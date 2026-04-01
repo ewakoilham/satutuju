@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -12,69 +16,96 @@ export async function PATCH(
   const { id, sessionNum } = await params;
   const body = await req.json();
 
-  const session = await prisma.session.findUnique({
-    where: { pairingId_sessionNum: { pairingId: id, sessionNum: parseInt(sessionNum) } },
-    include: { pairing: true },
-  });
+  // Find the session by pairingId + sessionNum (composite unique)
+  const { data: session, error: sessionError } = await supabase
+    .from("Session")
+    .select("*")
+    .eq("pairingId", id)
+    .eq("sessionNum", parseInt(sessionNum))
+    .single();
 
-  if (!session) {
+  if (sessionError || !session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  // Get the pairing for access check
+  const { data: pairing } = await supabase
+    .from("Pairing")
+    .select("mentorId, menteeId")
+    .eq("id", id)
+    .single();
+
+  if (!pairing) {
+    return NextResponse.json({ error: "Pairing not found" }, { status: 404 });
   }
 
   if (
     user.role !== "admin" &&
-    session.pairing.mentorId !== user.userId &&
-    session.pairing.menteeId !== user.userId
+    pairing.mentorId !== user.userId &&
+    pairing.menteeId !== user.userId
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const updated = await prisma.session.update({
-    where: { id: session.id },
-    data: {
+  const now = new Date().toISOString();
+  const { data: updated, error: updateError } = await supabase
+    .from("Session")
+    .update({
       status: body.status ?? session.status,
-      scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : session.scheduledAt,
-      completedAt: body.status === "completed" ? new Date() : session.completedAt,
+      scheduledAt: body.scheduledAt ? new Date(body.scheduledAt).toISOString() : session.scheduledAt,
+      completedAt: body.status === "completed" ? now : session.completedAt,
       mentorRating: body.mentorRating ?? session.mentorRating,
       menteeEnergy: body.menteeEnergy ?? session.menteeEnergy,
       keyOutput: body.keyOutput ?? session.keyOutput,
       obstacles: body.obstacles ?? session.obstacles,
       summaryNotes: body.summaryNotes ?? session.summaryNotes,
       menteeFeedback: body.menteeFeedback ?? session.menteeFeedback,
-    },
-  });
+      updatedAt: now,
+    })
+    .eq("id", session.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error("Session update error:", updateError);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   // Notify mentor when mentee submits feedback or rating
   if (body.menteeFeedback || body.mentorRating) {
-    const isMentee = session.pairing.menteeId === user.userId;
+    const isMentee = pairing.menteeId === user.userId;
     if (isMentee) {
-      const mentee = await prisma.user.findUnique({
-        where: { id: user.userId },
-        select: { name: true },
-      });
-      const mentorId = session.pairing.mentorId;
+      const { data: mentee } = await supabase
+        .from("User")
+        .select("name")
+        .eq("id", user.userId)
+        .single();
+
+      const mentorId = pairing.mentorId;
 
       if (body.menteeFeedback) {
-        await prisma.notification.create({
-          data: {
-            userId: mentorId,
-            title: "New Mentee Feedback",
-            message: `${mentee?.name} left feedback on Session ${sessionNum}: "${body.menteeFeedback.slice(0, 80)}${body.menteeFeedback.length > 80 ? "..." : ""}"`,
-            type: "session",
-            link: `/dashboard/pairings/${id}`,
-          },
+        await supabase.from("Notification").insert({
+          id: generateId(),
+          userId: mentorId,
+          title: "New Mentee Feedback",
+          message: `${mentee?.name} left feedback on Session ${sessionNum}: "${body.menteeFeedback.slice(0, 80)}${body.menteeFeedback.length > 80 ? "..." : ""}"`,
+          type: "session",
+          read: false,
+          link: `/dashboard/pairings/${id}`,
+          createdAt: now,
         });
       }
 
       if (body.mentorRating) {
-        await prisma.notification.create({
-          data: {
-            userId: mentorId,
-            title: "Mentor Rating Received",
-            message: `${mentee?.name} rated you ${body.mentorRating}/5 for Session ${sessionNum}.`,
-            type: "session",
-            link: `/dashboard/pairings/${id}`,
-          },
+        await supabase.from("Notification").insert({
+          id: generateId(),
+          userId: mentorId,
+          title: "Mentor Rating Received",
+          message: `${mentee?.name} rated you ${body.mentorRating}/5 for Session ${sessionNum}.`,
+          type: "session",
+          read: false,
+          link: `/dashboard/pairings/${id}`,
+          createdAt: now,
         });
       }
     }
@@ -82,31 +113,36 @@ export async function PATCH(
 
   // If mentee energy <= 2 for two consecutive sessions, create an alert notification
   if (body.menteeEnergy && body.menteeEnergy <= 2) {
-    const prevSession = await prisma.session.findUnique({
-      where: {
-        pairingId_sessionNum: {
-          pairingId: id,
-          sessionNum: parseInt(sessionNum) - 1,
-        },
-      },
-    });
+    const { data: prevSession } = await supabase
+      .from("Session")
+      .select("menteeEnergy")
+      .eq("pairingId", id)
+      .eq("sessionNum", parseInt(sessionNum) - 1)
+      .single();
 
     if (prevSession?.menteeEnergy && prevSession.menteeEnergy <= 2) {
       // Find admins and notify
-      const admins = await prisma.user.findMany({ where: { role: "admin" } });
-      const pairing = await prisma.pairing.findUnique({
-        where: { id },
-        include: { mentee: { select: { name: true } } },
-      });
-      for (const admin of admins) {
-        await prisma.notification.create({
-          data: {
-            userId: admin.id,
-            title: "Low Energy Alert",
-            message: `${pairing?.mentee.name} has had energy rating <= 2 for 2 consecutive sessions.`,
-            type: "alert",
-            link: `/dashboard/pairings/${id}`,
-          },
+      const { data: admins } = await supabase
+        .from("User")
+        .select("id")
+        .eq("role", "admin");
+
+      const { data: pairingWithMentee } = await supabase
+        .from("Pairing")
+        .select("*, mentee:User!menteeId(name)")
+        .eq("id", id)
+        .single();
+
+      for (const admin of admins || []) {
+        await supabase.from("Notification").insert({
+          id: generateId(),
+          userId: admin.id,
+          title: "Low Energy Alert",
+          message: `${pairingWithMentee?.mentee?.name} has had energy rating <= 2 for 2 consecutive sessions.`,
+          type: "alert",
+          read: false,
+          link: `/dashboard/pairings/${id}`,
+          createdAt: now,
         });
       }
     }

@@ -56,39 +56,59 @@ export default function AdminDashboard() {
   });
 
   const fetchData = useCallback(async () => {
-    const [pRes, mentorRes, menteeRes, fbRes] = await Promise.all([
-      fetch("/api/pairings"),
-      fetch("/api/users?role=mentor"),
-      fetch("/api/users?role=mentee"),
-      fetch("/api/admin/feedback"),
-    ]);
-    const [pData, mentorData, menteeData, fbData] = await Promise.all([
-      pRes.json(),
-      mentorRes.json(),
-      menteeRes.json(),
-      fbRes.json(),
-    ]);
-    setPairings(pData.pairings || []);
-    setMentors(mentorData.users || []);
-    setMentees(menteeData.users || []);
-    setMentorSummaries(fbData.mentorSummaries || []);
-    setRecentFeedback(fbData.recentFeedback || []);
+    try {
+      const [pRes, mentorRes, menteeRes, fbRes] = await Promise.all([
+        fetch("/api/pairings"),
+        fetch("/api/users?role=mentor"),
+        fetch("/api/users?role=mentee"),
+        fetch("/api/admin/feedback"),
+      ]);
+      const [pData, mentorData, menteeData, fbData] = await Promise.all([
+        pRes.json(),
+        mentorRes.json(),
+        menteeRes.json(),
+        fbRes.json(),
+      ]);
+      setPairings(pData.pairings || []);
+      setMentors(mentorData.users || []);
+      setMentees(menteeData.users || []);
+      setMentorSummaries(fbData.mentorSummaries || []);
+      setRecentFeedback(fbData.recentFeedback || []);
+    } catch (err) {
+      console.error("Failed to fetch admin data:", err);
+    }
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
+
   async function createPairing(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/pairings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newPairing),
-    });
-    setShowCreate(false);
-    setNewPairing({ mentorId: "", menteeId: "", targetProgram: "" });
-    fetchData();
+    setCreateError("");
+    setCreating(true);
+    try {
+      const res = await fetch("/api/pairings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPairing),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data.error || "Failed to create pairing");
+        setCreating(false);
+        return;
+      }
+      setShowCreate(false);
+      setNewPairing({ mentorId: "", menteeId: "", targetProgram: "" });
+      fetchData();
+    } catch {
+      setCreateError("Network error. Please try again.");
+    }
+    setCreating(false);
   }
 
   const completedSessions = (p: Pairing) =>
@@ -275,6 +295,11 @@ export default function AdminDashboard() {
           className="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
         >
           <h3 className="font-semibold">Create New Pairing</h3>
+          {createError && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">
+              {createError}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -337,9 +362,10 @@ export default function AdminDashboard() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+              disabled={creating}
+              className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
             >
-              Create Pairing
+              {creating ? "Creating..." : "Create Pairing"}
             </button>
             <button
               type="button"
@@ -392,7 +418,20 @@ export default function AdminDashboard() {
                     onClick={() => window.location.href = `/dashboard/pairings/${p.id}`}
                   >
                     <td className="px-3 sm:px-6 py-3">{p.mentor?.name}</td>
-                    <td className="px-3 sm:px-6 py-3">{p.mentee?.name}</td>
+                    <td className="px-3 sm:px-6 py-3">
+                      <span className="flex items-center gap-2">
+                        {p.mentee?.name}
+                        {p.mentee?.id && (
+                          <a
+                            href={`/dashboard/profile/${p.mentee.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-[var(--primary)] hover:underline font-medium"
+                          >
+                            Profile
+                          </a>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-3 sm:px-6 py-3 text-gray-500">
                       {p.targetProgram || "-"}
                     </td>

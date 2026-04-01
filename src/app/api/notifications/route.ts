@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: user.userId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const { data: notifications, error } = await supabase
+    .from("Notification")
+    .select("*")
+    .eq("userId", user.userId)
+    .order("createdAt", { ascending: false })
+    .limit(50);
 
-  return NextResponse.json({ notifications });
+  if (error) {
+    console.error("Notifications fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ notifications: notifications || [] });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -22,15 +28,16 @@ export async function PATCH(req: NextRequest) {
   const { id, readAll } = await req.json();
 
   if (readAll) {
-    await prisma.notification.updateMany({
-      where: { userId: user.userId, read: false },
-      data: { read: true },
-    });
+    await supabase
+      .from("Notification")
+      .update({ read: true })
+      .eq("userId", user.userId)
+      .eq("read", false);
   } else if (id) {
-    await prisma.notification.update({
-      where: { id },
-      data: { read: true },
-    });
+    await supabase
+      .from("Notification")
+      .update({ read: true })
+      .eq("id", id);
   }
 
   return NextResponse.json({ ok: true });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
@@ -9,23 +9,25 @@ export async function GET() {
   }
 
   // Get all sessions that have feedback or ratings, with pairing info
-  const sessions = await prisma.session.findMany({
-    where: {
-      OR: [
-        { menteeFeedback: { not: null } },
-        { mentorRating: { not: null } },
-      ],
-    },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      pairing: {
-        include: {
-          mentor: { select: { id: true, name: true } },
-          mentee: { select: { id: true, name: true } },
-        },
-      },
-    },
-  });
+  // Supabase doesn't support OR on "not null" directly in PostgREST the same way,
+  // so we fetch sessions that have mentorRating or menteeFeedback by fetching all
+  // completed-ish sessions and filtering in JS.
+  const { data: sessions, error } = await supabase
+    .from("Session")
+    .select(
+      "*, pairing:Pairing!pairingId(mentorId, mentor:User!mentorId(id, name), mentee:User!menteeId(id, name))"
+    )
+    .order("updatedAt", { ascending: false });
+
+  if (error) {
+    console.error("Feedback sessions fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  // Filter to only sessions with feedback or ratings
+  const filteredSessions = (sessions || []).filter(
+    (s: Record<string, unknown>) => s.menteeFeedback !== null || s.mentorRating !== null
+  );
 
   // Aggregate per mentor
   const mentorStats: Record<
@@ -42,7 +44,7 @@ export async function GET() {
     }
   > = {};
 
-  for (const s of sessions) {
+  for (const s of filteredSessions) {
     const mid = s.pairing.mentorId;
     if (!mentorStats[mid]) {
       mentorStats[mid] = {
@@ -78,13 +80,13 @@ export async function GET() {
   }));
 
   // Recent feedback list
-  const recentFeedback = sessions
-    .filter((s) => s.menteeFeedback)
+  const recentFeedback = filteredSessions
+    .filter((s: Record<string, unknown>) => s.menteeFeedback)
     .slice(0, 20)
-    .map((s) => ({
+    .map((s: Record<string, unknown>) => ({
       sessionNum: s.sessionNum,
-      mentorName: s.pairing.mentor.name,
-      menteeName: s.pairing.mentee.name,
+      mentorName: (s.pairing as Record<string, unknown> & { mentor: { name: string } }).mentor.name,
+      menteeName: (s.pairing as Record<string, unknown> & { mentee: { name: string } }).mentee.name,
       mentorRating: s.mentorRating,
       menteeFeedback: s.menteeFeedback,
       pairingId: s.pairingId,

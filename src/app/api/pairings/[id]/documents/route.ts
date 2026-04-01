@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/auth";
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export async function GET(
   _req: NextRequest,
@@ -11,12 +14,19 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const documents = await prisma.document.findMany({
-    where: { pairingId: id },
-    orderBy: { createdAt: "desc" },
-  });
 
-  return NextResponse.json({ documents });
+  const { data: documents, error } = await supabase
+    .from("Document")
+    .select("*")
+    .eq("pairingId", id)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("Documents fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ documents: documents || [] });
 }
 
 export async function POST(
@@ -60,13 +70,20 @@ export async function POST(
     .getPublicUrl(storagePath);
 
   // Check if there's an existing doc of same category to increment version
-  const existing = await prisma.document.findFirst({
-    where: { pairingId: id, category },
-    orderBy: { version: "desc" },
-  });
+  const { data: existing } = await supabase
+    .from("Document")
+    .select("version")
+    .eq("pairingId", id)
+    .eq("category", category)
+    .order("version", { ascending: false })
+    .limit(1)
+    .single();
 
-  const doc = await prisma.document.create({
-    data: {
+  const now = new Date().toISOString();
+  const { data: doc, error: docError } = await supabase
+    .from("Document")
+    .insert({
+      id: generateId(),
       pairingId: id,
       category,
       name,
@@ -76,22 +93,36 @@ export async function POST(
       mimeType: file.type,
       uploadedBy: user.userId,
       version: existing ? existing.version + 1 : 1,
-    },
-  });
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select()
+    .single();
+
+  if (docError || !doc) {
+    console.error("Document create error:", docError);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   // Notify the other party
-  const pairing = await prisma.pairing.findUnique({ where: { id } });
+  const { data: pairing } = await supabase
+    .from("Pairing")
+    .select("mentorId, menteeId")
+    .eq("id", id)
+    .single();
+
   if (pairing) {
     const notifyUserId =
       user.userId === pairing.menteeId ? pairing.mentorId : pairing.menteeId;
-    await prisma.notification.create({
-      data: {
-        userId: notifyUserId,
-        title: "New Document Uploaded",
-        message: `A new document was uploaded: "${name}"`,
-        type: "document",
-        link: `/dashboard/pairings/${id}`,
-      },
+    await supabase.from("Notification").insert({
+      id: generateId(),
+      userId: notifyUserId,
+      title: "New Document Uploaded",
+      message: `A new document was uploaded: "${name}"`,
+      type: "document",
+      read: false,
+      link: `/dashboard/pairings/${id}`,
+      createdAt: now,
     });
   }
 

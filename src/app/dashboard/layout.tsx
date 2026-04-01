@@ -16,6 +16,7 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
   ],
   mentee: [
     { href: "/dashboard", label: "My Journey", icon: "🗺️" },
+    { href: "/dashboard/profile", label: "Profile", icon: "👤" },
   ],
 };
 

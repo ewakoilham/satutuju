@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -10,11 +10,21 @@ export async function GET(req: NextRequest) {
 
   const role = req.nextUrl.searchParams.get("role");
 
-  const users = await prisma.user.findMany({
-    where: role ? { role } : undefined,
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
+  let query = supabase
+    .from("User")
+    .select("id, email, name, role, createdAt")
+    .order("createdAt", { ascending: false });
 
-  return NextResponse.json({ users });
+  if (role) {
+    query = query.eq("role", role);
+  }
+
+  const { data: users, error } = await query;
+
+  if (error) {
+    console.error("Users fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ users: users || [] });
 }

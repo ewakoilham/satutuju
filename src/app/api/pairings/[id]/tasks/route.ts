@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export async function GET(
   _req: NextRequest,
@@ -10,12 +14,19 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const tasks = await prisma.task.findMany({
-    where: { pairingId: id },
-    orderBy: { createdAt: "desc" },
-  });
 
-  return NextResponse.json({ tasks });
+  const { data: tasks, error } = await supabase
+    .from("Task")
+    .select("*")
+    .eq("pairingId", id)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("Tasks fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ tasks: tasks || [] });
 }
 
 export async function POST(
@@ -28,31 +39,48 @@ export async function POST(
   const { id } = await params;
   const body = await req.json();
 
-  const pairing = await prisma.pairing.findUnique({ where: { id } });
+  const { data: pairing } = await supabase
+    .from("Pairing")
+    .select("id, menteeId")
+    .eq("id", id)
+    .single();
+
   if (!pairing) {
     return NextResponse.json({ error: "Pairing not found" }, { status: 404 });
   }
 
-  const task = await prisma.task.create({
-    data: {
+  const now = new Date().toISOString();
+  const { data: task, error: taskError } = await supabase
+    .from("Task")
+    .insert({
+      id: generateId(),
       pairingId: id,
       sessionNum: body.sessionNum,
       title: body.title,
       description: body.description,
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      dueDate: body.dueDate ? new Date(body.dueDate).toISOString() : null,
       assignedBy: user.userId,
-    },
-  });
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select()
+    .single();
+
+  if (taskError || !task) {
+    console.error("Task create error:", taskError);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   // Notify mentee
-  await prisma.notification.create({
-    data: {
-      userId: pairing.menteeId,
-      title: "New Task Assigned",
-      message: `Your mentor assigned a new task: "${task.title}"`,
-      type: "task",
-      link: `/dashboard/pairings/${id}`,
-    },
+  await supabase.from("Notification").insert({
+    id: generateId(),
+    userId: pairing.menteeId,
+    title: "New Task Assigned",
+    message: `Your mentor assigned a new task: "${task.title}"`,
+    type: "task",
+    read: false,
+    link: `/dashboard/pairings/${id}`,
+    createdAt: now,
   });
 
   return NextResponse.json({ task }, { status: 201 });

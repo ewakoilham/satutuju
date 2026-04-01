@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -12,21 +16,33 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const doc = await prisma.document.findUnique({
-    where: { id },
-    include: { pairing: true },
-  });
-  if (!doc) {
+  // Find the document and its pairing
+  const { data: doc, error: docError } = await supabase
+    .from("Document")
+    .select("*, pairing:Pairing!pairingId(mentorId, menteeId)")
+    .eq("id", id)
+    .single();
+
+  if (docError || !doc) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  const updated = await prisma.document.update({
-    where: { id },
-    data: {
+  const now = new Date().toISOString();
+  const { data: updated, error: updateError } = await supabase
+    .from("Document")
+    .update({
       status: body.status ?? doc.status,
       feedback: body.feedback ?? doc.feedback,
-    },
-  });
+      updatedAt: now,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error("Document update error:", updateError);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   // Notify mentee when mentor reviews
   if (body.status && user.userId === doc.pairing.mentorId) {
@@ -36,14 +52,15 @@ export async function PATCH(
         : body.status === "needs_revision"
         ? "needs revision"
         : body.status;
-    await prisma.notification.create({
-      data: {
-        userId: doc.pairing.menteeId,
-        title: "Document Review Update",
-        message: `Your document "${doc.name}" has been marked as ${statusLabel}.`,
-        type: "document",
-        link: `/dashboard/pairings/${doc.pairingId}`,
-      },
+    await supabase.from("Notification").insert({
+      id: generateId(),
+      userId: doc.pairing.menteeId,
+      title: "Document Review Update",
+      message: `Your document "${doc.name}" has been marked as ${statusLabel}.`,
+      type: "document",
+      read: false,
+      link: `/dashboard/pairings/${doc.pairingId}`,
+      createdAt: now,
     });
   }
 

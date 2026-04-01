@@ -1,46 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { CURRICULUM } from "@/lib/curriculum";
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let pairings;
-  if (user.role === "admin") {
-    pairings = await prisma.pairing.findMany({
-      include: {
-        mentor: { select: { id: true, name: true, email: true } },
-        mentee: { select: { id: true, name: true, email: true } },
-        sessions: { orderBy: { sessionNum: "asc" } },
-        _count: { select: { documents: true, tasks: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  } else if (user.role === "mentor") {
-    pairings = await prisma.pairing.findMany({
-      where: { mentorId: user.userId },
-      include: {
-        mentee: { select: { id: true, name: true, email: true } },
-        sessions: { orderBy: { sessionNum: "asc" } },
-        _count: { select: { documents: true, tasks: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  } else {
-    pairings = await prisma.pairing.findMany({
-      where: { menteeId: user.userId },
-      include: {
-        mentor: { select: { id: true, name: true, email: true } },
-        sessions: { orderBy: { sessionNum: "asc" } },
-        _count: { select: { documents: true, tasks: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+  let query = supabase.from("Pairing").select(
+    "*, mentor:User!mentorId(id, name, email), mentee:User!menteeId(id, name, email), sessions:Session(*), documents:Document(id), tasks:Task(id)"
+  );
+
+  if (user.role === "mentor") {
+    query = query.eq("mentorId", user.userId);
+  } else if (user.role !== "admin") {
+    query = query.eq("menteeId", user.userId);
   }
 
-  return NextResponse.json({ pairings });
+  const { data: pairings, error } = await query.order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("Pairings fetch error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  // Sort sessions by sessionNum and compute _count equivalents
+  const result = (pairings || []).map((p: Record<string, unknown>) => {
+    const sessions = Array.isArray(p.sessions)
+      ? [...p.sessions].sort(
+          (a: Record<string, unknown>, b: Record<string, unknown>) =>
+            (a.sessionNum as number) - (b.sessionNum as number)
+        )
+      : [];
+    const documentsCount = Array.isArray(p.documents) ? p.documents.length : 0;
+    const tasksCount = Array.isArray(p.tasks) ? p.tasks.length : 0;
+
+    // Remove raw arrays used only for counting, keep mentor/mentee
+    const { documents: _docs, tasks: _tasks, ...rest } = p as Record<string, unknown>;
+    return {
+      ...rest,
+      sessions,
+      _count: { documents: documentsCount, tasks: tasksCount },
+    };
+  });
+
+  return NextResponse.json({ pairings: result });
 }
 
 export async function POST(req: NextRequest) {
@@ -56,26 +64,52 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing mentor or mentee" }, { status: 400 });
   }
 
-  const pairing = await prisma.pairing.create({
-    data: {
+  const now = new Date().toISOString();
+  const pairingId = generateId();
+
+  const { data: pairing, error: pairingError } = await supabase
+    .from("Pairing")
+    .insert({
+      id: pairingId,
       mentorId,
       menteeId,
-      targetProgram,
+      status: "active",
+      track: "full",
+      startDate: now,
+      targetProgram: targetProgram || null,
       priorityUnis: priorityUnis ? JSON.stringify(priorityUnis) : null,
-      ieltsScore,
-    },
-  });
+      ieltsScore: ieltsScore || null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select()
+    .single();
+
+  if (pairingError || !pairing) {
+    console.error("Pairing create error:", pairingError);
+    const msg = pairingError?.message?.includes("duplicate")
+      ? "This mentor-mentee pairing already exists"
+      : "Failed to create pairing";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   // Auto-create the 10 sessions from curriculum
-  await prisma.session.createMany({
-    data: CURRICULUM.map((s) => ({
-      pairingId: pairing.id,
-      sessionNum: s.sessionNum,
-      phase: s.phase,
-      topic: s.topic,
-      status: s.sessionNum === 1 ? "upcoming" : "upcoming",
-    })),
-  });
+  const sessionRows = CURRICULUM.map((s) => ({
+    id: generateId(),
+    pairingId: pairing.id,
+    sessionNum: s.sessionNum,
+    phase: s.phase,
+    topic: s.topic,
+    status: "upcoming",
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const { error: sessionsError } = await supabase.from("Session").insert(sessionRows);
+
+  if (sessionsError) {
+    console.error("Sessions create error:", sessionsError);
+  }
 
   return NextResponse.json({ pairing }, { status: 201 });
 }

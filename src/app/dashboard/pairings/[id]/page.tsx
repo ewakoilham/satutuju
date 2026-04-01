@@ -148,6 +148,14 @@ export default function PairingDetailPage() {
               </span>
             )}
             {pairing.ieltsScore && <span>IELTS: {pairing.ieltsScore}</span>}
+            {isMentor && (
+              <button
+                onClick={() => router.push(`/dashboard/profile/${pairing.mentee.id}`)}
+                className="text-[var(--primary)] hover:underline font-medium"
+              >
+                View Mentee Profile
+              </button>
+            )}
           </div>
         </div>
         <div className="text-right">
