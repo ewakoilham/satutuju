@@ -29,6 +29,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -50,7 +51,21 @@ export default function DashboardLayout({
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 sm:gap-8">
+              {/* Hamburger menu button - mobile only */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="sm:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
               <Link href="/dashboard" className="text-xl font-bold text-[var(--primary)]">
                 SATU TUJU
               </Link>
@@ -90,7 +105,7 @@ export default function DashboardLayout({
                 </button>
 
                 {showNotifs && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+                  <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
                     <div className="flex items-center justify-between px-4 py-3 border-b">
                       <span className="font-semibold text-sm">Notifications</span>
                       {unreadCount > 0 && (
@@ -147,6 +162,62 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
+
+      {/* Mobile slide-out navigation drawer */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden fixed inset-0 z-40">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Drawer */}
+          <div className="fixed top-0 left-0 bottom-0 w-64 bg-white shadow-xl z-50 flex flex-col">
+            <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200">
+              <span className="text-lg font-bold text-[var(--primary)]">SATU TUJU</span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                aria-label="Close menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <nav className="flex flex-col gap-1 p-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                    pathname === item.href
+                      ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="mr-2">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-auto border-t border-gray-200 p-4">
+              <p className="text-sm font-medium">{user.name}</p>
+              <p className="text-xs text-gray-500 capitalize mb-3">{user.role}</p>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  logout();
+                }}
+                className="text-sm text-red-500 hover:underline"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

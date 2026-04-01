@@ -112,7 +112,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Mentors", value: mentors.length, color: "blue" },
           { label: "Total Mentees", value: mentees.length, color: "purple" },
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex flex-wrap border-b border-gray-200">
         {[
           { key: "pairings" as AdminTab, label: "Pairings" },
           { key: "quality" as AdminTab, label: "Quality Control" },
@@ -366,22 +366,22 @@ export default function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Mentor
                   </th>
-                  <th className="px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Mentee
                   </th>
-                  <th className="px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Program
                   </th>
-                  <th className="px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Progress
                   </th>
-                  <th className="px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Status
                   </th>
-                  <th className="px-6 py-3 font-medium text-gray-500"></th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500"></th>
                 </tr>
               </thead>
               <tbody>
@@ -391,12 +391,12 @@ export default function AdminDashboard() {
                     className="border-t border-gray-50 cursor-pointer hover:bg-gray-50 transition"
                     onClick={() => window.location.href = `/dashboard/pairings/${p.id}`}
                   >
-                    <td className="px-6 py-3">{p.mentor?.name}</td>
-                    <td className="px-6 py-3">{p.mentee?.name}</td>
-                    <td className="px-6 py-3 text-gray-500">
+                    <td className="px-3 sm:px-6 py-3">{p.mentor?.name}</td>
+                    <td className="px-3 sm:px-6 py-3">{p.mentee?.name}</td>
+                    <td className="px-3 sm:px-6 py-3 text-gray-500">
                       {p.targetProgram || "-"}
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-3 sm:px-6 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
@@ -411,7 +411,7 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-3 sm:px-6 py-3">
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
                           p.status === "active"
@@ -424,7 +424,7 @@ export default function AdminDashboard() {
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-3 sm:px-6 py-3">
                       <span className="text-[var(--primary)] text-sm">
                         View &rarr;
                       </span>

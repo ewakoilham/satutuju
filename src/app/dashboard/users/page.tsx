@@ -47,7 +47,7 @@ export default function UsersPage() {
             All registered users on the platform
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {["", "mentor", "mentee", "admin"].map((r) => (
             <button
               key={r}
@@ -68,18 +68,18 @@ export default function UsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 text-left">
-              <th className="px-6 py-3 font-medium text-gray-500">Name</th>
-              <th className="px-6 py-3 font-medium text-gray-500">Email</th>
-              <th className="px-6 py-3 font-medium text-gray-500">Role</th>
-              <th className="px-6 py-3 font-medium text-gray-500">Joined</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Name</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Email</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Role</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Joined</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((u) => (
               <tr key={u.id} className="border-t border-gray-50">
-                <td className="px-6 py-3 font-medium">{u.name}</td>
-                <td className="px-6 py-3 text-gray-500">{u.email}</td>
-                <td className="px-6 py-3">
+                <td className="px-3 sm:px-6 py-3 font-medium">{u.name}</td>
+                <td className="px-3 sm:px-6 py-3 text-gray-500">{u.email}</td>
+                <td className="px-3 sm:px-6 py-3">
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
                       ROLE_STYLES[u.role] || ""
@@ -88,7 +88,7 @@ export default function UsersPage() {
                     {u.role}
                   </span>
                 </td>
-                <td className="px-6 py-3 text-gray-400">
+                <td className="px-3 sm:px-6 py-3 text-gray-400">
                   {new Date(u.createdAt).toLocaleDateString()}
                 </td>
               </tr>

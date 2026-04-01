@@ -213,7 +213,7 @@ export default function MenteeDashboard() {
         </div>
 
         {/* Phase timeline — clickable, expands inline */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {Object.entries(PHASES).map(([key, phase]) => {
             const phaseSessions = pairing.sessions.filter((s) => s.phase === key);
             const phaseCompleted = phaseSessions.every((s) => s.status === "completed");

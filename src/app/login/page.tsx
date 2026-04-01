@@ -34,10 +34,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[var(--primary)]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--primary)]">
             SATU TUJU
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -47,7 +47,7 @@ export default function LoginPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-5"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 space-y-5"
         >
           <h2 className="text-xl font-semibold text-center">Sign In</h2>
 
