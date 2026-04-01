@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ──────────────────────────────────────────────
+// USERS
+// ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("mentee") // "admin" | "mentor" | "mentee"
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Mentor relations
+  mentorPairings Pairing[] @relation("MentorPairings")
+
+  // Mentee relations
+  menteePairings Pairing[] @relation("MenteePairings")
+
+  // Notifications
+  notifications Notification[]
+}
+
+// ──────────────────────────────────────────────
+// MENTOR-MENTEE PAIRING
+// ──────────────────────────────────────────────
+
+model Pairing {
+  id        String   @id @default(cuid())
+  mentorId  String
+  menteeId  String
+  status    String   @default("active") // "active" | "completed" | "paused"
+  track     String   @default("full") // "full" (10 sessions) — extensible later
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentor  User      @relation("MentorPairings", fields: [mentorId], references: [id])
+  mentee  User      @relation("MenteePairings", fields: [menteeId], references: [id])
+
+  sessions       Session[]
+  documents      Document[]
+  tasks          Task[]
+  progressNotes  ProgressNote[]
+
+  // Mentee profile data
+  targetProgram     String?
+  priorityUnis      String? // JSON array of university names
+  ieltsScore        String?
+  northStarCard     String? // Mentor's north star card for this pairing
+
+  @@unique([mentorId, menteeId])
+}
+
+// ──────────────────────────────────────────────
+// SESSIONS (10-session curriculum)
+// ──────────────────────────────────────────────
+
+model Session {
+  id          String   @id @default(cuid())
+  pairingId   String
+  sessionNum  Int      // 1-10
+  phase       String   // "discovery" | "planning" | "writing" | "execution" | "closing"
+  topic       String   // e.g. "Perkenalan & Profil Mentee"
+  status      String   @default("upcoming") // "upcoming" | "scheduled" | "completed" | "skipped"
+  scheduledAt DateTime?
+  completedAt DateTime?
+
+  // Session tracking
+  mentorRating    Int?   // 1-5 (mentee rates the mentor)
+  menteeEnergy    Int?   // 1-5 (mentor observes mentee energy)
+  keyOutput       String?
+  obstacles       String?
+  summaryNotes    String? // 24-hour post-session summary
+  menteeFeedback  String? // Mentee's impression/comment about the session
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pairing Pairing @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+
+  @@unique([pairingId, sessionNum])
+}
+
+// ──────────────────────────────────────────────
+// DOCUMENTS (upload, review, approve)
+// ──────────────────────────────────────────────
+
+model Document {
+  id          String   @id @default(cuid())
+  pairingId   String
+  category    String   // "cv" | "motivation_letter" | "transcript" | "ielts" | "recommendation" | "essay_lpdp" | "other"
+  name        String
+  fileName    String
+  filePath    String
+  fileSize    Int
+  mimeType    String
+  status      String   @default("uploaded") // "uploaded" | "under_review" | "needs_revision" | "approved"
+  version     Int      @default(1)
+  uploadedBy  String   // userId
+  feedback    String?  // Mentor feedback on this document
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pairing Pairing @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// TASKS / HOMEWORK
+// ──────────────────────────────────────────────
+
+model Task {
+  id          String   @id @default(cuid())
+  pairingId   String
+  sessionNum  Int?     // Which session this task relates to
+  title       String
+  description String?
+  status      String   @default("pending") // "pending" | "in_progress" | "completed" | "overdue"
+  dueDate     DateTime?
+  assignedBy  String   // userId (mentor)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pairing Pairing @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// PROGRESS NOTES (per-session reflections)
+// ──────────────────────────────────────────────
+
+model ProgressNote {
+  id         String   @id @default(cuid())
+  pairingId  String
+  sessionNum Int?
+  authorId   String   // userId
+  content    String
+  type       String   @default("note") // "note" | "achievement" | "concern" | "action_item"
+
+  createdAt DateTime @default(now())
+
+  pairing Pairing @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// NOTIFICATIONS
+// ──────────────────────────────────────────────
+
+model Notification {
+  id      String   @id @default(cuid())
+  userId  String
+  title   String
+  message String
+  type    String   @default("info") // "info" | "task" | "document" | "session" | "alert"
+  read    Boolean  @default(false)
+  link    String?  // URL to navigate to
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
