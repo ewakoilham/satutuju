@@ -75,6 +75,7 @@ const buildEmptyProfile = (): ProfileData => {
 // ── Component ─────────────────────────────────────────────────
 export default function OnboardingPage() {
   const router = useRouter();
+  const [showIntro, setShowIntro] = useState(true);
   const [current, setCurrent] = useState(0);
   const [profile, setProfile] = useState<ProfileData>(buildEmptyProfile);
   const [saving, setSaving] = useState(false);
@@ -177,6 +178,33 @@ export default function OnboardingPage() {
   const currentSection = q.section;
 
   const value = profile[q.field];
+
+  // ── Intro screen ──
+  if (showIntro) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center px-6">
+        <div className="max-w-md text-center space-y-6">
+          <span className="text-sm font-semibold text-[var(--primary)] tracking-wide">SATU TUJU</span>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+            Hey there!<br />Welcome to SatuTuju
+          </h1>
+          <p className="text-gray-500 text-base sm:text-lg leading-relaxed">
+            Before we start, let&apos;s get to know you a little deeper so we can
+            understand you better and personalise your study-abroad journey.
+          </p>
+          <p className="text-sm text-gray-400">
+            This will only take a few minutes.
+          </p>
+          <button
+            onClick={() => setShowIntro(false)}
+            className="bg-[var(--primary)] text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
+          >
+            Let&apos;s Go
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 
 interface User {
@@ -85,6 +85,10 @@ export default function AdminDashboard() {
 
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [replacingPairingId, setReplacingPairingId] = useState<string | null>(null);
+  const [replaceMentorId, setReplaceMentorId] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const createFormRef = useRef<HTMLFormElement>(null);
 
   async function createPairing(e: React.FormEvent) {
     e.preventDefault();
@@ -109,6 +113,53 @@ export default function AdminDashboard() {
       setCreateError("Network error. Please try again.");
     }
     setCreating(false);
+  }
+
+  // Auto-scroll to create form on mobile
+  useEffect(() => {
+    if (showCreate && createFormRef.current) {
+      createFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showCreate]);
+
+  async function replaceMentor(pairingId: string) {
+    if (!replaceMentorId) return;
+    setActionLoading(pairingId);
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mentorId: replaceMentorId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to replace mentor");
+      } else {
+        setReplacingPairingId(null);
+        setReplaceMentorId("");
+        fetchData();
+      }
+    } catch {
+      alert("Network error");
+    }
+    setActionLoading(null);
+  }
+
+  async function removePairing(pairingId: string, mentorName: string, menteeName: string) {
+    if (!window.confirm(`Cancel the pairing between ${mentorName} and ${menteeName}? This cannot be undone.`)) return;
+    setActionLoading(pairingId);
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to cancel pairing");
+      } else {
+        fetchData();
+      }
+    } catch {
+      alert("Network error");
+    }
+    setActionLoading(null);
   }
 
   const completedSessions = (p: Pairing) =>
@@ -291,6 +342,7 @@ export default function AdminDashboard() {
       {/* Create Pairing Form */}
       {showCreate && (
         <form
+          ref={createFormRef}
           onSubmit={createPairing}
           className="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
         >
@@ -407,7 +459,7 @@ export default function AdminDashboard() {
                   <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
                     Status
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500"></th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -457,6 +509,8 @@ export default function AdminDashboard() {
                             ? "bg-green-100 text-green-700"
                             : p.status === "completed"
                             ? "bg-blue-100 text-blue-700"
+                            : p.status === "cancelled"
+                            ? "bg-red-100 text-red-700"
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
@@ -464,9 +518,56 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3">
-                      <span className="text-[var(--primary)] text-sm">
-                        View &rarr;
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[var(--primary)] text-xs font-medium">
+                          View &rarr;
+                        </span>
+                        {p.status !== "cancelled" && (
+                          <>
+                            {replacingPairingId === p.id ? (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <select
+                                  value={replaceMentorId}
+                                  onChange={(e) => setReplaceMentorId(e.target.value)}
+                                  className="text-xs border border-gray-300 rounded px-1.5 py-1"
+                                >
+                                  <option value="">New mentor...</option>
+                                  {mentors.filter((m) => m.id !== p.mentor?.id).map((m) => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => replaceMentor(p.id)}
+                                  disabled={!replaceMentorId || actionLoading === p.id}
+                                  className="text-xs bg-[var(--primary)] text-white px-2 py-1 rounded hover:opacity-90 disabled:opacity-50"
+                                >
+                                  {actionLoading === p.id ? "..." : "OK"}
+                                </button>
+                                <button
+                                  onClick={() => { setReplacingPairingId(null); setReplaceMentorId(""); }}
+                                  className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setReplacingPairingId(p.id); setReplaceMentorId(""); }}
+                                className="text-xs text-amber-600 hover:underline font-medium"
+                              >
+                                Replace
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removePairing(p.id, p.mentor?.name || "mentor", p.mentee?.name || "mentee"); }}
+                              disabled={actionLoading === p.id}
+                              className="text-xs text-red-500 hover:underline font-medium disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

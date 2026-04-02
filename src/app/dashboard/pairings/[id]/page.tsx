@@ -114,9 +114,63 @@ export default function PairingDetailPage() {
   }
 
   const isMentor = user.role === "mentor" || user.role === "admin";
+  const isAdmin = user.role === "admin";
   const completed = pairing.sessions.filter(
     (s) => s.status === "completed"
   ).length;
+
+  // Admin action states
+  const [showReplaceMentor, setShowReplaceMentor] = useState(false);
+  const [allMentors, setAllMentors] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [newMentorId, setNewMentorId] = useState("");
+  const [adminActionLoading, setAdminActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch("/api/users?role=mentor").then(r => r.json()).then(d => setAllMentors(d.users || []));
+    }
+  }, [isAdmin]);
+
+  async function handleReplaceMentor() {
+    if (!newMentorId) return;
+    setAdminActionLoading(true);
+    try {
+      const res = await fetch(`/api/pairings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mentorId: newMentorId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to replace mentor");
+      } else {
+        setShowReplaceMentor(false);
+        setNewMentorId("");
+        fetchPairing();
+      }
+    } catch {
+      alert("Network error");
+    }
+    setAdminActionLoading(false);
+  }
+
+  async function handleRemovePairing() {
+    if (!pairing) return;
+    if (!window.confirm(`Cancel the pairing between ${pairing.mentor.name} and ${pairing.mentee.name}? This cannot be undone.`)) return;
+    setAdminActionLoading(true);
+    try {
+      const res = await fetch(`/api/pairings/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to cancel pairing");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      alert("Network error");
+    }
+    setAdminActionLoading(false);
+  }
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "sessions", label: "Sessions", count: completed },
@@ -157,6 +211,57 @@ export default function PairingDetailPage() {
               </button>
             )}
           </div>
+          {/* Admin actions */}
+          {isAdmin && pairing.status !== "cancelled" && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {showReplaceMentor ? (
+                <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                  <select
+                    value={newMentorId}
+                    onChange={(e) => setNewMentorId(e.target.value)}
+                    className="text-sm border border-gray-300 rounded-lg px-2 py-1"
+                  >
+                    <option value="">Select new mentor...</option>
+                    {allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => (
+                      <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleReplaceMentor}
+                    disabled={!newMentorId || adminActionLoading}
+                    className="text-sm bg-[var(--primary)] text-white px-3 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                  >
+                    {adminActionLoading ? "..." : "Confirm"}
+                  </button>
+                  <button
+                    onClick={() => { setShowReplaceMentor(false); setNewMentorId(""); }}
+                    className="text-sm text-gray-400 hover:text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowReplaceMentor(true)}
+                  className="text-sm text-amber-600 hover:underline font-medium"
+                >
+                  Replace Mentor
+                </button>
+              )}
+              <button
+                onClick={handleRemovePairing}
+                disabled={adminActionLoading}
+                className="text-sm text-red-500 hover:underline font-medium disabled:opacity-50"
+              >
+                Remove Pairing
+              </button>
+            </div>
+          )}
+          {pairing.status === "cancelled" && (
+            <span className="inline-block mt-2 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
+              Cancelled
+            </span>
+          )}
         </div>
         <div className="text-right">
           <div className="text-sm text-gray-500">Progress</div>
