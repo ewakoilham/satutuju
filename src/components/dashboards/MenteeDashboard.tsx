@@ -274,14 +274,15 @@ export default function MenteeDashboard() {
                 const isNext = session === nextSession;
 
                 return (
-                  <div
+                  <Link
                     key={session.sessionNum}
-                    className={`p-4 rounded-lg border transition ${
+                    href={`/dashboard/pairings/${pairing.id}`}
+                    className={`block p-4 rounded-lg border transition hover:shadow-md cursor-pointer ${
                       isCompleted
-                        ? "bg-green-50 border-green-200"
+                        ? "bg-green-50 border-green-200 hover:border-green-300"
                         : isNext
-                        ? "bg-blue-50 border-blue-200"
-                        : "bg-gray-50 border-gray-100"
+                        ? "bg-blue-50 border-blue-200 hover:border-blue-300"
+                        : "bg-gray-50 border-gray-100 hover:border-gray-200"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -345,7 +346,7 @@ export default function MenteeDashboard() {
                         {session.status}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

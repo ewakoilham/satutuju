@@ -105,31 +105,32 @@ export default function PairingDetailPage() {
     setLoading(false);
   }, [id, router]);
 
-  useEffect(() => {
-    fetchPairing();
-  }, [fetchPairing]);
-
-  if (loading || !pairing || !user) {
-    return <div className="text-gray-400">Loading...</div>;
-  }
-
-  const isMentor = user.role === "mentor" || user.role === "admin";
-  const isAdmin = user.role === "admin";
-  const completed = pairing.sessions.filter(
-    (s) => s.status === "completed"
-  ).length;
-
-  // Admin action states
+  // Admin action states (must be before early return)
   const [showReplaceMentor, setShowReplaceMentor] = useState(false);
   const [allMentors, setAllMentors] = useState<{ id: string; name: string; email: string }[]>([]);
   const [newMentorId, setNewMentorId] = useState("");
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+
+  const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    fetchPairing();
+  }, [fetchPairing]);
 
   useEffect(() => {
     if (isAdmin) {
       fetch("/api/users?role=mentor").then(r => r.json()).then(d => setAllMentors(d.users || []));
     }
   }, [isAdmin]);
+
+  if (loading || !pairing || !user) {
+    return <div className="text-gray-400">Loading...</div>;
+  }
+
+  const isMentor = user.role === "mentor" || user.role === "admin";
+  const completed = pairing.sessions.filter(
+    (s) => s.status === "completed"
+  ).length;
 
   async function handleReplaceMentor() {
     if (!newMentorId) return;
@@ -629,8 +630,8 @@ function SessionDetail({
       {/* SESSION RESULTS — always shown first */}
       {hasResults && !editing ? (
         <div className="space-y-4">
-          {/* Ratings row */}
-          <div className={`grid grid-cols-2 ${isMentor ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-3`}>
+          {/* Info cards */}
+          <div className={`grid gap-3 ${isMentor ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <p className="text-xs text-gray-400 mb-1">Status</p>
               <p className={`text-sm font-semibold capitalize ${
@@ -675,11 +676,11 @@ function SessionDetail({
             </div>
           </div>
 
-          {/* Key Output */}
+          {/* Topic of Discussion */}
           {session.keyOutput && (
             <div className="bg-green-50 border border-green-100 rounded-lg p-4">
               <h4 className="text-xs font-semibold text-green-700 uppercase mb-1">
-                Key Output
+                Topic of Discussion
               </h4>
               <p className="text-sm text-gray-700">{session.keyOutput}</p>
             </div>
@@ -697,8 +698,8 @@ function SessionDetail({
             </div>
           )}
 
-          {/* Obstacles */}
-          {session.obstacles && (
+          {/* Obstacles — mentor/admin only */}
+          {isMentor && session.obstacles && (
             <div className="bg-red-50 border border-red-100 rounded-lg p-4">
               <h4 className="text-xs font-semibold text-red-700 uppercase mb-1">
                 Obstacles / Concerns
@@ -882,7 +883,7 @@ function SessionDetail({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Key Output
+              Topic of Discussion
             </label>
             <input
               type="text"
@@ -891,7 +892,7 @@ function SessionDetail({
                 setForm({ ...form, keyOutput: e.target.value })
               }
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              placeholder="What was achieved in this session?"
+              placeholder="What was discussed in this session?"
             />
           </div>
           <div>
@@ -1004,24 +1005,31 @@ function DeliverablesList({
               </div>
               <div className="flex-shrink-0 flex items-center gap-2">
                 {matched.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 justify-end">
+                  <div className="flex flex-col items-end gap-1">
                     {matched.map((doc) => (
-                      <button
-                        key={doc.id}
-                        onClick={(e) => { e.stopPropagation(); onPreview(doc); }}
-                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                          doc.status === "approved"
-                            ? "bg-green-100 text-green-700"
-                            : doc.status === "needs_revision"
-                            ? "bg-amber-100 text-amber-700"
-                            : doc.status === "under_review"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-600"
-                        } hover:opacity-80 transition cursor-pointer`}
-                      >
-                        {doc.name} <span className="opacity-60">v{doc.version}</span>
-                        <span className="ml-0.5">👁</span>
-                      </button>
+                      <div key={doc.id} className="flex flex-col items-end gap-0.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPreview(doc); }}
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                            doc.status === "approved"
+                              ? "bg-green-100 text-green-700"
+                              : doc.status === "needs_revision"
+                              ? "bg-amber-100 text-amber-700"
+                              : doc.status === "under_review"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-600"
+                          } hover:opacity-80 transition cursor-pointer`}
+                        >
+                          {doc.status === "approved" ? "✓ Verified" : doc.status === "needs_revision" ? "⚠ Needs Changes" : doc.status === "under_review" ? "⏳ Under Review" : "Uploaded"}
+                          <span className="opacity-60">v{doc.version}</span>
+                          <span className="ml-0.5">👁</span>
+                        </button>
+                        {doc.status === "needs_revision" && doc.feedback && (
+                          <span className="text-[10px] text-amber-600 max-w-[200px] truncate" title={doc.feedback}>
+                            Mentor: &ldquo;{doc.feedback}&rdquo;
+                          </span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 ) : isUploading ? (
@@ -1066,11 +1074,13 @@ function MenteeFeedback({
   sessionNum: number;
   onRefresh: () => void;
 }) {
+  const hasSubmitted = currentRating > 0 && currentFeedback.length > 0;
+  const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(currentRating);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [feedback, setFeedback] = useState(currentFeedback);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   async function submitRating(value: number) {
     setRating(value);
@@ -1081,8 +1091,6 @@ function MenteeFeedback({
       body: JSON.stringify({ mentorRating: value }),
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
     onRefresh();
   }
 
@@ -1094,13 +1102,53 @@ function MenteeFeedback({
       body: JSON.stringify({ menteeFeedback: feedback }),
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setIsEditing(false);
+    setJustSubmitted(true);
     onRefresh();
   }
 
+  // Show submitted confirmation view
+  if ((hasSubmitted || justSubmitted) && !isEditing) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">✅</span>
+          <h4 className="text-sm font-semibold text-green-800">
+            Thanks! Your feedback has been submitted to your mentor.
+          </h4>
+        </div>
+
+        <div className="bg-white rounded-lg border border-green-100 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Your rating:</span>
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <span key={s} className={`text-sm ${s <= (rating || currentRating) ? "text-yellow-500" : "text-gray-200"}`}>★</span>
+              ))}
+            </div>
+            <span className="text-xs font-medium text-gray-600">{rating || currentRating}/5</span>
+          </div>
+          {(feedback || currentFeedback) && (
+            <div>
+              <span className="text-xs text-gray-500">Your feedback:</span>
+              <p className="text-sm text-gray-700 mt-0.5">&ldquo;{feedback || currentFeedback}&rdquo;</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => setIsEditing(true)}
+          className="text-xs text-[var(--primary)] hover:underline font-medium"
+        >
+          Edit feedback
+        </button>
+      </div>
+    );
+  }
+
+  // Editable form
   return (
-    <div className="bg-purple-50 border border-purple-100 rounded-lg p-4 space-y-4">
+    <div className="bg-purple-50 border border-purple-100 rounded-lg p-5 space-y-4">
       <h4 className="text-xs font-semibold text-purple-700 uppercase">
         Your Feedback
       </h4>
@@ -1142,12 +1190,19 @@ function MenteeFeedback({
         <div className="flex items-center gap-2 mt-2">
           <button
             onClick={submitFeedback}
-            disabled={saving || feedback === currentFeedback}
+            disabled={saving || !feedback.trim()}
             className="bg-[var(--primary)] text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save Feedback"}
+            {saving ? "Saving..." : "Submit Feedback"}
           </button>
-          {saved && <span className="text-xs text-green-600">Saved!</span>}
+          {isEditing && (
+            <button
+              onClick={() => { setIsEditing(false); setFeedback(currentFeedback); setRating(currentRating); }}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
     </div>
