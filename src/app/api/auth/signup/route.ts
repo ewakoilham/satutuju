@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin role cannot be self-assigned via signup
+    if (role === "admin") {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
     const validRoles = ["mentor", "mentee"];
     const userRole = validRoles.includes(role) ? role : "mentee";
 
