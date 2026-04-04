@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Logo from "@/components/ui/Logo";
 import Icon from "@/components/ui/Icon";
 
 const ROLES = [
   { value: "mentee", label: "Mentee", icon: "graduation", desc: "I want guidance" },
   { value: "mentor", label: "Mentor", icon: "star", desc: "I want to guide" },
-  { value: "admin", label: "Admin", icon: "settings", desc: "Manage platform" },
 ];
 
 export default function SignupPage() {
@@ -129,7 +129,7 @@ export default function SignupPage() {
                 <label className="block text-sm font-medium text-gray-600 mb-2">
                   I am a...
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {ROLES.map((r) => (
                     <button
                       key={r.value}
@@ -177,12 +177,10 @@ export default function SignupPage() {
 
       {/* Right branded panel - desktop only */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        <svg viewBox="0 0 120 120" fill="none" className="absolute top-10 left-10 w-40 h-40 text-primary/5">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
-        <svg viewBox="0 0 120 120" fill="none" className="absolute bottom-10 right-10 w-56 h-56 text-brand-yellow/20 rotate-90">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
+        {/* Brand illustrations */}
+        <Image src="/illustrations/lightbulb.png" alt="" width={130} height={130} className="absolute top-12 left-16 opacity-20" />
+        <Image src="/illustrations/notebook.png" alt="" width={110} height={110} className="absolute top-16 right-12 opacity-15" />
+        <Image src="/illustrations/globe.png" alt="" width={140} height={140} className="absolute bottom-16 right-16 opacity-20" />
 
         <div className="relative text-center">
           <Logo variant="main" size="lg" className="mx-auto mb-8" />
