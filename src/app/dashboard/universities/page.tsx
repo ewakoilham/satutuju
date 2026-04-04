@@ -59,6 +59,24 @@ const REGION_TABS = [
   { key: "others", label: "Others", icon: "📍" },
 ];
 
+const REGION_COUNTRY_MAP: Record<string, string[]> = {
+  "au-nz": ["Australia", "New Zealand"],
+  uk: ["UK"],
+  us: ["USA"],
+  canada: ["Canada"],
+  europe: [
+    "Austria","Belgium","Croatia","Cyprus","Czech Republic","Finland","France",
+    "Georgia","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania",
+    "Malta","Monaco","Netherlands","Poland","Portugal","Romania","Russia","Spain",
+    "Sweden","Switzerland","Turkey",
+  ],
+  asia: [
+    "China","Hong Kong","India","Indonesia","Japan","Kazakhstan","Malaysia",
+    "Philippines","Singapore","South Korea","Sri Lanka","Thailand","Vietnam",
+  ],
+  others: ["Caribbean","Grenada","Mauritius","UAE","West Indies"],
+};
+
 const ALL_COUNTRIES = [
   "Australia","Austria","Belgium","Canada","Caribbean","China","Croatia","Cyprus",
   "Czech Republic","Finland","France","Georgia","Germany","Greece","Grenada",
@@ -165,6 +183,9 @@ export default function UniversitiesPage() {
     }
   }
 
+  // Countries shown in dropdown — scoped to active region tab
+  const visibleCountries = region ? (REGION_COUNTRY_MAP[region] || ALL_COUNTRIES) : ALL_COUNTRIES;
+
   const paginated = universities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(universities.length / PAGE_SIZE);
   const hasFilters = search || region || country || level;
@@ -230,7 +251,7 @@ export default function UniversitiesPage() {
           className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
         >
           <option value="">All Countries</option>
-          {ALL_COUNTRIES.map((c) => (
+          {visibleCountries.map((c) => (
             <option key={c} value={c}>
               {COUNTRY_FLAGS[c] || "🌍"} {c}
             </option>
