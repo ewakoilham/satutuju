@@ -58,7 +58,14 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ pairing });
+  // Attach live mentee profile data
+  const { data: menteeProfile } = await supabase
+    .from("MenteeProfile")
+    .select("intendedStudyProgram, preferredDestinations")
+    .eq("userId", pairing.menteeId)
+    .single();
+
+  return NextResponse.json({ pairing: { ...pairing, menteeProfile: menteeProfile || null } });
 }
 
 function generateId(): string {

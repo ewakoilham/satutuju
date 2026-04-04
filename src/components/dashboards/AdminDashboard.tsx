@@ -10,12 +10,18 @@ interface User {
   role: string;
 }
 
+interface MenteeProfile {
+  intendedStudyProgram?: string;
+  preferredDestinations?: string;
+}
+
 interface Pairing {
   id: string;
   status: string;
   mentor?: User;
   mentee?: User;
   targetProgram?: string;
+  menteeProfile?: MenteeProfile | null;
   sessions: Array<{ status: string }>;
   _count: { documents: number; tasks: number };
 }
@@ -65,7 +71,6 @@ export default function AdminDashboard() {
   const [newPairing, setNewPairing] = useState({
     mentorId: "",
     menteeId: "",
-    targetProgram: "",
   });
 
   const fetchData = useCallback(async () => {
@@ -120,7 +125,7 @@ export default function AdminDashboard() {
         return;
       }
       setShowCreate(false);
-      setNewPairing({ mentorId: "", menteeId: "", targetProgram: "" });
+      setNewPairing({ mentorId: "", menteeId: "" });
       fetchData();
     } catch {
       setCreateError("Network error. Please try again.");
@@ -431,7 +436,7 @@ export default function AdminDashboard() {
               {createError}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mentor
@@ -479,23 +484,6 @@ export default function AdminDashboard() {
                   </select>
                 );
               })()}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Program
-              </label>
-              <input
-                type="text"
-                value={newPairing.targetProgram}
-                onChange={(e) =>
-                  setNewPairing({
-                    ...newPairing,
-                    targetProgram: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                placeholder="e.g. Masters in Education, UK"
-              />
             </div>
           </div>
           <div className="flex gap-2">
@@ -581,7 +569,7 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 text-gray-500">
-                      {p.targetProgram || "-"}
+                      {p.menteeProfile?.intendedStudyProgram || p.targetProgram || "-"}
                     </td>
                     <td className="px-3 sm:px-6 py-3">
                       <div className="flex items-center gap-2">

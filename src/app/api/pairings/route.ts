@@ -28,6 +28,24 @@ export async function GET() {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
+  // Fetch mentee profiles for live program data
+  const menteeIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.menteeId as string))];
+  const menteeProfiles: Record<string, { intendedStudyProgram?: string; preferredDestinations?: string }> = {};
+  if (menteeIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("MenteeProfile")
+      .select("userId, intendedStudyProgram, preferredDestinations")
+      .in("userId", menteeIds);
+    if (profiles) {
+      for (const mp of profiles) {
+        menteeProfiles[mp.userId] = {
+          intendedStudyProgram: mp.intendedStudyProgram,
+          preferredDestinations: mp.preferredDestinations,
+        };
+      }
+    }
+  }
+
   // Sort sessions by sessionNum and compute _count equivalents
   const result = (pairings || []).map((p: Record<string, unknown>) => {
     const sessions = Array.isArray(p.sessions)
@@ -45,6 +63,7 @@ export async function GET() {
       ...rest,
       sessions,
       _count: { documents: documentsCount, tasks: tasksCount },
+      menteeProfile: menteeProfiles[p.menteeId as string] || null,
     };
   });
 
@@ -57,12 +76,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { mentorId, menteeId, targetProgram, priorityUnis, ieltsScore } =
+  const { mentorId, menteeId, priorityUnis, ieltsScore } =
     await req.json();
 
   if (!mentorId || !menteeId) {
     return NextResponse.json({ error: "Missing mentor or mentee" }, { status: 400 });
   }
+
+  // Auto-fetch target program from mentee's profile
+  const { data: menteeProfile } = await supabase
+    .from("MenteeProfile")
+    .select("intendedStudyProgram")
+    .eq("userId", menteeId)
+    .single();
+  const targetProgram = menteeProfile?.intendedStudyProgram || null;
 
   // Enforce one active pairing per mentee
   const { data: existingActive } = await supabase

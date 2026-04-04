@@ -50,6 +50,7 @@ interface Pairing {
   targetProgram?: string;
   priorityUnis?: string;
   ieltsScore?: string;
+  menteeProfile?: { intendedStudyProgram?: string; preferredDestinations?: string } | null;
   mentor: { id: string; name: string; email: string };
   mentee: { id: string; name: string; email: string };
   sessions: Session[];
@@ -197,10 +198,13 @@ export default function PairingDetailPage() {
             </span>
           </h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-            {pairing.targetProgram && (
+            {(pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram) && (
               <span className="text-[var(--primary)]">
-                {pairing.targetProgram}
+                {pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram}
               </span>
+            )}
+            {pairing.menteeProfile?.preferredDestinations && (
+              <span>{pairing.menteeProfile.preferredDestinations}</span>
             )}
             {pairing.ieltsScore && <span>IELTS: {pairing.ieltsScore}</span>}
             {isMentor && (
