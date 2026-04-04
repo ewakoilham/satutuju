@@ -37,6 +37,11 @@ interface Pairing {
   documents: Document[];
 }
 
+interface MenteeProfile {
+  intendedStudyProgram?: string;
+  preferredDestinations?: string;
+}
+
 // Map checklist keywords to document categories (same as pairing detail page)
 const DOC_CAT_MAP: Record<string, string[]> = {
   cv: ["cv"], resume: ["cv"], transcript: ["transcript"],
@@ -58,23 +63,28 @@ function checklistItemUploaded(item: string, docs: Document[]): boolean {
 
 export default function MenteeDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>([]);
+  const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/pairings")
-      .then((r) => r.json())
-      .then(async (d) => {
-        const detailed = await Promise.all(
-          (d.pairings || []).map(async (p: { id: string }) => {
-            const res = await fetch(`/api/pairings/${p.id}`);
-            const data = await res.json();
-            return data.pairing;
-          })
-        );
-        setPairings(detailed.filter(Boolean));
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/pairings")
+        .then((r) => r.json())
+        .then(async (d) => {
+          const detailed = await Promise.all(
+            (d.pairings || []).map(async (p: { id: string }) => {
+              const res = await fetch(`/api/pairings/${p.id}`);
+              const data = await res.json();
+              return data.pairing;
+            })
+          );
+          setPairings(detailed.filter(Boolean));
+        }),
+      fetch("/api/profile")
+        .then((r) => r.json())
+        .then((d) => setProfile(d.profile || null)),
+    ]).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-400">Loading...</div>;
@@ -120,12 +130,20 @@ export default function MenteeDashboard() {
         <p className="text-gray-500 text-sm mt-1">
           Your mentor:{" "}
           <span className="font-medium text-gray-700">{pairing.mentor.name}</span>
-          {pairing.targetProgram && (
-            <>
-              {" "}&middot; Target:{" "}
-              <span className="text-[var(--primary)]">{pairing.targetProgram}</span>
-            </>
-          )}
+          {(() => {
+            const target = profile?.intendedStudyProgram || pairing.targetProgram;
+            const destinations = profile?.preferredDestinations;
+            if (!target) return null;
+            return (
+              <>
+                {" "}&middot; Target:{" "}
+                <span className="text-[var(--primary)]">{target}</span>
+                {destinations && (
+                  <span className="text-gray-400"> &middot; {destinations}</span>
+                )}
+              </>
+            );
+          })()}
         </p>
       </div>
 
