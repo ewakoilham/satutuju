@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import rawData from "@/data/universities.json";
 
 interface University {
@@ -44,7 +45,23 @@ export async function GET(req: NextRequest) {
   const level = searchParams.get("level") || "";
   const region = searchParams.get("region") || "";
 
-  let results = ALL_UNIVERSITIES;
+  // Fetch admin overrides from DB
+  const { data: overrides } = await supabase
+    .from("UniversityOverride")
+    .select("universityId, degreeLevel");
+
+  const overrideMap: Record<number, string> = {};
+  if (overrides) {
+    for (const o of overrides) {
+      overrideMap[o.universityId] = o.degreeLevel;
+    }
+  }
+
+  // Merge overrides into base data
+  let results = ALL_UNIVERSITIES.map((u) => ({
+    ...u,
+    degreeLevel: overrideMap[u.id] ?? u.degreeLevel,
+  }));
 
   // Region filter
   if (region && REGION_COUNTRIES[region]) {
@@ -77,8 +94,34 @@ export async function GET(req: NextRequest) {
     })
   );
 
-  return NextResponse.json({
-    universities: sanitized,
-    total: sanitized.length,
-  });
+  return NextResponse.json({ universities: sanitized, total: sanitized.length });
+}
+
+export async function PATCH(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+
+  const body = await req.json();
+  const { universityId, degreeLevel } = body;
+
+  if (!universityId || !degreeLevel) {
+    return NextResponse.json({ error: "Missing universityId or degreeLevel" }, { status: 400 });
+  }
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase.from("UniversityOverride").upsert({
+    universityId,
+    degreeLevel,
+    updatedAt: now,
+    updatedBy: user.userId,
+  }, { onConflict: "universityId" });
+
+  if (error) {
+    console.error("UniversityOverride upsert error:", error);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
