@@ -17,6 +17,7 @@ export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [filter, setFilter] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role !== "admin") {
@@ -28,9 +29,27 @@ export default function UsersPage() {
       .then((d) => setUsers(d.users || []));
   }, [user, router]);
 
-  const filtered = filter
-    ? users.filter((u) => u.role === filter)
-    : users;
+  async function deleteUser(u: UserRow) {
+    if (!window.confirm(
+      `Permanently delete ${u.name} (${u.email})?\n\nThis will remove the user and all their associated pairings, sessions, and documents. This cannot be undone.`
+    )) return;
+
+    setDeletingId(u.id);
+    try {
+      const res = await fetch(`/api/users/${u.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to delete user");
+      } else {
+        setUsers((prev) => prev.filter((x) => x.id !== u.id));
+      }
+    } catch {
+      alert("Network error");
+    }
+    setDeletingId(null);
+  }
+
+  const filtered = filter ? users.filter((u) => u.role === filter) : users;
 
   const ROLE_STYLES: Record<string, string> = {
     admin: "bg-red-100 text-red-700",
@@ -72,6 +91,7 @@ export default function UsersPage() {
               <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Email</th>
               <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Role</th>
               <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Joined</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -90,6 +110,23 @@ export default function UsersPage() {
                 </td>
                 <td className="px-3 sm:px-6 py-3 text-gray-400">
                   {new Date(u.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-3 sm:px-6 py-3">
+                  {u.id !== user?.id && (
+                    <button
+                      onClick={() => deleteUser(u)}
+                      disabled={deletingId === u.id}
+                      className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                      title="Delete user"
+                    >
+                      {deletingId === u.id
+                        ? <span className="text-xs text-red-400">...</span>
+                        : <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                      }
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
