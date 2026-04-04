@@ -964,6 +964,7 @@ function DeliverablesList({
   onRefresh: () => void;
 }) {
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
   async function handleUpload(file: File, checklistItem: string) {
     setUploadingItem(checklistItem);
@@ -971,12 +972,28 @@ function DeliverablesList({
     formData.append("file", file);
     formData.append("name", checklistItem);
     formData.append("category", guessCategory(checklistItem));
-
-    await fetch(`/api/pairings/${pairingId}/documents`, {
-      method: "POST",
-      body: formData,
-    });
+    await fetch(`/api/pairings/${pairingId}/documents`, { method: "POST", body: formData });
     setUploadingItem(null);
+    onRefresh();
+  }
+
+  async function handleReplace(file: File, doc: Doc) {
+    setUploadingItem(doc.name);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", doc.name);
+    formData.append("category", doc.category);
+    await fetch(`/api/pairings/${pairingId}/documents`, { method: "POST", body: formData });
+    await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+    setUploadingItem(null);
+    onRefresh();
+  }
+
+  async function handleDelete(doc: Doc) {
+    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return;
+    setDeletingDocId(doc.id);
+    await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+    setDeletingDocId(null);
     onRefresh();
   }
 
@@ -1008,22 +1025,42 @@ function DeliverablesList({
                   <div className="flex flex-col items-end gap-1">
                     {matched.map((doc) => (
                       <div key={doc.id} className="flex flex-col items-end gap-0.5">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onPreview(doc); }}
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                            doc.status === "approved"
-                              ? "bg-green-100 text-green-700"
-                              : doc.status === "needs_revision"
-                              ? "bg-amber-100 text-amber-700"
-                              : doc.status === "under_review"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-600"
-                          } hover:opacity-80 transition cursor-pointer`}
-                        >
-                          {doc.status === "approved" ? "✓ Verified" : doc.status === "needs_revision" ? "⚠ Needs Changes" : doc.status === "under_review" ? "⏳ Under Review" : "Uploaded"}
-                          <span className="opacity-60">v{doc.version}</span>
-                          <span className="ml-0.5">👁</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onPreview(doc); }}
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                              doc.status === "approved"
+                                ? "bg-green-100 text-green-700"
+                                : doc.status === "needs_revision"
+                                ? "bg-amber-100 text-amber-700"
+                                : doc.status === "under_review"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            } hover:opacity-80 transition cursor-pointer`}
+                          >
+                            {doc.status === "approved" ? "✓ Verified" : doc.status === "needs_revision" ? "⚠ Needs Changes" : doc.status === "under_review" ? "⏳ Under Review" : "Uploaded"}
+                            <span className="opacity-60">v{doc.version}</span>
+                            <span className="ml-0.5">👁</span>
+                          </button>
+                          {/* Replace icon */}
+                          <label className="p-1 rounded hover:bg-gray-100 transition cursor-pointer" title="Replace document">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReplace(f, doc); e.target.value = ""; }} />
+                          </label>
+                          {/* Delete icon */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}
+                            disabled={deletingDocId === doc.id}
+                            className="p-1 rounded hover:bg-red-50 transition disabled:opacity-50"
+                            title="Delete document"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                         {doc.status === "needs_revision" && doc.feedback && (
                           <span className="text-[10px] text-amber-600 max-w-[200px] truncate" title={doc.feedback}>
                             Mentor: &ldquo;{doc.feedback}&rdquo;
@@ -1445,21 +1482,26 @@ function DocumentsTab({
                       Review
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      setReplacingDocId(replacingDocId === doc.id ? null : doc.id);
-                      setReplacingFile(null);
-                    }}
-                    className="text-xs text-amber-600 hover:underline"
-                  >
-                    Replace
-                  </button>
+                  {/* Replace icon */}
+                  <label className="p-1.5 rounded-lg hover:bg-amber-50 transition cursor-pointer" title="Replace document">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setReplacingFile(f); setReplacingDocId(doc.id); } e.target.value = ""; }} />
+                  </label>
+                  {/* Delete icon */}
                   <button
                     onClick={() => handleDelete(doc)}
                     disabled={deletingDocId === doc.id}
-                    className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                    className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                    title="Delete document"
                   >
-                    {deletingDocId === doc.id ? "..." : "Delete"}
+                    {deletingDocId === doc.id
+                      ? <span className="text-xs text-red-400">...</span>
+                      : <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    }
                   </button>
                 </div>
               </div>
@@ -1475,18 +1517,14 @@ function DocumentsTab({
                 </div>
               )}
 
-              {replacingDocId === doc.id && (
+              {replacingDocId === doc.id && replacingFile && (
                 <div className="mt-3 p-4 bg-amber-50 border border-amber-100 rounded-lg space-y-3">
                   <p className="text-xs font-semibold text-amber-700 uppercase">Replace Document</p>
-                  <input
-                    type="file"
-                    onChange={(e) => setReplacingFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm"
-                  />
+                  <p className="text-xs text-gray-600">New file: <span className="font-medium">{replacingFile.name}</span></p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReplace(doc)}
-                      disabled={!replacingFile || deletingDocId === doc.id}
+                      disabled={deletingDocId === doc.id}
                       className="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:opacity-90 disabled:opacity-50"
                     >
                       {deletingDocId === doc.id ? "Replacing..." : "Upload New Version"}
