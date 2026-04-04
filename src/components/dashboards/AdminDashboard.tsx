@@ -273,24 +273,28 @@ export default function AdminDashboard() {
           value={mentors.length}
           icon="users"
           accent="blue"
+          href="/dashboard/users?filter=mentor"
         />
         <StatCard
           label="Total Mentees"
           value={mentees.length}
           icon="graduation"
           accent="lavender"
+          href="/dashboard/users?filter=mentee"
         />
         <StatCard
           label="Active Pairings"
           value={pairings.filter((p) => p.status === "active").length}
           icon="link"
           accent="green"
+          href="/dashboard/pairings"
         />
         <StatCard
           label="Completed"
           value={pairings.filter((p) => p.status === "completed").length}
           icon="check"
           accent="yellow"
+          href="/dashboard/pairings"
         />
       </div>
 
