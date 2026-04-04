@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const validRoles = ["mentor", "mentee", "admin"];
+    // Admin role cannot be self-assigned via signup
+    const validRoles = ["mentor", "mentee"];
     const userRole = validRoles.includes(role) ? role : "mentee";
 
     const { data: existing } = await supabase
