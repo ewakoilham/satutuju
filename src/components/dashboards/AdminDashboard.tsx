@@ -518,10 +518,18 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[var(--primary)] text-xs font-medium">
-                          View &rarr;
-                        </span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {/* View icon */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/pairings/${p.id}`; }}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+                          title="View pairing"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
                         {p.status !== "cancelled" && (
                           <>
                             {replacingPairingId === p.id ? (
@@ -551,19 +559,30 @@ export default function AdminDashboard() {
                                 </button>
                               </div>
                             ) : (
+                              /* Replace icon */
                               <button
                                 onClick={(e) => { e.stopPropagation(); setReplacingPairingId(p.id); setReplaceMentorId(""); }}
-                                className="text-xs text-amber-600 hover:underline font-medium"
+                                className="p-1.5 rounded-lg hover:bg-amber-50 transition"
+                                title="Replace mentor"
                               >
-                                Replace
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
                               </button>
                             )}
+                            {/* Remove icon */}
                             <button
                               onClick={(e) => { e.stopPropagation(); removePairing(p.id, p.mentor?.name || "mentor", p.mentee?.name || "mentee"); }}
                               disabled={actionLoading === p.id}
-                              className="text-xs text-red-500 hover:underline font-medium disabled:opacity-50"
+                              className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                              title="Remove pairing"
                             >
-                              Remove
+                              {actionLoading === p.id
+                                ? <span className="text-xs text-red-400">...</span>
+                                : <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                              }
                             </button>
                           </>
                         )}
