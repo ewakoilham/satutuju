@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Logo from "@/components/ui/Logo";
 import Icon from "@/components/ui/Icon";
 
@@ -127,12 +128,10 @@ export default function LoginPage() {
 
       {/* Right branded panel - desktop only */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        <svg viewBox="0 0 120 120" fill="none" className="absolute top-10 right-10 w-48 h-48 text-primary/5">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
-        <svg viewBox="0 0 120 120" fill="none" className="absolute bottom-20 left-10 w-32 h-32 text-brand-yellow/30 rotate-45">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
+        {/* Brand illustrations */}
+        <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-20" />
+        <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-20" />
+        <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-15" />
 
         <div className="relative text-center">
           <Logo variant="main" size="lg" className="mx-auto mb-8" />
