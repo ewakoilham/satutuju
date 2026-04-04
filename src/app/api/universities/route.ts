@@ -88,8 +88,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Degree level filter
+  // Selecting a specific level includes "All Programs" entries (they cover all levels)
+  // Exception: Undergraduate excludes Graduate-only, and vice versa
   if (level) {
-    results = results.filter((u) => u.degreeLevel === level);
+    results = results.filter((u) => {
+      if (u.degreeLevel === "All") return true; // All Programs always included
+      if (u.degreeLevel === level) return true; // exact match always included
+      // Exclude the opposite specific level
+      if (level === "Undergraduate" && u.degreeLevel === "Graduate") return false;
+      if (level === "Graduate" && u.degreeLevel === "Undergraduate") return false;
+      // For other specific levels (English Language, Summer Programs etc), exclude unrelated specifics
+      return false;
+    });
   }
 
   const isAdmin = user.role === "admin";
