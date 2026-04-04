@@ -37,35 +37,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Left branded panel - desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        {/* Decorative puzzle shapes */}
-        <svg viewBox="0 0 120 120" fill="none" className="absolute top-10 right-10 w-48 h-48 text-primary/5">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
-        <svg viewBox="0 0 120 120" fill="none" className="absolute bottom-20 left-10 w-32 h-32 text-brand-yellow/30 rotate-45">
-          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
-        </svg>
-
-        <div className="relative text-center">
-          <Logo variant="main" size="lg" className="mx-auto mb-8" />
-          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
-            Welcome back
-          </h2>
-          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
-            Continue your mentorship journey. Your mentor and resources are waiting for you.
-          </p>
-
-          {/* Decorative dots */}
-          <div className="flex items-center justify-center gap-2 mt-10">
-            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
-          </div>
-        </div>
-      </div>
-
-      {/* Right form panel */}
+      {/* Left form panel */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-8 py-12">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
@@ -149,6 +121,32 @@ export default function LoginPage() {
                 Sign Up
               </Link>
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right branded panel - desktop only */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
+        <svg viewBox="0 0 120 120" fill="none" className="absolute top-10 right-10 w-48 h-48 text-primary/5">
+          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
+        </svg>
+        <svg viewBox="0 0 120 120" fill="none" className="absolute bottom-20 left-10 w-32 h-32 text-brand-yellow/30 rotate-45">
+          <path d="M50 10a10 10 0 0120 0v8a4 4 0 004 4h24a8 8 0 018 8v24a4 4 0 01-4 4 10 10 0 000 20 4 4 0 014 4v24a8 8 0 01-8 8H74a4 4 0 01-4-4 10 10 0 00-20 0 4 4 0 01-4 4H22a8 8 0 01-8-8V82a4 4 0 00-4-4 10 10 0 010-20 4 4 0 004-4V30a8 8 0 018-8h24a4 4 0 004-4V10z" fill="currentColor" />
+        </svg>
+
+        <div className="relative text-center">
+          <Logo variant="main" size="lg" className="mx-auto mb-8" />
+          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
+            Welcome back
+          </h2>
+          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
+            Continue your mentorship journey. Your mentor and resources are waiting for you.
+          </p>
+
+          <div className="flex items-center justify-center gap-2 mt-10">
+            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
+            <div className="w-2 h-2 rounded-full bg-primary/30" />
+            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
           </div>
         </div>
       </div>

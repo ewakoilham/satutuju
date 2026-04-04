@@ -4,9 +4,9 @@
   /* === BRAND COLORS (from official Satu Tuju brand guidelines) === */
   --primary: #3958b3;
   --primary-deep: #4f64b1;
-  --brand-blue-soft: #c6dee6;
-  --brand-lavender: #d4d1e1;
-  --brand-yellow: #f0eab4;
+  --brand-blue-soft: #c2dbee;
+  --brand-lavender: #c2dbee;
+  --brand-yellow: #fefaef;
 
   /* Primary scale (harmonized around #3958b3) */
   --primary-50: #edf1fa;
@@ -39,7 +39,7 @@
 
   /* Borders */
   --border: #dfe5eb;
-  --border-hover: #c6dee6;
+  --border-hover: #c2dbee;
 
   /* Shadows (warm-tinted for brand feel) */
   --shadow-xs: 0 1px 2px 0 rgb(57 88 179 / 0.04);
