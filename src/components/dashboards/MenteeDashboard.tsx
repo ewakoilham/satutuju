@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PHASES, CURRICULUM } from "@/lib/curriculum";
+import Icon from "@/components/ui/Icon";
+import Badge from "@/components/ui/Badge";
+import ProgressBar from "@/components/ui/ProgressBar";
+import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
 interface Session {
   sessionNum: number;
@@ -61,6 +66,14 @@ function checklistItemUploaded(item: string, docs: Document[]): boolean {
   return docs.some((d) => d.name.toLowerCase().includes(lower.split(/[\s\/\(\)]+/).filter(w => w.length > 2)[0] || ""));
 }
 
+const PHASE_ICONS: Record<string, string> = {
+  discovery: "search",
+  planning: "map",
+  writing: "edit",
+  execution: "document",
+  closing: "check",
+};
+
 export default function MenteeDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
@@ -87,17 +100,15 @@ export default function MenteeDashboard() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-gray-400">Loading...</div>;
+  if (loading) return <SkeletonDashboard />;
 
   if (pairings.length === 0) {
     return (
-      <div className="text-center py-20">
-        <p className="text-5xl mb-4">🗺️</p>
-        <h2 className="text-xl font-semibold">Your journey hasn&apos;t started yet</h2>
-        <p className="text-gray-500 mt-2">
-          You&apos;ll be paired with a mentor soon. Hang tight!
-        </p>
-      </div>
+      <EmptyState
+        icon="map"
+        title="Your journey hasn't started yet"
+        description="You'll be paired with a mentor soon. Hang tight!"
+      />
     );
   }
 
@@ -126,7 +137,7 @@ export default function MenteeDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">My Journey</h1>
+        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
         <p className="text-gray-500 text-sm mt-1">
           Your mentor:{" "}
           <span className="font-medium text-gray-700">{pairing.mentor.name}</span>
@@ -152,9 +163,14 @@ export default function MenteeDashboard() {
         {/* Next Session */}
         <Link
           href={`/dashboard/pairings/${pairing.id}`}
-          className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[var(--primary)] transition"
+          className="card card-hover p-5"
         >
-          <p className="text-xs text-gray-400 font-medium uppercase mb-2">Next Session</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-blue-soft flex items-center justify-center">
+              <Icon name="calendar" size={18} className="text-primary" />
+            </div>
+            <p className="text-xs text-gray-400 font-medium uppercase">Next Session</p>
+          </div>
           {nextSession ? (
             <>
               <p className="text-sm font-semibold">
@@ -172,13 +188,9 @@ export default function MenteeDashboard() {
                   : "Not scheduled yet"}
               </p>
               <div className="mt-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  nextSession.status === "scheduled"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-gray-100 text-gray-500"
-                }`}>
+                <Badge variant={nextSession.status === "scheduled" ? "info" : "neutral"}>
                   {nextSession.status}
-                </span>
+                </Badge>
               </div>
             </>
           ) : (
@@ -189,9 +201,14 @@ export default function MenteeDashboard() {
         {/* Pending Tasks */}
         <Link
           href={`/dashboard/pairings/${pairing.id}`}
-          className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[var(--primary)] transition"
+          className="card card-hover p-5"
         >
-          <p className="text-xs text-gray-400 font-medium uppercase mb-2">Tasks</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-yellow flex items-center justify-center">
+              <Icon name="clipboard-check" size={18} className="text-primary" />
+            </div>
+            <p className="text-xs text-gray-400 font-medium uppercase">Tasks</p>
+          </div>
           <p className="text-3xl font-bold">{pendingTasks.length}</p>
           <p className="text-xs text-gray-500 mt-1">
             {pendingTasks.length === 0 ? "All caught up!" : "pending tasks"}
@@ -206,9 +223,14 @@ export default function MenteeDashboard() {
         {/* Document Progress */}
         <Link
           href={`/dashboard/pairings/${pairing.id}`}
-          className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[var(--primary)] transition"
+          className="card card-hover p-5"
         >
-          <p className="text-xs text-gray-400 font-medium uppercase mb-2">Documents</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-lavender flex items-center justify-center">
+              <Icon name="document" size={18} className="text-primary" />
+            </div>
+            <p className="text-xs text-gray-400 font-medium uppercase">Documents</p>
+          </div>
           <p className="text-3xl font-bold">
             {uploadedCount}<span className="text-lg text-gray-400 font-normal">/{totalChecklist}</span>
           </p>
@@ -218,17 +240,16 @@ export default function MenteeDashboard() {
       </div>
 
       {/* Session Progress */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Session Progress</h3>
           <span className="text-sm text-gray-500">{completed}/10 completed</span>
         </div>
-        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-6">
-          <div
-            className="h-full bg-[var(--primary)] rounded-full transition-all"
-            style={{ width: `${(completed / 10) * 100}%` }}
-          />
-        </div>
+        <ProgressBar
+          value={(completed / 10) * 100}
+          size="lg"
+          className="mb-6"
+        />
 
         {/* Phase timeline — clickable, expands inline */}
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -241,6 +262,7 @@ export default function MenteeDashboard() {
                 (s) => s.status === "completed" || s === nextSession
               );
             const isExpanded = expandedPhase === key;
+            const phaseIconName = PHASE_ICONS[key] || "puzzle";
 
             return (
               <button
@@ -250,13 +272,15 @@ export default function MenteeDashboard() {
                   isExpanded
                     ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
                     : phaseCompleted
-                    ? "bg-green-50 border-green-200 hover:border-green-300"
+                    ? "bg-success-light border-green-200 hover:border-green-300"
                     : phaseActive
-                    ? "bg-[var(--primary-light)] border-[var(--primary)]"
+                    ? "bg-brand-blue-soft border-[var(--primary)]"
                     : "bg-gray-50 border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <p className="text-lg">{phase.emoji}</p>
+                <div className="flex justify-center">
+                  <Icon name={phaseIconName} size={20} className={isExpanded ? "text-white" : ""} />
+                </div>
                 <p className={`text-xs font-medium mt-1 ${isExpanded ? "text-white" : ""}`}>{phase.label}</p>
                 <p className={`text-[10px] mt-0.5 ${isExpanded ? "text-white/70" : "text-gray-400"}`}>
                   {phaseSessions.filter((s) => s.status === "completed").length}/{phaseSessions.length} sessions
@@ -269,15 +293,16 @@ export default function MenteeDashboard() {
         {/* Expanded phase detail */}
         {expandedPhase && (() => {
           const phaseInfo = PHASES[expandedPhase as keyof typeof PHASES];
+          const phaseIconName = PHASE_ICONS[expandedPhase] || "puzzle";
           const phaseSessions = pairing.sessions
             .filter((s) => s.phase === expandedPhase)
             .sort((a, b) => a.sessionNum - b.sessionNum);
 
           return (
-            <div className="mt-4 border-t border-gray-100 pt-4 space-y-3 animate-in fade-in duration-200">
+            <div className="mt-4 border-t border-gray-100 pt-4 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-700">
-                  {phaseInfo.emoji} {phaseInfo.label} Phase
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Icon name={phaseIconName} size={16} /> {phaseInfo.label} Phase
                 </h4>
                 <Link
                   href={`/dashboard/pairings/${pairing.id}`}
@@ -312,7 +337,7 @@ export default function MenteeDashboard() {
                             ? "bg-blue-100 text-blue-600"
                             : "bg-gray-200 text-gray-400"
                         }`}>
-                          {isCompleted ? "✓" : session.sessionNum}
+                          {isCompleted ? <Icon name="check" size={16} /> : session.sessionNum}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-800">
@@ -322,8 +347,9 @@ export default function MenteeDashboard() {
                             {currItem?.duration || "75 Min"}
                           </p>
                           {session.scheduledAt && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              📅 {new Date(session.scheduledAt).toLocaleDateString("en-GB", {
+                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                              <Icon name="calendar" size={12} />
+                              {new Date(session.scheduledAt).toLocaleDateString("en-GB", {
                                 weekday: "short",
                                 day: "numeric",
                                 month: "short",
@@ -338,31 +364,29 @@ export default function MenteeDashboard() {
                               {currItem.docChecklist.map((item, i) => {
                                 const uploaded = checklistItemUploaded(item, pairing.documents);
                                 return (
-                                  <span
+                                  <Badge
                                     key={i}
-                                    className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                      uploaded
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-gray-100 text-gray-500"
-                                    }`}
+                                    variant={uploaded ? "success" : "neutral"}
                                   >
-                                    {uploaded ? "✓" : "○"} {item}
-                                  </span>
+                                    {uploaded ? <Icon name="check" size={10} className="inline mr-0.5" /> : "○"} {item}
+                                  </Badge>
                                 );
                               })}
                             </div>
                           )}
                         </div>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${
-                        isCompleted
-                          ? "bg-green-100 text-green-700"
-                          : isNext && session.status === "scheduled"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
+                      <Badge
+                        variant={
+                          isCompleted
+                            ? "success"
+                            : isNext && session.status === "scheduled"
+                            ? "info"
+                            : "neutral"
+                        }
+                      >
                         {session.status}
-                      </span>
+                      </Badge>
                     </div>
                   </Link>
                 );
@@ -374,7 +398,7 @@ export default function MenteeDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Deadlines & Tasks */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">My Tasks</h3>
             <span className="text-xs text-gray-400">{pendingTasks.length} pending</span>
@@ -413,7 +437,7 @@ export default function MenteeDashboard() {
         </div>
 
         {/* Document Checklist */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Document Checklist</h3>
             <Link
@@ -426,12 +450,11 @@ export default function MenteeDashboard() {
 
           {/* Progress bar */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${totalChecklist > 0 ? (uploadedCount / totalChecklist) * 100 : 0}%` }}
-              />
-            </div>
+            <ProgressBar
+              value={totalChecklist > 0 ? (uploadedCount / totalChecklist) * 100 : 0}
+              size="sm"
+              className="flex-1"
+            />
             <span className="text-xs text-gray-500 whitespace-nowrap">
               {uploadedCount}/{totalChecklist}
             </span>
@@ -456,6 +479,7 @@ export default function MenteeDashboard() {
             {CURRICULUM.map((session) => {
               if (session.docChecklist.length === 0) return null;
               const phaseInfo = PHASES[session.phase as keyof typeof PHASES];
+              const phaseIconName = PHASE_ICONS[session.phase] || "puzzle";
               const sessionDone = pairing.sessions.find(
                 (s) => s.sessionNum === session.sessionNum
               )?.status === "completed";
@@ -466,8 +490,8 @@ export default function MenteeDashboard() {
               return (
                 <div key={session.sessionNum} className="border-b border-gray-50 pb-2 last:border-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-gray-500">
-                      {phaseInfo?.emoji} S{session.sessionNum}
+                    <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                      <Icon name={phaseIconName} size={12} /> S{session.sessionNum}
                     </span>
                     <span className="text-xs text-gray-400">
                       {itemsUploaded}/{session.docChecklist.length}
@@ -478,9 +502,13 @@ export default function MenteeDashboard() {
                       const uploaded = checklistItemUploaded(item, pairing.documents);
                       return (
                         <div key={i} className="flex items-center gap-2">
-                          <span className={`text-xs ${uploaded ? "text-green-500" : "text-gray-300"}`}>
-                            {uploaded ? "✓" : "○"}
-                          </span>
+                          {uploaded ? (
+                            <Icon name="check" size={12} className="text-green-500" />
+                          ) : (
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-gray-300">
+                              <circle cx="12" cy="12" r="9" />
+                            </svg>
+                          )}
                           <span className={`text-xs ${uploaded ? "text-gray-600" : "text-gray-400"}`}>
                             {item}
                           </span>
@@ -499,10 +527,10 @@ export default function MenteeDashboard() {
       <div className="text-center">
         <Link
           href={`/dashboard/pairings/${pairing.id}`}
-          className="inline-flex items-center gap-2 bg-[var(--primary)] text-white px-6 py-2.5 rounded-lg font-medium hover:opacity-90 transition text-sm"
+          className="btn-primary inline-flex items-center gap-2"
         >
           View Full Journey Details
-          <span>&rarr;</span>
+          <Icon name="arrow-right" size={16} />
         </Link>
       </div>
     </div>
@@ -523,7 +551,7 @@ function TaskItem({ task }: { task: Task }) {
   }
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 card-hover rounded-lg border-l-4 border-l-[var(--primary)]">
       <div>
         <p className="text-sm font-medium">{task.title}</p>
         {task.dueDate && (
@@ -535,8 +563,9 @@ function TaskItem({ task }: { task: Task }) {
       <button
         onClick={markComplete}
         disabled={completing}
-        className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium hover:bg-green-200 transition disabled:opacity-50"
+        className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium hover:bg-green-200 transition disabled:opacity-50 inline-flex items-center gap-1"
       >
+        <Icon name="clipboard-check" size={12} />
         {completing ? "..." : "Complete"}
       </button>
     </div>

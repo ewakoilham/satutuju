@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
+import Badge from "@/components/ui/Badge";
+import ProgressBar from "@/components/ui/ProgressBar";
+import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
 interface Pairing {
   id: string;
@@ -13,11 +19,11 @@ interface Pairing {
 }
 
 const PHASE_COLORS: Record<string, string> = {
-  discovery: "bg-blue-100 text-blue-700",
-  planning: "bg-amber-100 text-amber-700",
-  writing: "bg-purple-100 text-purple-700",
-  execution: "bg-orange-100 text-orange-700",
-  closing: "bg-green-100 text-green-700",
+  discovery: "bg-brand-blue-soft text-primary",
+  planning: "bg-brand-yellow text-primary-800",
+  writing: "bg-brand-lavender text-primary-700",
+  execution: "bg-primary-100 text-primary-700",
+  closing: "bg-success-light text-success",
 };
 
 export default function MentorDashboard() {
@@ -31,24 +37,22 @@ export default function MentorDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-gray-400">Loading...</div>;
+  if (loading) return <SkeletonDashboard />;
 
   if (pairings.length === 0) {
     return (
-      <div className="text-center py-20">
-        <p className="text-5xl mb-4">🎓</p>
-        <h2 className="text-xl font-semibold">No mentees assigned yet</h2>
-        <p className="text-gray-500 mt-2">
-          The admin will pair you with mentees soon.
-        </p>
-      </div>
+      <EmptyState
+        icon="graduation"
+        title="No mentees assigned yet"
+        description="The admin will pair you with mentees soon."
+      />
     );
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">My Mentees</h1>
+        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Mentees</h1>
         <p className="text-gray-500 text-sm mt-1">
           Track progress and guide your mentees
         </p>
@@ -69,27 +73,24 @@ export default function MentorDashboard() {
             <Link
               key={p.id}
               href={`/dashboard/pairings/${p.id}`}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition block"
+              className="card-hover block"
             >
               <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{p.mentee.name}</h3>
-                  <p className="text-sm text-gray-500">{p.mentee.email}</p>
-                  {p.targetProgram && (
-                    <p className="text-sm text-[var(--primary)] mt-1">
-                      {p.targetProgram}
-                    </p>
-                  )}
+                <div className="flex items-start gap-3">
+                  <Avatar name={p.mentee.name} size="lg" />
+                  <div>
+                    <h3 className="text-lg font-semibold">{p.mentee.name}</h3>
+                    <p className="text-sm text-gray-500">{p.mentee.email}</p>
+                    {p.targetProgram && (
+                      <p className="text-sm text-[var(--primary)] mt-1">
+                        {p.targetProgram}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    p.status === "active"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
+                <Badge variant={p.status === "active" ? "success" : "neutral"}>
                   {p.status}
-                </span>
+                </Badge>
               </div>
 
               {/* Progress bar */}
@@ -98,12 +99,7 @@ export default function MentorDashboard() {
                   <span>Session Progress</span>
                   <span>{completed}/10</span>
                 </div>
-                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--primary)] rounded-full transition-all"
-                    style={{ width: `${(completed / 10) * 100}%` }}
-                  />
-                </div>
+                <ProgressBar value={(completed / 10) * 100} />
               </div>
 
               {/* Current phase & stats */}
@@ -124,9 +120,7 @@ export default function MentorDashboard() {
                   {p._count.tasks} tasks
                 </span>
                 {latestEnergy && latestEnergy <= 2 && (
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
-                    Low energy
-                  </span>
+                  <Badge variant="danger">Low energy</Badge>
                 )}
               </div>
             </Link>
