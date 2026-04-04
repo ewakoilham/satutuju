@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/ui/Icon";
+import Logo from "@/components/ui/Logo";
 
 // ── Question definitions ──────────────────────────────────────
 interface Question {
@@ -177,6 +179,26 @@ export default function OnboardingPage() {
   const sections = [...new Set(QUESTIONS.map((q) => q.section))];
   const currentSection = q.section;
 
+  // Determine which sections are completed (all questions answered)
+  const isSectionCompleted = (section: string): boolean => {
+    const sectionQuestions = QUESTIONS.filter((sq) => sq.section === section);
+    const currentSectionIndex = sections.indexOf(currentSection);
+    const thisSectionIndex = sections.indexOf(section);
+    if (thisSectionIndex >= currentSectionIndex) return false;
+    return sectionQuestions.every((sq) => {
+      const v = profile[sq.field];
+      if (sq.type === "toggle") return true; // toggles always have a value
+      return v !== "" && v !== undefined;
+    });
+  };
+
+  // Check if a section is before the current one (passed through)
+  const isSectionPassed = (section: string): boolean => {
+    const currentSectionIndex = sections.indexOf(currentSection);
+    const thisSectionIndex = sections.indexOf(section);
+    return thisSectionIndex < currentSectionIndex;
+  };
+
   const value = profile[q.field];
 
   // ── Intro screen ──
@@ -184,8 +206,8 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center px-6">
         <div className="max-w-md text-center space-y-6">
-          <span className="text-sm font-semibold text-[var(--primary)] tracking-wide">SATU TUJU</span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+          <Logo variant="main" size="lg" className="mx-auto" />
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight font-[family-name:var(--font-heading)]">
             Hey there!<br />Welcome to SatuTuju
           </h1>
           <p className="text-gray-500 text-base sm:text-lg leading-relaxed">
@@ -197,7 +219,7 @@ export default function OnboardingPage() {
           </p>
           <button
             onClick={() => setShowIntro(false)}
-            className="bg-[var(--primary)] text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
+            className="bg-primary text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
           >
             Let&apos;s Go
           </button>
@@ -211,32 +233,39 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <div className="px-4 sm:px-8 pt-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--primary)]">SATU TUJU</span>
+          <span className="text-sm font-semibold text-primary">SATU TUJU</span>
           <span className="text-xs text-gray-400">{current + 1} / {total}</span>
         </div>
         {/* Progress bar */}
         <div className="max-w-2xl mx-auto mt-3">
-          <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-gradient-to-r from-primary to-primary-deep rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
         {/* Section pills */}
         <div className="max-w-2xl mx-auto mt-3 flex gap-2 flex-wrap">
-          {sections.map((s) => (
-            <span
-              key={s}
-              className={`text-xs px-2.5 py-1 rounded-full transition-all ${
-                s === currentSection
-                  ? "bg-[var(--primary)] text-white font-medium"
-                  : "bg-white text-gray-400 border border-gray-200"
-              }`}
-            >
-              {s}
-            </span>
-          ))}
+          {sections.map((s) => {
+            const completed = isSectionPassed(s) && isSectionCompleted(s);
+            const passed = isSectionPassed(s);
+            return (
+              <span
+                key={s}
+                className={`text-xs px-2.5 py-1 rounded-full transition-all inline-flex items-center gap-1 ${
+                  s === currentSection
+                    ? "bg-brand-blue-soft text-primary font-medium"
+                    : passed
+                      ? "bg-white text-gray-500 border border-gray-200"
+                      : "bg-white text-gray-400 border border-gray-200"
+                }`}
+              >
+                {completed && <Icon name="check" size={12} className="text-primary" />}
+                {s}
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -253,12 +282,12 @@ export default function OnboardingPage() {
             }`}
           >
             {/* Question number */}
-            <p className="text-xs text-[var(--primary)] font-semibold mb-2 tracking-wide">
+            <p className="text-xs text-primary font-semibold mb-2 tracking-wide">
               QUESTION {current + 1}
             </p>
 
             {/* Question text */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-1 font-[family-name:var(--font-heading)]">
               {q.question}
             </h2>
             {q.subtitle && (
@@ -275,7 +304,7 @@ export default function OnboardingPage() {
                   value={(value as string) || ""}
                   onChange={(e) => updateField(q.field, e.target.value)}
                   placeholder={q.placeholder || "Type your answer..."}
-                  className="w-full text-lg px-0 py-3 border-0 border-b-2 border-gray-200 bg-transparent focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-gray-300"
+                  className="input-field"
                 />
               )}
 
@@ -285,7 +314,7 @@ export default function OnboardingPage() {
                   type="date"
                   value={(value as string) || ""}
                   onChange={(e) => updateField(q.field, e.target.value)}
-                  className="w-full text-lg px-0 py-3 border-0 border-b-2 border-gray-200 bg-transparent focus:outline-none focus:border-[var(--primary)] transition-colors"
+                  className="input-field"
                 />
               )}
 
@@ -296,7 +325,7 @@ export default function OnboardingPage() {
                   onChange={(e) => updateField(q.field, e.target.value)}
                   placeholder={q.placeholder || "Type your answer..."}
                   rows={3}
-                  className="w-full text-lg px-0 py-3 border-0 border-b-2 border-gray-200 bg-transparent focus:outline-none focus:border-[var(--primary)] transition-colors placeholder:text-gray-300 resize-none"
+                  className="input-field resize-none"
                 />
               )}
 
@@ -308,11 +337,11 @@ export default function OnboardingPage() {
                       onClick={() => updateField(q.field, opt)}
                       className={`text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                         value === opt
-                          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                          ? "border-primary bg-primary text-white scale-[1.02]"
                           : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                       }`}
                     >
-                      {value === opt && <span className="mr-2">✓</span>}
+                      {value === opt && <Icon name="check" size={14} className="inline mr-2" />}
                       {opt}
                     </button>
                   ))}
@@ -325,7 +354,7 @@ export default function OnboardingPage() {
                     onClick={() => updateField(q.field, true)}
                     className={`flex-1 py-4 rounded-xl border-2 text-base font-semibold transition-all ${
                       value === true
-                        ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                        ? "border-primary bg-primary text-white scale-[1.02]"
                         : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     }`}
                   >
@@ -335,7 +364,7 @@ export default function OnboardingPage() {
                     onClick={() => updateField(q.field, false)}
                     className={`flex-1 py-4 rounded-xl border-2 text-base font-semibold transition-all ${
                       value === false
-                        ? "border-gray-400 bg-gray-100 text-gray-700"
+                        ? "border-gray-400 bg-gray-100 text-gray-700 scale-[1.02]"
                         : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     }`}
                   >
@@ -351,7 +380,7 @@ export default function OnboardingPage() {
                     <select
                       value={intakeMonth}
                       onChange={(e) => setIntakeMonth(e.target.value)}
-                      className="w-full text-base px-3 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[var(--primary)] transition-colors"
+                      className="input-field"
                     >
                       <option value="">Select month...</option>
                       {MONTHS.map((m) => (
@@ -364,7 +393,7 @@ export default function OnboardingPage() {
                     <select
                       value={intakeYear}
                       onChange={(e) => setIntakeYear(e.target.value)}
-                      className="w-full text-base px-3 py-3 border-2 border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[var(--primary)] transition-colors"
+                      className="input-field"
                     >
                       <option value="">Select year...</option>
                       {YEARS.map((y) => (
@@ -401,9 +430,7 @@ export default function OnboardingPage() {
               onClick={handleBack}
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 px-4 py-2.5 rounded-lg hover:bg-white transition"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <Icon name="chevron-left" size={16} />
               Back
             </button>
           ) : (
@@ -423,24 +450,20 @@ export default function OnboardingPage() {
               <button
                 onClick={handleComplete}
                 disabled={saving}
-                className="flex items-center gap-2 text-sm text-white bg-[var(--primary)] hover:opacity-90 px-6 py-2.5 rounded-lg transition font-medium disabled:opacity-50"
+                className="flex items-center gap-2 text-sm text-white bg-primary hover:opacity-90 px-6 py-2.5 rounded-lg transition font-medium disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Complete Setup"}
                 {!saving && (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Icon name="check" size={16} />
                 )}
               </button>
             ) : (
               <button
                 onClick={handleNext}
-                className="flex items-center gap-1 text-sm text-white bg-[var(--primary)] hover:opacity-90 px-5 py-2.5 rounded-lg transition font-medium"
+                className="flex items-center gap-1 text-sm text-white bg-primary hover:opacity-90 px-5 py-2.5 rounded-lg transition font-medium"
               >
                 Next
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <Icon name="chevron-right" size={16} />
               </button>
             )}
           </div>

@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/lib/hooks";
 import { CURRICULUM, DOCUMENT_CATEGORIES } from "@/lib/curriculum";
+import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
+import Badge from "@/components/ui/Badge";
+import ProgressBar from "@/components/ui/ProgressBar";
+import { ConfirmModal } from "@/components/ui/Modal";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
 interface Session {
   id: string;
@@ -23,7 +29,6 @@ interface Session {
 
 interface Doc {
   id: string;
-  pairingId: string;
   category: string;
   name: string;
   fileName: string;
@@ -51,7 +56,6 @@ interface Pairing {
   targetProgram?: string;
   priorityUnis?: string;
   ieltsScore?: string;
-  menteeProfile?: { intendedStudyProgram?: string; preferredDestinations?: string } | null;
   mentor: { id: string; name: string; email: string };
   mentee: { id: string; name: string; email: string };
   sessions: Session[];
@@ -112,6 +116,7 @@ export default function PairingDetailPage() {
   const [allMentors, setAllMentors] = useState<{ id: string; name: string; email: string }[]>([]);
   const [newMentorId, setNewMentorId] = useState("");
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const isAdmin = user?.role === "admin";
 
@@ -126,7 +131,7 @@ export default function PairingDetailPage() {
   }, [isAdmin]);
 
   if (loading || !pairing || !user) {
-    return <div className="text-gray-400">Loading...</div>;
+    return <SkeletonDashboard />;
   }
 
   const isMentor = user.role === "mentor" || user.role === "admin";
@@ -159,7 +164,6 @@ export default function PairingDetailPage() {
 
   async function handleRemovePairing() {
     if (!pairing) return;
-    if (!window.confirm(`Cancel the pairing between ${pairing.mentor.name} and ${pairing.mentee.name}? This cannot be undone.`)) return;
     setAdminActionLoading(true);
     try {
       const res = await fetch(`/api/pairings/${id}`, { method: "DELETE" });
@@ -173,6 +177,7 @@ export default function PairingDetailPage() {
       alert("Network error");
     }
     setAdminActionLoading(false);
+    setShowRemoveConfirm(false);
   }
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
@@ -188,30 +193,35 @@ export default function PairingDetailPage() {
         <div>
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-sm text-gray-400 hover:text-gray-600 mb-2 inline-block"
+            className="text-sm text-gray-400 hover:text-gray-600 mb-2 inline-flex items-center gap-1"
           >
-            &larr; Back to Dashboard
+            <Icon name="arrow-left" size={14} />
+            Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold">
-            {pairing.mentee.name}
-            <span className="text-gray-400 font-normal text-lg ml-2">
-              &times; {pairing.mentor.name}
+          <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">
+            <span className="flex items-center gap-3">
+              <Avatar name={pairing.mentee.name} size="md" />
+              {pairing.mentee.name}
+              <span className="text-gray-400 font-normal text-lg">
+                &times;
+              </span>
+              <Avatar name={pairing.mentor.name} size="md" />
+              <span className="text-gray-400 font-normal text-lg">
+                {pairing.mentor.name}
+              </span>
             </span>
           </h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-            {(pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram) && (
-              <span className="text-[var(--primary)]">
-                {pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram}
+            {pairing.targetProgram && (
+              <span className="text-primary">
+                {pairing.targetProgram}
               </span>
-            )}
-            {pairing.menteeProfile?.preferredDestinations && (
-              <span>{pairing.menteeProfile.preferredDestinations}</span>
             )}
             {pairing.ieltsScore && <span>IELTS: {pairing.ieltsScore}</span>}
             {isMentor && (
               <button
                 onClick={() => router.push(`/dashboard/profile/${pairing.mentee.id}`)}
-                className="text-[var(--primary)] hover:underline font-medium"
+                className="text-primary hover:underline font-medium"
               >
                 View Mentee Profile
               </button>
@@ -235,7 +245,7 @@ export default function PairingDetailPage() {
                   <button
                     onClick={handleReplaceMentor}
                     disabled={!newMentorId || adminActionLoading}
-                    className="text-sm bg-[var(--primary)] text-white px-3 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                    className="text-sm bg-primary text-white px-3 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
                   >
                     {adminActionLoading ? "..." : "Confirm"}
                   </button>
@@ -255,7 +265,7 @@ export default function PairingDetailPage() {
                 </button>
               )}
               <button
-                onClick={handleRemovePairing}
+                onClick={() => setShowRemoveConfirm(true)}
                 disabled={adminActionLoading}
                 className="text-sm text-red-500 hover:underline font-medium disabled:opacity-50"
               >
@@ -264,42 +274,37 @@ export default function PairingDetailPage() {
             </div>
           )}
           {pairing.status === "cancelled" && (
-            <span className="inline-block mt-2 text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700">
-              Cancelled
-            </span>
+            <Badge variant="danger" className="mt-2">Cancelled</Badge>
           )}
         </div>
         <div className="text-right">
           <div className="text-sm text-gray-500">Progress</div>
-          <div className="text-2xl font-bold text-[var(--primary)]">
+          <div className="text-2xl font-bold text-primary">
             {completed}/10
           </div>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-[var(--primary)] rounded-full transition-all"
-          style={{ width: `${(completed / 10) * 100}%` }}
-        />
-      </div>
+      <ProgressBar value={(completed / 10) * 100} size="lg" />
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="bg-gray-100 p-1 rounded-xl inline-flex">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               tab === t.key
-                ? "border-[var(--primary)] text-[var(--primary)]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "bg-white text-primary shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="ml-1.5 text-xs bg-gray-100 rounded-full px-2 py-0.5">
+              <span className={`ml-1.5 text-xs rounded-full px-2 py-0.5 ${
+                tab === t.key ? "bg-primary/10 text-primary" : "bg-gray-200 text-gray-500"
+              }`}>
                 {t.count}
               </span>
             )}
@@ -357,15 +362,16 @@ export default function PairingDetailPage() {
               <div className="flex items-center gap-2">
                 <a
                   href={`${getDocUrl(previewDoc)}?download=1`}
-                  className="inline-flex items-center gap-1.5 bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
+                  className="inline-flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
                 >
+                  <Icon name="download" size={16} />
                   Download
                 </a>
                 <button
                   onClick={() => setPreviewDoc(null)}
                   className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition"
                 >
-                  ✕
+                  <Icon name="x" size={18} />
                 </button>
               </div>
             </div>
@@ -392,7 +398,7 @@ export default function PairingDetailPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-gray-400">
-                  <div className="text-5xl mb-4">📄</div>
+                  <Icon name="document" size={48} className="mb-4 text-gray-300" />
                   <p className="text-sm font-medium mb-1">Preview not available for this file type</p>
                   <p className="text-xs">Click Download to view the file</p>
                 </div>
@@ -408,6 +414,18 @@ export default function PairingDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Confirm Remove Pairing Modal */}
+      <ConfirmModal
+        open={showRemoveConfirm}
+        onClose={() => setShowRemoveConfirm(false)}
+        onConfirm={handleRemovePairing}
+        title="Remove Pairing"
+        description={`Cancel the pairing between ${pairing.mentor.name} and ${pairing.mentee.name}? This cannot be undone.`}
+        confirmLabel="Remove"
+        variant="danger"
+        loading={adminActionLoading}
+      />
     </div>
   );
 }
@@ -441,6 +459,12 @@ function SessionsTab({
     closing: "border-l-green-500",
   };
 
+  const STATUS_BORDER: Record<string, string> = {
+    completed: "border-l-green-500",
+    scheduled: "border-l-blue-500",
+    upcoming: "border-l-gray-300",
+  };
+
   return (
     <div className="space-y-3">
       {sessions.map((session) => {
@@ -450,9 +474,9 @@ function SessionsTab({
         return (
           <div
             key={session.id}
-            className={`bg-white rounded-xl border border-gray-200 border-l-4 ${
-              PHASE_STYLES[session.phase] || ""
-            } overflow-hidden`}
+            className={`card card-hover border-l-4 ${
+              STATUS_BORDER[session.status] || PHASE_STYLES[session.phase] || "border-l-gray-300"
+            } overflow-hidden !p-0`}
           >
             <div
               className="px-6 py-4 cursor-pointer flex items-center justify-between"
@@ -468,43 +492,56 @@ function SessionsTab({
                       : "bg-gray-100 text-gray-500"
                   }`}
                 >
-                  {session.status === "completed" ? "✓" : session.sessionNum}
+                  {session.status === "completed" ? (
+                    <Icon name="check" size={16} />
+                  ) : (
+                    session.sessionNum
+                  )}
                 </div>
                 <div>
                   <p className="font-medium text-sm">{session.topic}</p>
-                  <p className="text-xs text-gray-400 capitalize">
+                  <p className="text-xs text-gray-400 capitalize flex items-center gap-1">
                     {session.phase} &middot; {template?.duration || 75} min
+                    {session.scheduledAt && (
+                      <>
+                        {" "}&middot;{" "}
+                        <Icon name="calendar" size={12} className="inline" />
+                        {new Date(session.scheduledAt).toLocaleDateString()}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 {session.menteeEnergy && (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
+                  <Badge
+                    variant={
                       session.menteeEnergy <= 2
-                        ? "bg-red-100 text-red-600"
+                        ? "danger"
                         : session.menteeEnergy <= 3
-                        ? "bg-amber-100 text-amber-600"
-                        : "bg-green-100 text-green-600"
-                    }`}
+                        ? "warning"
+                        : "success"
+                    }
                   >
                     Energy: {session.menteeEnergy}/5
-                  </span>
+                  </Badge>
                 )}
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
+                <Badge
+                  variant={
                     session.status === "completed"
-                      ? "bg-green-100 text-green-700"
+                      ? "success"
                       : session.status === "scheduled"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
+                      ? "info"
+                      : "neutral"
+                  }
                 >
                   {session.status}
-                </span>
-                <span className="text-gray-400 text-sm">
-                  {isExpanded ? "▲" : "▼"}
-                </span>
+                </Badge>
+                <Icon
+                  name={isExpanded ? "chevron-down" : "chevron-right"}
+                  size={16}
+                  className="text-gray-400"
+                />
               </div>
             </div>
 
@@ -632,27 +669,32 @@ function SessionDetail({
 
   return (
     <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
-      {/* SESSION RESULTS — always shown first */}
+      {/* SESSION RESULTS -- always shown first */}
       {hasResults && !editing ? (
         <div className="space-y-4">
           {/* Info cards */}
           <div className={`grid gap-3 ${isMentor ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="card bg-gray-50 !p-3 text-center">
               <p className="text-xs text-gray-400 mb-1">Status</p>
               <p className={`text-sm font-semibold capitalize ${
                 session.status === "completed" ? "text-green-600" : "text-gray-600"
               }`}>{session.status}</p>
             </div>
             {isMentor && (
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <div className="card bg-gray-50 !p-3 text-center">
                 <p className="text-xs text-gray-400 mb-1">Mentor Rating</p>
                 <p className="text-sm font-semibold">
-                  {session.mentorRating ? `${session.mentorRating}/5` : "—"}
+                  {session.mentorRating ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <Icon name="star" size={14} className="text-brand-yellow" />
+                      {session.mentorRating}/5
+                    </span>
+                  ) : "---"}
                 </p>
               </div>
             )}
             {isMentor && (
-              <div className={`rounded-lg p-3 text-center ${
+              <div className={`card !p-3 text-center ${
                 session.menteeEnergy && session.menteeEnergy <= 2
                   ? "bg-red-50"
                   : session.menteeEnergy && session.menteeEnergy <= 3
@@ -667,16 +709,17 @@ function SessionDetail({
                     ? "text-amber-600"
                     : ""
                 }`}>
-                  {session.menteeEnergy ? `${session.menteeEnergy}/5` : "—"}
+                  {session.menteeEnergy ? `${session.menteeEnergy}/5` : "---"}
                 </p>
               </div>
             )}
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="card bg-gray-50 !p-3 text-center">
               <p className="text-xs text-gray-400 mb-1">Completed</p>
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold flex items-center justify-center gap-1">
+                <Icon name="calendar" size={14} className="text-gray-400" />
                 {session.completedAt
                   ? new Date(session.completedAt).toLocaleDateString()
-                  : "—"}
+                  : "---"}
               </p>
             </div>
           </div>
@@ -703,7 +746,7 @@ function SessionDetail({
             </div>
           )}
 
-          {/* Obstacles — mentor/admin only */}
+          {/* Obstacles -- mentor/admin only */}
           {isMentor && session.obstacles && (
             <div className="bg-red-50 border border-red-100 rounded-lg p-4">
               <h4 className="text-xs font-semibold text-red-700 uppercase mb-1">
@@ -713,7 +756,7 @@ function SessionDetail({
             </div>
           )}
 
-          {/* Mentee feedback — visible to mentor/admin */}
+          {/* Mentee feedback -- visible to mentor/admin */}
           {isMentor && session.menteeFeedback && (
             <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
               <h4 className="text-xs font-semibold text-purple-700 uppercase mb-1">
@@ -723,7 +766,11 @@ function SessionDetail({
               {session.mentorRating && (
                 <div className="mt-2 flex items-center gap-1">
                   <span className="text-xs text-gray-400">Rating:</span>
-                  <span className="text-sm">{Array.from({ length: session.mentorRating }, () => "★").join("")}</span>
+                  <span className="text-sm flex gap-0.5">
+                    {Array.from({ length: session.mentorRating }, (_, i) => (
+                      <Icon key={i} name="star" size={14} className="text-brand-yellow" />
+                    ))}
+                  </span>
                   <span className="text-xs text-purple-600 font-medium">{session.mentorRating}/5</span>
                 </div>
               )}
@@ -731,14 +778,14 @@ function SessionDetail({
           )}
         </div>
       ) : !editing ? (
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
+        <div className="card bg-gray-50 text-center">
           <p className="text-sm text-gray-400">
             No session results yet. {isMentor ? "Click \"Edit session details\" to log results after the session." : "Your mentor will log results after the session."}
           </p>
         </div>
       ) : null}
 
-      {/* Session Deliverables — links doc checklist to actual uploads */}
+      {/* Session Deliverables -- links doc checklist to actual uploads */}
       {template.docChecklist.length > 0 && (
         <DeliverablesList
           checklist={template.docChecklist}
@@ -753,7 +800,7 @@ function SessionDetail({
       {isMentor && !editing && (
         <button
           onClick={() => setEditing(true)}
-          className="text-sm bg-[var(--primary)] text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
+          className="text-sm bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
         >
           {hasResults ? "Edit session results" : "Log session results"}
         </button>
@@ -770,13 +817,14 @@ function SessionDetail({
         />
       )}
 
-      {/* Curriculum reference — collapsible, mentor/admin only */}
+      {/* Curriculum reference -- collapsible, mentor/admin only */}
       {isMentor && <div className="border-t border-gray-100 pt-3">
         <button
           onClick={() => setShowCurriculum(!showCurriculum)}
-          className="text-xs text-gray-400 hover:text-gray-600 font-medium uppercase tracking-wide"
+          className="text-xs text-gray-400 hover:text-gray-600 font-medium uppercase tracking-wide flex items-center gap-1"
         >
-          {showCurriculum ? "▲ Hide" : "▼ Show"} Curriculum Guide
+          <Icon name={showCurriculum ? "chevron-down" : "chevron-right"} size={14} />
+          {showCurriculum ? "Hide" : "Show"} Curriculum Guide
         </button>
 
         {showCurriculum && (
@@ -835,7 +883,7 @@ function SessionDetail({
       </div>}
 
       {editing && (
-        <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+        <div className="space-y-4 card bg-gray-50">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -932,7 +980,7 @@ function SessionDetail({
             <button
               onClick={save}
               disabled={saving}
-              className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -970,6 +1018,7 @@ function DeliverablesList({
 }) {
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
 
   async function handleUpload(file: File, checklistItem: string) {
     setUploadingItem(checklistItem);
@@ -995,15 +1044,15 @@ function DeliverablesList({
   }
 
   async function handleDelete(doc: Doc) {
-    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return;
     setDeletingDocId(doc.id);
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
     setDeletingDocId(null);
+    setDeleteConfirm(null);
     onRefresh();
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="card">
       <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">
         Session Deliverables
       </h4>
@@ -1021,7 +1070,13 @@ function DeliverablesList({
                     ? "bg-blue-100 text-blue-600"
                     : "bg-gray-100 text-gray-400"
                 }`}>
-                  {matched.some((d) => d.status === "approved") ? "✓" : matched.length > 0 ? "●" : "○"}
+                  {matched.some((d) => d.status === "approved") ? (
+                    <Icon name="check" size={12} />
+                  ) : matched.length > 0 ? (
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-gray-300" />
+                  )}
                 </span>
                 <span className="text-sm text-gray-700">{item}</span>
               </div>
@@ -1033,37 +1088,38 @@ function DeliverablesList({
                         <div className="flex items-center gap-1">
                           <button
                             onClick={(e) => { e.stopPropagation(); onPreview(doc); }}
-                            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                              doc.status === "approved"
-                                ? "bg-green-100 text-green-700"
-                                : doc.status === "needs_revision"
-                                ? "bg-amber-100 text-amber-700"
-                                : doc.status === "under_review"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
-                            } hover:opacity-80 transition cursor-pointer`}
+                            className="inline-flex items-center gap-1 hover:opacity-80 transition cursor-pointer"
                           >
-                            {doc.status === "approved" ? "✓ Verified" : doc.status === "needs_revision" ? "⚠ Needs Changes" : doc.status === "under_review" ? "⏳ Under Review" : "Uploaded"}
-                            <span className="opacity-60">v{doc.version}</span>
-                            <span className="ml-0.5">👁</span>
+                            <Badge
+                              variant={
+                                doc.status === "approved"
+                                  ? "success"
+                                  : doc.status === "needs_revision"
+                                  ? "warning"
+                                  : doc.status === "under_review"
+                                  ? "info"
+                                  : "neutral"
+                              }
+                            >
+                              {doc.status === "approved" && <Icon name="check" size={10} className="inline mr-0.5" />}
+                              {doc.status === "approved" ? "Verified" : doc.status === "needs_revision" ? "Needs Changes" : doc.status === "under_review" ? "Under Review" : "Uploaded"}
+                              <span className="opacity-60 ml-1">v{doc.version}</span>
+                            </Badge>
+                            <Icon name="eye" size={14} className="text-gray-400" />
                           </button>
                           {/* Replace icon */}
                           <label className="p-1 rounded hover:bg-gray-100 transition cursor-pointer" title="Replace document">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
+                            <Icon name="upload" size={14} className="text-amber-500" />
                             <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReplace(f, doc); e.target.value = ""; }} />
                           </label>
                           {/* Delete icon */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirm(doc); }}
                             disabled={deletingDocId === doc.id}
                             className="p-1 rounded hover:bg-red-50 transition disabled:opacity-50"
                             title="Delete document"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <Icon name="trash" size={14} className="text-red-400" />
                           </button>
                         </div>
                         {doc.status === "needs_revision" && doc.feedback && (
@@ -1075,9 +1131,10 @@ function DeliverablesList({
                     ))}
                   </div>
                 ) : isUploading ? (
-                  <span className="text-xs text-[var(--primary)]">Uploading...</span>
+                  <span className="text-xs text-primary">Uploading...</span>
                 ) : (
-                  <label className="inline-flex items-center gap-1 text-xs text-[var(--primary)] font-medium cursor-pointer hover:opacity-80 transition">
+                  <label className="inline-flex items-center gap-1 text-xs text-primary font-medium cursor-pointer hover:opacity-80 transition">
+                    <Icon name="upload" size={14} />
                     <span>Upload</span>
                     <input
                       type="file"
@@ -1095,6 +1152,18 @@ function DeliverablesList({
           );
         })}
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Document"
+        description={`Delete "${deleteConfirm?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!deletingDocId}
+      />
     </div>
   );
 }
@@ -1154,7 +1223,7 @@ function MenteeFeedback({
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">✅</span>
+          <Icon name="check" size={18} className="text-green-600" />
           <h4 className="text-sm font-semibold text-green-800">
             Thanks! Your feedback has been submitted to your mentor.
           </h4>
@@ -1165,7 +1234,12 @@ function MenteeFeedback({
             <span className="text-xs text-gray-500">Your rating:</span>
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (
-                <span key={s} className={`text-sm ${s <= (rating || currentRating) ? "text-yellow-500" : "text-gray-200"}`}>★</span>
+                <Icon
+                  key={s}
+                  name="star"
+                  size={14}
+                  className={s <= (rating || currentRating) ? "text-brand-yellow" : "text-gray-200"}
+                />
               ))}
             </div>
             <span className="text-xs font-medium text-gray-600">{rating || currentRating}/5</span>
@@ -1180,7 +1254,7 @@ function MenteeFeedback({
 
         <button
           onClick={() => setIsEditing(true)}
-          className="text-xs text-[var(--primary)] hover:underline font-medium"
+          className="text-xs text-primary hover:underline font-medium"
         >
           Edit feedback
         </button>
@@ -1209,7 +1283,11 @@ function MenteeFeedback({
                 disabled={saving}
                 className="text-2xl transition hover:scale-110 disabled:opacity-50"
               >
-                {star <= (hoveredStar || rating) ? "★" : "☆"}
+                <Icon
+                  name="star"
+                  size={24}
+                  className={star <= (hoveredStar || rating) ? "text-brand-yellow" : "text-gray-200"}
+                />
               </button>
             ))}
           </div>
@@ -1233,7 +1311,7 @@ function MenteeFeedback({
           <button
             onClick={submitFeedback}
             disabled={saving || !feedback.trim()}
-            className="bg-[var(--primary)] text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+            className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
           >
             {saving ? "Saving..." : "Submit Feedback"}
           </button>
@@ -1281,6 +1359,7 @@ function DocumentsTab({
   const [replacingDocId, setReplacingDocId] = useState<string | null>(null);
   const [replacingFile, setReplacingFile] = useState<File | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -1335,19 +1414,12 @@ function DocumentsTab({
   }
 
   async function handleDelete(doc: Doc) {
-    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return;
     setDeletingDocId(doc.id);
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
     setDeletingDocId(null);
+    setDeleteConfirm(null);
     onRefresh();
   }
-
-  const STATUS_STYLES: Record<string, string> = {
-    uploaded: "bg-gray-100 text-gray-600",
-    under_review: "bg-blue-100 text-blue-700",
-    needs_revision: "bg-amber-100 text-amber-700",
-    approved: "bg-green-100 text-green-700",
-  };
 
   return (
     <div className="space-y-4">
@@ -1355,16 +1427,17 @@ function DocumentsTab({
         <h3 className="font-semibold">All Documents</h3>
         <button
           onClick={() => setShowUpload(!showUpload)}
-          className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 inline-flex items-center gap-1.5"
         >
-          + Upload Document
+          <Icon name="plus" size={16} />
+          Upload Document
         </button>
       </div>
 
       {showUpload && (
         <form
           onSubmit={handleUpload}
-          className="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+          className="card space-y-4"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -1405,23 +1478,31 @@ function DocumentsTab({
             <label className="block text-xs font-medium text-gray-500 mb-1">
               File
             </label>
-            <input
-              type="file"
-              onChange={(e) =>
-                setUploadForm({
-                  ...uploadForm,
-                  file: e.target.files?.[0] || null,
-                })
-              }
-              required
-              className="w-full text-sm"
-            />
+            <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:border-primary/50 transition">
+              <Icon name="upload" size={28} className="mx-auto text-primary/40 mb-2" />
+              <input
+                type="file"
+                onChange={(e) =>
+                  setUploadForm({
+                    ...uploadForm,
+                    file: e.target.files?.[0] || null,
+                  })
+                }
+                required
+                className="w-full text-sm"
+              />
+              {uploadForm.file && (
+                <p className="text-xs text-primary mt-2 font-medium">
+                  Selected: {uploadForm.file.name}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={uploading}
-              className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
             >
               {uploading ? "Uploading..." : "Upload"}
             </button>
@@ -1437,48 +1518,52 @@ function DocumentsTab({
       )}
 
       {documents.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 px-6 py-12 text-center text-gray-400 text-sm">
+        <div className="card text-center py-12 text-gray-400 text-sm">
+          <Icon name="document" size={36} className="mx-auto mb-3 text-gray-300" />
           No documents uploaded yet
         </div>
       ) : (
         <div className="space-y-3">
-          {documents.map((doc) => {
-            const isFromOtherPairing = doc.pairingId !== pairingId;
-            return (
+          {documents.map((doc) => (
             <div
               key={doc.id}
-              className={`bg-white rounded-xl border p-5 ${isFromOtherPairing ? "border-gray-100 bg-gray-50/50" : "border-gray-200"}`}
+              className="card card-hover"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
+                    <Icon name="document" size={16} className="text-gray-400" />
                     <h4 className="font-medium text-sm">{doc.name}</h4>
                     <span className="text-xs text-gray-400">v{doc.version}</span>
-                    {isFromOtherPairing && (
-                      <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Previous pairing</span>
-                    )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-400 mt-0.5 ml-6">
                     {DOCUMENT_CATEGORIES.find((c) => c.value === doc.category)?.label} &middot;{" "}
                     {(doc.fileSize / 1024).toFixed(0)} KB &middot;{" "}
                     {new Date(doc.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      STATUS_STYLES[doc.status] || ""
-                    }`}
+                  <Badge
+                    variant={
+                      doc.status === "approved"
+                        ? "success"
+                        : doc.status === "needs_revision"
+                        ? "warning"
+                        : doc.status === "under_review"
+                        ? "info"
+                        : "neutral"
+                    }
                   >
                     {doc.status.replace("_", " ")}
-                  </span>
+                  </Badge>
                   <button
                     onClick={() => onPreview(doc)}
-                    className="text-xs text-[var(--primary)] hover:underline"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                   >
+                    <Icon name="eye" size={14} />
                     Preview
                   </button>
-                  {isMentor && !isFromOtherPairing && (
+                  {isMentor && (
                     <button
                       onClick={() => {
                         setReviewingDoc(
@@ -1487,36 +1572,29 @@ function DocumentsTab({
                         setFeedback(doc.feedback || "");
                         setReviewStatus(doc.status);
                       }}
-                      className="text-xs text-[var(--primary)] hover:underline"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                     >
+                      <Icon name="edit" size={14} />
                       Review
                     </button>
                   )}
-                  {!isFromOtherPairing && (
-                    <>
                   {/* Replace icon */}
                   <label className="p-1.5 rounded-lg hover:bg-amber-50 transition cursor-pointer" title="Replace document">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+                    <Icon name="upload" size={16} className="text-amber-500" />
                     <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setReplacingFile(f); setReplacingDocId(doc.id); } e.target.value = ""; }} />
                   </label>
                   {/* Delete icon */}
                   <button
-                    onClick={() => handleDelete(doc)}
+                    onClick={() => setDeleteConfirm(doc)}
                     disabled={deletingDocId === doc.id}
                     className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
                     title="Delete document"
                   >
                     {deletingDocId === doc.id
                       ? <span className="text-xs text-red-400">...</span>
-                      : <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                      : <Icon name="trash" size={16} className="text-red-400" />
                     }
                   </button>
-                    </>
-                  )}
                 </div>
               </div>
 
@@ -1584,7 +1662,7 @@ function DocumentsTab({
                   <div className="flex gap-2">
                     <button
                       onClick={() => submitReview(doc.id)}
-                      className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+                      className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
                     >
                       Submit Review
                     </button>
@@ -1598,10 +1676,21 @@ function DocumentsTab({
                 </div>
               )}
             </div>
-          );
-          })}
+          ))}
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Document"
+        description={`Delete "${deleteConfirm?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={!!deletingDocId}
+      />
     </div>
   );
 }
@@ -1667,9 +1756,10 @@ function TasksTab({
         {isMentor && (
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 inline-flex items-center gap-1.5"
           >
-            + Assign Task
+            <Icon name="plus" size={16} />
+            Assign Task
           </button>
         )}
       </div>
@@ -1677,7 +1767,7 @@ function TasksTab({
       {showCreate && (
         <form
           onSubmit={createTask}
-          className="bg-white rounded-xl border border-gray-200 p-6 space-y-4"
+          className="card space-y-4"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
@@ -1745,7 +1835,7 @@ function TasksTab({
           <div className="flex gap-2">
             <button
               type="submit"
-              className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
             >
               Create Task
             </button>
@@ -1770,32 +1860,40 @@ function TasksTab({
             {pending.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between"
+                className="card card-hover flex items-center justify-between"
               >
-                <div>
-                  <p className="text-sm font-medium">{task.title}</p>
-                  {task.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {task.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3 mt-1">
-                    {task.sessionNum && (
-                      <span className="text-xs text-gray-400">
-                        Session {task.sessionNum}
-                      </span>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded border-2 border-gray-300 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">{task.title}</p>
+                    {task.description && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {task.description}
+                      </p>
                     )}
-                    {task.dueDate && (
-                      <span className="text-xs text-gray-400">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-3 mt-1">
+                      {task.sessionNum && (
+                        <span className="text-xs text-gray-400">
+                          Session {task.sessionNum}
+                        </span>
+                      )}
+                      {task.dueDate && (
+                        <span className="text-xs text-gray-400 inline-flex items-center gap-1">
+                          <Icon name="calendar" size={12} />
+                          Due: {new Date(task.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                      <Badge variant="warning" size="sm">
+                        {task.status === "in_progress" ? "In Progress" : "Pending"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 <button
                   onClick={() => updateTaskStatus(task.id, "completed")}
-                  className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium hover:bg-green-200 transition"
+                  className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium hover:bg-green-200 transition inline-flex items-center gap-1"
                 >
+                  <Icon name="check" size={12} />
                   Mark Complete
                 </button>
               </div>
@@ -1814,11 +1912,14 @@ function TasksTab({
             {completed.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-xl border border-gray-200 p-4 opacity-60"
+                className="card opacity-60"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-green-500">✓</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Icon name="check" size={12} className="text-green-600" />
+                  </div>
                   <p className="text-sm line-through">{task.title}</p>
+                  <Badge variant="success" size="sm">Done</Badge>
                 </div>
               </div>
             ))}
@@ -1827,7 +1928,8 @@ function TasksTab({
       )}
 
       {tasks.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 px-6 py-12 text-center text-gray-400 text-sm">
+        <div className="card text-center py-12 text-gray-400 text-sm">
+          <Icon name="clipboard-check" size={36} className="mx-auto mb-3 text-gray-300" />
           No tasks yet.{" "}
           {isMentor
             ? "Assign a task to your mentee."

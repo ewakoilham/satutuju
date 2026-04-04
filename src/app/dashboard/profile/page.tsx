@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
+import Badge from "@/components/ui/Badge";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
 interface ProfileData {
   // Personal
@@ -103,9 +107,7 @@ type SectionKey =
 
 function MissingBadge() {
   return (
-    <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-red-50 text-red-500 border border-red-100">
-      Missing details
-    </span>
+    <Badge variant="danger">Missing details</Badge>
   );
 }
 
@@ -149,7 +151,7 @@ function TextInput({
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+        className="input-field"
       />
     </div>
   );
@@ -174,7 +176,7 @@ function SelectInput({
       <select
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+        className="input-field"
       >
         <option value="">{placeholder}</option>
         {options.map((opt) => (
@@ -235,7 +237,7 @@ function TextareaInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent resize-none"
+        className="input-field resize-none"
       />
     </div>
   );
@@ -308,8 +310,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-gray-400">Loading profile...</div>
+      <div className="max-w-3xl mx-auto">
+        <SkeletonDashboard />
       </div>
     );
   }
@@ -317,26 +319,26 @@ export default function ProfilePage() {
   const isEditing = (section: SectionKey) => editingSection === section;
 
   const sectionHeader = (
-    icon: string,
+    iconName: string,
     title: string,
     section: SectionKey
   ) => (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-        <span>{icon}</span> {title}
+        <Icon name={iconName} size={18} className="text-primary-600" /> {title}
       </h2>
       {isEditing(section) ? (
         <div className="flex items-center gap-2">
           <button
             onClick={cancelEdit}
-            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-100 transition"
+            className="btn-ghost text-sm px-3 py-1.5"
           >
             Cancel
           </button>
           <button
             onClick={saveSection}
             disabled={saving}
-            className="text-sm text-white bg-[var(--primary)] hover:opacity-90 px-4 py-1.5 rounded-lg transition disabled:opacity-50"
+            className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -344,8 +346,9 @@ export default function ProfilePage() {
       ) : (
         <button
           onClick={() => startEdit(section)}
-          className="text-sm text-[var(--primary)] hover:underline font-medium"
+          className="btn-ghost text-sm px-3 py-1.5 flex items-center gap-1.5"
         >
+          <Icon name="edit" size={14} />
           Edit
         </button>
       )}
@@ -354,16 +357,19 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Complete your profile to help your mentor guide you better.
-        </p>
+      <div className="flex items-center gap-4">
+        <Avatar name={profile.fullLegalName || email || "User"} size="lg" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Complete your profile to help your mentor guide you better.
+          </p>
+        </div>
       </div>
 
       {/* Personal Information */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u{1F464}", "Personal Information", "personal")}
+      <div className={`card ${isEditing("personal") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("user", "Personal Information", "personal")}
         {isEditing("personal") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
@@ -394,7 +400,7 @@ export default function ProfilePage() {
                 type="email"
                 value={email}
                 disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                className="input-field bg-gray-50 text-gray-500 cursor-not-allowed"
               />
             </div>
           </div>
@@ -410,8 +416,8 @@ export default function ProfilePage() {
       </div>
 
       {/* National ID */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u{1FAAA}", "National ID", "nationalId")}
+      <div className={`card ${isEditing("nationalId") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("lock", "National ID", "nationalId")}
         {isEditing("nationalId") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
@@ -456,8 +462,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Academic Background */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u{1F393}", "Academic Background", "academic")}
+      <div className={`card ${isEditing("academic") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("graduation", "Academic Background", "academic")}
         {isEditing("academic") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
@@ -495,8 +501,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Goals and Preferences */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u{1F6A9}", "Goals and Preferences", "goals")}
+      <div className={`card ${isEditing("goals") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("map", "Goals and Preferences", "goals")}
         {isEditing("goals") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
@@ -525,7 +531,7 @@ export default function ProfilePage() {
                     updateDraft("preferredIntakeMonth", e.target.value);
                     updateDraft("preferredEarliestIntake", `${e.target.value} ${draft.preferredIntakeYear || ""}`.trim());
                   }}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                  className="input-field"
                 >
                   <option value="">Month</option>
                   {INTAKE_MONTH_OPTIONS.map((m) => (
@@ -538,7 +544,7 @@ export default function ProfilePage() {
                     updateDraft("preferredIntakeYear", e.target.value);
                     updateDraft("preferredEarliestIntake", `${draft.preferredIntakeMonth || ""} ${e.target.value}`.trim());
                   }}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                  className="input-field"
                 >
                   <option value="">Year</option>
                   {INTAKE_YEAR_OPTIONS.map((y) => (
@@ -568,8 +574,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Test Preparation */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u2705", "Test Preparation Interest", "testPrep")}
+      <div className={`card ${isEditing("testPrep") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("clipboard-check", "Test Preparation Interest", "testPrep")}
         {isEditing("testPrep") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SelectInput
@@ -608,8 +614,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Visa Status */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u2708\uFE0F", "Visa Status", "visa")}
+      <div className={`card ${isEditing("visa") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("globe", "Visa Status", "visa")}
         {isEditing("visa") ? (
           <div className="space-y-3">
             <ToggleInput
@@ -644,8 +650,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Funding */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {sectionHeader("\u{1F4B0}", "Funding", "funding")}
+      <div className={`card ${isEditing("funding") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("chart", "Funding", "funding")}
         {isEditing("funding") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
