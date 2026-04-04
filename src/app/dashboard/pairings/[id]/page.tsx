@@ -23,6 +23,7 @@ interface Session {
 
 interface Doc {
   id: string;
+  pairingId: string;
   category: string;
   name: string;
   fileName: string;
@@ -1441,16 +1442,21 @@ function DocumentsTab({
         </div>
       ) : (
         <div className="space-y-3">
-          {documents.map((doc) => (
+          {documents.map((doc) => {
+            const isFromOtherPairing = doc.pairingId !== pairingId;
+            return (
             <div
               key={doc.id}
-              className="bg-white rounded-xl border border-gray-200 p-5"
+              className={`bg-white rounded-xl border p-5 ${isFromOtherPairing ? "border-gray-100 bg-gray-50/50" : "border-gray-200"}`}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium text-sm">{doc.name}</h4>
                     <span className="text-xs text-gray-400">v{doc.version}</span>
+                    {isFromOtherPairing && (
+                      <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Previous pairing</span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {DOCUMENT_CATEGORIES.find((c) => c.value === doc.category)?.label} &middot;{" "}
@@ -1472,7 +1478,7 @@ function DocumentsTab({
                   >
                     Preview
                   </button>
-                  {isMentor && (
+                  {isMentor && !isFromOtherPairing && (
                     <button
                       onClick={() => {
                         setReviewingDoc(
@@ -1486,6 +1492,8 @@ function DocumentsTab({
                       Review
                     </button>
                   )}
+                  {!isFromOtherPairing && (
+                    <>
                   {/* Replace icon */}
                   <label className="p-1.5 rounded-lg hover:bg-amber-50 transition cursor-pointer" title="Replace document">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1507,6 +1515,8 @@ function DocumentsTab({
                         </svg>
                     }
                   </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1588,7 +1598,8 @@ function DocumentsTab({
                 </div>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>

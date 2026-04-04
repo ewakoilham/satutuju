@@ -58,6 +58,32 @@ export async function GET(
     );
   }
 
+  // Fetch ALL documents for this mentee across all pairings
+  const { data: allMenteePairings } = await supabase
+    .from("Pairing")
+    .select("id")
+    .eq("menteeId", pairing.menteeId)
+    .neq("id", id);
+
+  if (allMenteePairings && allMenteePairings.length > 0) {
+    const otherPairingIds = allMenteePairings.map((p: { id: string }) => p.id);
+    const { data: otherDocs } = await supabase
+      .from("Document")
+      .select("*")
+      .in("pairingId", otherPairingIds)
+      .order("createdAt", { ascending: false });
+
+    if (otherDocs && otherDocs.length > 0) {
+      pairing.documents = [
+        ...(Array.isArray(pairing.documents) ? pairing.documents : []),
+        ...otherDocs,
+      ].sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
+      );
+    }
+  }
+
   // Attach live mentee profile data
   const { data: menteeProfile } = await supabase
     .from("MenteeProfile")
