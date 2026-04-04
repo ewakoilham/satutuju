@@ -211,68 +211,78 @@ export default function PairingDetailPage() {
               </span>
             </span>
           </h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+          <div className="flex items-center gap-2 mt-2">
             {pairing.targetProgram && (
-              <span className="text-primary">
+              <span className="text-sm text-primary font-medium bg-primary-50 px-2.5 py-1 rounded-lg">
                 {pairing.targetProgram}
               </span>
             )}
-            {pairing.ieltsScore && <span>IELTS: {pairing.ieltsScore}</span>}
             {isMentor && (
               <button
                 onClick={() => router.push(`/dashboard/profile/${pairing.mentee.id}`)}
-                className="text-primary hover:underline font-medium"
+                className="group relative p-2 rounded-lg bg-brand-blue-soft/50 hover:bg-brand-blue-soft text-primary transition"
+                aria-label="View Mentee Profile"
               >
-                View Mentee Profile
+                <Icon name="user" size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                  View Mentee Profile
+                </span>
               </button>
             )}
-          </div>
-          {/* Admin actions */}
-          {isAdmin && pairing.status !== "cancelled" && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {showReplaceMentor ? (
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                  <select
-                    value={newMentorId}
-                    onChange={(e) => setNewMentorId(e.target.value)}
-                    className="text-sm border border-gray-300 rounded-lg px-2 py-1"
-                  >
-                    <option value="">Select new mentor...</option>
-                    {allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
-                    ))}
-                  </select>
+            {isAdmin && pairing.status !== "cancelled" && (
+              <>
+                {showReplaceMentor ? (
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <select
+                      value={newMentorId}
+                      onChange={(e) => setNewMentorId(e.target.value)}
+                      className="text-sm border border-gray-300 rounded-lg px-2 py-1"
+                    >
+                      <option value="">Select new mentor...</option>
+                      {allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleReplaceMentor}
+                      disabled={!newMentorId || adminActionLoading}
+                      className="text-sm bg-primary text-white px-3 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                    >
+                      {adminActionLoading ? "..." : "Confirm"}
+                    </button>
+                    <button
+                      onClick={() => { setShowReplaceMentor(false); setNewMentorId(""); }}
+                      className="text-sm text-gray-400 hover:text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={handleReplaceMentor}
-                    disabled={!newMentorId || adminActionLoading}
-                    className="text-sm bg-primary text-white px-3 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                    onClick={() => setShowReplaceMentor(true)}
+                    className="group relative p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 transition"
+                    aria-label="Replace Mentor"
                   >
-                    {adminActionLoading ? "..." : "Confirm"}
+                    <Icon name="refresh" size={16} />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                      Replace Mentor
+                    </span>
                   </button>
-                  <button
-                    onClick={() => { setShowReplaceMentor(false); setNewMentorId(""); }}
-                    className="text-sm text-gray-400 hover:text-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
+                )}
                 <button
-                  onClick={() => setShowReplaceMentor(true)}
-                  className="text-sm text-amber-600 hover:underline font-medium"
+                  onClick={() => setShowRemoveConfirm(true)}
+                  disabled={adminActionLoading}
+                  className="group relative p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition disabled:opacity-50"
+                  aria-label="Remove Pairing"
                 >
-                  Replace Mentor
+                  <Icon name="trash" size={16} />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                    Remove Pairing
+                  </span>
                 </button>
-              )}
-              <button
-                onClick={() => setShowRemoveConfirm(true)}
-                disabled={adminActionLoading}
-                className="text-sm text-red-500 hover:underline font-medium disabled:opacity-50"
-              >
-                Remove Pairing
-              </button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
           {pairing.status === "cancelled" && (
             <Badge variant="danger" className="mt-2">Cancelled</Badge>
           )}
