@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@/lib/hooks";
 
 interface University {
@@ -15,20 +15,34 @@ interface University {
   programs?: string;
 }
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Australia: "🇦🇺", Austria: "🇦🇹", Belgium: "🇧🇪", Canada: "🇨🇦",
-  Caribbean: "🌴", China: "🇨🇳", Croatia: "🇭🇷", Cyprus: "🇨🇾",
-  "Czech Republic": "🇨🇿", Finland: "🇫🇮", France: "🇫🇷", Georgia: "🇬🇪",
-  Germany: "🇩🇪", Greece: "🇬🇷", Grenada: "🇬🇩", "Hong Kong": "🇭🇰",
-  Hungary: "🇭🇺", India: "🇮🇳", Indonesia: "🇮🇩", Ireland: "🇮🇪",
-  Italy: "🇮🇹", Japan: "🇯🇵", Kazakhstan: "🇰🇿", Latvia: "🇱🇻",
-  Lithuania: "🇱🇹", Malaysia: "🇲🇾", Malta: "🇲🇹", Mauritius: "🇲🇺",
-  Monaco: "🇲🇨", Netherlands: "🇳🇱", "New Zealand": "🇳🇿", Philippines: "🇵🇭",
-  Poland: "🇵🇱", Portugal: "🇵🇹", Romania: "🇷🇴", Russia: "🇷🇺",
-  Singapore: "🇸🇬", "South Korea": "🇰🇷", Spain: "🇪🇸", "Sri Lanka": "🇱🇰",
-  Sweden: "🇸🇪", Switzerland: "🇨🇭", Thailand: "🇹🇭", Turkey: "🇹🇷",
-  UAE: "🇦🇪", UK: "🇬🇧", USA: "🇺🇸", Vietnam: "🇻🇳", "West Indies": "🌴",
+// ISO 3166-1 alpha-2 codes for flagcdn.com
+const COUNTRY_CODES: Record<string, string> = {
+  Australia: "au", Austria: "at", Belgium: "be", Canada: "ca",
+  China: "cn", Croatia: "hr", Cyprus: "cy", "Czech Republic": "cz",
+  Finland: "fi", France: "fr", Georgia: "ge", Germany: "de",
+  Greece: "gr", Grenada: "gd", "Hong Kong": "hk", Hungary: "hu",
+  India: "in", Indonesia: "id", Ireland: "ie", Italy: "it",
+  Japan: "jp", Kazakhstan: "kz", Latvia: "lv", Lithuania: "lt",
+  Malaysia: "my", Malta: "mt", Mauritius: "mu", Monaco: "mc",
+  Netherlands: "nl", "New Zealand": "nz", Philippines: "ph",
+  Poland: "pl", Portugal: "pt", Romania: "ro", Russia: "ru",
+  Singapore: "sg", "South Korea": "kr", Spain: "es", "Sri Lanka": "lk",
+  Sweden: "se", Switzerland: "ch", Thailand: "th", Turkey: "tr",
+  UAE: "ae", UK: "gb", USA: "us", Vietnam: "vn",
 };
+
+function FlagImg({ code, size = 16 }: { code: string; size?: number }) {
+  const h = Math.round(size * 0.75);
+  return (
+    <img
+      src={`https://flagcdn.com/${size}x${h}/${code}.png`}
+      width={size}
+      height={h}
+      alt={code.toUpperCase()}
+      className="inline-block rounded-sm flex-shrink-0"
+    />
+  );
+}
 
 const DEGREE_OPTIONS = [
   "Undergraduate",
@@ -48,12 +62,12 @@ const DEGREE_LABELS: Record<string, { label: string; color: string }> = {
   All: { label: "All Programs", color: "bg-purple-100 text-purple-700" },
 };
 
-const REGION_TABS = [
+const REGION_TABS: { key: string; label: string; icon: React.ReactNode }[] = [
   { key: "", label: "All", icon: "🌐" },
-  { key: "au-nz", label: "Australia & NZ", icon: "🇦🇺" },
-  { key: "uk", label: "UK", icon: "🇬🇧" },
-  { key: "us", label: "USA", icon: "🇺🇸" },
-  { key: "canada", label: "Canada", icon: "🇨🇦" },
+  { key: "au-nz", label: "Australia & NZ", icon: <FlagImg code="au" size={18} /> },
+  { key: "uk", label: "UK", icon: <FlagImg code="gb" size={18} /> },
+  { key: "us", label: "USA", icon: <FlagImg code="us" size={18} /> },
+  { key: "canada", label: "Canada", icon: <FlagImg code="ca" size={18} /> },
   { key: "europe", label: "Europe", icon: "🌍" },
   { key: "asia", label: "Asia", icon: "🌏" },
   { key: "others", label: "Others", icon: "📍" },
@@ -252,9 +266,7 @@ export default function UniversitiesPage() {
         >
           <option value="">All Countries</option>
           {visibleCountries.map((c) => (
-            <option key={c} value={c}>
-              {COUNTRY_FLAGS[c] || "🌍"} {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
 
@@ -311,8 +323,10 @@ export default function UniversitiesPage() {
                   className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition"
                   onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
                 >
-                  <span className="text-xl flex-shrink-0 w-8 text-center">
-                    {COUNTRY_FLAGS[u.country] || "🌍"}
+                  <span className="flex-shrink-0 w-8 flex items-center justify-center">
+                    {COUNTRY_CODES[u.country]
+                      ? <FlagImg code={COUNTRY_CODES[u.country]} size={24} />
+                      : <span className="text-xl">🌍</span>}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{u.name}</p>
@@ -355,7 +369,12 @@ export default function UniversitiesPage() {
                       </div>
                       <div>
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Country</p>
-                        <p className="text-sm">{COUNTRY_FLAGS[u.country] || "🌍"} {u.country}</p>
+                        <p className="text-sm flex items-center gap-1.5">
+                          {COUNTRY_CODES[u.country]
+                            ? <FlagImg code={COUNTRY_CODES[u.country]} size={16} />
+                            : <span>🌍</span>}
+                          {u.country}
+                        </p>
                       </div>
 
                       {/* Programs Offered — admin can edit */}
