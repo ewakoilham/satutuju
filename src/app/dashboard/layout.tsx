@@ -10,14 +10,17 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
     { href: "/dashboard", label: "Overview", icon: "📊" },
     { href: "/dashboard/users", label: "Users", icon: "👥" },
     { href: "/dashboard/pairings", label: "Pairings", icon: "🔗" },
+    { href: "/dashboard/universities", label: "Universities", icon: "🎓" },
   ],
   mentor: [
     { href: "/dashboard", label: "My Mentees", icon: "🎓" },
+    { href: "/dashboard/universities", label: "Universities", icon: "🏫" },
     { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
   ],
   mentee: [
     { href: "/dashboard", label: "My Journey", icon: "🗺️" },
     { href: "/dashboard/profile", label: "Profile", icon: "👤" },
+    { href: "/dashboard/universities", label: "Universities", icon: "🏫" },
     { href: "/dashboard/settings", label: "Settings", icon: "⚙️" },
   ],
 };
