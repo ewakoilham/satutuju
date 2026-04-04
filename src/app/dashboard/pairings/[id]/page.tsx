@@ -1236,6 +1236,9 @@ function DocumentsTab({
   const [reviewingDoc, setReviewingDoc] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [reviewStatus, setReviewStatus] = useState("under_review");
+  const [replacingDocId, setReplacingDocId] = useState<string | null>(null);
+  const [replacingFile, setReplacingFile] = useState<File | null>(null);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -1266,6 +1269,34 @@ function DocumentsTab({
     });
     setReviewingDoc(null);
     setFeedback("");
+    onRefresh();
+  }
+
+  async function handleReplace(doc: Doc) {
+    if (!replacingFile) return;
+    setDeletingDocId(doc.id);
+    // Upload new version with same name/category
+    const formData = new FormData();
+    formData.append("file", replacingFile);
+    formData.append("name", doc.name);
+    formData.append("category", doc.category);
+    await fetch(`/api/pairings/${pairingId}/documents`, {
+      method: "POST",
+      body: formData,
+    });
+    // Delete old version
+    await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+    setReplacingDocId(null);
+    setReplacingFile(null);
+    setDeletingDocId(null);
+    onRefresh();
+  }
+
+  async function handleDelete(doc: Doc) {
+    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return;
+    setDeletingDocId(doc.id);
+    await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+    setDeletingDocId(null);
     onRefresh();
   }
 
@@ -1414,6 +1445,22 @@ function DocumentsTab({
                       Review
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setReplacingDocId(replacingDocId === doc.id ? null : doc.id);
+                      setReplacingFile(null);
+                    }}
+                    className="text-xs text-amber-600 hover:underline"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc)}
+                    disabled={deletingDocId === doc.id}
+                    className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                  >
+                    {deletingDocId === doc.id ? "..." : "Delete"}
+                  </button>
                 </div>
               </div>
 
@@ -1425,6 +1472,32 @@ function DocumentsTab({
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">
                     {doc.feedback}
                   </p>
+                </div>
+              )}
+
+              {replacingDocId === doc.id && (
+                <div className="mt-3 p-4 bg-amber-50 border border-amber-100 rounded-lg space-y-3">
+                  <p className="text-xs font-semibold text-amber-700 uppercase">Replace Document</p>
+                  <input
+                    type="file"
+                    onChange={(e) => setReplacingFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleReplace(doc)}
+                      disabled={!replacingFile || deletingDocId === doc.id}
+                      className="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:opacity-90 disabled:opacity-50"
+                    >
+                      {deletingDocId === doc.id ? "Replacing..." : "Upload New Version"}
+                    </button>
+                    <button
+                      onClick={() => { setReplacingDocId(null); setReplacingFile(null); }}
+                      className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
 

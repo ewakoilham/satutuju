@@ -66,3 +66,56 @@ export async function PATCH(
 
   return NextResponse.json({ document: updated });
 }
+
+// ── DELETE: Remove a document ──
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  // Find the document and its pairing
+  const { data: doc, error: docError } = await supabase
+    .from("Document")
+    .select("*, pairing:Pairing!pairingId(mentorId, menteeId)")
+    .eq("id", id)
+    .single();
+
+  if (docError || !doc) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  // Access check: admin, mentor of the pairing, or the uploader
+  if (
+    user.role !== "admin" &&
+    user.userId !== doc.pairing.mentorId &&
+    user.userId !== doc.uploadedBy
+  ) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Delete from Supabase Storage if it's a storage URL
+  if (doc.filePath && doc.filePath.includes("supabase")) {
+    // Extract the storage path from the URL
+    const match = doc.filePath.match(/\/storage\/v1\/object\/public\/documents\/(.+)/);
+    if (match) {
+      await supabase.storage.from("documents").remove([match[1]]);
+    }
+  }
+
+  // Delete from DB
+  const { error: deleteError } = await supabase
+    .from("Document")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("Document delete error:", deleteError);
+    return NextResponse.json({ error: "Failed to delete document" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
