@@ -353,8 +353,8 @@ export default function AdminDashboard() {
                                 key={s}
                                 className={`text-sm ${
                                   s <= Math.round(m.avgRating)
-                                    ? "text-brand-yellow"
-                                    : "text-gray-200"
+                                    ? "text-amber-400"
+                                    : "text-gray-300"
                                 }`}
                               >
                                 ★
@@ -420,7 +420,7 @@ export default function AdminDashboard() {
                       <div className="flex-shrink-0 text-right">
                         {fb.mentorRating && (
                           <div className="flex items-center gap-1">
-                            <span className="text-sm text-brand-yellow">
+                            <span className="text-sm text-amber-400">
                               {Array.from(
                                 { length: fb.mentorRating },
                                 () => "★"
@@ -788,7 +788,7 @@ export default function AdminDashboard() {
                   <span className="text-2xl font-bold text-primary">{selectedMentor.avgRating}</span>
                   <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(s => (
-                      <span key={s} className={`text-sm ${s <= Math.round(selectedMentor.avgRating) ? "text-brand-yellow" : "text-gray-200"}`}>★</span>
+                      <span key={s} className={`text-sm ${s <= Math.round(selectedMentor.avgRating) ? "text-amber-400" : "text-gray-300"}`}>★</span>
                     ))}
                   </div>
                   <span className="text-xs text-gray-400">avg from {selectedMentor.totalRatings} rating{selectedMentor.totalRatings !== 1 ? "s" : ""}</span>
@@ -812,7 +812,7 @@ export default function AdminDashboard() {
                     {fb.mentorRating && (
                       <div className="flex gap-0.5">
                         {[1,2,3,4,5].map(s => (
-                          <span key={s} className={`text-xs ${s <= fb.mentorRating! ? "text-brand-yellow" : "text-gray-200"}`}>★</span>
+                          <span key={s} className={`text-xs ${s <= fb.mentorRating! ? "text-amber-400" : "text-gray-300"}`}>★</span>
                         ))}
                       </div>
                     )}
