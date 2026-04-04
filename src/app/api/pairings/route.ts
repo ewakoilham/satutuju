@@ -64,6 +64,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing mentor or mentee" }, { status: 400 });
   }
 
+  // Enforce one active pairing per mentee
+  const { data: existingActive } = await supabase
+    .from("Pairing")
+    .select("id")
+    .eq("menteeId", menteeId)
+    .eq("status", "active")
+    .limit(1)
+    .single();
+
+  if (existingActive) {
+    return NextResponse.json(
+      { error: "This mentee already has an active pairing. Cancel it before creating a new one." },
+      { status: 409 }
+    );
+  }
+
   const now = new Date().toISOString();
   const pairingId = generateId();
 

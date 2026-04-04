@@ -40,6 +40,7 @@ interface FeedbackItem {
 }
 
 type AdminTab = "pairings" | "quality";
+type PairingsTab = "active" | "archived";
 
 export default function AdminDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>([]);
@@ -47,6 +48,7 @@ export default function AdminDashboard() {
   const [mentees, setMentees] = useState<User[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [tab, setTab] = useState<AdminTab>("pairings");
+  const [pairingsTab, setPairingsTab] = useState<PairingsTab>("active");
   const [mentorSummaries, setMentorSummaries] = useState<MentorSummary[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackItem[]>([]);
   const [newPairing, setNewPairing] = useState({
@@ -339,8 +341,33 @@ export default function AdminDashboard() {
       )}
 
       {tab === "pairings" && <>
+      {/* Pairings Sub-tabs */}
+      <div className="flex gap-1 border-b border-gray-100">
+        {([
+          { key: "active" as PairingsTab, label: "Active" },
+          { key: "archived" as PairingsTab, label: "Archived" },
+        ] as { key: PairingsTab; label: string }[]).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setPairingsTab(t.key)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition ${
+              pairingsTab === t.key
+                ? "bg-white border border-b-white border-gray-200 text-[var(--primary)] -mb-px"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t.label}
+            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+              {t.key === "active"
+                ? pairings.filter((p) => p.status === "active").length
+                : pairings.filter((p) => p.status !== "active").length}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Create Pairing Form */}
-      {showCreate && (
+      {showCreate && pairingsTab === "active" && (
         <form
           ref={createFormRef}
           onSubmit={createPairing}
@@ -377,21 +404,29 @@ export default function AdminDashboard() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mentee
               </label>
-              <select
-                value={newPairing.menteeId}
-                onChange={(e) =>
-                  setNewPairing({ ...newPairing, menteeId: e.target.value })
-                }
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="">Select mentee...</option>
-                {mentees.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.email})
-                  </option>
-                ))}
-              </select>
+              {(() => {
+                const activeMenteeIds = new Set(
+                  pairings.filter((p) => p.status === "active").map((p) => p.mentee?.id).filter(Boolean)
+                );
+                const availableMentees = mentees.filter((m) => !activeMenteeIds.has(m.id));
+                return (
+                  <select
+                    value={newPairing.menteeId}
+                    onChange={(e) =>
+                      setNewPairing({ ...newPairing, menteeId: e.target.value })
+                    }
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="">Select mentee...</option>
+                    {availableMentees.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.email})
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -431,13 +466,22 @@ export default function AdminDashboard() {
       )}
 
       {/* Pairings Table */}
+      {(() => {
+        const visiblePairings = pairings.filter((p) =>
+          pairingsTab === "active" ? p.status === "active" : p.status !== "active"
+        );
+        return (
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold">All Pairings</h3>
+          <h3 className="font-semibold">
+            {pairingsTab === "active" ? "Active Pairings" : "Archived Pairings"}
+          </h3>
         </div>
-        {pairings.length === 0 ? (
+        {visiblePairings.length === 0 ? (
           <div className="px-6 py-12 text-center text-gray-400 text-sm">
-            No pairings yet. Create one to get started.
+            {pairingsTab === "active"
+              ? "No active pairings. Create one to get started."
+              : "No archived pairings."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -463,7 +507,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {pairings.map((p) => (
+                {visiblePairings.map((p) => (
                   <tr
                     key={p.id}
                     className="border-t border-gray-50 cursor-pointer hover:bg-gray-50 transition"
@@ -595,6 +639,8 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+        );
+      })()}
       </>}
     </div>
   );
