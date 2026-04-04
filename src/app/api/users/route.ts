@@ -26,5 +26,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  return NextResponse.json({ users: users || [] });
+  // Fetch active pairing counts per user
+  const { data: activePairings } = await supabase
+    .from("Pairing")
+    .select("mentorId, menteeId")
+    .eq("status", "active");
+
+  const activePairingUserIds = new Set<string>();
+  for (const p of activePairings || []) {
+    if (p.mentorId) activePairingUserIds.add(p.mentorId);
+    if (p.menteeId) activePairingUserIds.add(p.menteeId);
+  }
+
+  const result = (users || []).map((u) => ({
+    ...u,
+    hasActivePairing: activePairingUserIds.has(u.id),
+  }));
+
+  return NextResponse.json({ users: result });
 }

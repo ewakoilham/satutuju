@@ -10,6 +10,7 @@ interface UserRow {
   email: string;
   role: string;
   createdAt: string;
+  hasActivePairing: boolean;
 }
 
 export default function UsersPage() {
@@ -115,9 +116,9 @@ export default function UsersPage() {
                   {u.id !== user?.id && (
                     <button
                       onClick={() => deleteUser(u)}
-                      disabled={deletingId === u.id}
-                      className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
-                      title="Delete user"
+                      disabled={deletingId === u.id || u.hasActivePairing}
+                      className={`p-1.5 rounded-lg transition disabled:opacity-40 ${u.hasActivePairing ? "cursor-not-allowed" : "hover:bg-red-50"}`}
+                      title={u.hasActivePairing ? "Cannot delete — user has an active pairing" : "Delete user"}
                     >
                       {deletingId === u.id
                         ? <span className="text-xs text-red-400">...</span>

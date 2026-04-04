@@ -28,7 +28,22 @@ export async function DELETE(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // Delete all pairings where user is mentor or mentee (cascades sessions, documents, tasks, progressNotes)
+  // Block deletion if user has any active pairings
+  const { data: activePairings } = await supabase
+    .from("Pairing")
+    .select("id")
+    .eq("status", "active")
+    .or(`mentorId.eq.${id},menteeId.eq.${id}`)
+    .limit(1);
+
+  if (activePairings && activePairings.length > 0) {
+    return NextResponse.json(
+      { error: "Cannot delete a user with active pairings. Cancel their active pairings first." },
+      { status: 409 }
+    );
+  }
+
+  // Delete all non-active pairings where user is mentor or mentee (cascades sessions, documents, tasks, progressNotes)
   await supabase.from("Pairing").delete().eq("mentorId", id);
   await supabase.from("Pairing").delete().eq("menteeId", id);
 
