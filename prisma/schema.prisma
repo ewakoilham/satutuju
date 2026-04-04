@@ -30,6 +30,39 @@ model User {
 
   // Notifications
   notifications Notification[]
+
+  // Profiles
+  mentorProfile MentorProfile?
+}
+
+model MentorProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  // Study Experience
+  fullName           String?
+  city               String?
+  undergradMajor     String?
+  undergradUniversity String?
+  postgradMajor      String?
+  postgradUniversity  String?
+  fundingScheme      String?  // "lpdp" | "self-funded" | "other"
+  fundingOther       String?
+  currentField       String?
+  currentFieldOther  String?
+  // Mentoring Preference
+  weeklyHours        String?
+  availability       String?  // JSON array of slots
+  availabilityOther  String?
+  personality        String?  // "introvert" | "extrovert" | "ambivert"
+  mentorStyle        String?  // "gentle" … "direct"
+  workStyle          String?  // "structured" … "flexible"
+  communicationStyle String?  // "casual" … "formal"
+  primaryRoles       String?  // JSON array, max 2
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ──────────────────────────────────────────────
