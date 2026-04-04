@@ -20,6 +20,15 @@ interface Pairing {
   _count: { documents: number; tasks: number };
 }
 
+interface MentorFeedbackItem {
+  sessionNum: number;
+  menteeName: string;
+  mentorRating: number | null;
+  menteeFeedback: string;
+  pairingId: string;
+  updatedAt: string;
+}
+
 interface MentorSummary {
   mentorId: string;
   mentorName: string;
@@ -27,6 +36,7 @@ interface MentorSummary {
   totalRatings: number;
   feedbackCount: number;
   pairingCount: number;
+  feedbackItems: MentorFeedbackItem[];
 }
 
 interface FeedbackItem {
@@ -51,6 +61,7 @@ export default function AdminDashboard() {
   const [pairingsTab, setPairingsTab] = useState<PairingsTab>("active");
   const [mentorSummaries, setMentorSummaries] = useState<MentorSummary[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackItem[]>([]);
+  const [selectedMentor, setSelectedMentor] = useState<MentorSummary | null>(null);
   const [newPairing, setNewPairing] = useState({
     mentorId: "",
     menteeId: "",
@@ -271,7 +282,8 @@ export default function AdminDashboard() {
                 {mentorSummaries.map((m) => (
                   <div
                     key={m.mentorId}
-                    className="bg-white rounded-xl border border-gray-200 p-5"
+                    onClick={() => m.feedbackCount > 0 && setSelectedMentor(m)}
+                    className={`bg-white rounded-xl border border-gray-200 p-5 transition ${m.feedbackCount > 0 ? "cursor-pointer hover:border-[var(--primary)] hover:shadow-sm" : ""}`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium">{m.mentorName}</h4>
@@ -305,8 +317,13 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {m.feedbackCount} feedback comment{m.feedbackCount !== 1 ? "s" : ""}
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {m.feedbackCount} feedback comment{m.feedbackCount !== 1 ? "s" : ""}
+                      </div>
+                      {m.feedbackCount > 0 && (
+                        <span className="text-xs text-[var(--primary)]">View all →</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -712,6 +729,58 @@ export default function AdminDashboard() {
         );
       })()}
       </>}
+
+      {/* Mentor Feedback Modal */}
+      {selectedMentor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedMentor(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-semibold text-lg">{selectedMentor.mentorName}</h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-2xl font-bold text-[var(--primary)]">{selectedMentor.avgRating}</span>
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <span key={s} className={`text-sm ${s <= Math.round(selectedMentor.avgRating) ? "text-yellow-500" : "text-gray-200"}`}>★</span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-400">avg from {selectedMentor.totalRatings} rating{selectedMentor.totalRatings !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedMentor(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Feedback list */}
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+              {selectedMentor.feedbackItems.map((fb, i) => (
+                <div key={i} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition cursor-pointer"
+                  onClick={() => { setSelectedMentor(null); window.location.href = `/dashboard/pairings/${fb.pairingId}`; }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{fb.menteeName}</span>
+                      <span className="text-xs text-gray-400">· Session {fb.sessionNum}</span>
+                    </div>
+                    {fb.mentorRating && (
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(s => (
+                          <span key={s} className={`text-xs ${s <= fb.mentorRating! ? "text-yellow-500" : "text-gray-200"}`}>★</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">{fb.menteeFeedback}</p>
+                  <p className="text-xs text-gray-400 mt-2">{new Date(fb.updatedAt).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

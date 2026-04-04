@@ -70,6 +70,30 @@ export async function GET() {
     }
   }
 
+  // Build per-mentor feedback items list
+  const mentorFeedbackItems: Record<string, Array<{
+    sessionNum: number;
+    menteeName: string;
+    mentorRating: number | null;
+    menteeFeedback: string;
+    pairingId: string;
+    updatedAt: string;
+  }>> = {};
+
+  for (const s of filteredSessions) {
+    if (!s.menteeFeedback) continue;
+    const mid = s.pairing.mentorId;
+    if (!mentorFeedbackItems[mid]) mentorFeedbackItems[mid] = [];
+    mentorFeedbackItems[mid].push({
+      sessionNum: s.sessionNum,
+      menteeName: s.pairing.mentee.name,
+      mentorRating: s.mentorRating,
+      menteeFeedback: s.menteeFeedback,
+      pairingId: s.pairingId,
+      updatedAt: s.updatedAt,
+    });
+  }
+
   const mentorSummaries = Object.values(mentorStats).map((s) => ({
     mentorId: s.mentorId,
     mentorName: s.mentorName,
@@ -77,6 +101,7 @@ export async function GET() {
     totalRatings: s.totalRatings,
     feedbackCount: s.feedbackCount,
     pairingCount: s.pairingIds.size,
+    feedbackItems: mentorFeedbackItems[s.mentorId] || [],
   }));
 
   // Recent feedback list
