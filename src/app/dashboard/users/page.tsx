@@ -113,7 +113,7 @@ export default function UsersPage() {
                   {new Date(u.createdAt).toLocaleDateString()}
                 </td>
                 <td className="px-3 sm:px-6 py-3">
-                  {u.id !== user?.id && (
+                  {u.id !== user?.userId && (
                     <button
                       onClick={() => deleteUser(u)}
                       disabled={deletingId === u.id || u.hasActivePairing}
