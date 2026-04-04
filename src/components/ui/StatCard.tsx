@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import Link from "next/link";
 import Icon from "./Icon";
 
 interface StatCardProps {
@@ -8,6 +9,7 @@ interface StatCardProps {
   accent?: "blue" | "lavender" | "yellow" | "green" | "red";
   change?: string;
   trend?: "up" | "down" | "neutral";
+  href?: string;
   children?: ReactNode;
   className?: string;
 }
@@ -27,13 +29,14 @@ export default function StatCard({
   accent = "blue",
   change,
   trend,
+  href,
   children,
   className = "",
 }: StatCardProps) {
   const colors = ACCENT_CLASSES[accent];
 
-  return (
-    <div className={`card ${className}`}>
+  const content = (
+    <>
       <div className="flex items-start gap-4">
         {icon && (
           <div className={`${colors.bg} rounded-xl p-2.5 flex-shrink-0`}>
@@ -61,8 +64,21 @@ export default function StatCard({
             )}
           </div>
         </div>
+        {href && (
+          <Icon name="chevron-right" size={16} className="text-gray-300 mt-1 flex-shrink-0" />
+        )}
       </div>
       {children && <div className="mt-3">{children}</div>}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={`card card-hover cursor-pointer ${className}`}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={`card ${className}`}>{content}</div>;
 }
