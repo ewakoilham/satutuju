@@ -164,6 +164,41 @@ export default function AdminDashboard() {
     setActionLoading(null);
   }
 
+  async function reopenPairing(pairingId: string) {
+    setActionLoading(pairingId);
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}`, { method: "PUT" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to reopen pairing");
+      } else {
+        fetchData();
+      }
+    } catch {
+      alert("Network error");
+    }
+    setActionLoading(null);
+  }
+
+  async function permanentlyDeletePairing(pairingId: string, mentorName: string, menteeName: string) {
+    if (!window.confirm(
+      `Permanently delete the pairing between ${mentorName} and ${menteeName}?\n\nThis will delete ALL associated sessions, documents, and tasks and CANNOT be undone.`
+    )) return;
+    setActionLoading(pairingId);
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}?permanent=true`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to delete pairing");
+      } else {
+        fetchData();
+      }
+    } catch {
+      alert("Network error");
+    }
+    setActionLoading(null);
+  }
+
   const completedSessions = (p: Pairing) =>
     p.sessions.filter((s) => s.status === "completed").length;
 
@@ -574,7 +609,7 @@ export default function AdminDashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                         </button>
-                        {p.status !== "cancelled" && (
+                        {p.status === "active" ? (
                           <>
                             {replacingPairingId === p.id ? (
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -629,7 +664,42 @@ export default function AdminDashboard() {
                               }
                             </button>
                           </>
-                        )}
+                        ) : (() => {
+                          // Archived pairing actions
+                          const activeMenteeIds = new Set(
+                            pairings.filter((ap) => ap.status === "active").map((ap) => ap.mentee?.id).filter(Boolean)
+                          );
+                          const canReopen = !activeMenteeIds.has(p.mentee?.id);
+                          return (
+                            <>
+                              {/* Reopen icon */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); if (canReopen) reopenPairing(p.id); }}
+                                disabled={!canReopen || actionLoading === p.id}
+                                className={`p-1.5 rounded-lg transition disabled:opacity-40 ${canReopen ? "hover:bg-green-50" : "cursor-not-allowed"}`}
+                                title={canReopen ? "Reopen pairing" : "Cannot reopen — mentee already has an active pairing"}
+                              >
+                                {actionLoading === p.id
+                                  ? <span className="text-xs text-green-500">...</span>
+                                  : <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" />
+                                    </svg>
+                                }
+                              </button>
+                              {/* Permanently delete icon */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); permanentlyDeletePairing(p.id, p.mentor?.name || "mentor", p.mentee?.name || "mentee"); }}
+                                disabled={actionLoading === p.id}
+                                className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                                title="Permanently delete pairing"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>
