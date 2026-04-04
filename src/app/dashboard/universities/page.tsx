@@ -64,10 +64,10 @@ const DEGREE_LABELS: Record<string, { label: string; color: string }> = {
 
 const REGION_TABS: { key: string; label: string; icon: React.ReactNode }[] = [
   { key: "", label: "All", icon: "🌐" },
-  { key: "au-nz", label: "Australia & NZ", icon: <FlagImg code="au" size={18} /> },
-  { key: "uk", label: "UK", icon: <FlagImg code="gb" size={18} /> },
-  { key: "us", label: "USA", icon: <FlagImg code="us" size={18} /> },
-  { key: "canada", label: "Canada", icon: <FlagImg code="ca" size={18} /> },
+  { key: "au-nz", label: "Australia & NZ", icon: <FlagImg code="au" size={20} /> },
+  { key: "uk", label: "UK", icon: <FlagImg code="gb" size={20} /> },
+  { key: "us", label: "USA", icon: <FlagImg code="us" size={20} /> },
+  { key: "canada", label: "Canada", icon: <FlagImg code="ca" size={20} /> },
   { key: "europe", label: "Europe", icon: "🌍" },
   { key: "asia", label: "Asia", icon: "🌏" },
   { key: "others", label: "Others", icon: "📍" },
