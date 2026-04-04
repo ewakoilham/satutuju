@@ -53,9 +53,20 @@ const REGION_TABS = [
   { key: "au-nz", label: "Australia & NZ", icon: "🇦🇺" },
   { key: "uk", label: "UK", icon: "🇬🇧" },
   { key: "us", label: "USA", icon: "🇺🇸" },
+  { key: "canada", label: "Canada", icon: "🇨🇦" },
   { key: "europe", label: "Europe", icon: "🌍" },
   { key: "asia", label: "Asia", icon: "🌏" },
   { key: "others", label: "Others", icon: "📍" },
+];
+
+const ALL_COUNTRIES = [
+  "Australia","Austria","Belgium","Canada","Caribbean","China","Croatia","Cyprus",
+  "Czech Republic","Finland","France","Georgia","Germany","Greece","Grenada",
+  "Hong Kong","Hungary","India","Indonesia","Ireland","Italy","Japan","Kazakhstan",
+  "Latvia","Lithuania","Malaysia","Malta","Mauritius","Monaco","Netherlands",
+  "New Zealand","Philippines","Poland","Portugal","Romania","Russia","Singapore",
+  "South Korea","Spain","Sri Lanka","Sweden","Switzerland","Thailand","Turkey",
+  "UAE","UK","USA","Vietnam","West Indies",
 ];
 
 const PAGE_SIZE = 30;
@@ -70,6 +81,7 @@ export default function UniversitiesPage() {
 
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("");
+  const [country, setCountry] = useState("");
   const [level, setLevel] = useState("");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -81,11 +93,12 @@ export default function UniversitiesPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchUniversities = useCallback((q: string, r: string, l: string) => {
+  const fetchUniversities = useCallback((q: string, r: string, c: string, l: string) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (r) params.set("region", r);
+    if (c) params.set("country", c);
     if (l) params.set("level", l);
 
     fetch(`/api/universities?${params}`)
@@ -99,28 +112,34 @@ export default function UniversitiesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchUniversities("", "", ""); }, [fetchUniversities]);
+  useEffect(() => { fetchUniversities("", "", "", ""); }, [fetchUniversities]);
 
   function handleSearch(value: string) {
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchUniversities(value, region, level), 350);
+    debounceRef.current = setTimeout(() => fetchUniversities(value, region, country, level), 350);
   }
 
   function handleRegion(r: string) {
     setRegion(r);
+    setCountry("");
     setLevel("");
-    fetchUniversities(search, r, "");
+    fetchUniversities(search, r, "", "");
+  }
+
+  function handleCountry(c: string) {
+    setCountry(c);
+    fetchUniversities(search, region, c, level);
   }
 
   function handleLevel(l: string) {
     setLevel(l);
-    fetchUniversities(search, region, l);
+    fetchUniversities(search, region, country, l);
   }
 
   function clearFilters() {
-    setSearch(""); setRegion(""); setLevel("");
-    fetchUniversities("", "", "");
+    setSearch(""); setRegion(""); setCountry(""); setLevel("");
+    fetchUniversities("", "", "", "");
   }
 
   async function saveLevel(u: University) {
@@ -148,7 +167,7 @@ export default function UniversitiesPage() {
 
   const paginated = universities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(universities.length / PAGE_SIZE);
-  const hasFilters = search || region || level;
+  const hasFilters = search || region || country || level;
 
   return (
     <div className="space-y-4">
@@ -202,8 +221,23 @@ export default function UniversitiesPage() {
         </div>
       </div>
 
-      {/* Degree level filter row */}
+      {/* Filter row */}
       <div className="flex flex-wrap gap-2 items-center">
+        {/* Country filter */}
+        <select
+          value={country}
+          onChange={(e) => handleCountry(e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+        >
+          <option value="">All Countries</option>
+          {ALL_COUNTRIES.map((c) => (
+            <option key={c} value={c}>
+              {COUNTRY_FLAGS[c] || "🌍"} {c}
+            </option>
+          ))}
+        </select>
+
+        {/* Degree level filter */}
         <select
           value={level}
           onChange={(e) => handleLevel(e.target.value)}

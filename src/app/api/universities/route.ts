@@ -21,6 +21,7 @@ const REGION_COUNTRIES: Record<string, string[]> = {
   "au-nz": ["Australia", "New Zealand"],
   uk: ["UK"],
   us: ["USA"],
+  canada: ["Canada"],
   europe: [
     "Austria", "Belgium", "Croatia", "Cyprus", "Czech Republic", "Finland",
     "France", "Georgia", "Germany", "Greece", "Hungary", "Ireland", "Italy",
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
   const q = (searchParams.get("q") || "").toLowerCase().trim();
   const level = searchParams.get("level") || "";
   const region = searchParams.get("region") || "";
+  const country = searchParams.get("country") || "";
 
   // Fetch admin overrides from DB
   const { data: overrides } = await supabase
@@ -69,6 +71,11 @@ export async function GET(req: NextRequest) {
     results = results.filter((u) => countries.includes(u.country));
   } else if (region === "others") {
     results = results.filter((u) => !ALL_GROUPED.includes(u.country));
+  }
+
+  // Individual country filter (overrides region if both set)
+  if (country) {
+    results = results.filter((u) => u.country === country);
   }
 
   // Search
