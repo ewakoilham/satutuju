@@ -10,7 +10,8 @@ interface University {
   degreeLevel: string;
   website: string;
   // admin only
-  commissionRate?: string;
+  commissionNote?: string;
+  commissionFee?: string;
   agency?: string;
   programs?: string;
 }
@@ -31,19 +32,22 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 const DEGREE_LABELS: Record<string, { label: string; color: string }> = {
-  All: { label: "All Programs", color: "bg-purple-100 text-purple-700" },
-  Graduate: { label: "Postgraduate / Master", color: "bg-blue-100 text-blue-700" },
-  Undergraduate: { label: "Undergraduate / Bachelor", color: "bg-green-100 text-green-700" },
+  "Undergraduate": { label: "Undergraduate / Bachelor", color: "bg-green-100 text-green-700" },
+  "Graduate": { label: "Postgraduate / Master", color: "bg-blue-100 text-blue-700" },
+  "English Language": { label: "English Language", color: "bg-yellow-100 text-yellow-700" },
+  "English Language / Foundation": { label: "English Language / Foundation", color: "bg-orange-100 text-orange-700" },
+  "Summer Programs": { label: "Summer Programs", color: "bg-pink-100 text-pink-700" },
+  "All": { label: "All Programs", color: "bg-purple-100 text-purple-700" },
 };
 
-const ALL_COUNTRIES = [
-  "Australia","Austria","Belgium","Canada","Caribbean","China","Croatia","Cyprus",
-  "Czech Republic","Finland","France","Georgia","Germany","Greece","Grenada",
-  "Hong Kong","Hungary","India","Indonesia","Ireland","Italy","Japan","Kazakhstan",
-  "Latvia","Lithuania","Malaysia","Malta","Mauritius","Monaco","Netherlands",
-  "New Zealand","Philippines","Poland","Portugal","Romania","Russia","Singapore",
-  "South Korea","Spain","Sri Lanka","Sweden","Switzerland","Thailand","Turkey",
-  "UAE","UK","USA","Vietnam","West Indies",
+const REGION_TABS = [
+  { key: "", label: "All", icon: "🌐" },
+  { key: "au-nz", label: "Australia & NZ", icon: "🇦🇺" },
+  { key: "uk", label: "UK", icon: "🇬🇧" },
+  { key: "us", label: "USA", icon: "🇺🇸" },
+  { key: "europe", label: "Europe", icon: "🌍" },
+  { key: "asia", label: "Asia", icon: "🌏" },
+  { key: "others", label: "Others", icon: "📍" },
 ];
 
 const PAGE_SIZE = 30;
@@ -57,28 +61,28 @@ export default function UniversitiesPage() {
   const [total, setTotal] = useState(0);
 
   const [search, setSearch] = useState("");
-  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
   const [level, setLevel] = useState("");
   const [page, setPage] = useState(1);
-
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUniversities = useCallback(
-    (q: string, c: string, l: string) => {
+    (q: string, r: string, l: string) => {
       setLoading(true);
       const params = new URLSearchParams();
       if (q) params.set("q", q);
-      if (c) params.set("country", c);
+      if (r) params.set("region", r);
       if (l) params.set("level", l);
 
       fetch(`/api/universities?${params}`)
-        .then((r) => r.json())
+        .then((res) => res.json())
         .then((d) => {
           setUniversities(d.universities || []);
           setTotal(d.total || 0);
           setPage(1);
+          setExpandedId(null);
         })
         .finally(() => setLoading(false));
     },
@@ -93,45 +97,65 @@ export default function UniversitiesPage() {
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      fetchUniversities(value, country, level);
+      fetchUniversities(value, region, level);
     }, 350);
   }
 
-  function handleCountry(value: string) {
-    setCountry(value);
-    fetchUniversities(search, value, level);
+  function handleRegion(r: string) {
+    setRegion(r);
+    setLevel("");
+    fetchUniversities(search, r, "");
   }
 
-  function handleLevel(value: string) {
-    setLevel(value);
-    fetchUniversities(search, country, value);
+  function handleLevel(l: string) {
+    setLevel(l);
+    fetchUniversities(search, region, l);
   }
 
   function clearFilters() {
     setSearch("");
-    setCountry("");
+    setRegion("");
     setLevel("");
     fetchUniversities("", "", "");
   }
 
   const paginated = universities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(universities.length / PAGE_SIZE);
-  const hasFilters = search || country || level;
+  const hasFilters = search || region || level;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Partner Universities</h1>
         <p className="text-gray-500 text-sm mt-1">
-          {total.toLocaleString()} partner institutions across{" "}
-          {ALL_COUNTRIES.length} countries
+          {total.toLocaleString()} partner institutions worldwide
         </p>
       </div>
 
-      {/* Search + Filters */}
+      {/* Region Tabs */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {REGION_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handleRegion(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition flex-shrink-0 ${
+                region === tab.key
+                  ? "border-[var(--primary)] text-[var(--primary)] bg-[var(--primary-light)]"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search + Filter bar */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        {/* Search bar */}
+        {/* Search */}
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -142,10 +166,10 @@ export default function UniversitiesPage() {
           </svg>
           <input
             type="text"
-            placeholder="Search university name or country…"
+            placeholder="Search by university name or country…"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+            className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
           />
           {search && (
             <button
@@ -157,23 +181,8 @@ export default function UniversitiesPage() {
           )}
         </div>
 
-        {/* Filter row */}
+        {/* Degree level filter + result count */}
         <div className="flex flex-wrap gap-2 items-center">
-          {/* Country filter */}
-          <select
-            value={country}
-            onChange={(e) => handleCountry(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 bg-white"
-          >
-            <option value="">All Countries</option>
-            {ALL_COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {COUNTRY_FLAGS[c] || "🌍"} {c}
-              </option>
-            ))}
-          </select>
-
-          {/* Degree level filter */}
           <select
             value={level}
             onChange={(e) => handleLevel(e.target.value)}
@@ -182,7 +191,10 @@ export default function UniversitiesPage() {
             <option value="">All Levels</option>
             <option value="Undergraduate">Undergraduate / Bachelor</option>
             <option value="Graduate">Postgraduate / Master</option>
-            <option value="All">All Programs (Foundation, Language, etc.)</option>
+            <option value="English Language">English Language</option>
+            <option value="English Language / Foundation">English Language / Foundation</option>
+            <option value="Summer Programs">Summer Programs</option>
+            <option value="All">All Programs</option>
           </select>
 
           {hasFilters && (
@@ -224,23 +236,20 @@ export default function UniversitiesPage() {
               key={u.id}
               className="bg-white rounded-xl border border-gray-200 overflow-hidden"
             >
-              {/* Main row */}
+              {/* Row */}
               <div
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition"
                 onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
               >
-                {/* Country flag */}
                 <span className="text-xl flex-shrink-0 w-8 text-center">
                   {COUNTRY_FLAGS[u.country] || "🌍"}
                 </span>
 
-                {/* Name + country */}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{u.name}</p>
                   <p className="text-xs text-gray-400">{u.country}</p>
                 </div>
 
-                {/* Degree badge */}
                 <span
                   className={`hidden sm:inline-flex text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
                     DEGREE_LABELS[u.degreeLevel]?.color || "bg-gray-100 text-gray-600"
@@ -249,14 +258,9 @@ export default function UniversitiesPage() {
                   {DEGREE_LABELS[u.degreeLevel]?.label || u.degreeLevel}
                 </span>
 
-                {/* Website link */}
                 {u.website && (
                   <a
-                    href={
-                      u.website.startsWith("http")
-                        ? u.website
-                        : `https://${u.website}`
-                    }
+                    href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -270,7 +274,6 @@ export default function UniversitiesPage() {
                   </a>
                 )}
 
-                {/* Expand chevron */}
                 <svg
                   className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${
                     expandedId === u.id ? "rotate-180" : ""
@@ -281,47 +284,31 @@ export default function UniversitiesPage() {
                 </svg>
               </div>
 
-              {/* Expanded detail */}
+              {/* Expanded */}
               {expandedId === u.id && (
                 <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                        University
-                      </p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">University</p>
                       <p className="text-sm font-medium">{u.name}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                        Country
-                      </p>
-                      <p className="text-sm">
-                        {COUNTRY_FLAGS[u.country] || "🌍"} {u.country}
-                      </p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Country</p>
+                      <p className="text-sm">{COUNTRY_FLAGS[u.country] || "🌍"} {u.country}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                        Programs Offered
-                      </p>
-                      <span
-                        className={`inline-flex text-xs font-medium px-2 py-1 rounded-full ${
-                          DEGREE_LABELS[u.degreeLevel]?.color || "bg-gray-100 text-gray-600"
-                        }`}
-                      >
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Programs Offered</p>
+                      <span className={`inline-flex text-xs font-medium px-2 py-1 rounded-full ${
+                        DEGREE_LABELS[u.degreeLevel]?.color || "bg-gray-100 text-gray-600"
+                      }`}>
                         {DEGREE_LABELS[u.degreeLevel]?.label || u.degreeLevel}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                        Admission Website
-                      </p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Admission Website</p>
                       {u.website ? (
                         <a
-                          href={
-                            u.website.startsWith("http")
-                              ? u.website
-                              : `https://${u.website}`
-                          }
+                          href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-[var(--primary)] hover:underline break-all"
@@ -334,9 +321,9 @@ export default function UniversitiesPage() {
                     </div>
                   </div>
 
-                  {/* Admin-only: commission info */}
-                  {isAdmin && (u.commissionRate || u.agency) && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                  {/* Admin-only commission */}
+                  {isAdmin && (u.commissionFee || u.commissionNote || u.agency) && (
+                    <div className="mt-2 pt-3 border-t border-gray-200 space-y-3">
                       <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -350,12 +337,16 @@ export default function UniversitiesPage() {
                           <p className="text-sm font-medium">{u.agency}</p>
                         </div>
                       )}
-                      {u.commissionRate && (
+                      {u.commissionFee && (
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Commission Rate</p>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                            {u.commissionRate}
-                          </p>
+                          <p className="text-xs text-gray-500 mb-0.5">Commission Fee</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{u.commissionFee}</p>
+                        </div>
+                      )}
+                      {u.commissionNote && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-0.5">Commission Note</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{u.commissionNote}</p>
                         </div>
                       )}
                     </div>
@@ -378,17 +369,15 @@ export default function UniversitiesPage() {
           <div className="flex items-center gap-2">
             <button
               disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
             >
               ← Prev
             </button>
-            <span className="text-sm text-gray-500">
-              {page} / {totalPages}
-            </span>
+            <span className="text-sm text-gray-500">{page} / {totalPages}</span>
             <button
               disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
             >
               Next →
