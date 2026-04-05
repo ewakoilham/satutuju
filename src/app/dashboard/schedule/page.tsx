@@ -103,6 +103,15 @@ export default function SchedulePage() {
     await refresh();
   }
 
+  async function handleDismissRejection(slotId: string, bookingId: string) {
+    await fetch(`/api/schedule/${slotId}/book`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId }),
+    });
+    dispatch({ type: "DISMISS" });
+    await refresh();
+  }
+
   // ── Click handlers ──────────────────────────────────────────────────────
 
   function handleCellClick(e: React.MouseEvent<HTMLDivElement>, dateStr: string) {
@@ -311,6 +320,7 @@ export default function SchedulePage() {
           }}
           onAccept={id => handleBookingAction(mode.slot.id, id, "accept")}
           onReject={id => handleBookingAction(mode.slot.id, id, "reject")}
+          onDismissRejection={id => handleDismissRejection(mode.slot.id, id)}
         />
       )}
 

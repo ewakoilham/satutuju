@@ -19,11 +19,13 @@ interface SlotPopoverProps {
   onBook?: () => void;
   onAccept?: (bookingId: string) => void;
   onReject?: (bookingId: string) => void;
+  /** Mentee: dismiss a rejected booking so they can rebook */
+  onDismissRejection?: (bookingId: string) => void;
 }
 
 export default function SlotPopover({
   slot, role, x, y, mentorColor,
-  onClose, onEdit, onDelete, onBook, onAccept, onReject,
+  onClose, onEdit, onDelete, onBook, onAccept, onReject, onDismissRejection,
 }: SlotPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -204,16 +206,30 @@ export default function SlotPopover({
                 Request this slot
               </button>
             )}
-            {myBooking && (
+            {myBooking && myBooking.status !== "rejected" && (
               <div className="flex items-center gap-2 py-0.5">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  myBooking.status === "accepted" ? "bg-emerald-500" :
-                  myBooking.status === "rejected" ? "bg-red-400" : "bg-amber-400"
+                  myBooking.status === "accepted" ? "bg-emerald-500" : "bg-amber-400"
                 }`} />
                 <p className="text-xs text-gray-700 font-medium">
-                  {myBooking.status === "accepted" ? "Booking accepted \u2713" :
-                   myBooking.status === "rejected" ? "Request rejected" : "Request pending\u2026"}
+                  {myBooking.status === "accepted" ? "Booking accepted \u2713" : "Request pending\u2026"}
                 </p>
+              </div>
+            )}
+            {myBooking && myBooking.status === "rejected" && (
+              <div className="space-y-2.5">
+                <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+                  <p className="text-xs font-semibold text-red-600 mb-0.5">Request rejected</p>
+                  <p className="text-[11px] text-red-400 leading-snug">
+                    Your mentor declined this request. You can dismiss and try booking again.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onDismissRejection?.(myBooking.id)}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs btn-primary py-2"
+                >
+                  Dismiss &amp; rebook
+                </button>
               </div>
             )}
             {!myBooking && slot.bookings?.some(b => b.status === "accepted") && (

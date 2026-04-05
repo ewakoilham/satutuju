@@ -202,3 +202,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ success: true });
 }
+
+// DELETE: mentee dismisses their own rejected booking so they can rebook
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: slotId } = await params;
+  const user = await getCurrentUser();
+  if (!user || user.role !== "mentee") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { bookingId } = await req.json();
+  if (!bookingId) return NextResponse.json({ error: "bookingId required" }, { status: 400 });
+
+  // Only allow deleting own rejected booking
+  const { data: booking } = await supabase
+    .from("ScheduleBooking")
+    .select("id, menteeId, status")
+    .eq("id", bookingId)
+    .eq("slotId", slotId)
+    .single();
+
+  if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  if (booking.menteeId !== user.userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (booking.status !== "rejected") return NextResponse.json({ error: "Only rejected bookings can be dismissed" }, { status: 409 });
+
+  const { error } = await supabase.from("ScheduleBooking").delete().eq("id", bookingId);
+  if (error) return NextResponse.json({ error: "Failed to dismiss booking" }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}
