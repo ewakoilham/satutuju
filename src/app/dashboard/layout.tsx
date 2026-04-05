@@ -78,7 +78,7 @@ export default function DashboardLayout({
       <header className="bg-white/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4 sm:gap-8">
+            <div className="flex items-center gap-2 sm:gap-4">
               {/* Hamburger menu - mobile only */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
