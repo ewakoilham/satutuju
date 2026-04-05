@@ -108,7 +108,7 @@ export default function SlotPopover({
             );
           }
 
-          // ── State 2: Pending requests exist — no edit allowed ─────────
+          // ── State 2: Pending requests exist — no edit or delete allowed ─
           if (hasPending) {
             return (
               <>
@@ -120,14 +120,17 @@ export default function SlotPopover({
                   >
                     <Icon name="edit" size={13} /> Edit
                   </button>
-                  <button onClick={() => onDelete?.()}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition">
+                  <button
+                    disabled
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-gray-300 border border-gray-100 cursor-not-allowed"
+                    title="Reject all requests before deleting"
+                  >
                     <Icon name="trash" size={13} /> Delete
                   </button>
                 </div>
                 <p className="text-[10px] text-amber-600 flex items-start gap-1 px-0.5">
                   <span className="mt-px flex-shrink-0">⚠</span>
-                  Reject all requests before editing this slot.
+                  Reject all requests before editing or deleting this slot.
                 </p>
               </>
             );
