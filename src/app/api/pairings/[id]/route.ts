@@ -14,7 +14,7 @@ export async function GET(
   const { data: pairing, error } = await supabase
     .from("Pairing")
     .select(
-      "*, mentor:User!mentorId(id, name, email), mentee:User!menteeId(id, name, email), sessions:Session(*), documents:Document(*), tasks:Task(*), progressNotes:ProgressNote(*)"
+      "*, mentor:User!mentorId(id, name, email), mentee:User!menteeId(id, name, email), sessions:Session(*), tasks:Task(*), progressNotes:ProgressNote(*)"
     )
     .eq("id", id)
     .single();
@@ -32,17 +32,19 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Fetch documents via direct query (bypasses FK join issues)
+  const { data: directDocs } = await supabase
+    .from("Document")
+    .select("*")
+    .eq("pairingId", id)
+    .order("createdAt", { ascending: false });
+  pairing.documents = directDocs || [];
+
   // Sort nested arrays
   if (Array.isArray(pairing.sessions)) {
     pairing.sessions.sort(
       (a: Record<string, unknown>, b: Record<string, unknown>) =>
         (a.sessionNum as number) - (b.sessionNum as number)
-    );
-  }
-  if (Array.isArray(pairing.documents)) {
-    pairing.documents.sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
     );
   }
   if (Array.isArray(pairing.tasks)) {

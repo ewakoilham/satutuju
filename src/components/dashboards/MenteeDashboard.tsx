@@ -58,12 +58,24 @@ const DOC_CAT_MAP: Record<string, string[]> = {
 
 function checklistItemUploaded(item: string, docs: Document[]): boolean {
   const lower = item.toLowerCase();
+
+  // Exact name match
+  if (docs.some((d) => d.name.toLowerCase() === lower)) return true;
+
+  // Category match
   for (const [keyword, cats] of Object.entries(DOC_CAT_MAP)) {
     if (lower.includes(keyword)) {
       return docs.some((d) => cats.includes(d.category));
     }
   }
-  return docs.some((d) => d.name.toLowerCase().includes(lower.split(/[\s\/\(\)]+/).filter(w => w.length > 2)[0] || ""));
+
+  // Whole-word AND match (prevents false positives like "university" matching unrelated docs)
+  const words = lower.split(/[\s\/\(\)\-]+/).filter(w => w.length > 3);
+  if (words.length === 0) return false;
+  return docs.some((d) => {
+    const docWords = d.name.toLowerCase().split(/[\s\/\(\)\-]+/);
+    return words.every((w) => docWords.includes(w));
+  });
 }
 
 const PHASE_ICONS: Record<string, string> = {

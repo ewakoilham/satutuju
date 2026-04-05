@@ -16,16 +16,23 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  // Find the document and its pairing
+  // Find the document
   const { data: doc, error: docError } = await supabase
     .from("Document")
-    .select("*, pairing:Pairing!pairingId(mentorId, menteeId)")
+    .select("*")
     .eq("id", id)
     .single();
 
   if (docError || !doc) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
+
+  // Find its pairing separately (avoids FK join issues)
+  const { data: docPairing } = await supabase
+    .from("Pairing")
+    .select("mentorId, menteeId")
+    .eq("id", doc.pairingId)
+    .single();
 
   const now = new Date().toISOString();
   const { data: updated, error: updateError } = await supabase
@@ -45,7 +52,7 @@ export async function PATCH(
   }
 
   // Notify mentee when mentor reviews
-  if (body.status && user.userId === doc.pairing.mentorId) {
+  if (body.status && docPairing && user.userId === docPairing.mentorId) {
     const statusLabel =
       body.status === "approved"
         ? "approved"
@@ -54,7 +61,7 @@ export async function PATCH(
         : body.status;
     await supabase.from("Notification").insert({
       id: generateId(),
-      userId: doc.pairing.menteeId,
+      userId: docPairing.menteeId,
       title: "Document Review Update",
       message: `Your document "${doc.name}" has been marked as ${statusLabel}.`,
       type: "document",
@@ -77,10 +84,10 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // Find the document and its pairing
+  // Find the document
   const { data: doc, error: docError } = await supabase
     .from("Document")
-    .select("*, pairing:Pairing!pairingId(mentorId, menteeId)")
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -89,12 +96,16 @@ export async function DELETE(
   }
 
   // Access check: admin, mentor of the pairing, or the uploader
-  if (
-    user.role !== "admin" &&
-    user.userId !== doc.pairing.mentorId &&
-    user.userId !== doc.uploadedBy
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "admin" && user.userId !== doc.uploadedBy) {
+    // Also allow mentor of the pairing
+    const { data: delPairing } = await supabase
+      .from("Pairing")
+      .select("mentorId")
+      .eq("id", doc.pairingId)
+      .single();
+    if (!delPairing || user.userId !== delPairing.mentorId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   // Delete from Supabase Storage if it's a storage URL

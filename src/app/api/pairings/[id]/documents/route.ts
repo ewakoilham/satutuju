@@ -69,12 +69,12 @@ export async function POST(
     .from(STORAGE_BUCKET)
     .getPublicUrl(storagePath);
 
-  // Check if there's an existing doc of same category to increment version
+  // Check if there's an existing doc of same name to increment version
   const { data: existing } = await supabase
     .from("Document")
     .select("version")
     .eq("pairingId", id)
-    .eq("category", category)
+    .eq("name", name)
     .order("version", { ascending: false })
     .limit(1)
     .single();

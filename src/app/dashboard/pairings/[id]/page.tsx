@@ -622,25 +622,31 @@ function guessCategory(checklistItem: string): string {
 
 function findMatchingDocs(checklistItem: string, documents: Doc[]): Doc[] {
   const lower = checklistItem.toLowerCase();
-  const words = lower.split(/[\s\/\(\)]+/).filter((w) => w.length > 2);
 
-  // 1. Exact name match (documents uploaded via session deliverables use the checklist item as name)
+  // 1. Exact name match (session deliverables are always uploaded with exact checklist item name)
   const exactMatch = documents.filter((d) => d.name.toLowerCase() === lower);
   if (exactMatch.length > 0) return exactMatch;
 
-  // 2. Partial name match (doc name contains a keyword from the checklist item)
-  const nameMatch = documents.filter((d) => {
-    const docName = d.name.toLowerCase();
-    return words.some((w) => docName.includes(w));
-  });
-  if (nameMatch.length > 0) return nameMatch;
-
-  // 3. Specific category match (only for non-generic categories — "other" excluded)
+  // 2. Category match (reliable for known document types — cv, transcript, ielts, etc.)
   for (const [keyword, categories] of Object.entries(DOC_CHECKLIST_MATCH)) {
     if (lower.includes(keyword)) {
-      const matched = documents.filter((d) => categories.includes(d.category));
-      if (matched.length > 0) return matched;
+      const catMatch = documents.filter((d) => categories.includes(d.category));
+      if (catMatch.length > 0) return catMatch;
+      // keyword matched but no docs in that category — stop here, don't fall to name match
+      break;
     }
+  }
+
+  // 3. Whole-word AND match: every meaningful word in the checklist item must appear
+  //    as a whole word in the doc name. Prevents "University wish list" matching
+  //    "University shortlist document" (different items from different sessions).
+  const words = lower.split(/[\s\/\(\)\-]+/).filter((w) => w.length > 3);
+  if (words.length > 0) {
+    const nameMatch = documents.filter((d) => {
+      const docWords = d.name.toLowerCase().split(/[\s\/\(\)\-]+/);
+      return words.every((w) => docWords.includes(w));
+    });
+    if (nameMatch.length > 0) return nameMatch;
   }
 
   return [];
