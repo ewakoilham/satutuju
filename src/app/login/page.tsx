@@ -38,7 +38,31 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Left form panel */}
+      {/* Left branded panel - desktop only */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
+        {/* Brand illustrations */}
+        <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-20" />
+        <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-20" />
+        <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-15" />
+
+        <div className="relative text-center">
+          <Logo variant="main" size="lg" className="mx-auto mb-8" />
+          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
+            Welcome back
+          </h2>
+          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
+            Continue your mentorship journey. Your mentor and resources are waiting for you.
+          </p>
+
+          <div className="flex items-center justify-center gap-2 mt-10">
+            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
+            <div className="w-2 h-2 rounded-full bg-primary/30" />
+            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-8 py-12">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
@@ -126,29 +150,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right branded panel - desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        {/* Brand illustrations */}
-        <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-20" />
-        <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-20" />
-        <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-15" />
-
-        <div className="relative text-center">
-          <Logo variant="main" size="lg" className="mx-auto mb-8" />
-          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
-            Welcome back
-          </h2>
-          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
-            Continue your mentorship journey. Your mentor and resources are waiting for you.
-          </p>
-
-          <div className="flex items-center justify-center gap-2 mt-10">
-            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
