@@ -16,11 +16,6 @@ const FIELD_LABELS: Record<string, string> = {
   health: "Health & Medicine", education: "Education & Research",
   government: "Government & Public Policy", other: "Other",
 };
-const AVAIL_LABELS: Record<string, string> = {
-  morning: "Weekday morning (before 9am)", midday: "Weekday midday (9am–12pm)",
-  afternoon: "Weekday afternoon (1pm–5pm)", evening: "Weekday evening (after 6pm)",
-  weekend: "Weekend",
-};
 const PERSONALITY_LABELS: Record<string, string> = {
   introvert: "Introvert",
   extrovert: "Extrovert",
@@ -171,8 +166,6 @@ export default function MentorProfileAdminView() {
           {/* Preferences */}
           <SectionCard icon="settings" title="Mentoring Preferences">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FieldDisplay label="Weekly Hours" value={str("weeklyHours")} />
-              <FieldDisplay label="Availability" value={arrLabel(AVAIL_LABELS, p.availability)} />
               <FieldDisplay label="Personality" value={label(PERSONALITY_LABELS, str("personality"))} />
               <FieldDisplay label="Mentoring Style" value={label(MENTOR_STYLE_LABELS, str("mentorStyle"))} />
               <FieldDisplay label="Working Style" value={label(WORK_STYLE_LABELS, str("workStyle"))} />

@@ -33,6 +33,10 @@ model User {
 
   // Profiles
   mentorProfile MentorProfile?
+
+  // Schedule
+  scheduleSlots    ScheduleSlot[]    @relation("MentorSlots")
+  scheduleBookings ScheduleBooking[] @relation("MenteeBookings")
 }
 
 model MentorProfile {
@@ -50,9 +54,6 @@ model MentorProfile {
   currentField       String?
   currentFieldOther  String?
   // Mentoring Preference
-  weeklyHours        String?
-  availability       String?  // JSON array of slots
-  availabilityOther  String?
   personality        String?  // "introvert" | "extrovert" | "ambivert"
   mentorStyle        String?  // "gentle" … "direct"
   workStyle          String?  // "structured" … "flexible"
@@ -63,6 +64,41 @@ model MentorProfile {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// SCHEDULE
+// ──────────────────────────────────────────────
+
+model ScheduleSlot {
+  id        String   @id @default(cuid())
+  mentorId  String
+  date      String   // "YYYY-MM-DD"
+  startTime String   // "HH:MM"
+  endTime   String   // "HH:MM"
+  notes     String?
+  status    String   @default("available") // "available" | "pending" | "booked"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentor   User              @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
+  bookings ScheduleBooking[]
+}
+
+model ScheduleBooking {
+  id             String   @id @default(cuid())
+  slotId         String
+  menteeId       String
+  message        String?
+  sessionId      String?  // FK to Session being discussed
+  requestedStart String?  // "HH:MM" — chosen 90-min window start
+  requestedEnd   String?  // "HH:MM" — chosen 90-min window end
+  status         String   @default("pending") // "pending" | "accepted" | "rejected"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  slot   ScheduleSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  mentee User         @relation("MenteeBookings", fields: [menteeId], references: [id], onDelete: Cascade)
 }
 
 // ──────────────────────────────────────────────

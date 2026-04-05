@@ -19,8 +19,6 @@ interface MentorProfileData {
   fundingOther: string;
   currentField: string;
   currentFieldOther: string;
-  weeklyHours: string;
-  availability: string;
   personality: string;
   mentorStyle: string;
   workStyle: string;
@@ -34,7 +32,6 @@ const EMPTY: MentorProfileData = {
   postgradMajor: "", postgradUniversity: "",
   fundingScheme: "", fundingOther: "",
   currentField: "", currentFieldOther: "",
-  weeklyHours: "", availability: "",
   personality: "", mentorStyle: "", workStyle: "",
   communicationStyle: "", primaryRoles: [],
 };
@@ -52,14 +49,6 @@ const FIELD_VALUES = [
   "technology", "business", "finance", "consulting",
   "health", "education", "government", "other",
 ];
-
-const HOURS_OPTIONS = ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"];
-
-const AVAIL_OPTIONS = [
-  "Weekday morning (before 9am)", "Weekday midday (9am–12pm)",
-  "Weekday afternoon (1pm–5pm)", "Weekday evening (after 6pm)", "Weekend",
-];
-const AVAIL_VALUES = ["morning", "midday", "afternoon", "evening", "weekend"];
 
 const PERSONALITY_OPTIONS = ["Introvert", "Extrovert", "Ambivert", "Not sure"];
 const PERSONALITY_VALUES  = ["introvert", "extrovert", "ambivert", "not-sure"];
@@ -254,8 +243,6 @@ export default function MentorProfilePage() {
       fundingOther:       String(data.fundingOther       ?? ""),
       currentField:       String(data.currentField       ?? ""),
       currentFieldOther:  String(data.currentFieldOther  ?? ""),
-      weeklyHours:        String(data.weeklyHours        ?? ""),
-      availability:       firstOf(data.availability),
       personality:        String(data.personality        ?? ""),
       mentorStyle:        String(data.mentorStyle        ?? ""),
       workStyle:          String(data.workStyle          ?? ""),
@@ -288,15 +275,10 @@ export default function MentorProfilePage() {
   const saveSection = async () => {
     setSaving(true);
     try {
-      // Wrap availability back to array for JSONB consistency; primaryRoles is already string[]
-      const payload = {
-        ...draft,
-        availability: draft.availability ? [draft.availability] : [],
-      };
       const res = await fetch("/api/mentor-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(draft),
       });
       if (res.ok) {
         setProfile({ ...draft });
@@ -412,8 +394,6 @@ export default function MentorProfilePage() {
         <SectionHeader icon="settings" title="Mentoring Preferences" section="preferences" />
         {isEditing("preferences") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <SelectInput label="Weekly Hours" value={draft.weeklyHours} onChange={(v) => upd("weeklyHours", v)} options={HOURS_OPTIONS} />
-            <SelectInput label="Availability" value={draft.availability} onChange={(v) => upd("availability", v)} options={AVAIL_OPTIONS} values={AVAIL_VALUES} />
             <SelectInput label="Personality" value={draft.personality} onChange={(v) => upd("personality", v)} options={PERSONALITY_OPTIONS} values={PERSONALITY_VALUES} />
             <SelectInput label="Mentoring Style" value={draft.mentorStyle} onChange={(v) => upd("mentorStyle", v)} options={MENTOR_STYLE_OPTIONS} values={MENTOR_STYLE_VALUES} />
             <SelectInput label="Working Style" value={draft.workStyle} onChange={(v) => upd("workStyle", v)} options={WORK_STYLE_OPTIONS} values={WORK_STYLE_VALUES} />
@@ -431,8 +411,6 @@ export default function MentorProfilePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldDisplay label="Weekly Hours" value={profile.weeklyHours} />
-            <FieldDisplay label="Availability" value={labelFor(profile.availability, AVAIL_VALUES, AVAIL_OPTIONS)} />
             <FieldDisplay label="Personality" value={labelFor(profile.personality, PERSONALITY_VALUES, PERSONALITY_OPTIONS)} />
             <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, MENTOR_STYLE_VALUES, MENTOR_STYLE_OPTIONS)} />
             <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, WORK_STYLE_VALUES, WORK_STYLE_OPTIONS)} />

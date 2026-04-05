@@ -91,25 +91,6 @@ const QUESTIONS: Question[] = [
 
   // ── Mentoring Preference ──────────────────────────────────────
   {
-    id: "m9", field: "weeklyHours", section: "Mentoring Preference",
-    question: "How many hours per week can you allocate for mentoring?",
-    type: "select",
-    options: ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"],
-  },
-  {
-    id: "m10", field: "availability", otherField: "availabilityOther", section: "Mentoring Preference",
-    question: "When are you usually available?",
-    subtitle: "Select all that apply",
-    type: "multiselect",
-    options: [
-      "Weekday morning (before 9am)",
-      "Weekday midday (9am–12pm)",
-      "Weekday afternoon (1pm–5pm)",
-      "Weekday evening (after 6pm)",
-      "Weekend",
-    ],
-  },
-  {
     id: "m11", field: "personality", section: "Mentoring Preference",
     question: "How would you describe yourself?",
     type: "select",
@@ -399,17 +380,6 @@ export default function MentorOnboardingPage() {
                     </button>
                   );
                 })}
-                {q.id === "m10" && (
-                  <div className="pt-1">
-                    <input
-                      type="text"
-                      value={profile["availabilityOther"] || ""}
-                      onChange={(e) => setProfile((p) => ({ ...p, availabilityOther: e.target.value }))}
-                      placeholder="Other availability (optional)..."
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none text-base focus:border-[var(--primary)] transition-colors"
-                    />
-                  </div>
-                )}
                 {q.maxSelect && (
                   <p className="text-xs text-gray-400 mt-1">
                     {getMultiselectValues().length}/{q.maxSelect} selected

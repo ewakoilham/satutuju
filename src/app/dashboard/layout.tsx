@@ -15,16 +15,19 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
     { href: "/dashboard", label: "Overview", icon: "chart" },
     { href: "/dashboard/users", label: "Users", icon: "users" },
     { href: "/dashboard/pairings", label: "Pairings", icon: "link" },
+    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
     { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
   ],
   mentor: [
     { href: "/dashboard", label: "My Mentees", icon: "graduation" },
+    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
     { href: "/dashboard/mentor-profile", label: "Profile", icon: "user" },
     { href: "/dashboard/universities", label: "Universities", icon: "school" },
     { href: "/dashboard/settings", label: "Settings", icon: "settings" },
   ],
   mentee: [
     { href: "/dashboard", label: "My Journey", icon: "map" },
+    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
     { href: "/dashboard/profile", label: "Profile", icon: "user" },
     { href: "/dashboard/universities", label: "Universities", icon: "school" },
     { href: "/dashboard/settings", label: "Settings", icon: "settings" },
@@ -72,6 +75,9 @@ export default function DashboardLayout({
   }
 
   const navItems = NAV_ITEMS[user.role] || NAV_ITEMS.mentee;
+  const scheduleUnread = notifications.filter(
+    (n) => n.link === "/dashboard/schedule" && !n.read
+  ).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,6 +104,7 @@ export default function DashboardLayout({
               <nav className="hidden sm:flex items-center gap-1">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
+                  const isSchedule = item.href === "/dashboard/schedule";
                   return (
                     <Link
                       key={item.href}
@@ -110,6 +117,11 @@ export default function DashboardLayout({
                     >
                       <Icon name={item.icon} size={16} className={isActive ? "text-primary" : ""} />
                       {item.label}
+                      {isSchedule && scheduleUnread > 0 && (
+                        <span className="ml-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                          {scheduleUnread}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -236,6 +248,7 @@ export default function DashboardLayout({
             <nav className="flex flex-col gap-1 p-4 flex-1">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
+                const isSchedule = item.href === "/dashboard/schedule";
                 return (
                   <Link
                     key={item.href}
@@ -249,6 +262,11 @@ export default function DashboardLayout({
                   >
                     <Icon name={item.icon} size={18} className={isActive ? "text-primary" : ""} />
                     {item.label}
+                    {isSchedule && scheduleUnread > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                        {scheduleUnread}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
