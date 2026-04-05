@@ -24,9 +24,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.endTime) updates.endTime = body.endTime;
   if ("notes" in body) updates.notes = body.notes;
 
-  if (updates.startTime && updates.endTime && updates.startTime >= updates.endTime) {
+  const effectiveStart = updates.startTime || slot.startTime;
+  const effectiveEnd   = updates.endTime   || slot.endTime;
+  if (effectiveStart >= effectiveEnd) {
     return NextResponse.json({ error: "startTime must be before endTime" }, { status: 400 });
   }
+  const toMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const dur = toMins(effectiveEnd) - toMins(effectiveStart);
+  if (dur < 60) return NextResponse.json({ error: "Slot must be at least 60 minutes" }, { status: 400 });
+  if (dur > 90) return NextResponse.json({ error: "Slot must be at most 90 minutes" }, { status: 400 });
 
   const now = new Date().toISOString();
   const { data: updated, error } = await supabase

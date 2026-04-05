@@ -2,7 +2,10 @@
 
 import { useRef, useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
-import { calcPopoverPos, fmtDateLong } from "./helpers";
+import { calcPopoverPos, fmtDateLong, toMins, minsToTime } from "./helpers";
+
+const MIN_MINS = 60;
+const MAX_MINS = 90;
 
 interface InlineCreateCardProps {
   date: string;
@@ -26,7 +29,7 @@ export default function InlineCreateCard({
   const [saving, setSaving] = useState(false);
   const [err, setErr]     = useState("");
 
-  // Sync from parent when props change (e.g. re-click different time)
+  // Sync from parent on mount
   useEffect(() => { setSt(startTime); }, [startTime]);
   useEffect(() => { setEt(endTime); }, [endTime]);
 
@@ -39,19 +42,60 @@ export default function InlineCreateCard({
     return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
   }, [onClose]);
 
-  function changeSt(v: string) { setSt(v); onUpdateTime(v, et); }
-  function changeEt(v: string) { setEt(v); onUpdateTime(st, v); }
+  // When start changes: preserve current duration (clamped to 60–90 min)
+  function changeSt(v: string) {
+    if (!v) return;
+    const startMins = toMins(v);
+    const prevDur   = toMins(et) - toMins(st);
+    const clampedDur = Math.max(MIN_MINS, Math.min(MAX_MINS, prevDur || MIN_MINS));
+    const newEnd = minsToTime(startMins + clampedDur);
+    setSt(v);
+    setEt(newEnd);
+    setErr("");
+    onUpdateTime(v, newEnd);
+  }
+
+  // When end changes: clamp to [start+60, start+90] automatically
+  function changeEt(v: string) {
+    if (!v) return;
+    const startMins = toMins(st);
+    const endMins   = toMins(v);
+    const dur = endMins - startMins;
+    if (dur < MIN_MINS) {
+      const clamped = minsToTime(startMins + MIN_MINS);
+      setEt(clamped);
+      setErr("Minimum slot duration is 60 minutes.");
+      onUpdateTime(st, clamped);
+    } else if (dur > MAX_MINS) {
+      const clamped = minsToTime(startMins + MAX_MINS);
+      setEt(clamped);
+      setErr("Maximum slot duration is 90 minutes.");
+      onUpdateTime(st, clamped);
+    } else {
+      setEt(v);
+      setErr("");
+      onUpdateTime(st, v);
+    }
+  }
+
+  // Duration indicator
+  const durMins = st && et ? toMins(et) - toMins(st) : 0;
+  const durOk   = durMins >= MIN_MINS && durMins <= MAX_MINS;
+  const durLabel = durMins > 0 ? `${durMins} min` : "";
 
   async function save() {
     if (!st || !et) { setErr("Start and end time required."); return; }
     if (st >= et)   { setErr("Start must be before end."); return; }
+    const dur = toMins(et) - toMins(st);
+    if (dur < MIN_MINS) { setErr("Minimum slot duration is 60 minutes."); return; }
+    if (dur > MAX_MINS) { setErr("Maximum slot duration is 90 minutes."); return; }
     setSaving(true);
     try { await onSave({ date, startTime: st, endTime: et, notes }); onClose(); }
     catch (e: unknown) { setErr(e instanceof Error ? e.message : "Failed to save"); }
     finally { setSaving(false); }
   }
 
-  const { left, top } = calcPopoverPos(anchorX, anchorY, 280, 260);
+  const { left, top } = calcPopoverPos(anchorX, anchorY, 280, 280);
 
   return (
     <div
@@ -72,12 +116,20 @@ export default function InlineCreateCard({
       <div className="px-4 pb-4 space-y-3">
         <p className="text-sm font-semibold text-gray-800 leading-tight">{fmtDateLong(date)}</p>
 
-        <div className="flex items-center gap-2">
-          <input type="time" value={st} onChange={e => changeSt(e.target.value)}
-            className="input-field text-sm py-1.5 flex-1 min-w-0" />
-          <span className="text-gray-400 text-sm flex-shrink-0">&ndash;</span>
-          <input type="time" value={et} onChange={e => changeEt(e.target.value)}
-            className="input-field text-sm py-1.5 flex-1 min-w-0" />
+        {/* Time row + duration badge */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <input type="time" value={st} onChange={e => changeSt(e.target.value)}
+              className="input-field text-sm py-1.5 flex-1 min-w-0" />
+            <span className="text-gray-400 text-sm flex-shrink-0">&ndash;</span>
+            <input type="time" value={et} onChange={e => changeEt(e.target.value)}
+              className="input-field text-sm py-1.5 flex-1 min-w-0" />
+          </div>
+          {durLabel && (
+            <p className={`text-[11px] font-medium text-right pr-0.5 ${durOk ? "text-blue-500" : "text-amber-500"}`}>
+              {durLabel} &middot; 60&ndash;90 min slots only
+            </p>
+          )}
         </div>
 
         <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
@@ -88,7 +140,7 @@ export default function InlineCreateCard({
 
         <div className="flex gap-2">
           <button onClick={onClose} className="btn-ghost flex-1 text-sm py-1.5">Cancel</button>
-          <button onClick={save} disabled={saving} className="btn-primary flex-1 text-sm py-1.5">
+          <button onClick={save} disabled={saving || !durOk} className="btn-primary flex-1 text-sm py-1.5 disabled:opacity-50">
             {saving ? "Saving\u2026" : "Save"}
           </button>
         </div>

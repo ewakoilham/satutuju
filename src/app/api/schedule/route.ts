@@ -88,6 +88,10 @@ export async function POST(req: NextRequest) {
   if (startTime >= endTime) {
     return NextResponse.json({ error: "startTime must be before endTime" }, { status: 400 });
   }
+  const toMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const dur = toMins(endTime) - toMins(startTime);
+  if (dur < 60) return NextResponse.json({ error: "Slot must be at least 60 minutes" }, { status: 400 });
+  if (dur > 90) return NextResponse.json({ error: "Slot must be at most 90 minutes" }, { status: 400 });
 
   const now = new Date().toISOString();
   const { data: slot, error } = await supabase

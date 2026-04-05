@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/Icon";
+import { toMins, minsToTime } from "./helpers";
+
+const MIN_MINS = 60;
+const MAX_MINS = 90;
 
 interface EditSlotModalProps {
   open: boolean;
@@ -28,9 +32,45 @@ export default function EditSlotModal({ open, onClose, onSave, initial }: EditSl
     }
   }, [open, initial]);
 
+  // When start changes: preserve current duration (clamped to 60–90 min)
+  function changeSt(v: string) {
+    if (!v) return;
+    const startMins  = toMins(v);
+    const prevDur    = st && et ? toMins(et) - toMins(st) : MIN_MINS;
+    const clampedDur = Math.max(MIN_MINS, Math.min(MAX_MINS, prevDur));
+    setSt(v);
+    setEt(minsToTime(startMins + clampedDur));
+    setErr("");
+  }
+
+  // When end changes: clamp automatically
+  function changeEt(v: string) {
+    if (!v || !st) return;
+    const startMins = toMins(st);
+    const dur = toMins(v) - startMins;
+    if (dur < MIN_MINS) {
+      setEt(minsToTime(startMins + MIN_MINS));
+      setErr("Minimum slot duration is 60 minutes.");
+    } else if (dur > MAX_MINS) {
+      setEt(minsToTime(startMins + MAX_MINS));
+      setErr("Maximum slot duration is 90 minutes.");
+    } else {
+      setEt(v);
+      setErr("");
+    }
+  }
+
+  // Duration indicator
+  const durMins = st && et ? toMins(et) - toMins(st) : 0;
+  const durOk   = durMins >= MIN_MINS && durMins <= MAX_MINS;
+  const durLabel = durMins > 0 ? `${durMins} min` : "";
+
   async function save() {
     if (!date || !st || !et) { setErr("Date, start and end time required."); return; }
     if (st >= et)             { setErr("Start must be before end."); return; }
+    const dur = toMins(et) - toMins(st);
+    if (dur < MIN_MINS) { setErr("Minimum slot duration is 60 minutes."); return; }
+    if (dur > MAX_MINS) { setErr("Maximum slot duration is 90 minutes."); return; }
     setSaving(true);
     try { await onSave({ date, startTime: st, endTime: et, notes }); onClose(); }
     catch (e: unknown) { setErr(e instanceof Error ? e.message : "Failed to save"); }
@@ -57,13 +97,19 @@ export default function EditSlotModal({ open, onClose, onSave, initial }: EditSl
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 font-medium block mb-1">Start</label>
-              <input type="time" value={st} onChange={e => setSt(e.target.value)} className="input-field w-full" />
+              <input type="time" value={st} onChange={e => changeSt(e.target.value)} className="input-field w-full" />
             </div>
             <div>
               <label className="text-xs text-gray-500 font-medium block mb-1">End</label>
-              <input type="time" value={et} onChange={e => setEt(e.target.value)} className="input-field w-full" />
+              <input type="time" value={et} onChange={e => changeEt(e.target.value)} className="input-field w-full" />
             </div>
           </div>
+          {/* Duration indicator */}
+          {durLabel && (
+            <p className={`text-[11px] font-medium text-right pr-0.5 -mt-1 ${durOk ? "text-blue-500" : "text-amber-500"}`}>
+              {durLabel} &middot; 60&ndash;90 min slots only
+            </p>
+          )}
           <div>
             <label className="text-xs text-gray-500 font-medium block mb-1">
               Notes <span className="text-gray-300">(optional)</span>
@@ -74,7 +120,7 @@ export default function EditSlotModal({ open, onClose, onSave, initial }: EditSl
         </div>
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="btn-ghost flex-1 text-sm py-2">Cancel</button>
-          <button onClick={save} disabled={saving} className="btn-primary flex-1 text-sm py-2">
+          <button onClick={save} disabled={saving || !durOk} className="btn-primary flex-1 text-sm py-2 disabled:opacity-50">
             {saving ? "Saving\u2026" : "Save"}
           </button>
         </div>
