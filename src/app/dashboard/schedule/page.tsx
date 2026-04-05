@@ -128,6 +128,49 @@ function slotPos(startTime: string, endTime: string) {
   const height = Math.max(((toMins(endTime) - toMins(startTime)) / 60) * HOUR_H - 2, 22);
   return { top, height };
 }
+// Returns visual segments so only the booked window is colored, rest stays available-blue
+function getVisualSegments(slot: Slot, role: string): Array<{ startTime: string; endTime: string; type: string }> {
+  type Seg = { startTime: string; endTime: string; type: string };
+
+  if (role === "mentee") {
+    const b = slot.myBooking;
+    if (b && b.requestedStart && b.requestedEnd && (b.status === "pending" || b.status === "accepted")) {
+      const segs: Seg[] = [];
+      if (b.requestedStart > slot.startTime)
+        segs.push({ startTime: slot.startTime, endTime: b.requestedStart, type: "available" });
+      segs.push({ startTime: b.requestedStart, endTime: b.requestedEnd, type: b.status });
+      if (b.requestedEnd < slot.endTime)
+        segs.push({ startTime: b.requestedEnd, endTime: slot.endTime, type: "available" });
+      return segs;
+    }
+  }
+
+  if (role === "mentor") {
+    const active = (slot.bookings || [])
+      .filter((b): b is Booking & { requestedStart: string; requestedEnd: string } =>
+        (b.status === "pending" || b.status === "accepted") &&
+        typeof b.requestedStart === "string" && typeof b.requestedEnd === "string"
+      )
+      .sort((a, b) => toMins(a.requestedStart) - toMins(b.requestedStart));
+    if (active.length > 0) {
+      const segs: Seg[] = [];
+      let cur = slot.startTime;
+      for (const b of active) {
+        if (b.requestedStart > cur)
+          segs.push({ startTime: cur, endTime: b.requestedStart, type: "available" });
+        segs.push({ startTime: b.requestedStart, endTime: b.requestedEnd, type: b.status });
+        cur = b.requestedEnd;
+      }
+      if (cur < slot.endTime)
+        segs.push({ startTime: cur, endTime: slot.endTime, type: "available" });
+      return segs;
+    }
+  }
+
+  // Default: single block with overall slot status
+  return [{ startTime: slot.startTime, endTime: slot.endTime, type: slot.status }];
+}
+
 function slotBg(slot: Slot, role: string) {
   if (role === "mentee") {
     const bs = slot.myBooking?.status;
@@ -1002,44 +1045,58 @@ export default function SchedulePage() {
                           const slotPending = (slot.bookings || []).filter(b => b.status === "pending");
                           const isSelected  = popover?.slot.id === slot.id;
 
-                          // Admin: mentor-specific color; others: status color class
                           const mentorColor = isAdmin && slot.mentorId
                             ? (mentorColorMap.get(slot.mentorId) ?? MENTOR_PALETTE[0])
                             : undefined;
-                          const bgClass = mentorColor ? "" : slotBg(slot, user.role);
+
+                          // Build segments: only the booked window gets status color, rest stays blue
+                          const segments = getVisualSegments(slot, user.role);
 
                           return (
                             <div
                               key={slot.id}
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => handleSlotClick(e, slot)}
-                              className={`absolute ${bgClass} text-white rounded-md px-2 py-1 overflow-hidden transition-all select-none ${
+                              className={`absolute text-white rounded-md overflow-hidden transition-all select-none ${
                                 isMentor || isMentee || isAdmin ? "cursor-pointer" : ""
                               } ${isSelected ? "ring-2 ring-white/50" : "hover:brightness-110 active:brightness-95"}`}
                               style={{
-                                top,
-                                height,
+                                top, height,
                                 left:  `calc(${col * pct}% + 2px)`,
                                 width: `calc(${pct}% - 4px)`,
-                                backgroundColor: mentorColor,
                               }}
                             >
-                              <p className="text-[11px] font-semibold truncate leading-tight">
-                                {slot.startTime}–{slot.endTime}
-                              </p>
-                              {height > 38 && slot.notes && (
-                                <p className="text-[10px] opacity-70 truncate mt-0.5">{slot.notes}</p>
-                              )}
-                              {/* Mentor name label (admin view) */}
-                              {isAdmin && slot.mentor && (
-                                <p className="text-[10px] opacity-80 truncate mt-0.5">{slot.mentor.name}</p>
-                              )}
-                              {/* Pending request badge (mentor view) */}
-                              {isMentor && slotPending.length > 0 && (
-                                <span className="absolute top-1 right-1 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                                  <span className="text-[9px] font-bold text-amber-600">{slotPending.length}</span>
-                                </span>
-                              )}
+                              {/* Colored segment strips */}
+                              {segments.map((seg, idx) => {
+                                const segTop = ((toMins(seg.startTime) - toMins(slot.startTime)) / 60) * HOUR_H;
+                                const segH   = ((toMins(seg.endTime) - toMins(seg.startTime)) / 60) * HOUR_H;
+                                const bgCls  = mentorColor ? "" :
+                                  seg.type === "pending"  ? "bg-amber-400" :
+                                  seg.type === "accepted" || seg.type === "booked" ? "bg-emerald-500" :
+                                  seg.type === "available" ? "bg-blue-600" : "bg-gray-400";
+                                return (
+                                  <div key={idx} className={`absolute left-0 right-0 ${bgCls}`}
+                                    style={{ top: segTop, height: segH, ...(mentorColor ? { backgroundColor: mentorColor } : {}) }} />
+                                );
+                              })}
+
+                              {/* Text + badge overlay */}
+                              <div className="relative z-10 px-2 py-1">
+                                <p className="text-[11px] font-semibold truncate leading-tight">
+                                  {slot.startTime}–{slot.endTime}
+                                </p>
+                                {height > 38 && slot.notes && (
+                                  <p className="text-[10px] opacity-70 truncate mt-0.5">{slot.notes}</p>
+                                )}
+                                {isAdmin && slot.mentor && (
+                                  <p className="text-[10px] opacity-80 truncate mt-0.5">{slot.mentor.name}</p>
+                                )}
+                                {isMentor && slotPending.length > 0 && (
+                                  <span className="absolute top-1 right-1 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="text-[9px] font-bold text-amber-600">{slotPending.length}</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
