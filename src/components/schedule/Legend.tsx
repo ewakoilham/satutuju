@@ -24,6 +24,7 @@ export default function Legend({ role, mentors, mentorColorMap }: LegendProps) {
           <LegendItem color="bg-blue-600" label="Available" />
           <LegendItem color="bg-amber-400" label="Your request pending" />
           <LegendItem color="bg-emerald-500" label="Accepted" />
+          <LegendItem color="bg-red-400" label="Request rejected" />
         </>
       )}
       {role === "admin" && mentors.length > 0 && (

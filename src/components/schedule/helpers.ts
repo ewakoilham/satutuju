@@ -109,7 +109,7 @@ export function slotColorClass(slot: Slot, role: string): string {
     const bs = slot.myBooking?.status;
     if (bs === "accepted") return "bg-emerald-500 hover:bg-emerald-600";
     if (bs === "pending")  return "bg-amber-400 hover:bg-amber-500";
-    // Rejected: treat same as no booking — show availability status instead
+    if (bs === "rejected") return "bg-red-400 hover:bg-red-500";
     // No booking by this mentee — check slot availability
     const hasAccepted = slot.bookings?.some(b => b.status === "accepted");
     if (hasAccepted) return "bg-gray-300 hover:bg-gray-400";

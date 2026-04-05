@@ -58,6 +58,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: "Failed to update slot" }, { status: 500 });
 
+  // Clear all rejected bookings — slot time changed, mentees should see it as fresh
+  await supabase
+    .from("ScheduleBooking")
+    .delete()
+    .eq("slotId", id)
+    .eq("status", "rejected");
+
   // Notify mentees who have pending/accepted bookings
   const activeBookings = (slot.bookings || []).filter(
     (b: { status: string }) => b.status === "pending" || b.status === "accepted"
