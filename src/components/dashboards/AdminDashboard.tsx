@@ -73,7 +73,6 @@ export default function AdminDashboard() {
   const [newPairing, setNewPairing] = useState({
     mentorId: "",
     menteeId: "",
-    targetProgram: "",
   });
   const [loading, setLoading] = useState(true);
 
@@ -138,7 +137,7 @@ export default function AdminDashboard() {
         return;
       }
       setShowCreate(false);
-      setNewPairing({ mentorId: "", menteeId: "", targetProgram: "" });
+      setNewPairing({ mentorId: "", menteeId: "" });
       fetchData();
     } catch {
       setCreateError("Network error. Please try again.");
@@ -488,7 +487,7 @@ export default function AdminDashboard() {
               {createError}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mentor
@@ -550,23 +549,6 @@ export default function AdminDashboard() {
                   </select>
                 );
               })()}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Program
-              </label>
-              <input
-                type="text"
-                value={newPairing.targetProgram}
-                onChange={(e) =>
-                  setNewPairing({
-                    ...newPairing,
-                    targetProgram: e.target.value,
-                  })
-                }
-                className="input-field"
-                placeholder="e.g. Masters in Education, UK"
-              />
             </div>
           </div>
           <div className="flex gap-2">
