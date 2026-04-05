@@ -82,19 +82,24 @@ export default function BookingModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 z-10">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h2 className="text-base font-semibold font-[family-name:var(--font-heading)] mb-2">Request Slot</h2>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-              <p className="text-xl font-bold text-blue-700 leading-none tracking-tight">
-                {slot.startTime}&ndash;{slot.endTime}
-              </p>
-              <p className="text-sm font-medium text-blue-500 mt-1">{fmtDate(slot.date)}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition text-gray-400 mt-0.5">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold font-[family-name:var(--font-heading)]">Request Slot</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition text-gray-400">
             <Icon name="x" size={16} />
           </button>
+        </div>
+
+        {/* Slot info card — full width */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-0.5">Time slot</p>
+            <p className="text-lg font-bold text-blue-700 leading-none">{slot.startTime} &ndash; {slot.endTime}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-0.5">Date</p>
+            <p className="text-sm font-semibold text-blue-700">{fmtDate(slot.date)}</p>
+          </div>
         </div>
 
         {err && <p className="text-sm text-red-500 mb-3">{err}</p>}
