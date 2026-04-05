@@ -621,7 +621,7 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, onClose, onEdit
         {role === "mentee" && (
           <>
             {!myBooking && slot.status === "available" && (
-              <button onClick={() => { onBook?.(); onClose(); }} className="btn-primary w-full text-sm py-2">
+              <button onClick={() => onBook?.()} className="btn-primary w-full text-sm py-2">
                 Request this slot
               </button>
             )}
@@ -1112,7 +1112,7 @@ export default function SchedulePage() {
           onClose={() => { setPopover(null); setMenteeGhost(null); }}
           onEdit={() => setEditModal({ open: true, initial: { ...popover.slot, id: popover.slot.id } })}
           onDelete={() => setDeleteTarget(popover.slot)}
-          onBook={() => setBookTarget(popover.slot)}
+          onBook={() => { setBookTarget(popover.slot); setPopover(null); /* keep menteeGhost alive for modal */ }}
           onAccept={id => handleBookingAction(popover.slot.id, id, "accept")}
           onReject={id => handleBookingAction(popover.slot.id, id, "reject")}
         />
