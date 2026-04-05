@@ -67,12 +67,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Set slot to pending
   await supabase.from("ScheduleSlot").update({ status: "pending", updatedAt: now }).eq("id", slotId);
 
-  // Notify mentor
+  // Notify mentor — use the requested window if provided, else full slot range
+  const reqTimeDisplay = requestedStart && requestedEnd
+    ? `${requestedStart}–${requestedEnd}`
+    : `${slot.startTime}–${slot.endTime}`;
+
   await supabase.from("Notification").insert({
     id: crypto.randomUUID(),
     userId: slot.mentorId,
     title: "New Booking Request",
-    message: `${user.name} requested your slot on ${slot.date} (${slot.startTime}–${slot.endTime}).`,
+    message: `${user.name} requested your slot on ${slot.date} (${reqTimeDisplay}).`,
     type: "schedule",
     read: false,
     link: "/dashboard/schedule",
@@ -105,7 +109,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: booking } = await supabase
     .from("ScheduleBooking")
-    .select("id, menteeId, status")
+    .select("id, menteeId, status, requestedStart, requestedEnd")
     .eq("id", bookingId)
     .eq("slotId", slotId)
     .single();
@@ -133,12 +137,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq("status", "pending")
       .neq("id", bookingId);
 
-    // Notify accepted mentee
+    // Notify accepted mentee — use requested window if stored
+    const acceptedTimeDisplay = booking.requestedStart && booking.requestedEnd
+      ? `${booking.requestedStart}–${booking.requestedEnd}`
+      : `${slot.startTime}–${slot.endTime}`;
+
     await supabase.from("Notification").insert({
       id: crypto.randomUUID(),
       userId: booking.menteeId,
       title: "Booking Accepted",
-      message: `Your request for the slot on ${slot.date} (${slot.startTime}–${slot.endTime}) has been accepted!`,
+      message: `Your request for ${slot.date} (${acceptedTimeDisplay}) has been accepted!`,
       type: "schedule",
       read: false,
       link: "/dashboard/schedule",
