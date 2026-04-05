@@ -377,10 +377,11 @@ function EditSlotModal({ open, onClose, onSave, initial }: {
 }
 
 // ── Booking modal (mentee) — session required, time-frame picker, optional message ──
-function BookingModal({ open, slot, sessions, onClose, onBook, onPreviewChange }: {
+function BookingModal({ open, slot, sessions, initialWindow, onClose, onBook, onPreviewChange }: {
   open: boolean;
   slot: Slot | null;
   sessions: Session[];
+  initialWindow?: { startTime: string; endTime: string };
   onClose: () => void;
   onBook: (slotId: string, opts: { sessionId: string; requestedStart: string; requestedEnd: string; message: string }) => Promise<void>;
   onPreviewChange: (startTime: string, endTime: string) => void;
@@ -402,11 +403,15 @@ function BookingModal({ open, slot, sessions, onClose, onBook, onPreviewChange }
       setSessionId("");
       setMsg("");
       setErr("");
-      const first = getTimeFrameOptions(slot.startTime, slot.endTime)[0];
-      if (first) {
-        const key = `${first.startTime}|${first.endTime}`;
+      const opts = getTimeFrameOptions(slot.startTime, slot.endTime);
+      // Pre-select whichever option matches the ghost block the mentee already positioned
+      const match = initialWindow
+        ? (opts.find(o => o.startTime === initialWindow.startTime) ?? opts[0])
+        : opts[0];
+      if (match) {
+        const key = `${match.startTime}|${match.endTime}`;
         setTimeFrame(key);
-        onPreviewChange(first.startTime, first.endTime);
+        onPreviewChange(match.startTime, match.endTime);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1124,6 +1129,7 @@ export default function SchedulePage() {
         open={!!bookTarget}
         slot={bookTarget}
         sessions={sessions}
+        initialWindow={menteeGhost ?? undefined}
         onClose={() => { setBookTarget(null); setMenteeGhost(null); }}
         onBook={handleBook}
         onPreviewChange={handlePreviewChange}
