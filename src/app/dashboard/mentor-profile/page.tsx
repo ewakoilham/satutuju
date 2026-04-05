@@ -1,632 +1,481 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
+import Badge from "@/components/ui/Badge";
+import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { useUser } from "@/lib/hooks";
 
-// ── Question definitions ──────────────────────────────────────
-type QType =
-  | "text"
-  | "select"
-  | "select-other"
-  | "multiselect"
-
-interface Question {
-  id: string;
-  field: string;
-  otherField?: string;
-  question: string;
-  subtitle?: string;
-  type: QType;
-  options?: string[];
-  optionValues?: string[];
-  maxSelect?: number;
-  section: string;
+// ── Data shape ────────────────────────────────────────────────
+interface MentorProfileData {
+  fullName: string;
+  city: string;
+  undergradMajor: string;
+  undergradUniversity: string;
+  postgradMajor: string;
+  postgradUniversity: string;
+  fundingScheme: string;
+  fundingOther: string;
+  currentField: string;
+  currentFieldOther: string;
+  weeklyHours: string;
+  availability: string[];
+  availabilityOther: string;
+  personality: string;
+  mentorStyle: string;
+  workStyle: string;
+  communicationStyle: string;
+  primaryRoles: string[];
 }
 
-const QUESTIONS: Question[] = [
-  // ── Study Experience ──────────────────────────────────────────
-  {
-    id: "m1", field: "fullName", section: "Study Experience",
-    question: "What is your full name?",
-    subtitle: "As it appears on your ID",
-    type: "text",
-  },
-  {
-    id: "m2", field: "city", section: "Study Experience",
-    question: "What city do you live in?",
-    subtitle: "Your current city or district",
-    type: "text",
-  },
-  {
-    id: "m3", field: "undergradMajor", section: "Study Experience",
-    question: "What was your undergraduate major and degree?",
-    subtitle: "e.g. Chemical Engineering, Bachelor's",
-    type: "text",
-  },
-  {
-    id: "m4", field: "undergradUniversity", section: "Study Experience",
-    question: "Where did you complete your undergraduate degree?",
-    subtitle: "University name and country — e.g. Universitas Indonesia, Indonesia",
-    type: "text",
-  },
-  {
-    id: "m5", field: "postgradMajor", section: "Study Experience",
-    question: "What was your postgraduate major and degree?",
-    subtitle: "e.g. Master's in Public Policy",
-    type: "text",
-  },
-  {
-    id: "m6", field: "postgradUniversity", section: "Study Experience",
-    question: "Where did you complete your postgraduate degree?",
-    subtitle: "University name and country — e.g. University of Melbourne, Australia",
-    type: "text",
-  },
-  {
-    id: "m7", field: "fundingScheme", otherField: "fundingOther", section: "Study Experience",
-    question: "How was your postgraduate study funded?",
-    type: "select-other",
-    options: ["LPDP Scholarship", "Self-funded", "Other"],
-    optionValues: ["lpdp", "self-funded", "other"],
-  },
-  {
-    id: "m8", field: "currentField", otherField: "currentFieldOther", section: "Study Experience",
-    question: "What field do you currently work in?",
-    type: "select-other",
-    options: [
-      "Technology & Engineering",
-      "Business & Management",
-      "Finance & Banking",
-      "Consulting",
-      "Health & Medicine",
-      "Education & Research",
-      "Government & Public Policy",
-      "Other",
-    ],
-    optionValues: [
-      "technology", "business", "finance", "consulting",
-      "health", "education", "government", "other",
-    ],
-  },
+const EMPTY: MentorProfileData = {
+  fullName: "", city: "",
+  undergradMajor: "", undergradUniversity: "",
+  postgradMajor: "", postgradUniversity: "",
+  fundingScheme: "", fundingOther: "",
+  currentField: "", currentFieldOther: "",
+  weeklyHours: "", availability: [], availabilityOther: "",
+  personality: "", mentorStyle: "", workStyle: "",
+  communicationStyle: "", primaryRoles: [],
+};
 
-  // ── Mentoring Preference ──────────────────────────────────────
-  {
-    id: "m9", field: "weeklyHours", section: "Mentoring Preference",
-    question: "How many hours per week can you allocate for mentoring?",
-    type: "select",
-    options: ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"],
-  },
-  {
-    id: "m10", field: "availability", otherField: "availabilityOther", section: "Mentoring Preference",
-    question: "When are you usually available?",
-    subtitle: "Select all that apply",
-    type: "multiselect",
-    options: [
-      "Weekday morning (before 9am)",
-      "Weekday midday (9am–12pm)",
-      "Weekday afternoon (1pm–5pm)",
-      "Weekday evening (after 6pm)",
-      "Weekend",
-    ],
-  },
-  {
-    id: "m11", field: "personality", section: "Mentoring Preference",
-    question: "How would you describe yourself?",
-    type: "select",
-    options: [
-      "Introvert — prefer calm, 1-on-1 interactions",
-      "Extrovert — open, energetic, love interacting",
-      "Ambivert",
-    ],
-    optionValues: ["introvert", "extrovert", "ambivert"],
-  },
-  {
-    id: "m12", field: "mentorStyle", section: "Mentoring Preference",
-    question: "What's your mentoring style?",
-    type: "select",
-    options: ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"],
-    optionValues: ["gentle", "somewhat-gentle", "no-preference", "somewhat-direct", "direct"],
-  },
-  {
-    id: "m13", field: "workStyle", section: "Mentoring Preference",
-    question: "What's your working style in sessions?",
-    type: "select",
-    options: ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"],
-    optionValues: ["structured", "somewhat-structured", "no-preference", "somewhat-flexible", "flexible"],
-  },
-  {
-    id: "m14", field: "communicationStyle", section: "Mentoring Preference",
-    question: "What's your preferred communication style?",
-    type: "select",
-    options: ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"],
-    optionValues: ["formal", "somewhat-formal", "no-preference", "somewhat-casual", "casual"],
-  },
-  {
-    id: "m15", field: "primaryRoles", section: "Mentoring Preference",
-    question: "What role do you play most in mentoring?",
-    subtitle: "Choose up to 2",
-    type: "multiselect",
-    maxSelect: 2,
-    options: [
-      "Listener — give the mentee space to reflect",
-      "Problem solver — help find concrete solutions",
-      "Challenger — push the mentee out of their comfort zone",
-      "Motivator — keep their energy and confidence up",
-      "Advisor — share personal experience and perspective",
-    ],
-    optionValues: ["listener", "problem-solver", "challenger", "motivator", "advisor"],
-  },
+// ── Option lists ──────────────────────────────────────────────
+const FUNDING_OPTIONS   = ["LPDP Scholarship", "Self-funded", "Other"];
+const FUNDING_VALUES    = ["lpdp", "self-funded", "other"];
+const FIELD_OPTIONS     = [
+  "Technology & Engineering", "Business & Management", "Finance & Banking",
+  "Consulting", "Health & Medicine", "Education & Research",
+  "Government & Public Policy", "Other",
 ];
-
-// ── Human-readable labels for summary view ──────────────────
-const FIELD_LABELS: Record<string, string> = {
-  fullName: "Full Name",
-  city: "City",
-  undergradMajor: "Undergrad Major & Degree",
-  undergradUniversity: "Undergrad University",
-  postgradMajor: "Postgrad Major & Degree",
-  postgradUniversity: "Postgrad University",
-  fundingScheme: "Funding Scheme",
-  fundingOther: "Funding (other)",
-  currentField: "Current Field",
-  currentFieldOther: "Current Field (other)",
-  weeklyHours: "Weekly Hours",
-  availability: "Availability",
-  availabilityOther: "Availability (other)",
-  personality: "Personality",
-  mentorStyle: "Mentoring Style",
-  workStyle: "Working Style",
-  communicationStyle: "Communication Style",
-  primaryRoles: "Primary Roles",
+const FIELD_VALUES      = [
+  "technology", "business", "finance", "consulting",
+  "health", "education", "government", "other",
+];
+const HOURS_OPTIONS     = ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"];
+const AVAIL_OPTIONS     = [
+  "Weekday morning (before 9am)", "Weekday midday (9am–12pm)",
+  "Weekday afternoon (1pm–5pm)", "Weekday evening (after 6pm)", "Weekend",
+];
+const AVAIL_VALUES      = ["morning", "midday", "afternoon", "evening", "weekend"];
+const PERSONALITY_OPTIONS = [
+  "Introvert — prefer calm, 1-on-1 interactions",
+  "Extrovert — open, energetic, love interacting",
+  "Ambivert",
+];
+const PERSONALITY_VALUES  = ["introvert", "extrovert", "ambivert"];
+const STYLE_OPTIONS = {
+  mentor:        { labels: ["Gentle","Somewhat gentle","No preference","Somewhat direct","Direct"],         values: ["gentle","somewhat-gentle","no-preference","somewhat-direct","direct"] },
+  work:          { labels: ["Structured","Somewhat structured","No preference","Somewhat flexible","Flexible"], values: ["structured","somewhat-structured","no-preference","somewhat-flexible","flexible"] },
+  communication: { labels: ["Formal","Somewhat formal","No preference","Somewhat casual","Casual"],         values: ["formal","somewhat-formal","no-preference","somewhat-casual","casual"] },
 };
+const ROLE_OPTIONS = [
+  "Listener — give the mentee space to reflect",
+  "Problem solver — help find concrete solutions",
+  "Challenger — push the mentee out of their comfort zone",
+  "Motivator — keep their energy and confidence up",
+  "Advisor — share personal experience and perspective",
+];
+const ROLE_VALUES  = ["listener", "problem-solver", "challenger", "motivator", "advisor"];
 
-interface ProfileData {
-  [key: string]: string;
+// ── Value → display label helpers ────────────────────────────
+function labelFor(value: string, values: string[], labels: string[]): string {
+  const idx = values.indexOf(value);
+  return idx >= 0 ? labels[idx] : value;
+}
+function labelsForArray(values: string[], valuesList: string[], labelsList: string[]): string {
+  return values.map((v) => labelFor(v, valuesList, labelsList)).filter(Boolean).join(", ");
 }
 
-const buildEmpty = (): ProfileData => {
-  const p: ProfileData = {};
-  QUESTIONS.forEach((q) => {
-    p[q.field] = "";
-    if (q.otherField) p[q.otherField] = "";
-  });
-  return p;
-};
-
-function formatValue(field: string, value: string): string {
-  if (!value) return "—";
-  try {
-    const arr = JSON.parse(value);
-    if (Array.isArray(arr)) return arr.join(", ") || "—";
-  } catch { /* not JSON */ }
-  return value;
+// ── Reusable display/input components ────────────────────────
+function MissingBadge() {
+  return <Badge variant="danger">Missing details</Badge>;
 }
 
-export default function MentorProfilePage() {
-  const [mode, setMode] = useState<"edit" | "view">("edit");
-  const [current, setCurrent] = useState(0);
-  const [profile, setProfile] = useState<ProfileData>(buildEmpty);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
-  const [direction, setDirection] = useState<"next" | "prev">("next");
-  const [animating, setAnimating] = useState(false);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+function FieldDisplay({ label, value }: { label: string; value: string | undefined | null }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-gray-500 font-medium">{label}</p>
+      {value ? <p className="text-sm text-gray-900">{value}</p> : <MissingBadge />}
+    </div>
+  );
+}
 
-  const total = QUESTIONS.length;
-  const q = QUESTIONS[current];
-  const progress = ((current + 1) / total) * 100;
-  const isLast = current === total - 1;
+function TextInput({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <input
+        type="text"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="input-field"
+      />
+    </div>
+  );
+}
 
-  // Load existing profile on mount — if data exists, go straight to dashboard view
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/mentor-profile");
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.fullName) {
-            setProfile((prev) => {
-              const next = { ...prev };
-              Object.keys(data).forEach((k) => {
-                if (k in next && data[k] != null) {
-                  if (Array.isArray(data[k])) {
-                    next[k] = JSON.stringify(data[k]);
-                  } else {
-                    next[k] = String(data[k]);
-                  }
-                }
-              });
-              return next;
-            });
-            setMode("view");
-          }
-        }
-      } finally {
-        setLoadingProfile(false);
+function SelectInput({ label, value, onChange, options, values, placeholder = "Select..." }: {
+  label: string; value: string; onChange: (v: string) => void;
+  options: string[]; values?: string[]; placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
+        <option value="">{placeholder}</option>
+        {options.map((opt, i) => (
+          <option key={opt} value={values?.[i] ?? opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function SelectOtherInput({ label, value, otherValue, onChange, onOtherChange, options, values }: {
+  label: string; value: string; otherValue: string;
+  onChange: (v: string) => void; onOtherChange: (v: string) => void;
+  options: string[]; values: string[];
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
+        <option value="">Select...</option>
+        {options.map((opt, i) => (
+          <option key={opt} value={values[i]}>{opt}</option>
+        ))}
+      </select>
+      {value === "other" && (
+        <input
+          type="text"
+          value={otherValue || ""}
+          onChange={(e) => onOtherChange(e.target.value)}
+          placeholder="Please specify..."
+          className="input-field mt-1"
+        />
+      )}
+    </div>
+  );
+}
+
+function MultiSelectInput({ label, selected, onChange, options, values, maxSelect }: {
+  label: string; selected: string[]; onChange: (v: string[]) => void;
+  options: string[]; values: string[]; maxSelect?: number;
+}) {
+  const toggle = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter((v) => v !== val));
+    } else {
+      if (maxSelect && selected.length >= maxSelect) {
+        onChange([...selected.slice(1), val]);
+      } else {
+        onChange([...selected, val]);
       }
-    })();
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs text-gray-500 font-medium">
+        {label}{maxSelect ? ` (up to ${maxSelect})` : ""}
+      </label>
+      <div className="space-y-2">
+        {options.map((opt, i) => {
+          const val = values[i];
+          const checked = selected.includes(val);
+          return (
+            <label key={val} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+              checked ? "border-[var(--primary)] bg-[var(--primary-light)]" : "border-gray-200 hover:border-gray-300"
+            }`}>
+              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                checked ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
+              }`}>
+                {checked && <span className="text-white text-[10px] font-bold">✓</span>}
+              </span>
+              <span className={`text-sm ${checked ? "text-[var(--primary)] font-medium" : "text-gray-700"}`}>{opt}</span>
+              <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggle(val)} />
+            </label>
+          );
+        })}
+      </div>
+      {maxSelect && <p className="text-xs text-gray-400">{selected.length}/{maxSelect} selected</p>}
+    </div>
+  );
+}
+
+// ── Section header helper ─────────────────────────────────────
+type SectionKey = "biodata" | "education" | "preferences";
+
+// ── Main page ─────────────────────────────────────────────────
+export default function MentorProfilePage() {
+  const { user } = useUser();
+  const [profile, setProfile] = useState<MentorProfileData>(EMPTY);
+  const [draft, setDraft]     = useState<MentorProfileData>(EMPTY);
+  const [loading, setLoading] = useState(true);
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+  const [saving, setSaving]   = useState(false);
+
+  // Parse API response (arrays may come as JSON strings or real arrays)
+  const parseProfile = (data: Record<string, unknown>): MentorProfileData => {
+    const parseArr = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === "string") { try { return JSON.parse(v); } catch { return []; } }
+      return [];
+    };
+    return {
+      fullName:          String(data.fullName          ?? ""),
+      city:              String(data.city              ?? ""),
+      undergradMajor:    String(data.undergradMajor    ?? ""),
+      undergradUniversity: String(data.undergradUniversity ?? ""),
+      postgradMajor:     String(data.postgradMajor     ?? ""),
+      postgradUniversity: String(data.postgradUniversity ?? ""),
+      fundingScheme:     String(data.fundingScheme     ?? ""),
+      fundingOther:      String(data.fundingOther      ?? ""),
+      currentField:      String(data.currentField      ?? ""),
+      currentFieldOther: String(data.currentFieldOther ?? ""),
+      weeklyHours:       String(data.weeklyHours       ?? ""),
+      availability:      parseArr(data.availability),
+      availabilityOther: String(data.availabilityOther ?? ""),
+      personality:       String(data.personality       ?? ""),
+      mentorStyle:       String(data.mentorStyle       ?? ""),
+      workStyle:         String(data.workStyle         ?? ""),
+      communicationStyle: String(data.communicationStyle ?? ""),
+      primaryRoles:      parseArr(data.primaryRoles),
+    };
+  };
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mentor-profile");
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          const parsed = parseProfile(data);
+          setProfile(parsed);
+          setDraft(parsed);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (mode === "edit") {
-      const t = setTimeout(() => inputRef.current?.focus(), 350);
-      return () => clearTimeout(t);
-    }
-  }, [current, mode]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  const goTo = useCallback((idx: number) => {
-    if (idx < 0 || idx >= total || animating) return;
-    setDirection(idx > current ? "next" : "prev");
-    setAnimating(true);
-    setTimeout(() => { setCurrent(idx); setAnimating(false); }, 200);
-  }, [current, total, animating]);
-
-  const handleNext = useCallback(() => { if (!isLast) goTo(current + 1); }, [isLast, goTo, current]);
-  const handleBack = useCallback(() => { if (current > 0) goTo(current - 1); }, [current, goTo]);
-
-  const handleSave = async (andFinish = false) => {
+  const startEdit = (section: SectionKey) => {
+    setDraft({ ...profile });
+    setEditingSection(section);
+  };
+  const cancelEdit = () => {
+    setDraft({ ...profile });
+    setEditingSection(null);
+  };
+  const saveSection = async () => {
     setSaving(true);
-    setError("");
-    setSaved(false);
     try {
       const res = await fetch("/api/mentor-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(draft),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to save");
-        setSaving(false);
-        return;
+      if (res.ok) {
+        setProfile({ ...draft });
+        setEditingSection(null);
       }
-      if (andFinish) {
-        setMode("view");
-      } else {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
-    } catch {
-      setError("Network error. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Enter" && q?.type === "text") {
-      e.preventDefault();
-      if (isLast) handleSave(true);
-      else handleNext();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLast, handleNext, q?.type]);
+  const upd = (field: keyof MentorProfileData, value: string | string[]) =>
+    setDraft((prev) => ({ ...prev, [field]: value }));
 
-  useEffect(() => {
-    if (mode !== "edit") return;
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown, mode]);
-
-  const sections = [...new Set(QUESTIONS.map((q) => q.section))];
-
-  const toggleMultiselect = (value: string) => {
-    const currentVal = profile[q.field] ? JSON.parse(profile[q.field] || "[]") : [];
-    let next: string[];
-    if (currentVal.includes(value)) {
-      next = currentVal.filter((v: string) => v !== value);
-    } else {
-      if (q.maxSelect && currentVal.length >= q.maxSelect) {
-        next = [...currentVal.slice(1), value];
-      } else {
-        next = [...currentVal, value];
-      }
-    }
-    setProfile((p) => ({ ...p, [q.field]: JSON.stringify(next) }));
-  };
-
-  const getMultiselectValues = (): string[] => {
-    try { return JSON.parse(profile[q.field] || "[]"); } catch { return []; }
-  };
-
-  // ── Loading ───────────────────────────────────────────────────
-  if (loadingProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-gray-400">Loading your profile…</p>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div className="max-w-3xl mx-auto"><SkeletonDashboard /></div>;
   }
 
-  // ── Summary / View Mode ───────────────────────────────────────
-  const renderSummary = () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-12">
-      {/* Top bar */}
-      <div className="px-4 sm:px-8 pt-6 pb-4 sticky top-0 bg-gradient-to-b from-slate-50 to-transparent z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-base font-bold text-gray-900">My Profile</h1>
-          <button
-            onClick={() => setMode("edit")}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition"
-          >
-            <Icon name="edit" size={14} />
-            Edit Profile
+  const isEditing = (s: SectionKey) => editingSection === s;
+
+  const SectionHeader = ({ icon, title, section }: { icon: string; title: string; section: SectionKey }) => (
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+        <Icon name={icon} size={18} className="text-primary-600" />
+        {title}
+      </h2>
+      {isEditing(section) ? (
+        <div className="flex items-center gap-2">
+          <button onClick={cancelEdit} className="btn-ghost text-sm px-3 py-1.5">Cancel</button>
+          <button onClick={saveSection} disabled={saving} className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50">
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
-      </div>
-
-      <div className="px-4 sm:px-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {sections.map((section) => {
-            const sectionQs = QUESTIONS.filter((q) => q.section === section);
-            return (
-              <div key={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                  <h2 className="text-sm font-semibold text-gray-700">{section}</h2>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {sectionQs.map((sq) => {
-                    // skip otherField rows — they're shown inline with their parent
-                    if (QUESTIONS.some((x) => x.otherField === sq.field)) return null;
-                    const val = profile[sq.field];
-                    const display = formatValue(sq.field, val);
-                    const otherVal = sq.otherField ? profile[sq.otherField] : "";
-                    const showOther = sq.otherField && val === "other" && otherVal;
-                    return (
-                      <div key={sq.field} className="px-6 py-3 flex items-start gap-4">
-                        <p className="text-xs text-gray-400 w-40 flex-shrink-0 pt-0.5">
-                          {FIELD_LABELS[sq.field] || sq.field}
-                        </p>
-                        <p className="text-sm text-gray-800 font-medium flex-1">
-                          {showOther ? otherVal : display}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      ) : (
+        <button onClick={() => startEdit(section)} className="btn-ghost text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <Icon name="edit" size={14} />
+          Edit
+        </button>
+      )}
     </div>
   );
 
-  if (mode === "view") return renderSummary();
+  // Display helpers
+  const fundingDisplay = profile.fundingScheme === "other"
+    ? profile.fundingOther || "Other"
+    : labelFor(profile.fundingScheme, FUNDING_VALUES, FUNDING_OPTIONS);
+  const fieldDisplay = profile.currentField === "other"
+    ? profile.currentFieldOther || "Other"
+    : labelFor(profile.currentField, FIELD_VALUES, FIELD_OPTIONS);
+  const availDisplay = labelsForArray(profile.availability, AVAIL_VALUES, AVAIL_OPTIONS);
+  const rolesDisplay = labelsForArray(profile.primaryRoles, ROLE_VALUES, ROLE_OPTIONS);
 
-  // ── Edit Mode (step-by-step) ──────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      {/* Top bar */}
-      <div className="px-4 sm:px-8 pt-6">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-sm font-bold text-gray-900">My Profile</h1>
-          <div className="flex items-center gap-3">
-            {saved && (
-              <span className="text-xs text-green-600 font-medium flex items-center gap-1 animate-fade-in">
-                <Icon name="check" size={13} />
-                Saved!
-              </span>
-            )}
-            <button
-              onClick={() => setMode("view")}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition px-2 py-1 rounded hover:bg-gray-100"
-            >
-              <Icon name="eye" size={13} />
-              View summary
-            </button>
-            <span className="text-xs text-gray-400">{current + 1} / {total}</span>
-          </div>
-        </div>
-        <div className="max-w-2xl mx-auto mt-3">
-          <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-        <div className="max-w-2xl mx-auto mt-3 flex gap-2 flex-wrap">
-          {sections.map((s) => (
-            <span
-              key={s}
-              className={`text-xs px-2.5 py-1 rounded-full transition-all ${
-                s === q.section
-                  ? "bg-[var(--primary)] text-white font-medium"
-                  : "bg-white text-gray-400 border border-gray-200"
-              }`}
-            >
-              {s}
-            </span>
-          ))}
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Avatar name={profile.fullName || user?.name || "Mentor"} size="lg" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Your mentor profile visible to the admin team and mentees.</p>
         </div>
       </div>
 
-      {/* Main card */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-2xl">
-          <div
-            className={`transition-all duration-200 ease-out ${
-              animating
-                ? direction === "next"
-                  ? "opacity-0 translate-x-8"
-                  : "opacity-0 -translate-x-8"
-                : "opacity-100 translate-x-0"
-            }`}
-          >
-            <p className="text-xs text-[var(--primary)] font-semibold mb-2 tracking-wide">
-              QUESTION {current + 1}
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-1">
-              {q.question}
-            </h2>
-            {q.subtitle ? (
-              <p className="text-sm text-gray-400 mb-6">{q.subtitle}</p>
-            ) : (
-              <div className="mb-6" />
-            )}
+      {/* ── Biodata ─────────────────────────────────────────── */}
+      <div className={`card ${isEditing("biodata") ? "bg-primary-50/50" : ""}`}>
+        <SectionHeader icon="user" title="Biodata" section="biodata" />
+        {isEditing("biodata") ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextInput label="Full Name" value={draft.fullName} onChange={(v) => upd("fullName", v)} placeholder="As on your ID" />
+            <TextInput label="City" value={draft.city} onChange={(v) => upd("city", v)} placeholder="Your current city" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FieldDisplay label="Full Name" value={profile.fullName} />
+            <FieldDisplay label="City" value={profile.city} />
+          </div>
+        )}
+      </div>
 
-            {/* ── text ── */}
-            {q.type === "text" && (
-              <input
-                ref={inputRef}
-                type="text"
-                value={profile[q.field] || ""}
-                onChange={(e) => setProfile((p) => ({ ...p, [q.field]: e.target.value }))}
-                className="w-full text-xl sm:text-2xl bg-transparent border-0 border-b-2 border-gray-300 focus:border-[var(--primary)] outline-none py-3 text-gray-900 placeholder-gray-300 transition-colors"
-                placeholder="Type your answer..."
+      {/* ── Education ───────────────────────────────────────── */}
+      <div className={`card ${isEditing("education") ? "bg-primary-50/50" : ""}`}>
+        <SectionHeader icon="graduation" title="Education" section="education" />
+        {isEditing("education") ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextInput label="Undergraduate Major & Degree" value={draft.undergradMajor} onChange={(v) => upd("undergradMajor", v)} placeholder="e.g. Chemical Engineering, Bachelor's" />
+            <TextInput label="Undergraduate University" value={draft.undergradUniversity} onChange={(v) => upd("undergradUniversity", v)} placeholder="e.g. Universitas Indonesia, Indonesia" />
+            <TextInput label="Postgraduate Major & Degree" value={draft.postgradMajor} onChange={(v) => upd("postgradMajor", v)} placeholder="e.g. Master's in Public Policy" />
+            <TextInput label="Postgraduate University" value={draft.postgradUniversity} onChange={(v) => upd("postgradUniversity", v)} placeholder="e.g. University of Melbourne, Australia" />
+            <SelectOtherInput
+              label="Funding Scheme"
+              value={draft.fundingScheme}
+              otherValue={draft.fundingOther}
+              onChange={(v) => upd("fundingScheme", v)}
+              onOtherChange={(v) => upd("fundingOther", v)}
+              options={FUNDING_OPTIONS}
+              values={FUNDING_VALUES}
+            />
+            <SelectOtherInput
+              label="Current Field"
+              value={draft.currentField}
+              otherValue={draft.currentFieldOther}
+              onChange={(v) => upd("currentField", v)}
+              onOtherChange={(v) => upd("currentFieldOther", v)}
+              options={FIELD_OPTIONS}
+              values={FIELD_VALUES}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FieldDisplay label="Undergraduate Major & Degree" value={profile.undergradMajor} />
+            <FieldDisplay label="Undergraduate University" value={profile.undergradUniversity} />
+            <FieldDisplay label="Postgraduate Major & Degree" value={profile.postgradMajor} />
+            <FieldDisplay label="Postgraduate University" value={profile.postgradUniversity} />
+            <FieldDisplay label="Funding Scheme" value={fundingDisplay} />
+            <FieldDisplay label="Current Field" value={fieldDisplay} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Mentoring Preferences ───────────────────────────── */}
+      <div className={`card ${isEditing("preferences") ? "bg-primary-50/50" : ""}`}>
+        <SectionHeader icon="settings" title="Mentoring Preferences" section="preferences" />
+        {isEditing("preferences") ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SelectInput
+              label="Weekly Hours"
+              value={draft.weeklyHours}
+              onChange={(v) => upd("weeklyHours", v)}
+              options={HOURS_OPTIONS}
+            />
+            <SelectInput
+              label="Personality"
+              value={draft.personality}
+              onChange={(v) => upd("personality", v)}
+              options={PERSONALITY_OPTIONS}
+              values={PERSONALITY_VALUES}
+            />
+            <SelectInput
+              label="Mentoring Style"
+              value={draft.mentorStyle}
+              onChange={(v) => upd("mentorStyle", v)}
+              options={STYLE_OPTIONS.mentor.labels}
+              values={STYLE_OPTIONS.mentor.values}
+            />
+            <SelectInput
+              label="Working Style"
+              value={draft.workStyle}
+              onChange={(v) => upd("workStyle", v)}
+              options={STYLE_OPTIONS.work.labels}
+              values={STYLE_OPTIONS.work.values}
+            />
+            <SelectInput
+              label="Communication Style"
+              value={draft.communicationStyle}
+              onChange={(v) => upd("communicationStyle", v)}
+              options={STYLE_OPTIONS.communication.labels}
+              values={STYLE_OPTIONS.communication.values}
+            />
+            <div className="sm:col-span-2">
+              <MultiSelectInput
+                label="Availability"
+                selected={draft.availability}
+                onChange={(v) => upd("availability", v)}
+                options={AVAIL_OPTIONS}
+                values={AVAIL_VALUES}
               />
-            )}
-
-            {/* ── select ── */}
-            {q.type === "select" && (
-              <div className="space-y-3">
-                {(q.options || []).map((opt, i) => {
-                  const val = q.optionValues?.[i] ?? opt;
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => setProfile((p) => ({ ...p, [q.field]: val }))}
-                      className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
-                        profile[q.field] === val
-                          ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
+              <div className="mt-2">
+                <TextInput
+                  label="Other availability (optional)"
+                  value={draft.availabilityOther}
+                  onChange={(v) => upd("availabilityOther", v)}
+                  placeholder="e.g. Public holidays"
+                />
               </div>
-            )}
-
-            {/* ── select-other ── */}
-            {q.type === "select-other" && (
-              <div className="space-y-3">
-                {(q.options || []).map((opt, i) => {
-                  const val = q.optionValues?.[i] ?? opt.toLowerCase();
-                  const isOther = val === "other";
-                  return (
-                    <div key={opt}>
-                      <button
-                        onClick={() => setProfile((p) => ({ ...p, [q.field]: val }))}
-                        className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
-                          profile[q.field] === val
-                            ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                      {isOther && profile[q.field] === "other" && q.otherField && (
-                        <input
-                          type="text"
-                          value={profile[q.otherField] || ""}
-                          onChange={(e) =>
-                            setProfile((p) => ({ ...p, [q.otherField!]: e.target.value }))
-                          }
-                          placeholder="Please specify..."
-                          className="mt-2 w-full px-4 py-3 border-2 border-[var(--primary)] rounded-xl outline-none text-base"
-                          autoFocus
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── multiselect ── */}
-            {q.type === "multiselect" && (
-              <div className="space-y-3">
-                {(q.options || []).map((opt, i) => {
-                  const val = q.optionValues?.[i] ?? opt;
-                  const selected = getMultiselectValues().includes(val);
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => toggleMultiselect(val)}
-                      className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium flex items-center gap-3 ${
-                        selected
-                          ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                      }`}
-                    >
-                      <span
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
-                          selected ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
-                        }`}
-                      >
-                        {selected && <span className="text-white text-xs font-bold">✓</span>}
-                      </span>
-                      {opt}
-                    </button>
-                  );
-                })}
-                {q.id === "m10" && (
-                  <div className="pt-1">
-                    <input
-                      type="text"
-                      value={profile["availabilityOther"] || ""}
-                      onChange={(e) =>
-                        setProfile((p) => ({ ...p, availabilityOther: e.target.value }))
-                      }
-                      placeholder="Other availability (optional)..."
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none text-base focus:border-[var(--primary)] transition-colors"
-                    />
-                  </div>
-                )}
-                {q.maxSelect && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {getMultiselectValues().length}/{q.maxSelect} selected
-                  </p>
-                )}
-              </div>
-            )}
-
-            {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+            </div>
+            <div className="sm:col-span-2">
+              <MultiSelectInput
+                label="Primary Roles in Mentoring"
+                selected={draft.primaryRoles}
+                onChange={(v) => upd("primaryRoles", v)}
+                options={ROLE_OPTIONS}
+                values={ROLE_VALUES}
+                maxSelect={2}
+              />
+            </div>
           </div>
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-10">
-            <button
-              onClick={handleBack}
-              disabled={current === 0}
-              className="px-5 py-2.5 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-30 transition rounded-lg hover:bg-gray-100"
-            >
-              ← Back
-            </button>
-            {isLast ? (
-              <button
-                onClick={() => handleSave(true)}
-                disabled={saving}
-                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 text-sm"
-              >
-                {saving ? "Saving..." : "Save Changes →"}
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleSave(false)}
-                  disabled={saving}
-                  className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50 transition rounded-lg hover:bg-gray-100 border border-gray-200"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition text-sm"
-                >
-                  Continue →
-                </button>
-              </div>
-            )}
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FieldDisplay label="Weekly Hours" value={profile.weeklyHours} />
+            <FieldDisplay label="Personality" value={labelFor(profile.personality, PERSONALITY_VALUES, PERSONALITY_OPTIONS)} />
+            <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, STYLE_OPTIONS.mentor.values, STYLE_OPTIONS.mentor.labels)} />
+            <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, STYLE_OPTIONS.work.values, STYLE_OPTIONS.work.labels)} />
+            <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, STYLE_OPTIONS.communication.values, STYLE_OPTIONS.communication.labels)} />
+            <FieldDisplay label="Availability" value={availDisplay || (profile.availabilityOther || undefined)} />
+            <FieldDisplay label="Primary Roles" value={rolesDisplay} />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
