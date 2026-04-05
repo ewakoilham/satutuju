@@ -566,10 +566,11 @@ function BookingModal({ open, slot, sessions, initialWindow, onClose, onBook, on
 }
 
 // ── Slot popover (click existing slot) ────────────────────────────────────
-function SlotPopover({ slot, role, x, y, color, requestedWindow, onClose, onEdit, onDelete, onBook, onAccept, onReject }: {
+function SlotPopover({ slot, role, x, y, color, requestedWindow, tooShort, onClose, onEdit, onDelete, onBook, onAccept, onReject }: {
   slot: Slot; role: string; x: number; y: number;
   color?: string;
   requestedWindow?: { startTime: string; endTime: string };
+  tooShort?: boolean;
   onClose: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -660,12 +661,18 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, onClose, onEdit
 
         {role === "mentee" && (
           <>
-            {!myBooking && slot.status === "available" && (
+            {tooShort && (
+              <p className="text-xs text-amber-600 font-medium py-0.5 flex items-start gap-1.5">
+                <span className="mt-px flex-shrink-0">⚠</span>
+                This available portion is less than 90 minutes and cannot be booked.
+              </p>
+            )}
+            {!tooShort && !myBooking && slot.status === "available" && (
               <button onClick={() => onBook?.()} className="btn-primary w-full text-sm py-2">
                 Request this slot
               </button>
             )}
-            {myBooking && (
+            {!tooShort && myBooking && (
               <div className="flex items-center gap-2 py-0.5">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   myBooking.status === "accepted" ? "bg-emerald-500" :
@@ -677,7 +684,7 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, onClose, onEdit
                 </p>
               </div>
             )}
-            {!myBooking && slot.status !== "available" && (
+            {!tooShort && !myBooking && slot.status !== "available" && (
               <p className="text-xs text-gray-400 py-0.5">This slot is {slot.status}.</p>
             )}
           </>
@@ -710,7 +717,7 @@ export default function SchedulePage() {
     open: boolean;
     initial?: { id?: string; date?: string; startTime?: string; endTime?: string; notes?: string | null };
   }>({ open: false });
-  const [popover, setPopover]       = useState<{ slot: Slot; x: number; y: number } | null>(null);
+  const [popover, setPopover]       = useState<{ slot: Slot; x: number; y: number; tooShort?: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Slot | null>(null);
   const [deleting, setDeleting]     = useState(false);
   const [bookTarget, setBookTarget] = useState<Slot | null>(null);
@@ -826,27 +833,47 @@ export default function SchedulePage() {
   function handleSlotClick(e: React.MouseEvent, slot: Slot) {
     e.stopPropagation();
     setCreatePanel(null);
-    setPopover({ slot, x: e.clientX, y: e.clientY });
 
-    if (user?.role === "mentee" && slot.status === "available" && !slot.myBooking) {
-      const slotStartMins = toMins(slot.startTime);
-      const slotEndMins   = toMins(slot.endTime);
+    if (user?.role !== "mentee") {
+      setMenteeGhost(null);
+      setPopover({ slot, x: e.clientX, y: e.clientY });
+      return;
+    }
 
-      // Calculate which 30-min-snapped start the click maps to within the slot
-      const rect    = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const relY    = e.clientY - rect.top;
-      const clickedMins = slotStartMins + (relY / HOUR_H) * 60;
-      const snapped = Math.round(clickedMins / 30) * 30;
+    // ── Mentee: detect which visual segment was clicked ──────────────────
+    const rect      = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const relY      = e.clientY - rect.top;
+    const clickMins = toMins(slot.startTime) + (relY / HOUR_H) * 60;
+    const segments  = getVisualSegments(slot, "mentee");
+    const clickedSeg = segments.find(
+      seg => clickMins >= toMins(seg.startTime) && clickMins < toMins(seg.endTime)
+    ) ?? segments[segments.length - 1];
 
-      // Clamp so the 90-min window always fits inside the slot
-      const maxStart  = Math.max(slotStartMins, slotEndMins - 90);
-      const ghostStart = Math.max(slotStartMins, Math.min(snapped, maxStart));
-      const ghostEnd   = minsToTime(Math.min(ghostStart + 90, slotEndMins));
-
-      setMenteeGhost({ date: slot.date, startTime: minsToTime(ghostStart), endTime: ghostEnd });
+    if (clickedSeg.type === "available") {
+      const availDuration = toMins(clickedSeg.endTime) - toMins(clickedSeg.startTime);
+      if (availDuration < 90) {
+        // Available portion too short — show warning, no ghost
+        setMenteeGhost(null);
+        setPopover({ slot, x: e.clientX, y: e.clientY, tooShort: true });
+        return;
+      }
+      if (!slot.myBooking) {
+        // Whole slot available — snap ghost to click position
+        const slotStartMins = toMins(slot.startTime);
+        const slotEndMins   = toMins(slot.endTime);
+        const snapped    = Math.round(clickMins / 30) * 30;
+        const maxStart   = Math.max(slotStartMins, slotEndMins - 90);
+        const ghostStart = Math.max(slotStartMins, Math.min(snapped, maxStart));
+        const ghostEnd   = minsToTime(Math.min(ghostStart + 90, slotEndMins));
+        setMenteeGhost({ date: slot.date, startTime: minsToTime(ghostStart), endTime: ghostEnd });
+      } else {
+        setMenteeGhost(null);
+      }
     } else {
+      // Clicked the booked/pending segment — show booking status, no ghost
       setMenteeGhost(null);
     }
+    setPopover({ slot, x: e.clientX, y: e.clientY });
   }
 
   // ── Mentee ghost preview live update (when time-frame changes in BookingModal)
@@ -1051,13 +1078,16 @@ export default function SchedulePage() {
 
                           // Build segments: only the booked window gets status color, rest stays blue
                           const segments = getVisualSegments(slot, user.role);
+                          // Use dark text when first (top) segment is bright amber
+                          const topSegIsBright = !isAdmin && segments[0]?.type === "pending";
+                          const textCls = topSegIsBright ? "text-gray-900" : "text-white";
 
                           return (
                             <div
                               key={slot.id}
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => handleSlotClick(e, slot)}
-                              className={`absolute text-white rounded-md overflow-hidden transition-all select-none ${
+                              className={`absolute rounded-md overflow-hidden transition-all select-none ${textCls} ${
                                 isMentor || isMentee || isAdmin ? "cursor-pointer" : ""
                               } ${isSelected ? "ring-2 ring-white/50" : "hover:brightness-110 active:brightness-95"}`}
                               style={{
@@ -1162,7 +1192,13 @@ export default function SchedulePage() {
           x={popover.x}
           y={popover.y}
           color={isAdmin && popover.slot.mentorId ? mentorColorMap.get(popover.slot.mentorId) : undefined}
-          requestedWindow={menteeGhost ?? undefined}
+          requestedWindow={
+            menteeGhost ??
+            (!popover.tooShort && isMentee && popover.slot.myBooking?.requestedStart && popover.slot.myBooking?.requestedEnd
+              ? { startTime: popover.slot.myBooking.requestedStart, endTime: popover.slot.myBooking.requestedEnd }
+              : undefined)
+          }
+          tooShort={popover.tooShort}
           onClose={() => { setPopover(null); setMenteeGhost(null); }}
           onEdit={() => setEditModal({ open: true, initial: { ...popover.slot, id: popover.slot.id } })}
           onDelete={() => setDeleteTarget(popover.slot)}
