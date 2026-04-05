@@ -25,7 +25,7 @@ interface MentorProfileData {
   mentorStyle: string;
   workStyle: string;
   communicationStyle: string;
-  primaryRoles: string;
+  primaryRoles: string[];
 }
 
 const EMPTY: MentorProfileData = {
@@ -36,7 +36,7 @@ const EMPTY: MentorProfileData = {
   currentField: "", currentFieldOther: "",
   weeklyHours: "", availability: "",
   personality: "", mentorStyle: "", workStyle: "",
-  communicationStyle: "", primaryRoles: "",
+  communicationStyle: "", primaryRoles: [],
 };
 
 // ── Option lists ──────────────────────────────────────────────
@@ -167,6 +167,56 @@ function SelectOtherInput({ label, value, otherValue, onChange, onOtherChange, o
   );
 }
 
+function MultiSelectInput({ label, selected, onChange, options, values, maxSelect }: {
+  label: string; selected: string[]; onChange: (v: string[]) => void;
+  options: string[]; values: string[]; maxSelect?: number;
+}) {
+  const toggle = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter((v) => v !== val));
+    } else if (!maxSelect || selected.length < maxSelect) {
+      onChange([...selected, val]);
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs text-gray-500 font-medium">
+        {label}{maxSelect ? ` (up to ${maxSelect})` : ""}
+      </label>
+      <div className="space-y-2 mt-1">
+        {options.map((opt, i) => {
+          const val = values[i];
+          const checked = selected.includes(val);
+          const disabled = !checked && !!maxSelect && selected.length >= maxSelect;
+          return (
+            <label
+              key={val}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all ${
+                checked
+                  ? "border-[var(--primary)] bg-[var(--primary-light)] cursor-pointer"
+                  : disabled
+                  ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-50"
+                  : "border-gray-200 hover:border-gray-300 cursor-pointer"
+              }`}
+            >
+              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                checked ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
+              }`}>
+                {checked && <span className="text-white text-[10px] font-bold">✓</span>}
+              </span>
+              <span className={`text-sm ${checked ? "text-[var(--primary)] font-medium" : "text-gray-700"}`}>{opt}</span>
+              <input type="checkbox" className="sr-only" checked={checked} disabled={disabled} onChange={() => toggle(val)} />
+            </label>
+          );
+        })}
+      </div>
+      {maxSelect && (
+        <p className="text-xs text-gray-400 mt-1">{selected.length}/{maxSelect} selected</p>
+      )}
+    </div>
+  );
+}
+
 // ── Types ─────────────────────────────────────────────────────
 type SectionKey = "biodata" | "education" | "preferences";
 
@@ -179,7 +229,7 @@ export default function MentorProfilePage() {
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [saving, setSaving]   = useState(false);
 
-  // Parse API response — availability/primaryRoles come as JSONB arrays; take first element
+  // Parse API response — availability comes as JSONB array (take first), primaryRoles as array
   const parseProfile = (data: Record<string, unknown>): MentorProfileData => {
     const firstOf = (v: unknown): string => {
       if (Array.isArray(v) && v.length > 0) return String(v[0]);
@@ -188,6 +238,14 @@ export default function MentorProfilePage() {
         catch { return ""; }
       }
       return typeof v === "string" ? v : "";
+    };
+    const toArr = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.map(String);
+      if (typeof v === "string" && v.startsWith("[")) {
+        try { const arr = JSON.parse(v); return Array.isArray(arr) ? arr.map(String) : []; }
+        catch { return []; }
+      }
+      return [];
     };
     return {
       fullName:           String(data.fullName           ?? ""),
@@ -206,7 +264,7 @@ export default function MentorProfilePage() {
       mentorStyle:        String(data.mentorStyle        ?? ""),
       workStyle:          String(data.workStyle          ?? ""),
       communicationStyle: String(data.communicationStyle ?? ""),
-      primaryRoles:       firstOf(data.primaryRoles),
+      primaryRoles:       toArr(data.primaryRoles),
     };
   };
 
@@ -234,11 +292,10 @@ export default function MentorProfilePage() {
   const saveSection = async () => {
     setSaving(true);
     try {
-      // Wrap single-value fields back to arrays for JSONB consistency
+      // Wrap availability back to array for JSONB consistency; primaryRoles is already string[]
       const payload = {
         ...draft,
         availability: draft.availability ? [draft.availability] : [],
-        primaryRoles: draft.primaryRoles ? [draft.primaryRoles] : [],
       };
       const res = await fetch("/api/mentor-profile", {
         method: "PUT",
@@ -254,7 +311,7 @@ export default function MentorProfilePage() {
     }
   };
 
-  const upd = (field: keyof MentorProfileData, value: string) =>
+  const upd = (field: keyof MentorProfileData, value: string | string[]) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
 
   if (loading) {
@@ -365,7 +422,16 @@ export default function MentorProfilePage() {
             <SelectInput label="Mentoring Style" value={draft.mentorStyle} onChange={(v) => upd("mentorStyle", v)} options={MENTOR_STYLE_OPTIONS} values={MENTOR_STYLE_VALUES} />
             <SelectInput label="Working Style" value={draft.workStyle} onChange={(v) => upd("workStyle", v)} options={WORK_STYLE_OPTIONS} values={WORK_STYLE_VALUES} />
             <SelectInput label="Communication Style" value={draft.communicationStyle} onChange={(v) => upd("communicationStyle", v)} options={COMM_STYLE_OPTIONS} values={COMM_STYLE_VALUES} />
-            <SelectInput label="Primary Role in Mentoring" value={draft.primaryRoles} onChange={(v) => upd("primaryRoles", v)} options={ROLE_OPTIONS} values={ROLE_VALUES} />
+            <div className="sm:col-span-2">
+              <MultiSelectInput
+                label="Primary Roles in Mentoring"
+                selected={draft.primaryRoles}
+                onChange={(v) => upd("primaryRoles", v)}
+                options={ROLE_OPTIONS}
+                values={ROLE_VALUES}
+                maxSelect={2}
+              />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -375,7 +441,10 @@ export default function MentorProfilePage() {
             <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, MENTOR_STYLE_VALUES, MENTOR_STYLE_OPTIONS)} />
             <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, WORK_STYLE_VALUES, WORK_STYLE_OPTIONS)} />
             <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, COMM_STYLE_VALUES, COMM_STYLE_OPTIONS)} />
-            <FieldDisplay label="Primary Role in Mentoring" value={labelFor(profile.primaryRoles, ROLE_VALUES, ROLE_OPTIONS)} />
+            <FieldDisplay
+              label="Primary Roles in Mentoring"
+              value={profile.primaryRoles.map((v) => labelFor(v, ROLE_VALUES, ROLE_OPTIONS)).join(", ") || undefined}
+            />
           </div>
         )}
       </div>
