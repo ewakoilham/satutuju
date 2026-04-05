@@ -218,19 +218,18 @@ export default function MentorProfilePage() {
   const progress = ((current + 1) / total) * 100;
   const isLast = current === total - 1;
 
-  // Load existing profile on mount
+  // Load existing profile on mount — if data exists, go straight to dashboard view
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/mentor-profile");
         if (res.ok) {
           const data = await res.json();
-          if (data) {
+          if (data && data.fullName) {
             setProfile((prev) => {
               const next = { ...prev };
               Object.keys(data).forEach((k) => {
                 if (k in next && data[k] != null) {
-                  // JSON arrays stored as JSON strings in state
                   if (Array.isArray(data[k])) {
                     next[k] = JSON.stringify(data[k]);
                   } else {
@@ -240,6 +239,7 @@ export default function MentorProfilePage() {
               });
               return next;
             });
+            setMode("view");
           }
         }
       } finally {
@@ -265,7 +265,7 @@ export default function MentorProfilePage() {
   const handleNext = useCallback(() => { if (!isLast) goTo(current + 1); }, [isLast, goTo, current]);
   const handleBack = useCallback(() => { if (current > 0) goTo(current - 1); }, [current, goTo]);
 
-  const handleSave = async () => {
+  const handleSave = async (andFinish = false) => {
     setSaving(true);
     setError("");
     setSaved(false);
@@ -281,8 +281,12 @@ export default function MentorProfilePage() {
         setSaving(false);
         return;
       }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (andFinish) {
+        setMode("view");
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -293,7 +297,7 @@ export default function MentorProfilePage() {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Enter" && q?.type === "text") {
       e.preventDefault();
-      if (isLast) handleSave();
+      if (isLast) handleSave(true);
       else handleNext();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -598,7 +602,7 @@ export default function MentorProfilePage() {
             </button>
             {isLast ? (
               <button
-                onClick={handleSave}
+                onClick={() => handleSave(true)}
                 disabled={saving}
                 className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 text-sm"
               >
@@ -607,7 +611,7 @@ export default function MentorProfilePage() {
             ) : (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleSave}
+                  onClick={() => handleSave(false)}
                   disabled={saving}
                   className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50 transition rounded-lg hover:bg-gray-100 border border-gray-200"
                 >
