@@ -574,28 +574,23 @@ function SessionsTab({
 }
 
 // Maps curriculum doc checklist keywords to document categories
+// Only map keywords to specific (non-generic) categories.
+// "other" is intentionally excluded — it matches too broadly.
 const DOC_CHECKLIST_MATCH: Record<string, string[]> = {
   "cv": ["cv"],
   "resume": ["cv"],
-  "university": ["other"],
+  "academic cv": ["cv"],
   "transcript": ["transcript"],
   "language test": ["ielts"],
-  "financial": ["other"],
-  "application tracker": ["other"],
-  "deadline": ["other"],
-  "narrative": ["other"],
+  "ielts": ["ielts"],
+  "toefl": ["ielts"],
+  "motivation letter": ["motivation_letter"],
   "ml": ["motivation_letter"],
   "ps": ["motivation_letter"],
-  "motivation letter": ["motivation_letter"],
   "lpdp": ["essay_lpdp"],
   "essay": ["essay_lpdp"],
-  "academic cv": ["cv"],
   "certificate": ["certificate"],
   "recommendation": ["recommendation"],
-  "interview": ["other"],
-  "mock": ["other"],
-  "submission": ["other"],
-  "post-submission": ["other"],
 };
 
 function guessCategory(checklistItem: string): string {
@@ -608,19 +603,28 @@ function guessCategory(checklistItem: string): string {
 
 function findMatchingDocs(checklistItem: string, documents: Doc[]): Doc[] {
   const lower = checklistItem.toLowerCase();
-  // Try category matching
+  const words = lower.split(/[\s\/\(\)]+/).filter((w) => w.length > 2);
+
+  // 1. Exact name match (documents uploaded via session deliverables use the checklist item as name)
+  const exactMatch = documents.filter((d) => d.name.toLowerCase() === lower);
+  if (exactMatch.length > 0) return exactMatch;
+
+  // 2. Partial name match (doc name contains a keyword from the checklist item)
+  const nameMatch = documents.filter((d) => {
+    const docName = d.name.toLowerCase();
+    return words.some((w) => docName.includes(w));
+  });
+  if (nameMatch.length > 0) return nameMatch;
+
+  // 3. Specific category match (only for non-generic categories — "other" excluded)
   for (const [keyword, categories] of Object.entries(DOC_CHECKLIST_MATCH)) {
     if (lower.includes(keyword)) {
       const matched = documents.filter((d) => categories.includes(d.category));
       if (matched.length > 0) return matched;
     }
   }
-  // Fallback: fuzzy name match
-  const words = lower.split(/[\s\/\(\)]+/).filter((w) => w.length > 2);
-  return documents.filter((d) => {
-    const docName = d.name.toLowerCase();
-    return words.some((w) => docName.includes(w));
-  });
+
+  return [];
 }
 
 function SessionDetail({
