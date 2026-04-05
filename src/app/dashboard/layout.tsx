@@ -3,6 +3,7 @@
 import { useUser, useNotifications } from "@/lib/hooks";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
 import Logo from "@/components/ui/Logo";
@@ -89,7 +90,7 @@ export default function DashboardLayout({
 
               {/* Logo */}
               <Link href="/dashboard" className="flex items-center">
-                <Logo variant="main" size="sm" />
+                <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40} className="object-contain" priority />
               </Link>
 
               {/* Desktop nav */}
@@ -210,7 +211,7 @@ export default function DashboardLayout({
           {/* Drawer */}
           <div className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-[var(--shadow-xl)] z-50 flex flex-col animate-slide-in-left">
             <div className="flex items-center justify-between px-5 h-16 border-b border-border">
-              <Logo variant="main" size="sm" />
+              <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40} className="object-contain" priority />
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition"
