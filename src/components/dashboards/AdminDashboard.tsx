@@ -15,6 +15,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  mentorProfileComplete?: boolean;
 }
 
 interface Pairing {
@@ -503,10 +504,24 @@ export default function AdminDashboard() {
                 <option value="">Select mentor...</option>
                 {mentors.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} ({m.email})
+                    {m.mentorProfileComplete ? "✓" : "⚠"} {m.name} ({m.email}){m.mentorProfileComplete ? "" : " — profile incomplete"}
                   </option>
                 ))}
               </select>
+              {/* Profile status legend */}
+              {newPairing.mentorId && (() => {
+                const selected = mentors.find((m) => m.id === newPairing.mentorId);
+                if (!selected) return null;
+                return selected.mentorProfileComplete ? (
+                  <p className="text-xs text-success mt-1.5 flex items-center gap-1">
+                    <Icon name="check" size={12} /> Profile complete
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                    <Icon name="alert" size={12} /> Profile not yet filled — consider asking the mentor to complete it before pairing
+                  </p>
+                );
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -623,9 +638,22 @@ export default function AdminDashboard() {
                     onClick={() => window.location.href = `/dashboard/pairings/${p.id}`}
                   >
                     <td className="px-3 sm:px-6 py-3">
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 flex-wrap">
                         {p.mentor?.name && <Avatar name={p.mentor.name} size="sm" />}
-                        {p.mentor?.name}
+                        <span>{p.mentor?.name}</span>
+                        {(() => {
+                          const mentor = mentors.find((m) => m.id === p.mentor?.id);
+                          if (!mentor) return null;
+                          return mentor.mentorProfileComplete ? (
+                            <span title="Profile complete" className="text-success">
+                              <Icon name="check" size={13} />
+                            </span>
+                          ) : (
+                            <span title="Profile incomplete" className="text-amber-500">
+                              <Icon name="alert" size={13} />
+                            </span>
+                          );
+                        })()}
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3">

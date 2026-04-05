@@ -26,31 +26,83 @@ const PHASE_COLORS: Record<string, string> = {
   closing: "bg-success-light text-success",
 };
 
+const REQUIRED_PROFILE_FIELDS = [
+  "fullName", "city", "undergradUniversity", "postgradUniversity",
+  "fundingScheme", "currentField", "weeklyHours", "availability",
+  "personality", "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
+];
+
+function profileCompleteness(profile: Record<string, unknown> | null): { complete: boolean; filled: number; total: number } {
+  if (!profile) return { complete: false, filled: 0, total: REQUIRED_PROFILE_FIELDS.length };
+  let filled = 0;
+  for (const f of REQUIRED_PROFILE_FIELDS) {
+    const v = profile[f];
+    if (Array.isArray(v) ? v.length > 0 : (v !== null && v !== undefined && v !== "")) filled++;
+  }
+  return { complete: filled === REQUIRED_PROFILE_FIELDS.length, filled, total: REQUIRED_PROFILE_FIELDS.length };
+}
+
 export default function MentorDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileStatus, setProfileStatus] = useState<{ complete: boolean; filled: number; total: number } | null>(null);
 
   useEffect(() => {
-    fetch("/api/pairings")
-      .then((r) => r.json())
-      .then((d) => setPairings(d.pairings || []))
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/pairings").then((r) => r.json()),
+      fetch("/api/mentor-profile").then((r) => r.json()),
+    ]).then(([pairingsData, profileData]) => {
+      setPairings(pairingsData.pairings || []);
+      setProfileStatus(profileCompleteness(profileData.profile || null));
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <SkeletonDashboard />;
 
+  const incompleteBanner = profileStatus && !profileStatus.complete ? (
+    <Link
+      href="/dashboard/mentor-profile"
+      className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 hover:bg-amber-100 transition group"
+    >
+      <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition">
+        <Icon name="alert" size={18} className="text-amber-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-amber-800">Complete your mentor profile before you get paired</p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          Your profile is {profileStatus.filled}/{profileStatus.total} fields complete. Admins use this to match you with the right mentees — an incomplete profile may delay your pairing.
+        </p>
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex-1 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-amber-500 rounded-full transition-all"
+              style={{ width: `${(profileStatus.filled / profileStatus.total) * 100}%` }}
+            />
+          </div>
+          <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">
+            Fill in now →
+          </span>
+        </div>
+      </div>
+    </Link>
+  ) : null;
+
   if (pairings.length === 0) {
     return (
-      <EmptyState
-        icon="graduation"
-        title="No mentees assigned yet"
-        description="The admin will pair you with mentees soon."
-      />
+      <div className="space-y-6">
+        {incompleteBanner}
+        <EmptyState
+          icon="graduation"
+          title="No mentees assigned yet"
+          description="The admin will pair you with mentees soon."
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-8">
+      {incompleteBanner}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Mentees</h1>
         <p className="text-gray-500 text-sm mt-1">

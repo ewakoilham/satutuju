@@ -38,9 +38,35 @@ export async function GET(req: NextRequest) {
     if (p.menteeId) activePairingUserIds.add(p.menteeId);
   }
 
+  // Fetch mentor profile completeness (check key required fields)
+  const mentorIds = (users || []).filter((u) => u.role === "mentor").map((u) => u.id);
+  const mentorProfileMap = new Map<string, boolean>();
+  if (mentorIds.length > 0) {
+    const { data: mentorProfiles } = await supabase
+      .from("MentorProfile")
+      .select("userId, fullName, city, undergradUniversity, postgradUniversity, fundingScheme, currentField, weeklyHours, availability, personality, mentorStyle, workStyle, communicationStyle, primaryRoles")
+      .in("userId", mentorIds);
+
+    const REQUIRED_FIELDS = [
+      "fullName", "city", "undergradUniversity", "postgradUniversity",
+      "fundingScheme", "currentField", "weeklyHours", "availability",
+      "personality", "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
+    ] as const;
+
+    for (const mp of mentorProfiles || []) {
+      const complete = REQUIRED_FIELDS.every((f) => {
+        const v = mp[f as keyof typeof mp];
+        if (Array.isArray(v)) return v.length > 0;
+        return v !== null && v !== undefined && v !== "";
+      });
+      mentorProfileMap.set(mp.userId, complete);
+    }
+  }
+
   const result = (users || []).map((u) => ({
     ...u,
     hasActivePairing: activePairingUserIds.has(u.id),
+    mentorProfileComplete: u.role === "mentor" ? (mentorProfileMap.get(u.id) ?? false) : undefined,
   }));
 
   return NextResponse.json({ users: result });
