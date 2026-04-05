@@ -480,6 +480,12 @@ function SessionsTab({
       {sessions.map((session) => {
         const template = CURRICULUM[session.sessionNum - 1];
         const isExpanded = expandedSession === session.sessionNum;
+        const missingDocs =
+          session.status === "completed" &&
+          template?.docChecklist?.length > 0 &&
+          template.docChecklist.some(
+            (item) => findMatchingDocs(item, documents).length === 0
+          );
 
         return (
           <div
@@ -538,14 +544,16 @@ function SessionsTab({
                 )}
                 <Badge
                   variant={
-                    session.status === "completed"
+                    missingDocs
+                      ? "warning"
+                      : session.status === "completed"
                       ? "success"
                       : session.status === "scheduled"
                       ? "info"
                       : "neutral"
                   }
                 >
-                  {session.status}
+                  {missingDocs ? "missing documents" : session.status}
                 </Badge>
                 <Icon
                   name={isExpanded ? "chevron-down" : "chevron-right"}
