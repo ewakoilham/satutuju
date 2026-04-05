@@ -22,9 +22,10 @@ const AVAIL_LABELS: Record<string, string> = {
   weekend: "Weekend",
 };
 const PERSONALITY_LABELS: Record<string, string> = {
-  introvert: "Introvert — prefer calm, 1-on-1 interactions",
-  extrovert: "Extrovert — open, energetic, love interacting",
+  introvert: "Introvert",
+  extrovert: "Extrovert",
   ambivert: "Ambivert",
+  "not-sure": "Not sure",
 };
 const MENTOR_STYLE_LABELS: Record<string, string> = {
   gentle: "Gentle", "somewhat-gentle": "Somewhat gentle", "no-preference": "No preference",
@@ -176,7 +177,7 @@ export default function MentorProfileAdminView() {
               <FieldDisplay label="Mentoring Style" value={label(MENTOR_STYLE_LABELS, str("mentorStyle"))} />
               <FieldDisplay label="Working Style" value={label(WORK_STYLE_LABELS, str("workStyle"))} />
               <FieldDisplay label="Communication Style" value={label(COMM_STYLE_LABELS, str("communicationStyle"))} />
-              <FieldDisplay label="Primary Roles in Mentoring" value={arrLabel(ROLE_LABELS, p.primaryRoles)} />
+              <FieldDisplay label="Primary Mentoring Approach" value={arrLabel(ROLE_LABELS, p.primaryRoles)} />
             </div>
           </SectionCard>
         </>

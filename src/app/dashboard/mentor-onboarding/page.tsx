@@ -113,12 +113,8 @@ const QUESTIONS: Question[] = [
     id: "m11", field: "personality", section: "Mentoring Preference",
     question: "How would you describe yourself?",
     type: "select",
-    options: [
-      "Introvert — prefer calm, 1-on-1 interactions",
-      "Extrovert — open, energetic, love interacting",
-      "Ambivert",
-    ],
-    optionValues: ["introvert", "extrovert", "ambivert"],
+    options: ["Introvert", "Extrovert", "Ambivert", "Not sure"],
+    optionValues: ["introvert", "extrovert", "ambivert", "not-sure"],
   },
   {
     id: "m12", field: "mentorStyle", section: "Mentoring Preference",
@@ -143,7 +139,7 @@ const QUESTIONS: Question[] = [
   },
   {
     id: "m15", field: "primaryRoles", section: "Mentoring Preference",
-    question: "What role do you play most in mentoring?",
+    question: "What is your primary mentoring approach?",
     subtitle: "Choose up to 2",
     type: "multiselect",
     maxSelect: 2,

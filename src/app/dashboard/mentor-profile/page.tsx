@@ -61,12 +61,8 @@ const AVAIL_OPTIONS = [
 ];
 const AVAIL_VALUES = ["morning", "midday", "afternoon", "evening", "weekend"];
 
-const PERSONALITY_OPTIONS = [
-  "Introvert — prefer calm, 1-on-1 interactions",
-  "Extrovert — open, energetic, love interacting",
-  "Ambivert",
-];
-const PERSONALITY_VALUES = ["introvert", "extrovert", "ambivert"];
+const PERSONALITY_OPTIONS = ["Introvert", "Extrovert", "Ambivert", "Not sure"];
+const PERSONALITY_VALUES  = ["introvert", "extrovert", "ambivert", "not-sure"];
 
 const MENTOR_STYLE_OPTIONS = ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"];
 const MENTOR_STYLE_VALUES  = ["gentle", "somewhat-gentle", "no-preference", "somewhat-direct", "direct"];
@@ -424,7 +420,7 @@ export default function MentorProfilePage() {
             <SelectInput label="Communication Style" value={draft.communicationStyle} onChange={(v) => upd("communicationStyle", v)} options={COMM_STYLE_OPTIONS} values={COMM_STYLE_VALUES} />
             <div className="sm:col-span-2">
               <MultiSelectInput
-                label="Primary Roles in Mentoring"
+                label="Primary Mentoring Approach"
                 selected={draft.primaryRoles}
                 onChange={(v) => upd("primaryRoles", v)}
                 options={ROLE_OPTIONS}
@@ -442,7 +438,7 @@ export default function MentorProfilePage() {
             <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, WORK_STYLE_VALUES, WORK_STYLE_OPTIONS)} />
             <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, COMM_STYLE_VALUES, COMM_STYLE_OPTIONS)} />
             <FieldDisplay
-              label="Primary Roles in Mentoring"
+              label="Primary Mentoring Approach"
               value={profile.primaryRoles.map((v) => labelFor(v, ROLE_VALUES, ROLE_OPTIONS)).join(", ") || undefined}
             />
           </div>
