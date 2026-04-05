@@ -125,19 +125,36 @@ export default function UsersPage() {
                     {new Date(u.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-3 sm:px-6 py-3">
-                    {u.id !== user?.userId && (
-                      <button
-                        onClick={() => setConfirmUser(u)}
-                        disabled={deletingId === u.id || u.hasActivePairing}
-                        className={`p-1.5 rounded-lg transition disabled:opacity-40 ${u.hasActivePairing ? "cursor-not-allowed" : "hover:bg-red-50"}`}
-                        title={u.hasActivePairing ? "Cannot delete \u2014 user has an active pairing" : "Delete user"}
-                      >
-                        {deletingId === u.id
-                          ? <span className="text-xs text-red-400">...</span>
-                          : <Icon name="trash" className="text-red-400" size={16} />
-                        }
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {/* View profile */}
+                      {(u.role === "mentee" || u.role === "mentor") && (
+                        <button
+                          onClick={() => router.push(
+                            u.role === "mentor"
+                              ? `/dashboard/mentor-profile/${u.id}`
+                              : `/dashboard/profile/${u.id}`
+                          )}
+                          className="p-1.5 rounded-lg hover:bg-brand-blue-soft transition"
+                          title="View profile"
+                        >
+                          <Icon name="user" size={16} className="text-primary" />
+                        </button>
+                      )}
+                      {/* Delete */}
+                      {u.id !== user?.userId && (
+                        <button
+                          onClick={() => setConfirmUser(u)}
+                          disabled={deletingId === u.id || u.hasActivePairing}
+                          className={`p-1.5 rounded-lg transition disabled:opacity-40 ${u.hasActivePairing ? "cursor-not-allowed" : "hover:bg-red-50"}`}
+                          title={u.hasActivePairing ? "Cannot delete \u2014 user has an active pairing" : "Delete user"}
+                        >
+                          {deletingId === u.id
+                            ? <span className="text-xs text-red-400">...</span>
+                            : <Icon name="trash" className="text-red-400" size={16} />
+                          }
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

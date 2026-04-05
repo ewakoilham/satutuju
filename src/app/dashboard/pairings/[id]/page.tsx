@@ -229,6 +229,18 @@ export default function PairingDetailPage() {
                 </span>
               </button>
             )}
+            {isAdmin && (
+              <button
+                onClick={() => router.push(`/dashboard/mentor-profile/${pairing.mentor.id}`)}
+                className="group relative p-2 rounded-lg bg-brand-lavender/30 hover:bg-brand-lavender/60 text-primary-700 transition"
+                aria-label="View Mentor Profile"
+              >
+                <Icon name="graduation" size={16} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                  View Mentor Profile
+                </span>
+              </button>
+            )}
             {isAdmin && pairing.status !== "cancelled" && (
               <>
                 {showReplaceMentor ? (
