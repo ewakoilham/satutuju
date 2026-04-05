@@ -561,9 +561,6 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, onClose, onEdit
                 : `${slot.startTime} – ${slot.endTime}`}
             </p>
             <p className="text-xs opacity-75 mt-0.5">{fmtDate(slot.date)}</p>
-            {requestedWindow && (
-              <p className="text-xs opacity-60 mt-0.5">Full slot: {slot.startTime}–{slot.endTime}</p>
-            )}
           </div>
           <button onClick={onClose} className="opacity-70 hover:opacity-100 transition flex-shrink-0 mt-0.5">
             <Icon name="x" size={14} />
