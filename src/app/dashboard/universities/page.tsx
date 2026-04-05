@@ -1,10 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
 import Badge from "@/components/ui/Badge";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import * as AllFlags from "country-flag-icons/react/3x2";
+
+// ISO 3166-1 alpha-2 codes mapped to country names used in the data
+const COUNTRY_CODES: Record<string, string> = {
+  Australia: "AU", Austria: "AT", Belgium: "BE", Canada: "CA",
+  China: "CN", Croatia: "HR", Cyprus: "CY", "Czech Republic": "CZ",
+  Finland: "FI", France: "FR", Georgia: "GE", Germany: "DE",
+  Greece: "GR", Grenada: "GD", "Hong Kong": "HK", Hungary: "HU",
+  India: "IN", Indonesia: "ID", Ireland: "IE", Italy: "IT",
+  Japan: "JP", Kazakhstan: "KZ", Latvia: "LV", Lithuania: "LT",
+  Malaysia: "MY", Malta: "MT", Mauritius: "MU", Monaco: "MC",
+  Netherlands: "NL", "New Zealand": "NZ", Philippines: "PH",
+  Poland: "PL", Portugal: "PT", Romania: "RO", Russia: "RU",
+  Singapore: "SG", "South Korea": "KR", Spain: "ES", "Sri Lanka": "LK",
+  Sweden: "SE", Switzerland: "CH", Thailand: "TH", Turkey: "TR",
+  UAE: "AE", UK: "GB", USA: "US", Vietnam: "VN",
+};
+
+function FlagIcon({ code, className = "w-5 h-auto rounded-sm" }: { code: string; className?: string }) {
+  const Flag = (AllFlags as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>)[code];
+  if (!Flag) return null;
+  return <Flag className={className} />;
+}
 
 interface University {
   id: number;
@@ -18,20 +41,6 @@ interface University {
   programs?: string;
 }
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Australia: "\u{1F1E6}\u{1F1FA}", Austria: "\u{1F1E6}\u{1F1F9}", Belgium: "\u{1F1E7}\u{1F1EA}", Canada: "\u{1F1E8}\u{1F1E6}",
-  Caribbean: "\u{1F334}", China: "\u{1F1E8}\u{1F1F3}", Croatia: "\u{1F1ED}\u{1F1F7}", Cyprus: "\u{1F1E8}\u{1F1FE}",
-  "Czech Republic": "\u{1F1E8}\u{1F1FF}", Finland: "\u{1F1EB}\u{1F1EE}", France: "\u{1F1EB}\u{1F1F7}", Georgia: "\u{1F1EC}\u{1F1EA}",
-  Germany: "\u{1F1E9}\u{1F1EA}", Greece: "\u{1F1EC}\u{1F1F7}", Grenada: "\u{1F1EC}\u{1F1E9}", "Hong Kong": "\u{1F1ED}\u{1F1F0}",
-  Hungary: "\u{1F1ED}\u{1F1FA}", India: "\u{1F1EE}\u{1F1F3}", Indonesia: "\u{1F1EE}\u{1F1E9}", Ireland: "\u{1F1EE}\u{1F1EA}",
-  Italy: "\u{1F1EE}\u{1F1F9}", Japan: "\u{1F1EF}\u{1F1F5}", Kazakhstan: "\u{1F1F0}\u{1F1FF}", Latvia: "\u{1F1F1}\u{1F1FB}",
-  Lithuania: "\u{1F1F1}\u{1F1F9}", Malaysia: "\u{1F1F2}\u{1F1FE}", Malta: "\u{1F1F2}\u{1F1F9}", Mauritius: "\u{1F1F2}\u{1F1FA}",
-  Monaco: "\u{1F1F2}\u{1F1E8}", Netherlands: "\u{1F1F3}\u{1F1F1}", "New Zealand": "\u{1F1F3}\u{1F1FF}", Philippines: "\u{1F1F5}\u{1F1ED}",
-  Poland: "\u{1F1F5}\u{1F1F1}", Portugal: "\u{1F1F5}\u{1F1F9}", Romania: "\u{1F1F7}\u{1F1F4}", Russia: "\u{1F1F7}\u{1F1FA}",
-  Singapore: "\u{1F1F8}\u{1F1EC}", "South Korea": "\u{1F1F0}\u{1F1F7}", Spain: "\u{1F1EA}\u{1F1F8}", "Sri Lanka": "\u{1F1F1}\u{1F1F0}",
-  Sweden: "\u{1F1F8}\u{1F1EA}", Switzerland: "\u{1F1E8}\u{1F1ED}", Thailand: "\u{1F1F9}\u{1F1ED}", Turkey: "\u{1F1F9}\u{1F1F7}",
-  UAE: "\u{1F1E6}\u{1F1EA}", UK: "\u{1F1EC}\u{1F1E7}", USA: "\u{1F1FA}\u{1F1F8}", Vietnam: "\u{1F1FB}\u{1F1F3}", "West Indies": "\u{1F334}",
-};
 
 const DEGREE_OPTIONS = [
   "Undergraduate",
@@ -60,15 +69,15 @@ const DEGREE_LABELS: Record<string, { label: string; color: string }> = {
   All: { label: "All Programs", color: "bg-purple-100 text-purple-700" },
 };
 
-const REGION_TABS = [
-  { key: "", label: "All", icon: "\u{1F310}" },
-  { key: "au-nz", label: "Australia & NZ", icon: "\u{1F1E6}\u{1F1FA}" },
-  { key: "uk", label: "UK", icon: "\u{1F1EC}\u{1F1E7}" },
-  { key: "us", label: "USA", icon: "\u{1F1FA}\u{1F1F8}" },
-  { key: "canada", label: "Canada", icon: "\u{1F1E8}\u{1F1E6}" },
-  { key: "europe", label: "Europe", icon: "\u{1F30D}" },
-  { key: "asia", label: "Asia", icon: "\u{1F30F}" },
-  { key: "others", label: "Others", icon: "\u{1F4CD}" },
+const REGION_TABS: { key: string; label: string; icon: React.ReactNode }[] = [
+  { key: "", label: "All", icon: "🌐" },
+  { key: "au-nz", label: "Australia & NZ", icon: <FlagIcon code="AU" /> },
+  { key: "uk", label: "UK", icon: <FlagIcon code="GB" /> },
+  { key: "us", label: "USA", icon: <FlagIcon code="US" /> },
+  { key: "canada", label: "Canada", icon: <FlagIcon code="CA" /> },
+  { key: "europe", label: "Europe", icon: "🌍" },
+  { key: "asia", label: "Asia", icon: "🌏" },
+  { key: "others", label: "Others", icon: "📍" },
 ];
 
 const REGION_COUNTRY_MAP: Record<string, string[]> = {
@@ -277,9 +286,7 @@ export default function UniversitiesPage() {
         >
           <option value="">All Countries</option>
           {visibleCountries.map((c) => (
-            <option key={c} value={c}>
-              {COUNTRY_FLAGS[c] || "\u{1F30D}"} {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
 
@@ -335,8 +342,10 @@ export default function UniversitiesPage() {
                   className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/50 transition"
                   onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
                 >
-                  <span className="text-xl flex-shrink-0 w-8 text-center">
-                    {COUNTRY_FLAGS[u.country] || "\u{1F30D}"}
+                  <span className="flex-shrink-0 w-8 flex items-center justify-center">
+                    {COUNTRY_CODES[u.country]
+                      ? <FlagIcon code={COUNTRY_CODES[u.country]} className="w-6 h-auto rounded-sm" />
+                      : <span className="text-xl">🌍</span>}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{u.name}</p>
@@ -375,7 +384,12 @@ export default function UniversitiesPage() {
                       </div>
                       <div>
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Country</p>
-                        <p className="text-sm">{COUNTRY_FLAGS[u.country] || "\u{1F30D}"} {u.country}</p>
+                        <p className="text-sm flex items-center gap-1.5">
+                          {COUNTRY_CODES[u.country]
+                            ? <FlagIcon code={COUNTRY_CODES[u.country]} className="w-5 h-auto rounded-sm" />
+                            : <span>🌍</span>}
+                          {u.country}
+                        </p>
                       </div>
 
                       {/* Programs Offered -- admin can edit */}
