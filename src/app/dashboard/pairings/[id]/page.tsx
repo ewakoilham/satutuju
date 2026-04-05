@@ -347,7 +347,6 @@ export default function PairingDetailPage() {
       )}
       {tab === "documents" && (
         <DocumentsTab
-          documents={pairing.documents}
           pairingId={pairing.id}
           isMentor={isMentor}
           onRefresh={fetchPairing}
@@ -1368,18 +1367,18 @@ function MenteeFeedback({
 // ─────────────────────────────────────────────
 
 function DocumentsTab({
-  documents,
   pairingId,
   isMentor,
   onRefresh,
   onPreview,
 }: {
-  documents: Doc[];
   pairingId: string;
   isMentor: boolean;
   onRefresh: () => void;
   onPreview: (doc: Doc) => void;
 }) {
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [docsLoading, setDocsLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadForm, setUploadForm] = useState({
@@ -1394,6 +1393,17 @@ function DocumentsTab({
   const [replacingFile, setReplacingFile] = useState<File | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
+
+  const refreshDocs = useCallback(async () => {
+    const res = await fetch(`/api/pairings/${pairingId}/documents`);
+    if (res.ok) {
+      const data = await res.json();
+      setDocs(data.documents || []);
+    }
+    setDocsLoading(false);
+  }, [pairingId]);
+
+  useEffect(() => { refreshDocs(); }, [refreshDocs]);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -1413,6 +1423,7 @@ function DocumentsTab({
     setUploading(false);
     setShowUpload(false);
     setUploadForm({ name: "", category: "cv", file: null });
+    await refreshDocs();
     onRefresh();
   }
 
@@ -1424,6 +1435,7 @@ function DocumentsTab({
     });
     setReviewingDoc(null);
     setFeedback("");
+    await refreshDocs();
     onRefresh();
   }
 
@@ -1444,6 +1456,7 @@ function DocumentsTab({
     setReplacingDocId(null);
     setReplacingFile(null);
     setDeletingDocId(null);
+    await refreshDocs();
     onRefresh();
   }
 
@@ -1452,6 +1465,7 @@ function DocumentsTab({
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
     setDeletingDocId(null);
     setDeleteConfirm(null);
+    await refreshDocs();
     onRefresh();
   }
 
@@ -1551,14 +1565,16 @@ function DocumentsTab({
         </form>
       )}
 
-      {documents.length === 0 ? (
+      {docsLoading ? (
+        <div className="card py-10 animate-pulse bg-gray-50" />
+      ) : docs.length === 0 ? (
         <div className="card text-center py-12 text-gray-400 text-sm">
           <Icon name="document" size={36} className="mx-auto mb-3 text-gray-300" />
           No documents uploaded yet
         </div>
       ) : (
         <div className="space-y-3">
-          {documents.map((doc) => (
+          {docs.map((doc) => (
             <div
               key={doc.id}
               className="card card-hover"

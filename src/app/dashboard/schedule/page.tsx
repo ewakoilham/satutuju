@@ -204,6 +204,9 @@ export default function SchedulePage() {
       {/* Week navigation */}
       <WeekToolbar weekStart={weekStart} dispatch={dispatch} />
 
+      {/* Legend */}
+      <Legend role={user.role} mentors={mentors} mentorColorMap={mentorColorMap} />
+
       {/* No pairing (mentee) */}
       {isMentee && !hasPairing && (
         <div className="card text-center py-14 text-gray-400">
@@ -277,9 +280,6 @@ export default function SchedulePage() {
           </div>
         </div>
       )}
-
-      {/* Legend */}
-      <Legend role={user.role} mentors={mentors} mentorColorMap={mentorColorMap} />
 
       {/* ── Overlays ───────────────────────────────────────────────────────── */}
 
