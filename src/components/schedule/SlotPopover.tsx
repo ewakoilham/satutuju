@@ -268,15 +268,77 @@ export default function SlotPopover({
           </>
         )}
 
-        {/* Admin: mentor info */}
-        {role === "admin" && slot.mentor && (
-          <div className="flex items-center gap-2.5 py-0.5">
-            <Avatar name={slot.mentor.name} size="sm" />
-            <div>
-              <p className="text-xs font-medium">{slot.mentor.name}</p>
-              <p className="text-xs text-gray-400">{slot.mentor.email}</p>
-            </div>
-          </div>
+        {/* Admin: mentor info + booking status */}
+        {role === "admin" && (
+          <>
+            {slot.mentor && (
+              <div className="flex items-center gap-2.5 py-0.5">
+                <Avatar name={slot.mentor.name} size="sm" />
+                <div>
+                  <p className="text-xs font-medium">{slot.mentor.name}</p>
+                  <p className="text-xs text-gray-400">{slot.mentor.email}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Accepted booking */}
+            {(() => {
+              const accepted = (slot.bookings || []).find(b => b.status === "accepted");
+              if (!accepted) return null;
+              return (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5 space-y-0.5">
+                  <p className="text-xs font-semibold text-emerald-700">Session confirmed</p>
+                  <p className="text-[11px] text-emerald-600">
+                    {accepted.mentee?.name ?? "Mentee"}
+                    {accepted.requestedStart && accepted.requestedEnd && (
+                      <> &middot; {accepted.requestedStart}&ndash;{accepted.requestedEnd}</>
+                    )}
+                  </p>
+                  {accepted.session && (
+                    <p className="text-[11px] text-emerald-700 font-medium">
+                      Session {accepted.session.sessionNum}: {accepted.session.topic}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Pending requests */}
+            {(() => {
+              const pendingList = (slot.bookings || []).filter(b => b.status === "pending");
+              if (pendingList.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Pending ({pendingList.length})
+                  </p>
+                  {pendingList.map(b => (
+                    <div key={b.id} className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 space-y-0.5">
+                      <p className="text-[11px] font-medium text-amber-800">
+                        {b.mentee?.name ?? "Mentee"}
+                        {b.requestedStart && b.requestedEnd && (
+                          <> &middot; {b.requestedStart}&ndash;{b.requestedEnd}</>
+                        )}
+                      </p>
+                      {b.session && (
+                        <p className="text-[11px] text-amber-700 font-medium">
+                          Session {b.session.sessionNum}: {b.session.topic}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Available */}
+            {(slot.bookings || []).length === 0 && (
+              <div className="flex items-center gap-2 py-0.5 px-0.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                <p className="text-xs text-gray-600">Available time slot</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
