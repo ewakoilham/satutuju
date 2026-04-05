@@ -37,119 +37,94 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left branded panel - desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        {/* Brand illustrations */}
-        <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-20" />
-        <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-20" />
-        <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-15" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 relative overflow-hidden px-4 py-12">
+      {/* Decorative illustrations */}
+      <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-10 pointer-events-none" />
 
-        <div className="relative text-center">
-          <Logo variant="main" size="lg" className="mx-auto mb-8" />
-          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
-            Welcome back
-          </h2>
-          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
-            Continue your mentorship journey. Your mentor and resources are waiting for you.
-          </p>
-
-          <div className="flex items-center justify-center gap-2 mt-10">
-            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
-          </div>
+      <div className="relative w-full max-w-md">
+        <div className="text-center mb-6">
+          <Logo variant="main" size="md" className="mx-auto mb-2" />
+          <p className="text-sm text-primary-600/70">Mentorship Platform</p>
         </div>
-      </div>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-8 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <Logo variant="main" size="md" className="mx-auto mb-2" />
-            <p className="text-sm text-gray-400">Mentorship Platform</p>
+        <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl bg-white/95 backdrop-blur-sm">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-blue-soft rounded-2xl mb-3">
+              <Icon name="user" size={22} className="text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)]">
+              Sign In
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
           </div>
 
-          <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-blue-soft rounded-2xl mb-3">
-                <Icon name="user" size={22} className="text-primary" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)]">
-                Sign In
-              </h2>
-              <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
+          {error && (
+            <div className="bg-danger-light text-danger text-sm px-4 py-2.5 rounded-xl mb-4 flex items-center gap-2 animate-slide-in-up">
+              <Icon name="x" size={14} />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="input-field"
+                placeholder="you@example.com"
+              />
             </div>
 
-            {error && (
-              <div className="bg-danger-light text-danger text-sm px-4 py-2.5 rounded-xl mb-4 flex items-center gap-2 animate-slide-in-up">
-                <Icon name="x" size={14} />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                  Email
-                </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Password
+              </label>
+              <div className="relative">
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="input-field"
-                  placeholder="you@example.com"
+                  className="input-field pr-11"
+                  placeholder="Enter your password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
+                >
+                  <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
+                </button>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="input-field pr-11"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
-                  >
-                    <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
-                  </button>
-                </div>
-              </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3 rounded-xl text-base mt-2"
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full py-3 rounded-xl text-base mt-2"
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-            </form>
-
-            <p className="text-center text-sm text-gray-400 mt-6">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/signup"
-                className="text-primary font-semibold hover:underline"
-              >
-                Sign Up
-              </Link>
-            </p>
-          </div>
+          <p className="text-center text-sm text-gray-400 mt-6">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="text-primary font-semibold hover:underline"
+            >
+              Sign Up
+            </Link>
+          </p>
         </div>
       </div>
-
     </div>
   );
 }

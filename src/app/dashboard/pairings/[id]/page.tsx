@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/lib/hooks";
 import { CURRICULUM, DOCUMENT_CATEGORIES } from "@/lib/curriculum";
+import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
@@ -592,6 +593,14 @@ function SessionsTab({
   );
 }
 
+const PHASE_CURRICULUM_COLORS: Record<string, { bg: string; border: string; text: string; icon: string; badge: "info" | "warning" | "primary" | "danger" | "success" }> = {
+  discovery: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", icon: "text-blue-500", badge: "info" },
+  planning: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", icon: "text-amber-500", badge: "warning" },
+  writing: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", icon: "text-purple-500", badge: "primary" },
+  execution: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", icon: "text-orange-500", badge: "danger" },
+  closing: { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", icon: "text-green-500", badge: "success" },
+};
+
 // Maps curriculum doc checklist keywords to document categories
 // Only map keywords to specific (non-generic) categories.
 // "other" is intentionally excluded — it matches too broadly.
@@ -857,69 +866,79 @@ function SessionDetail({
       )}
 
       {/* Curriculum reference -- collapsible, mentor/admin only */}
-      {isMentor && <div className="border-t border-gray-100 pt-3">
-        <button
-          onClick={() => setShowCurriculum(!showCurriculum)}
-          className="text-xs text-gray-400 hover:text-gray-600 font-medium uppercase tracking-wide flex items-center gap-1"
-        >
-          <Icon name={showCurriculum ? "chevron-down" : "chevron-right"} size={14} />
-          {showCurriculum ? "Hide" : "Show"} Curriculum Guide
-        </button>
+      {isMentor && (() => {
+        const phaseColors = PHASE_CURRICULUM_COLORS[template.phase] || PHASE_CURRICULUM_COLORS.discovery;
+        return (
+          <div className="border-t border-gray-100 pt-3">
+            <button
+              onClick={() => setShowCurriculum(!showCurriculum)}
+              className={`text-sm font-medium flex items-center gap-2 ${phaseColors.text} hover:opacity-80 transition`}
+            >
+              <Icon name="book" size={16} />
+              <span>Curriculum Guide</span>
+              <Badge variant={phaseColors.badge}>{template.phaseLabel}</Badge>
+              <Icon name={showCurriculum ? "chevron-down" : "chevron-right"} size={14} className="ml-auto" />
+            </button>
 
-        {showCurriculum && (
-          <div className="mt-3 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-                  Objective
-                </h4>
-                <p className="text-sm text-gray-700">{template.objective}</p>
+            {showCurriculum && (
+              <div className={`mt-3 ${phaseColors.bg} ${phaseColors.border} border rounded-xl p-4 relative overflow-hidden animate-slide-in-up`}>
+                <Image src="/illustrations/open-book.png" alt="" width={90} height={90} className="absolute bottom-2 right-2 opacity-[0.07] pointer-events-none" />
+                <div className="relative grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${phaseColors.text}`}>
+                      <Icon name="lightbulb" size={13} className={phaseColors.icon} />
+                      Objective
+                    </h4>
+                    <p className="text-sm text-gray-700">{template.objective}</p>
+                  </div>
+                  <div>
+                    <h4 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${phaseColors.text}`}>
+                      <Icon name="clipboard-check" size={13} className={phaseColors.icon} />
+                      Deliverables
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {template.deliverables.map((d, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${phaseColors.text}`}>
+                      <Icon name="user" size={13} className={phaseColors.icon} />
+                      Mentee Preparation
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {template.menteePrep.map((p, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${phaseColors.text}`}>
+                      <Icon name="document" size={13} className={phaseColors.icon} />
+                      Document Checklist
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      {template.docChecklist.map((d, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-                  Deliverables
-                </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  {template.deliverables.map((d, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-gray-300 mt-0.5">-</span>
-                      {d}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-                  Mentee Preparation
-                </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  {template.menteePrep.map((p, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-gray-300 mt-0.5">-</span>
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-                  Document Checklist
-                </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  {template.docChecklist.map((d, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-gray-300 mt-0.5">-</span>
-                      {d}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>}
+        );
+      })()}
 
       {editing && (
         <div className="space-y-4 card bg-gray-50">
