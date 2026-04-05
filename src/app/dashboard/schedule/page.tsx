@@ -566,11 +566,12 @@ function BookingModal({ open, slot, sessions, initialWindow, onClose, onBook, on
 }
 
 // ── Slot popover (click existing slot) ────────────────────────────────────
-function SlotPopover({ slot, role, x, y, color, requestedWindow, tooShort, onClose, onEdit, onDelete, onBook, onAccept, onReject }: {
+function SlotPopover({ slot, role, x, y, color, requestedWindow, tooShort, clickedSegment, onClose, onEdit, onDelete, onBook, onAccept, onReject }: {
   slot: Slot; role: string; x: number; y: number;
   color?: string;
   requestedWindow?: { startTime: string; endTime: string };
   tooShort?: boolean;
+  clickedSegment?: { startTime: string; endTime: string; type: string };
   onClose: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -588,22 +589,29 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, tooShort, onClo
   }, [onClose]);
 
   const { left, top } = calcPopoverPos(x, y, 272, 380);
-  const bgClass = color ? "" : slotBg(slot, role);
-  const bgStyle = color ? { backgroundColor: color } : {};
-  const pending = (slot.bookings || []).filter(b => b.status === "pending");
+  const pending   = (slot.bookings || []).filter(b => b.status === "pending");
   const myBooking = slot.myBooking;
+
+  // Header: segment click overrides color + time for mentee; admin uses mentor color; else slot status
+  const headerBgClass = clickedSegment
+    ? (clickedSegment.type === "pending"  ? "bg-amber-400" :
+       clickedSegment.type === "accepted" ? "bg-emerald-500" : "bg-blue-600")
+    : (color ? "" : slotBg(slot, role));
+  const headerBgStyle = !clickedSegment && color ? { backgroundColor: color } : {};
+  const headerTextColor = clickedSegment?.type === "pending" ? "text-gray-900" : "text-white";
+  const headerTime = tooShort && clickedSegment
+    ? `${clickedSegment.startTime} – ${clickedSegment.endTime}`
+    : requestedWindow
+      ? `${requestedWindow.startTime} – ${requestedWindow.endTime}`
+      : `${slot.startTime} – ${slot.endTime}`;
 
   return (
     <div ref={ref} className="fixed z-[60] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
       style={{ left, top, width: 272 }}>
-      <div className={`${bgClass} text-white px-4 py-3`} style={bgStyle}>
+      <div className={`${headerBgClass} ${headerTextColor} px-4 py-3`} style={headerBgStyle}>
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-sm">
-              {requestedWindow
-                ? `${requestedWindow.startTime} – ${requestedWindow.endTime}`
-                : `${slot.startTime} – ${slot.endTime}`}
-            </p>
+            <p className="font-semibold text-sm">{headerTime}</p>
             <p className="text-xs opacity-75 mt-0.5">{fmtDate(slot.date)}</p>
           </div>
           <button onClick={onClose} className="opacity-70 hover:opacity-100 transition flex-shrink-0 mt-0.5">
@@ -717,7 +725,7 @@ export default function SchedulePage() {
     open: boolean;
     initial?: { id?: string; date?: string; startTime?: string; endTime?: string; notes?: string | null };
   }>({ open: false });
-  const [popover, setPopover]       = useState<{ slot: Slot; x: number; y: number; tooShort?: boolean } | null>(null);
+  const [popover, setPopover]       = useState<{ slot: Slot; x: number; y: number; tooShort?: boolean; clickedSegment?: { startTime: string; endTime: string; type: string } } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Slot | null>(null);
   const [deleting, setDeleting]     = useState(false);
   const [bookTarget, setBookTarget] = useState<Slot | null>(null);
@@ -854,7 +862,7 @@ export default function SchedulePage() {
       if (availDuration < 90) {
         // Available portion too short — show warning, no ghost
         setMenteeGhost(null);
-        setPopover({ slot, x: e.clientX, y: e.clientY, tooShort: true });
+        setPopover({ slot, x: e.clientX, y: e.clientY, tooShort: true, clickedSegment: clickedSeg });
         return;
       }
       if (!slot.myBooking) {
@@ -873,7 +881,7 @@ export default function SchedulePage() {
       // Clicked the booked/pending segment — show booking status, no ghost
       setMenteeGhost(null);
     }
-    setPopover({ slot, x: e.clientX, y: e.clientY });
+    setPopover({ slot, x: e.clientX, y: e.clientY, clickedSegment: clickedSeg });
   }
 
   // ── Mentee ghost preview live update (when time-frame changes in BookingModal)
@@ -1089,7 +1097,7 @@ export default function SchedulePage() {
                               onClick={e => handleSlotClick(e, slot)}
                               className={`absolute rounded-md overflow-hidden transition-all select-none ${textCls} ${
                                 isMentor || isMentee || isAdmin ? "cursor-pointer" : ""
-                              } ${isSelected ? "ring-2 ring-white/50" : "hover:brightness-110 active:brightness-95"}`}
+                              } ${isSelected ? "ring-2 ring-white/50" : "active:brightness-95"}`}
                               style={{
                                 top, height,
                                 left:  `calc(${col * pct}% + 2px)`,
@@ -1105,7 +1113,7 @@ export default function SchedulePage() {
                                   seg.type === "accepted" || seg.type === "booked" ? "bg-emerald-500" :
                                   seg.type === "available" ? "bg-blue-600" : "bg-gray-400";
                                 return (
-                                  <div key={idx} className={`absolute left-0 right-0 ${bgCls}`}
+                                  <div key={idx} className={`absolute left-0 right-0 ${bgCls} hover:brightness-110 transition-all`}
                                     style={{ top: segTop, height: segH, ...(mentorColor ? { backgroundColor: mentorColor } : {}) }} />
                                 );
                               })}
@@ -1199,6 +1207,7 @@ export default function SchedulePage() {
               : undefined)
           }
           tooShort={popover.tooShort}
+          clickedSegment={popover.clickedSegment}
           onClose={() => { setPopover(null); setMenteeGhost(null); }}
           onEdit={() => setEditModal({ open: true, initial: { ...popover.slot, id: popover.slot.id } })}
           onDelete={() => setDeleteTarget(popover.slot)}
