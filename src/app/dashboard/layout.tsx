@@ -19,6 +19,7 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
   ],
   mentor: [
     { href: "/dashboard", label: "My Mentees", icon: "graduation" },
+    { href: "/dashboard/mentor-profile", label: "Profile", icon: "user" },
     { href: "/dashboard/universities", label: "Universities", icon: "school" },
     { href: "/dashboard/settings", label: "Settings", icon: "settings" },
   ],
