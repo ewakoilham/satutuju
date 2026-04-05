@@ -6,62 +6,71 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
-import Logo from "@/components/ui/Logo";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 
+// Profile & Settings are removed from main nav — they live in the avatar dropdown
 const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: string }>> = {
   admin: [
-    { href: "/dashboard", label: "Overview", icon: "chart" },
-    { href: "/dashboard/users", label: "Users", icon: "users" },
-    { href: "/dashboard/pairings", label: "Pairings", icon: "link" },
-    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
-    { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
+    { href: "/dashboard",              label: "Overview",     icon: "chart"       },
+    { href: "/dashboard/users",        label: "Users",        icon: "users"       },
+    { href: "/dashboard/pairings",     label: "Pairings",     icon: "link"        },
+    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/universities", label: "Universities", icon: "graduation"  },
   ],
   mentor: [
-    { href: "/dashboard", label: "My Mentees", icon: "graduation" },
-    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
-    { href: "/dashboard/mentor-profile", label: "Profile", icon: "user" },
-    { href: "/dashboard/universities", label: "Universities", icon: "school" },
-    { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+    { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
+    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
   ],
   mentee: [
-    { href: "/dashboard", label: "My Journey", icon: "map" },
-    { href: "/dashboard/schedule", label: "Schedule", icon: "calendar" },
-    { href: "/dashboard/profile", label: "Profile", icon: "user" },
-    { href: "/dashboard/universities", label: "Universities", icon: "school" },
+    { href: "/dashboard",              label: "My Journey",   icon: "map"         },
+    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
+  ],
+};
+
+// Profile / Settings links per role (shown in avatar dropdown)
+const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon: string }>> = {
+  admin:  [],
+  mentor: [
+    { href: "/dashboard/mentor-profile", label: "Profile",  icon: "user"     },
+    { href: "/dashboard/settings",       label: "Settings", icon: "settings" },
+  ],
+  mentee: [
+    { href: "/dashboard/profile",  label: "Profile",  icon: "user"     },
     { href: "/dashboard/settings", label: "Settings", icon: "settings" },
   ],
 };
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useUser();
   const { notifications, unreadCount, markRead } = useNotifications();
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
-  const [showNotifs, setShowNotifs] = useState(false);
+
+  const [showNotifs,     setShowNotifs]     = useState(false);
+  const [showUserMenu,   setShowUserMenu]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+
+  const notifRef    = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
-  // Close notification dropdown when clicking outside
+  // Close dropdowns on outside click
   useEffect(() => {
-    if (!showNotifs) return;
     const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
         setShowNotifs(false);
-      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
+        setShowUserMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showNotifs]);
+  }, []);
 
   if (loading || !user) {
     return (
@@ -74,19 +83,21 @@ export default function DashboardLayout({
     );
   }
 
-  const navItems = NAV_ITEMS[user.role] || NAV_ITEMS.mentee;
+  const navItems      = NAV_ITEMS[user.role]      || NAV_ITEMS.mentee;
+  const userMenuItems = USER_MENU_ITEMS[user.role] || [];
   const scheduleUnread = notifications.filter(
     (n) => n.link === "/dashboard/schedule" && !n.read
   ).length;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Nav */}
+      {/* ── Top Nav ──────────────────────────────────────────────────────── */}
       <header className="bg-white/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+
+            {/* Left: hamburger (mobile) + logo + desktop nav */}
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Hamburger menu - mobile only */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="sm:hidden p-2 text-gray-500 hover:bg-brand-blue-soft rounded-lg transition"
@@ -95,20 +106,17 @@ export default function DashboardLayout({
                 <Icon name={mobileMenuOpen ? "x" : "menu"} size={22} />
               </button>
 
-              {/* Logo */}
               <Link href="/dashboard" className="flex items-center">
-                <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40} className="object-contain" priority />
+                <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40}
+                  className="object-contain" priority />
               </Link>
 
-              {/* Desktop nav */}
               <nav className="hidden sm:flex items-center gap-1">
                 {navItems.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive   = pathname === item.href;
                   const isSchedule = item.href === "/dashboard/schedule";
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
+                    <Link key={item.href} href={item.href}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive
                           ? "bg-brand-blue-soft text-primary"
@@ -128,16 +136,18 @@ export default function DashboardLayout({
               </nav>
             </div>
 
+            {/* Right: notifications + avatar dropdown */}
             <div className="flex items-center gap-2 sm:gap-3">
+
               {/* Notifications */}
               <div className="relative" ref={notifRef}>
                 <button
-                  onClick={() => setShowNotifs(!showNotifs)}
+                  onClick={() => { setShowNotifs(!showNotifs); setShowUserMenu(false); }}
                   className="relative p-2 text-gray-500 hover:bg-brand-blue-soft hover:text-primary rounded-lg transition"
                 >
                   <Icon name="bell" size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-danger text-white text-[10px] font-bold rounded-full w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 bg-danger text-white text-[10px] font-bold rounded-full min-w-[18px] min-h-[18px] flex items-center justify-center px-0.5">
                       {unreadCount}
                     </span>
                   )}
@@ -148,10 +158,7 @@ export default function DashboardLayout({
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50/50">
                       <span className="font-semibold text-sm font-[family-name:var(--font-heading)]">Notifications</span>
                       {unreadCount > 0 && (
-                        <button
-                          onClick={() => markRead()}
-                          className="text-xs text-primary font-medium hover:underline"
-                        >
+                        <button onClick={() => markRead()} className="text-xs text-primary font-medium hover:underline">
                           Mark all read
                         </button>
                       )}
@@ -164,20 +171,11 @@ export default function DashboardLayout({
                         </div>
                       ) : (
                         notifications.slice(0, 10).map((n) => (
-                          <div
-                            key={n.id}
-                            onClick={() => {
-                              markRead(n.id);
-                              if (n.link) router.push(n.link);
-                              setShowNotifs(false);
-                            }}
-                            className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition flex gap-3 ${
-                              !n.read ? "bg-primary-50/50" : ""
-                            }`}
+                          <div key={n.id}
+                            onClick={() => { markRead(n.id); if (n.link) router.push(n.link); setShowNotifs(false); }}
+                            className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition flex gap-3 ${!n.read ? "bg-primary-50/50" : ""}`}
                           >
-                            {!n.read && (
-                              <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                            )}
+                            {!n.read && <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
                             <div className={!n.read ? "" : "ml-5"}>
                               <p className="text-sm font-medium text-foreground">{n.title}</p>
                               <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
@@ -193,48 +191,85 @@ export default function DashboardLayout({
               {/* Divider */}
               <div className="hidden sm:block w-px h-8 bg-border" />
 
-              {/* User menu */}
-              <div className="flex items-center gap-2.5">
-                <Avatar name={user.name} size="sm" />
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-foreground">{user.name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{user.role}</p>
-                </div>
+              {/* Avatar dropdown */}
+              <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={logout}
-                  className="p-2 text-gray-400 hover:text-danger hover:bg-danger-light rounded-lg transition ml-1"
-                  title="Logout"
+                  onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
+                  className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-gray-50 ${showUserMenu ? "bg-gray-50" : ""}`}
                 >
-                  <Icon name="logout" size={18} />
+                  <Avatar name={user.name} size="sm" />
+                  <div className="text-left hidden sm:block">
+                    <p className="text-sm font-medium text-foreground leading-tight">{user.name}</p>
+                    <p className="text-xs text-gray-400 capitalize leading-tight">{user.role}</p>
+                  </div>
+                  <Icon name="chevron-down" size={14}
+                    className={`hidden sm:block text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
                 </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down">
+                    {/* User identity */}
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                    </div>
+
+                    {/* Profile + Settings links */}
+                    {userMenuItems.length > 0 && (
+                      <div className="py-1.5">
+                        {userMenuItems.map((item) => {
+                          const isActive = pathname === item.href;
+                          return (
+                            <Link key={item.href} href={item.href}
+                              onClick={() => setShowUserMenu(false)}
+                              className={`flex items-center gap-2.5 px-4 py-2 text-sm transition ${
+                                isActive
+                                  ? "text-primary font-medium bg-brand-blue-soft/50"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              <Icon name={item.icon} size={15} className={isActive ? "text-primary" : "text-gray-400"} />
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Logout */}
+                    <div className="border-t border-gray-100 py-1.5">
+                      <button
+                        onClick={() => { setShowUserMenu(false); logout(); }}
+                        className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                      >
+                        <Icon name="logout" size={15} className="text-red-400" />
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile slide-out navigation drawer */}
+      {/* ── Mobile slide-out drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div className="sm:hidden fixed inset-0 z-40">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-primary-900/30 backdrop-blur-sm animate-fade-in"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          {/* Drawer */}
+          <div className="fixed inset-0 bg-primary-900/30 backdrop-blur-sm animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)} />
           <div className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-[var(--shadow-xl)] z-50 flex flex-col animate-slide-in-left">
             <div className="flex items-center justify-between px-5 h-16 border-b border-border">
-              <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40} className="object-contain" priority />
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition"
-                aria-label="Close menu"
-              >
+              <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40}
+                className="object-contain" priority />
+              <button onClick={() => setMobileMenuOpen(false)}
+                className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition" aria-label="Close menu">
                 <Icon name="x" size={18} />
               </button>
             </div>
 
-            {/* User info in drawer */}
+            {/* User info */}
             <div className="px-5 py-4 bg-brand-blue-soft/30 border-b border-border">
               <div className="flex items-center gap-3">
                 <Avatar name={user.name} size="md" />
@@ -245,19 +280,16 @@ export default function DashboardLayout({
               </div>
             </div>
 
+            {/* Main nav */}
             <nav className="flex flex-col gap-1 p-4 flex-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive   = pathname === item.href;
                 const isSchedule = item.href === "/dashboard/schedule";
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
+                  <Link key={item.href} href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                      isActive
-                        ? "bg-brand-blue-soft text-primary"
-                        : "text-gray-500 hover:bg-gray-50"
+                      isActive ? "bg-brand-blue-soft text-primary" : "text-gray-500 hover:bg-gray-50"
                     }`}
                   >
                     <Icon name={item.icon} size={18} className={isActive ? "text-primary" : ""} />
@@ -272,23 +304,35 @@ export default function DashboardLayout({
               })}
             </nav>
 
-            <div className="border-t border-border p-4">
+            {/* Profile + Settings + Logout at bottom */}
+            <div className="border-t border-border p-4 space-y-1">
+              {userMenuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link key={item.href} href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
+                      isActive ? "bg-brand-blue-soft text-primary" : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon name={item.icon} size={18} className={isActive ? "text-primary" : ""} />
+                    {item.label}
+                  </Link>
+                );
+              })}
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout();
-                }}
-                className="flex items-center gap-2 text-sm text-danger font-medium hover:underline w-full px-3 py-2"
+                onClick={() => { setMobileMenuOpen(false); logout(); }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition"
               >
-                <Icon name="logout" size={16} />
-                Logout
+                <Icon name="logout" size={18} className="text-red-400" />
+                Log out
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main content */}
+      {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
