@@ -20,13 +20,12 @@ interface MentorProfileData {
   currentField: string;
   currentFieldOther: string;
   weeklyHours: string;
-  availability: string[];
-  availabilityOther: string;
+  availability: string;
   personality: string;
   mentorStyle: string;
   workStyle: string;
   communicationStyle: string;
-  primaryRoles: string[];
+  primaryRoles: string;
 }
 
 const EMPTY: MentorProfileData = {
@@ -35,40 +34,49 @@ const EMPTY: MentorProfileData = {
   postgradMajor: "", postgradUniversity: "",
   fundingScheme: "", fundingOther: "",
   currentField: "", currentFieldOther: "",
-  weeklyHours: "", availability: [], availabilityOther: "",
+  weeklyHours: "", availability: "",
   personality: "", mentorStyle: "", workStyle: "",
-  communicationStyle: "", primaryRoles: [],
+  communicationStyle: "", primaryRoles: "",
 };
 
 // ── Option lists ──────────────────────────────────────────────
-const FUNDING_OPTIONS   = ["LPDP Scholarship", "Self-funded", "Other"];
-const FUNDING_VALUES    = ["lpdp", "self-funded", "other"];
-const FIELD_OPTIONS     = [
+const FUNDING_OPTIONS = ["LPDP Scholarship", "Self-funded", "Other"];
+const FUNDING_VALUES  = ["lpdp", "self-funded", "other"];
+
+const FIELD_OPTIONS = [
   "Technology & Engineering", "Business & Management", "Finance & Banking",
   "Consulting", "Health & Medicine", "Education & Research",
   "Government & Public Policy", "Other",
 ];
-const FIELD_VALUES      = [
+const FIELD_VALUES = [
   "technology", "business", "finance", "consulting",
   "health", "education", "government", "other",
 ];
-const HOURS_OPTIONS     = ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"];
-const AVAIL_OPTIONS     = [
+
+const HOURS_OPTIONS = ["1 hour", "2–3 hours", "4–5 hours", "6 hours or more"];
+
+const AVAIL_OPTIONS = [
   "Weekday morning (before 9am)", "Weekday midday (9am–12pm)",
   "Weekday afternoon (1pm–5pm)", "Weekday evening (after 6pm)", "Weekend",
 ];
-const AVAIL_VALUES      = ["morning", "midday", "afternoon", "evening", "weekend"];
+const AVAIL_VALUES = ["morning", "midday", "afternoon", "evening", "weekend"];
+
 const PERSONALITY_OPTIONS = [
   "Introvert — prefer calm, 1-on-1 interactions",
   "Extrovert — open, energetic, love interacting",
   "Ambivert",
 ];
-const PERSONALITY_VALUES  = ["introvert", "extrovert", "ambivert"];
-const STYLE_OPTIONS = {
-  mentor:        { labels: ["Gentle","Somewhat gentle","No preference","Somewhat direct","Direct"],         values: ["gentle","somewhat-gentle","no-preference","somewhat-direct","direct"] },
-  work:          { labels: ["Structured","Somewhat structured","No preference","Somewhat flexible","Flexible"], values: ["structured","somewhat-structured","no-preference","somewhat-flexible","flexible"] },
-  communication: { labels: ["Formal","Somewhat formal","No preference","Somewhat casual","Casual"],         values: ["formal","somewhat-formal","no-preference","somewhat-casual","casual"] },
-};
+const PERSONALITY_VALUES = ["introvert", "extrovert", "ambivert"];
+
+const MENTOR_STYLE_OPTIONS = ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"];
+const MENTOR_STYLE_VALUES  = ["gentle", "somewhat-gentle", "no-preference", "somewhat-direct", "direct"];
+
+const WORK_STYLE_OPTIONS = ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"];
+const WORK_STYLE_VALUES  = ["structured", "somewhat-structured", "no-preference", "somewhat-flexible", "flexible"];
+
+const COMM_STYLE_OPTIONS = ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"];
+const COMM_STYLE_VALUES  = ["formal", "somewhat-formal", "no-preference", "somewhat-casual", "casual"];
+
 const ROLE_OPTIONS = [
   "Listener — give the mentee space to reflect",
   "Problem solver — help find concrete solutions",
@@ -76,18 +84,15 @@ const ROLE_OPTIONS = [
   "Motivator — keep their energy and confidence up",
   "Advisor — share personal experience and perspective",
 ];
-const ROLE_VALUES  = ["listener", "problem-solver", "challenger", "motivator", "advisor"];
+const ROLE_VALUES = ["listener", "problem-solver", "challenger", "motivator", "advisor"];
 
-// ── Value → display label helpers ────────────────────────────
+// ── Value → label helper ──────────────────────────────────────
 function labelFor(value: string, values: string[], labels: string[]): string {
   const idx = values.indexOf(value);
   return idx >= 0 ? labels[idx] : value;
 }
-function labelsForArray(values: string[], valuesList: string[], labelsList: string[]): string {
-  return values.map((v) => labelFor(v, valuesList, labelsList)).filter(Boolean).join(", ");
-}
 
-// ── Reusable display/input components ────────────────────────
+// ── Reusable components ───────────────────────────────────────
 function MissingBadge() {
   return <Badge variant="danger">Missing details</Badge>;
 }
@@ -162,51 +167,7 @@ function SelectOtherInput({ label, value, otherValue, onChange, onOtherChange, o
   );
 }
 
-function MultiSelectInput({ label, selected, onChange, options, values, maxSelect }: {
-  label: string; selected: string[]; onChange: (v: string[]) => void;
-  options: string[]; values: string[]; maxSelect?: number;
-}) {
-  const toggle = (val: string) => {
-    if (selected.includes(val)) {
-      onChange(selected.filter((v) => v !== val));
-    } else {
-      if (maxSelect && selected.length >= maxSelect) {
-        onChange([...selected.slice(1), val]);
-      } else {
-        onChange([...selected, val]);
-      }
-    }
-  };
-  return (
-    <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">
-        {label}{maxSelect ? ` (up to ${maxSelect})` : ""}
-      </label>
-      <div className="space-y-2">
-        {options.map((opt, i) => {
-          const val = values[i];
-          const checked = selected.includes(val);
-          return (
-            <label key={val} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
-              checked ? "border-[var(--primary)] bg-[var(--primary-light)]" : "border-gray-200 hover:border-gray-300"
-            }`}>
-              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                checked ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
-              }`}>
-                {checked && <span className="text-white text-[10px] font-bold">✓</span>}
-              </span>
-              <span className={`text-sm ${checked ? "text-[var(--primary)] font-medium" : "text-gray-700"}`}>{opt}</span>
-              <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggle(val)} />
-            </label>
-          );
-        })}
-      </div>
-      {maxSelect && <p className="text-xs text-gray-400">{selected.length}/{maxSelect} selected</p>}
-    </div>
-  );
-}
-
-// ── Section header helper ─────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 type SectionKey = "biodata" | "education" | "preferences";
 
 // ── Main page ─────────────────────────────────────────────────
@@ -218,32 +179,34 @@ export default function MentorProfilePage() {
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [saving, setSaving]   = useState(false);
 
-  // Parse API response (arrays may come as JSON strings or real arrays)
+  // Parse API response — availability/primaryRoles come as JSONB arrays; take first element
   const parseProfile = (data: Record<string, unknown>): MentorProfileData => {
-    const parseArr = (v: unknown): string[] => {
-      if (Array.isArray(v)) return v;
-      if (typeof v === "string") { try { return JSON.parse(v); } catch { return []; } }
-      return [];
+    const firstOf = (v: unknown): string => {
+      if (Array.isArray(v) && v.length > 0) return String(v[0]);
+      if (typeof v === "string" && v.startsWith("[")) {
+        try { const arr = JSON.parse(v); return Array.isArray(arr) && arr.length > 0 ? String(arr[0]) : ""; }
+        catch { return ""; }
+      }
+      return typeof v === "string" ? v : "";
     };
     return {
-      fullName:          String(data.fullName          ?? ""),
-      city:              String(data.city              ?? ""),
-      undergradMajor:    String(data.undergradMajor    ?? ""),
+      fullName:           String(data.fullName           ?? ""),
+      city:               String(data.city               ?? ""),
+      undergradMajor:     String(data.undergradMajor     ?? ""),
       undergradUniversity: String(data.undergradUniversity ?? ""),
-      postgradMajor:     String(data.postgradMajor     ?? ""),
+      postgradMajor:      String(data.postgradMajor      ?? ""),
       postgradUniversity: String(data.postgradUniversity ?? ""),
-      fundingScheme:     String(data.fundingScheme     ?? ""),
-      fundingOther:      String(data.fundingOther      ?? ""),
-      currentField:      String(data.currentField      ?? ""),
-      currentFieldOther: String(data.currentFieldOther ?? ""),
-      weeklyHours:       String(data.weeklyHours       ?? ""),
-      availability:      parseArr(data.availability),
-      availabilityOther: String(data.availabilityOther ?? ""),
-      personality:       String(data.personality       ?? ""),
-      mentorStyle:       String(data.mentorStyle       ?? ""),
-      workStyle:         String(data.workStyle         ?? ""),
+      fundingScheme:      String(data.fundingScheme      ?? ""),
+      fundingOther:       String(data.fundingOther       ?? ""),
+      currentField:       String(data.currentField       ?? ""),
+      currentFieldOther:  String(data.currentFieldOther  ?? ""),
+      weeklyHours:        String(data.weeklyHours        ?? ""),
+      availability:       firstOf(data.availability),
+      personality:        String(data.personality        ?? ""),
+      mentorStyle:        String(data.mentorStyle        ?? ""),
+      workStyle:          String(data.workStyle          ?? ""),
       communicationStyle: String(data.communicationStyle ?? ""),
-      primaryRoles:      parseArr(data.primaryRoles),
+      primaryRoles:       firstOf(data.primaryRoles),
     };
   };
 
@@ -251,9 +214,9 @@ export default function MentorProfilePage() {
     try {
       const res = await fetch("/api/mentor-profile");
       if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          const parsed = parseProfile(data);
+        const json = await res.json();
+        if (json.profile) {
+          const parsed = parseProfile(json.profile);
           setProfile(parsed);
           setDraft(parsed);
         }
@@ -265,21 +228,22 @@ export default function MentorProfilePage() {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  const startEdit = (section: SectionKey) => {
-    setDraft({ ...profile });
-    setEditingSection(section);
-  };
-  const cancelEdit = () => {
-    setDraft({ ...profile });
-    setEditingSection(null);
-  };
+  const startEdit  = (section: SectionKey) => { setDraft({ ...profile }); setEditingSection(section); };
+  const cancelEdit = () => { setDraft({ ...profile }); setEditingSection(null); };
+
   const saveSection = async () => {
     setSaving(true);
     try {
+      // Wrap single-value fields back to arrays for JSONB consistency
+      const payload = {
+        ...draft,
+        availability: draft.availability ? [draft.availability] : [],
+        primaryRoles: draft.primaryRoles ? [draft.primaryRoles] : [],
+      };
       const res = await fetch("/api/mentor-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setProfile({ ...draft });
@@ -290,7 +254,7 @@ export default function MentorProfilePage() {
     }
   };
 
-  const upd = (field: keyof MentorProfileData, value: string | string[]) =>
+  const upd = (field: keyof MentorProfileData, value: string) =>
     setDraft((prev) => ({ ...prev, [field]: value }));
 
   if (loading) {
@@ -321,15 +285,13 @@ export default function MentorProfilePage() {
     </div>
   );
 
-  // Display helpers
+  // Display label lookups
   const fundingDisplay = profile.fundingScheme === "other"
     ? profile.fundingOther || "Other"
     : labelFor(profile.fundingScheme, FUNDING_VALUES, FUNDING_OPTIONS);
   const fieldDisplay = profile.currentField === "other"
     ? profile.currentFieldOther || "Other"
     : labelFor(profile.currentField, FIELD_VALUES, FIELD_OPTIONS);
-  const availDisplay = labelsForArray(profile.availability, AVAIL_VALUES, AVAIL_OPTIONS);
-  const rolesDisplay = labelsForArray(profile.primaryRoles, ROLE_VALUES, ROLE_OPTIONS);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -342,7 +304,7 @@ export default function MentorProfilePage() {
         </div>
       </div>
 
-      {/* ── Biodata ─────────────────────────────────────────── */}
+      {/* ── Biodata ─────────────────────────────────────────────── */}
       <div className={`card ${isEditing("biodata") ? "bg-primary-50/50" : ""}`}>
         <SectionHeader icon="user" title="Biodata" section="biodata" />
         {isEditing("biodata") ? (
@@ -358,7 +320,7 @@ export default function MentorProfilePage() {
         )}
       </div>
 
-      {/* ── Education ───────────────────────────────────────── */}
+      {/* ── Education ───────────────────────────────────────────── */}
       <div className={`card ${isEditing("education") ? "bg-primary-50/50" : ""}`}>
         <SectionHeader icon="graduation" title="Education" section="education" />
         {isEditing("education") ? (
@@ -369,21 +331,15 @@ export default function MentorProfilePage() {
             <TextInput label="Postgraduate University" value={draft.postgradUniversity} onChange={(v) => upd("postgradUniversity", v)} placeholder="e.g. University of Melbourne, Australia" />
             <SelectOtherInput
               label="Funding Scheme"
-              value={draft.fundingScheme}
-              otherValue={draft.fundingOther}
-              onChange={(v) => upd("fundingScheme", v)}
-              onOtherChange={(v) => upd("fundingOther", v)}
-              options={FUNDING_OPTIONS}
-              values={FUNDING_VALUES}
+              value={draft.fundingScheme} otherValue={draft.fundingOther}
+              onChange={(v) => upd("fundingScheme", v)} onOtherChange={(v) => upd("fundingOther", v)}
+              options={FUNDING_OPTIONS} values={FUNDING_VALUES}
             />
             <SelectOtherInput
               label="Current Field"
-              value={draft.currentField}
-              otherValue={draft.currentFieldOther}
-              onChange={(v) => upd("currentField", v)}
-              onOtherChange={(v) => upd("currentFieldOther", v)}
-              options={FIELD_OPTIONS}
-              values={FIELD_VALUES}
+              value={draft.currentField} otherValue={draft.currentFieldOther}
+              onChange={(v) => upd("currentField", v)} onOtherChange={(v) => upd("currentFieldOther", v)}
+              options={FIELD_OPTIONS} values={FIELD_VALUES}
             />
           </div>
         ) : (
@@ -398,82 +354,28 @@ export default function MentorProfilePage() {
         )}
       </div>
 
-      {/* ── Mentoring Preferences ───────────────────────────── */}
+      {/* ── Mentoring Preferences ───────────────────────────────── */}
       <div className={`card ${isEditing("preferences") ? "bg-primary-50/50" : ""}`}>
         <SectionHeader icon="settings" title="Mentoring Preferences" section="preferences" />
         {isEditing("preferences") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <SelectInput
-              label="Weekly Hours"
-              value={draft.weeklyHours}
-              onChange={(v) => upd("weeklyHours", v)}
-              options={HOURS_OPTIONS}
-            />
-            <SelectInput
-              label="Personality"
-              value={draft.personality}
-              onChange={(v) => upd("personality", v)}
-              options={PERSONALITY_OPTIONS}
-              values={PERSONALITY_VALUES}
-            />
-            <SelectInput
-              label="Mentoring Style"
-              value={draft.mentorStyle}
-              onChange={(v) => upd("mentorStyle", v)}
-              options={STYLE_OPTIONS.mentor.labels}
-              values={STYLE_OPTIONS.mentor.values}
-            />
-            <SelectInput
-              label="Working Style"
-              value={draft.workStyle}
-              onChange={(v) => upd("workStyle", v)}
-              options={STYLE_OPTIONS.work.labels}
-              values={STYLE_OPTIONS.work.values}
-            />
-            <SelectInput
-              label="Communication Style"
-              value={draft.communicationStyle}
-              onChange={(v) => upd("communicationStyle", v)}
-              options={STYLE_OPTIONS.communication.labels}
-              values={STYLE_OPTIONS.communication.values}
-            />
-            <div className="sm:col-span-2">
-              <MultiSelectInput
-                label="Availability"
-                selected={draft.availability}
-                onChange={(v) => upd("availability", v)}
-                options={AVAIL_OPTIONS}
-                values={AVAIL_VALUES}
-              />
-              <div className="mt-2">
-                <TextInput
-                  label="Other availability (optional)"
-                  value={draft.availabilityOther}
-                  onChange={(v) => upd("availabilityOther", v)}
-                  placeholder="e.g. Public holidays"
-                />
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <MultiSelectInput
-                label="Primary Roles in Mentoring"
-                selected={draft.primaryRoles}
-                onChange={(v) => upd("primaryRoles", v)}
-                options={ROLE_OPTIONS}
-                values={ROLE_VALUES}
-                maxSelect={2}
-              />
-            </div>
+            <SelectInput label="Weekly Hours" value={draft.weeklyHours} onChange={(v) => upd("weeklyHours", v)} options={HOURS_OPTIONS} />
+            <SelectInput label="Availability" value={draft.availability} onChange={(v) => upd("availability", v)} options={AVAIL_OPTIONS} values={AVAIL_VALUES} />
+            <SelectInput label="Personality" value={draft.personality} onChange={(v) => upd("personality", v)} options={PERSONALITY_OPTIONS} values={PERSONALITY_VALUES} />
+            <SelectInput label="Mentoring Style" value={draft.mentorStyle} onChange={(v) => upd("mentorStyle", v)} options={MENTOR_STYLE_OPTIONS} values={MENTOR_STYLE_VALUES} />
+            <SelectInput label="Working Style" value={draft.workStyle} onChange={(v) => upd("workStyle", v)} options={WORK_STYLE_OPTIONS} values={WORK_STYLE_VALUES} />
+            <SelectInput label="Communication Style" value={draft.communicationStyle} onChange={(v) => upd("communicationStyle", v)} options={COMM_STYLE_OPTIONS} values={COMM_STYLE_VALUES} />
+            <SelectInput label="Primary Role in Mentoring" value={draft.primaryRoles} onChange={(v) => upd("primaryRoles", v)} options={ROLE_OPTIONS} values={ROLE_VALUES} />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FieldDisplay label="Weekly Hours" value={profile.weeklyHours} />
+            <FieldDisplay label="Availability" value={labelFor(profile.availability, AVAIL_VALUES, AVAIL_OPTIONS)} />
             <FieldDisplay label="Personality" value={labelFor(profile.personality, PERSONALITY_VALUES, PERSONALITY_OPTIONS)} />
-            <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, STYLE_OPTIONS.mentor.values, STYLE_OPTIONS.mentor.labels)} />
-            <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, STYLE_OPTIONS.work.values, STYLE_OPTIONS.work.labels)} />
-            <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, STYLE_OPTIONS.communication.values, STYLE_OPTIONS.communication.labels)} />
-            <FieldDisplay label="Availability" value={availDisplay || (profile.availabilityOther || undefined)} />
-            <FieldDisplay label="Primary Roles" value={rolesDisplay} />
+            <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, MENTOR_STYLE_VALUES, MENTOR_STYLE_OPTIONS)} />
+            <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, WORK_STYLE_VALUES, WORK_STYLE_OPTIONS)} />
+            <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, COMM_STYLE_VALUES, COMM_STYLE_OPTIONS)} />
+            <FieldDisplay label="Primary Role in Mentoring" value={labelFor(profile.primaryRoles, ROLE_VALUES, ROLE_OPTIONS)} />
           </div>
         )}
       </div>
