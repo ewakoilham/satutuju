@@ -599,10 +599,11 @@ function SlotPopover({ slot, role, x, y, color, requestedWindow, tooShort, click
     : (color ? "" : slotBg(slot, role));
   const headerBgStyle = !clickedSegment && color ? { backgroundColor: color } : {};
   const headerTextColor = clickedSegment?.type === "pending" ? "text-gray-900" : "text-white";
-  const headerTime = tooShort && clickedSegment
-    ? `${clickedSegment.startTime} – ${clickedSegment.endTime}`
-    : requestedWindow
-      ? `${requestedWindow.startTime} – ${requestedWindow.endTime}`
+  // Priority: ghost/booking window > clicked segment > full slot range
+  const headerTime = requestedWindow
+    ? `${requestedWindow.startTime} – ${requestedWindow.endTime}`
+    : clickedSegment
+      ? `${clickedSegment.startTime} – ${clickedSegment.endTime}`
       : `${slot.startTime} – ${slot.endTime}`;
 
   return (
@@ -842,9 +843,23 @@ export default function SchedulePage() {
     e.stopPropagation();
     setCreatePanel(null);
 
-    if (user?.role !== "mentee") {
+    if (user?.role === "admin") {
       setMenteeGhost(null);
       setPopover({ slot, x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // ── Mentor: segment-aware click (same detection as mentee, no ghost) ──
+    if (user?.role === "mentor") {
+      setMenteeGhost(null);
+      const rect      = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const relY      = e.clientY - rect.top;
+      const clickMins = toMins(slot.startTime) + (relY / HOUR_H) * 60;
+      const segments  = getVisualSegments(slot, "mentor");
+      const clickedSeg = segments.find(
+        seg => clickMins >= toMins(seg.startTime) && clickMins < toMins(seg.endTime)
+      ) ?? segments[segments.length - 1];
+      setPopover({ slot, x: e.clientX, y: e.clientY, clickedSegment: clickedSeg });
       return;
     }
 

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     // Return own slots with nested bookings (mentee name)
     const { data: slots, error } = await supabase
       .from("ScheduleSlot")
-      .select("*, bookings:ScheduleBooking(id, menteeId, message, status, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
+      .select("*, bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
       .eq("mentorId", user.userId)
       .order("date", { ascending: true })
       .order("startTime", { ascending: true });
