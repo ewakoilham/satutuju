@@ -2,7 +2,8 @@
 
 import { useRef, useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
-import { calcPopoverPos, fmtDateLong, toMins, minsToTime } from "./helpers";
+import { calcPopoverPos, fmtDateLong, toMins, minsToTime, buildBusy, clampToFreeGap, clampEndToGap } from "./helpers";
+import type { Slot } from "./types";
 
 const MIN_MINS = 60;
 const MAX_MINS = 90;
@@ -13,13 +14,15 @@ interface InlineCreateCardProps {
   endTime: string;
   anchorX: number;
   anchorY: number;
+  /** Existing slots on this day (to enforce no-overlap) */
+  existingSlots: Slot[];
   onSave: (d: { date: string; startTime: string; endTime: string; notes: string }) => Promise<void>;
   onClose: () => void;
   onUpdateTime: (st: string, et: string) => void;
 }
 
 export default function InlineCreateCard({
-  date, startTime, endTime, anchorX, anchorY,
+  date, startTime, endTime, anchorX, anchorY, existingSlots,
   onSave, onClose, onUpdateTime,
 }: InlineCreateCardProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,11 +32,9 @@ export default function InlineCreateCard({
   const [saving, setSaving] = useState(false);
   const [err, setErr]     = useState("");
 
-  // Sync from parent on mount
   useEffect(() => { setSt(startTime); }, [startTime]);
   useEffect(() => { setEt(endTime); }, [endTime]);
 
-  // Close on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
@@ -42,50 +43,47 @@ export default function InlineCreateCard({
     return () => { clearTimeout(t); document.removeEventListener("mousedown", h); };
   }, [onClose]);
 
-  // When start changes: preserve current duration (clamped to 60–90 min)
   function changeSt(v: string) {
     if (!v) return;
-    const startMins = toMins(v);
-    const prevDur   = toMins(et) - toMins(st);
-    const clampedDur = Math.max(MIN_MINS, Math.min(MAX_MINS, prevDur || MIN_MINS));
-    const newEnd = minsToTime(startMins + clampedDur);
-    setSt(v);
-    setEt(newEnd);
+    const busy = buildBusy(existingSlots);
+    const result = clampToFreeGap(toMins(v), busy, MIN_MINS, MAX_MINS);
+    if (!result) {
+      setErr("No 60-min free gap available at this time.");
+      return;
+    }
+    const newSt = minsToTime(result.start);
+    const newEt = minsToTime(result.end);
+    setSt(newSt);
+    setEt(newEt);
     setErr("");
-    onUpdateTime(v, newEnd);
+    onUpdateTime(newSt, newEt);
   }
 
-  // When end changes: clamp to [start+60, start+90] automatically
   function changeEt(v: string) {
     if (!v) return;
     const startMins = toMins(st);
-    const endMins   = toMins(v);
-    const dur = endMins - startMins;
+    const busy = buildBusy(existingSlots);
+    const clamped = clampEndToGap(startMins, toMins(v), busy, MIN_MINS, MAX_MINS);
+    const newEt = minsToTime(clamped);
+    setEt(newEt);
+
+    const dur = clamped - startMins;
     if (dur < MIN_MINS) {
-      const clamped = minsToTime(startMins + MIN_MINS);
-      setEt(clamped);
-      setErr("Minimum slot duration is 60 minutes.");
-      onUpdateTime(st, clamped);
-    } else if (dur > MAX_MINS) {
-      const clamped = minsToTime(startMins + MAX_MINS);
-      setEt(clamped);
-      setErr("Maximum slot duration is 90 minutes.");
-      onUpdateTime(st, clamped);
+      setErr("Not enough free time. Minimum 60 minutes required.");
+    } else if (toMins(v) !== clamped) {
+      setErr("End time adjusted — cannot overlap an existing slot.");
     } else {
-      setEt(v);
       setErr("");
-      onUpdateTime(st, v);
     }
+    onUpdateTime(st, newEt);
   }
 
-  // Duration indicator
   const durMins = st && et ? toMins(et) - toMins(st) : 0;
   const durOk   = durMins >= MIN_MINS && durMins <= MAX_MINS;
   const durLabel = durMins > 0 ? `${durMins} min` : "";
 
   async function save() {
     if (!st || !et) { setErr("Start and end time required."); return; }
-    if (st >= et)   { setErr("Start must be before end."); return; }
     const dur = toMins(et) - toMins(st);
     if (dur < MIN_MINS) { setErr("Minimum slot duration is 60 minutes."); return; }
     if (dur > MAX_MINS) { setErr("Maximum slot duration is 90 minutes."); return; }
@@ -116,7 +114,6 @@ export default function InlineCreateCard({
       <div className="px-4 pb-4 space-y-3">
         <p className="text-sm font-semibold text-gray-800 leading-tight">{fmtDateLong(date)}</p>
 
-        {/* Time row + duration badge */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <input type="time" value={st} onChange={e => changeSt(e.target.value)}
@@ -127,7 +124,7 @@ export default function InlineCreateCard({
           </div>
           {durLabel && (
             <p className={`text-[11px] font-medium text-right pr-0.5 ${durOk ? "text-blue-500" : "text-amber-500"}`}>
-              {durLabel} &middot; 60&ndash;90 min slots only
+              {durLabel} &middot; 60&ndash;90 min only
             </p>
           )}
         </div>

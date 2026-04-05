@@ -1,7 +1,7 @@
 "use client";
 
 import { HOUR_H, HOUR_START, HOUR_END, TOTAL_H, SNAP_MINS } from "./constants";
-import { toDateStr, toMins, minsToTime, computeDayLayout } from "./helpers";
+import { toDateStr, toMins, minsToTime, computeDayLayout, buildBusy, clampToFreeGap } from "./helpers";
 import type { Slot, Mode } from "./types";
 import NowLine from "./NowLine";
 import GhostBlock from "./GhostBlock";
@@ -119,20 +119,27 @@ export function computeGhostFromClick(
   return { ghostStart: minsToTime(ghostStart), ghostEnd: minsToTime(ghostEnd) };
 }
 
-/** Snap a cell click Y to a 30-min grid time */
+/**
+ * Snap a cell click to the nearest free 60-min gap.
+ * - If the click lands inside an existing slot, start is pushed to that slot's end.
+ * - End is capped at the next slot's start (never overlapping).
+ * - Returns null if there is no 60-min free gap at or after the clicked position.
+ */
 export function snapCellClick(
-  e: React.MouseEvent<HTMLDivElement>
-): { startTime: string; endTime: string } {
+  e: React.MouseEvent<HTMLDivElement>,
+  daySlots: Slot[]
+): { startTime: string; endTime: string } | null {
   const rect = e.currentTarget.getBoundingClientRect();
   const relY = e.clientY - rect.top;
-  const snapped = Math.floor((relY / HOUR_H) * 60 / SNAP_MINS) * SNAP_MINS;
-  const startH = HOUR_START + Math.floor(snapped / 60);
-  const startM = snapped % 60;
-  const clampedStart = Math.min(startH, HOUR_END - 1);
-  const startTime = `${String(clampedStart).padStart(2, "0")}:${String(startM).padStart(2, "0")}`;
-  const endMins = clampedStart * 60 + startM + 60;
-  const endH = Math.min(Math.floor(endMins / 60), HOUR_END);
-  const endM = endH >= HOUR_END ? 0 : endMins % 60;
-  const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
-  return { startTime, endTime };
+  const rawMins = HOUR_START * 60 + (relY / HOUR_H) * 60;
+  const snappedMins = Math.floor(rawMins / SNAP_MINS) * SNAP_MINS;
+
+  const busy = buildBusy(daySlots);
+  const result = clampToFreeGap(snappedMins, busy);
+  if (!result) return null;
+
+  return {
+    startTime: minsToTime(result.start),
+    endTime: minsToTime(result.end),
+  };
 }

@@ -1,4 +1,4 @@
-import { HOUR_START, HOUR_H, MENTOR_PALETTE } from "./constants";
+import { HOUR_START, HOUR_H, HOUR_END, MENTOR_PALETTE } from "./constants";
 import type { Slot } from "./types";
 
 // ── Date helpers ──────────────────────────────────────────────────────────
@@ -169,4 +169,74 @@ export function buildMentorColorMap(slots: Slot[]): Map<string, string> {
   const map = new Map<string, string>();
   ids.forEach((id, i) => map.set(id, MENTOR_PALETTE[i % MENTOR_PALETTE.length]));
   return map;
+}
+
+// ── Overlap / free-gap helpers (mentor scheduling) ────────────────────────
+
+interface Interval { start: number; end: number; }
+
+/** Build sorted busy intervals from a list of slots, optionally excluding one (for edit). */
+export function buildBusy(slots: Slot[], excludeId?: string): Interval[] {
+  return slots
+    .filter(s => s.id !== excludeId)
+    .map(s => ({ start: toMins(s.startTime), end: toMins(s.endTime) }))
+    .sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Given a desired start time (in minutes), push it past any overlapping busy
+ * interval, then return [clampedStart, clampedEnd] where end = start + 60
+ * capped at the next busy interval.
+ * Returns null if there is no 60-min free gap starting at or after rawStart.
+ */
+export function clampToFreeGap(
+  rawStart: number,
+  busy: Interval[],
+  minDur = 60,
+  maxDur = 90,
+): { start: number; end: number } | null {
+  // Push start past any slot it falls inside (handle consecutive slots)
+  let start = rawStart;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const b of busy) {
+      if (start >= b.start && start < b.end) {
+        start = b.end;
+        changed = true;
+      }
+    }
+  }
+
+  // Hard ceiling
+  if (start >= HOUR_END * 60) return null;
+
+  // Find the next busy interval after start
+  const next = busy.find(b => b.start > start);
+  const gapEnd = next ? next.start : HOUR_END * 60;
+
+  // How much free space do we have?
+  if (gapEnd - start < minDur) return null;
+
+  const end = Math.min(start + Math.min(maxDur, gapEnd - start), gapEnd);
+  return { start, end };
+}
+
+/**
+ * Clamp an end time so it does not overlap the next busy interval after
+ * startMins. Returns a (possibly adjusted) end in minutes.
+ * Also enforces minDur / maxDur from the start.
+ */
+export function clampEndToGap(
+  startMins: number,
+  rawEnd: number,
+  busy: Interval[],
+  minDur = 60,
+  maxDur = 90,
+): number {
+  const next = busy.find(b => b.start > startMins);
+  const gapEnd = next ? next.start : HOUR_END * 60;
+  // Apply duration limits, then don't cross next slot
+  const clamped = Math.min(rawEnd, gapEnd, startMins + maxDur);
+  return Math.max(clamped, startMins + minDur); // ensure at least minDur (may still violate gapEnd)
 }

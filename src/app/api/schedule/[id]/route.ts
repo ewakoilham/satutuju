@@ -34,6 +34,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (dur < 60) return NextResponse.json({ error: "Slot must be at least 60 minutes" }, { status: 400 });
   if (dur > 90) return NextResponse.json({ error: "Slot must be at most 90 minutes" }, { status: 400 });
 
+  // Check for overlapping slots on the same day (exclude self)
+  const effectiveDate = updates.date || slot.date;
+  const { data: existing } = await supabase
+    .from("ScheduleSlot")
+    .select("id, startTime, endTime")
+    .eq("mentorId", user.userId)
+    .eq("date", effectiveDate)
+    .neq("id", id);
+  const overlaps = (existing || []).some(
+    (s: { startTime: string; endTime: string }) =>
+      toMins(effectiveStart) < toMins(s.endTime) && toMins(effectiveEnd) > toMins(s.startTime)
+  );
+  if (overlaps) return NextResponse.json({ error: "This slot overlaps an existing slot" }, { status: 409 });
+
   const now = new Date().toISOString();
   const { data: updated, error } = await supabase
     .from("ScheduleSlot")

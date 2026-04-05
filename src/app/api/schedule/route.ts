@@ -93,6 +93,18 @@ export async function POST(req: NextRequest) {
   if (dur < 60) return NextResponse.json({ error: "Slot must be at least 60 minutes" }, { status: 400 });
   if (dur > 90) return NextResponse.json({ error: "Slot must be at most 90 minutes" }, { status: 400 });
 
+  // Check for overlapping slots on the same day
+  const { data: existing } = await supabase
+    .from("ScheduleSlot")
+    .select("id, startTime, endTime")
+    .eq("mentorId", user.userId)
+    .eq("date", date);
+  const overlaps = (existing || []).some(
+    (s: { startTime: string; endTime: string }) =>
+      toMins(startTime) < toMins(s.endTime) && toMins(endTime) > toMins(s.startTime)
+  );
+  if (overlaps) return NextResponse.json({ error: "This slot overlaps an existing slot" }, { status: 409 });
+
   const now = new Date().toISOString();
   const { data: slot, error } = await supabase
     .from("ScheduleSlot")

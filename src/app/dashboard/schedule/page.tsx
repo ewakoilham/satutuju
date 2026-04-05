@@ -110,11 +110,18 @@ export default function SchedulePage() {
     // If already in a mode, dismiss first
     if (mode.type !== "idle") { dispatch({ type: "DISMISS" }); return; }
 
-    const { startTime, endTime } = snapCellClick(e);
+    const daySlots = weekSlots.filter(s => s.date === dateStr);
+    const snapped = snapCellClick(e, daySlots);
+    // No free 60-min gap at this position — ignore the click
+    if (!snapped) return;
+
     dispatch({
       type: "START_CREATING",
-      date: dateStr, startTime, endTime,
-      anchorX: e.clientX, anchorY: e.clientY,
+      date: dateStr,
+      startTime: snapped.startTime,
+      endTime: snapped.endTime,
+      anchorX: e.clientX,
+      anchorY: e.clientY,
     });
   }
 
@@ -275,6 +282,7 @@ export default function SchedulePage() {
           endTime={mode.endTime}
           anchorX={mode.anchorX}
           anchorY={mode.anchorY}
+          existingSlots={weekSlots.filter(s => s.date === mode.date)}
           onClose={() => dispatch({ type: "DISMISS" })}
           onSave={handleSaveNew}
           onUpdateTime={handleUpdateCreateTime}
@@ -310,11 +318,13 @@ export default function SchedulePage() {
       <EditSlotModal
         open={mode.type === "editing"}
         initial={mode.type === "editing" ? {
+          id: mode.slot.id,
           date: mode.slot.date,
           startTime: mode.slot.startTime,
           endTime: mode.slot.endTime,
           notes: mode.slot.notes,
         } : undefined}
+        allSlots={slots}
         onClose={() => dispatch({ type: "DISMISS" })}
         onSave={handleSaveEdit}
       />
