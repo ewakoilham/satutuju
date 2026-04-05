@@ -18,7 +18,27 @@ export async function GET(req: NextRequest) {
       .order("startTime", { ascending: true });
 
     if (error) return NextResponse.json({ error: "Failed to fetch slots" }, { status: 500 });
-    return NextResponse.json({ slots: slots || [] });
+
+    // Batch-fetch session details for all booking sessionIds
+    const sessionIds = [...new Set(
+      (slots || []).flatMap((s: { bookings?: { sessionId?: string | null }[] }) =>
+        (s.bookings || []).map(b => b.sessionId).filter(Boolean)
+      )
+    )] as string[];
+    const { data: sessionData } = sessionIds.length > 0
+      ? await supabase.from("Session").select("id, sessionNum, topic, phase").in("id", sessionIds)
+      : { data: [] };
+    const sessionMap = new Map((sessionData || []).map((s: { id: string }) => [s.id, s]));
+
+    const slotsWithSessions = (slots || []).map((slot: { bookings?: { sessionId?: string | null }[] }) => ({
+      ...slot,
+      bookings: (slot.bookings || []).map((b: { sessionId?: string | null }) => ({
+        ...b,
+        session: b.sessionId ? (sessionMap.get(b.sessionId) ?? null) : null,
+      })),
+    }));
+
+    return NextResponse.json({ slots: slotsWithSessions });
   }
 
   if (user.role === "mentee") {
@@ -48,11 +68,19 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: "Failed to fetch slots" }, { status: 500 });
 
-    // Filter bookings to only the current mentee's
-    const slotsWithMyBooking = (slots || []).map((slot) => ({
-      ...slot,
-      myBooking: slot.bookings?.find((b: { menteeId: string }) => b.menteeId === user.userId) || null,
-    }));
+    // Build session lookup from already-fetched sessions
+    const sessionMap = new Map((sessions || []).map((s: { id: string }) => [s.id, s]));
+
+    // Filter bookings to only the current mentee's, and embed session info
+    const slotsWithMyBooking = (slots || []).map((slot) => {
+      const myBooking = slot.bookings?.find((b: { menteeId: string }) => b.menteeId === user.userId) || null;
+      return {
+        ...slot,
+        myBooking: myBooking
+          ? { ...myBooking, session: myBooking.sessionId ? (sessionMap.get(myBooking.sessionId) ?? null) : null }
+          : null,
+      };
+    });
 
     return NextResponse.json({ slots: slotsWithMyBooking, hasPairing: true, mentorId: pairing.mentorId, sessions: sessions || [] });
   }

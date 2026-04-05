@@ -10,6 +10,7 @@ export interface Booking {
   status: "pending" | "accepted" | "rejected";
   createdAt: string;
   mentee?: { name: string; email: string };
+  session?: { id: string; sessionNum: number; topic: string; phase: string } | null;
 }
 
 export interface Slot {

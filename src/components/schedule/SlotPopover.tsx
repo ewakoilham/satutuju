@@ -88,14 +88,19 @@ export default function SlotPopover({
           if (acceptedBooking) {
             return (
               <>
-                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-                  <p className="text-xs font-semibold text-emerald-700 mb-0.5">Session confirmed</p>
-                  <p className="text-[11px] text-emerald-600 leading-snug">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5 space-y-1">
+                  <p className="text-xs font-semibold text-emerald-700">Session confirmed</p>
+                  <p className="text-[11px] text-emerald-600">
                     {acceptedBooking.mentee?.name ?? "Mentee"} &middot;{" "}
                     {acceptedBooking.requestedStart && acceptedBooking.requestedEnd
                       ? `${acceptedBooking.requestedStart}\u2013${acceptedBooking.requestedEnd}`
                       : `${slot.startTime}\u2013${slot.endTime}`}
                   </p>
+                  {acceptedBooking.session && (
+                    <p className="text-[11px] text-emerald-700 font-medium">
+                      Session {acceptedBooking.session.sessionNum}: {acceptedBooking.session.topic}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => onReject?.(acceptedBooking.id)}
@@ -177,6 +182,11 @@ export default function SlotPopover({
                           {b.requestedStart}&ndash;{b.requestedEnd}
                         </p>
                       )}
+                      {b.session && (
+                        <p className="text-[11px] text-gray-600 font-medium truncate">
+                          Session {b.session.sessionNum}: {b.session.topic}
+                        </p>
+                      )}
                       {b.message && (
                         <p className="text-[11px] text-gray-400 italic truncate">
                           &ldquo;{b.message}&rdquo;
@@ -207,19 +217,39 @@ export default function SlotPopover({
               </button>
             )}
             {myBooking && myBooking.status !== "rejected" && (
-              <div className="flex items-center gap-2 py-0.5">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  myBooking.status === "accepted" ? "bg-emerald-500" : "bg-amber-400"
-                }`} />
-                <p className="text-xs text-gray-700 font-medium">
-                  {myBooking.status === "accepted" ? "Booking accepted \u2713" : "Request pending\u2026"}
-                </p>
+              <div className={`rounded-lg px-3 py-2.5 space-y-1 ${
+                myBooking.status === "accepted"
+                  ? "bg-emerald-50 border border-emerald-100"
+                  : "bg-amber-50 border border-amber-100"
+              }`}>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    myBooking.status === "accepted" ? "bg-emerald-500" : "bg-amber-400"
+                  }`} />
+                  <p className={`text-xs font-semibold ${
+                    myBooking.status === "accepted" ? "text-emerald-700" : "text-amber-700"
+                  }`}>
+                    {myBooking.status === "accepted" ? "Booking accepted \u2713" : "Request pending\u2026"}
+                  </p>
+                </div>
+                {myBooking.session && (
+                  <p className={`text-[11px] font-medium pl-3.5 ${
+                    myBooking.status === "accepted" ? "text-emerald-600" : "text-amber-600"
+                  }`}>
+                    Session {myBooking.session.sessionNum}: {myBooking.session.topic}
+                  </p>
+                )}
               </div>
             )}
             {myBooking && myBooking.status === "rejected" && (
               <div className="space-y-2.5">
-                <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
-                  <p className="text-xs font-semibold text-red-600 mb-0.5">Request rejected</p>
+                <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 space-y-1">
+                  <p className="text-xs font-semibold text-red-600">Request rejected</p>
+                  {myBooking.session && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      Session {myBooking.session.sessionNum}: {myBooking.session.topic}
+                    </p>
+                  )}
                   <p className="text-[11px] text-red-400 leading-snug">
                     Your mentor declined this request. You can dismiss and try booking again.
                   </p>
