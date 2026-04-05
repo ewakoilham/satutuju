@@ -138,16 +138,22 @@ export default function SlotPopover({
 
           // ── State 3: Clean slot — full edit/delete ────────────────────
           return (
-            <div className="flex gap-1.5">
-              <button onClick={() => onEdit?.()}
-                className="flex-1 flex items-center justify-center gap-1.5 text-xs btn-ghost px-2 py-1.5 rounded-lg">
-                <Icon name="edit" size={13} /> Edit
-              </button>
-              <button onClick={() => onDelete?.()}
-                className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition">
-                <Icon name="trash" size={13} /> Delete
-              </button>
-            </div>
+            <>
+              <div className="flex items-center gap-2 py-0.5 px-0.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                <p className="text-xs text-gray-600">Available time slot for mentoring</p>
+              </div>
+              <div className="flex gap-1.5">
+                <button onClick={() => onEdit?.()}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs btn-ghost px-2 py-1.5 rounded-lg">
+                  <Icon name="edit" size={13} /> Edit
+                </button>
+                <button onClick={() => onDelete?.()}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition">
+                  <Icon name="trash" size={13} /> Delete
+                </button>
+              </div>
+            </>
           );
         })()}
 
