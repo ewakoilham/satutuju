@@ -115,7 +115,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .single();
 
   if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  if (booking.status !== "pending") return NextResponse.json({ error: "Booking is not pending" }, { status: 409 });
+  // Allow rejecting both pending and accepted bookings (accepted = mentor cancelling a confirmed session)
+  if (action === "accept" && booking.status !== "pending") {
+    return NextResponse.json({ error: "Only pending bookings can be accepted" }, { status: 409 });
+  }
+  if (action === "reject" && booking.status !== "pending" && booking.status !== "accepted") {
+    return NextResponse.json({ error: "Booking cannot be cancelled" }, { status: 409 });
+  }
 
   const now = new Date().toISOString();
 
@@ -153,22 +159,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       createdAt: now,
     });
   } else {
-    // Reject this booking
+    const wasCancelling = booking.status === "accepted";
+
+    // Reject / cancel this booking
     await supabase
       .from("ScheduleBooking")
       .update({ status: "rejected", updatedAt: now })
       .eq("id", bookingId);
 
-    // If no more pending bookings → slot back to available
-    const { data: remaining } = await supabase
-      .from("ScheduleBooking")
-      .select("id")
-      .eq("slotId", slotId)
-      .eq("status", "pending");
-
-    if (!remaining || remaining.length === 0) {
+    // Slot always goes back to available when an accepted booking is cancelled
+    if (wasCancelling) {
       await supabase.from("ScheduleSlot").update({ status: "available", updatedAt: now }).eq("id", slotId);
+    } else {
+      // For pending rejections: only revert if no more pending bookings remain
+      const { data: remaining } = await supabase
+        .from("ScheduleBooking")
+        .select("id")
+        .eq("slotId", slotId)
+        .eq("status", "pending");
+      if (!remaining || remaining.length === 0) {
+        await supabase.from("ScheduleSlot").update({ status: "available", updatedAt: now }).eq("id", slotId);
+      }
     }
+
+    // Notify mentee
+    const cancelledTimeDisplay = booking.requestedStart && booking.requestedEnd
+      ? `${booking.requestedStart}–${booking.requestedEnd}`
+      : `${slot.startTime}–${slot.endTime}`;
+    await supabase.from("Notification").insert({
+      id: crypto.randomUUID(),
+      userId: booking.menteeId,
+      title: wasCancelling ? "Session Cancelled" : "Request Rejected",
+      message: wasCancelling
+        ? `Your mentor cancelled the confirmed session on ${slot.date} (${cancelledTimeDisplay}).`
+        : `Your request for ${slot.date} (${cancelledTimeDisplay}) was rejected.`,
+      type: "schedule",
+      read: false,
+      link: "/dashboard/schedule",
+      createdAt: now,
+    });
   }
 
   return NextResponse.json({ success: true });
