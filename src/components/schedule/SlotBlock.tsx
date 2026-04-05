@@ -32,6 +32,18 @@ export default function SlotBlock({
     ? (slot.bookings || []).filter(b => b.status === "pending").length
     : 0;
 
+  // Admin status dot: summarise the slot's booking state
+  const adminStatusDot = role === "admin" ? (() => {
+    const bookings = slot.bookings || [];
+    if (bookings.some(b => b.status === "accepted"))
+      return { color: "#22c55e", title: "Booked" };
+    if (bookings.some(b => b.status === "pending"))
+      return { color: "#f59e0b", title: "Pending request" };
+    if (bookings.length > 0 && bookings.every(b => b.status === "rejected"))
+      return { color: "#ef4444", title: "Rejected" };
+    return { color: "#3b82f6", title: "Available" };
+  })() : null;
+
   // Display time: if mentee has a booking with requested window, show that
   const displayTime = (() => {
     if (role === "mentee" && slot.myBooking?.requestedStart && slot.myBooking?.requestedEnd) {
@@ -75,6 +87,13 @@ export default function SlotBlock({
             {slot.myBooking.status === "accepted" && <Icon name="check" size={12} />}
             {slot.myBooking.status === "pending" && <Icon name="clock" size={12} />}
           </span>
+        )}
+        {adminStatusDot && (
+          <span
+            className="absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-white/80 shadow"
+            style={{ backgroundColor: adminStatusDot.color }}
+            title={adminStatusDot.title}
+          />
         )}
       </div>
     </div>
