@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const mentorId = searchParams.get("mentorId");
     let query = supabase
       .from("ScheduleSlot")
-      .select("*, mentor:User!ScheduleSlot_mentorId_fkey(name, email), bookings:ScheduleBooking(id, status)")
+      .select("*, mentor:User!ScheduleSlot_mentorId_fkey(name, email), bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
       .order("date", { ascending: true })
       .order("startTime", { ascending: true });
 
@@ -97,7 +97,27 @@ export async function GET(req: NextRequest) {
 
     const { data: slots, error } = await query;
     if (error) return NextResponse.json({ error: "Failed to fetch slots" }, { status: 500 });
-    return NextResponse.json({ slots: slots || [] });
+
+    // Batch-fetch session details for all booking sessionIds
+    const sessionIds = [...new Set(
+      (slots || []).flatMap((s: { bookings?: { sessionId?: string | null }[] }) =>
+        (s.bookings || []).map((b: { sessionId?: string | null }) => b.sessionId).filter(Boolean)
+      )
+    )] as string[];
+    const { data: sessionData } = sessionIds.length > 0
+      ? await supabase.from("Session").select("id, sessionNum, topic, phase").in("id", sessionIds)
+      : { data: [] };
+    const sessionMap = new Map((sessionData || []).map((s: { id: string }) => [s.id, s]));
+
+    const slotsWithSessions = (slots || []).map((slot: { bookings?: { sessionId?: string | null }[] }) => ({
+      ...slot,
+      bookings: (slot.bookings || []).map((b: { sessionId?: string | null }) => ({
+        ...b,
+        session: b.sessionId ? (sessionMap.get(b.sessionId) ?? null) : null,
+      })),
+    }));
+
+    return NextResponse.json({ slots: slotsWithSessions });
   }
 
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
