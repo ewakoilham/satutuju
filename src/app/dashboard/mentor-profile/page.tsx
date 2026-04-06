@@ -202,6 +202,39 @@ function MultiSelectInput({ label, selected, onChange, options, values, maxSelec
   );
 }
 
+// ── Completeness helpers ──────────────────────────────────────
+const SECTION_FIELDS: Record<string, { key: keyof MentorProfileData; label: string }[]> = {
+  biodata: [
+    { key: "fullName", label: "Full Name" },
+    { key: "city", label: "City" },
+  ],
+  education: [
+    { key: "undergradMajor", label: "Undergraduate Major & Degree" },
+    { key: "undergradUniversity", label: "Undergraduate University" },
+    { key: "postgradMajor", label: "Postgraduate Major & Degree" },
+    { key: "postgradUniversity", label: "Postgraduate University" },
+    { key: "fundingScheme", label: "Funding Scheme" },
+    { key: "currentField", label: "Current Field" },
+  ],
+  preferences: [
+    { key: "personality", label: "Personality" },
+    { key: "mentorStyle", label: "Mentoring Style" },
+    { key: "workStyle", label: "Working Style" },
+    { key: "communicationStyle", label: "Communication Style" },
+    { key: "primaryRoles", label: "Primary Mentoring Approach" },
+  ],
+};
+
+function getMissingFields(profile: MentorProfileData, section: string): string[] {
+  const fields = SECTION_FIELDS[section] || [];
+  return fields
+    .filter(({ key }) => {
+      const v = profile[key];
+      return Array.isArray(v) ? v.length === 0 : !v;
+    })
+    .map(({ label }) => label);
+}
+
 // ── Types ─────────────────────────────────────────────────────
 type SectionKey = "biodata" | "education" | "preferences";
 
@@ -298,27 +331,35 @@ export default function MentorProfilePage() {
 
   const isEditing = (s: SectionKey) => editingSection === s;
 
-  const SectionHeader = ({ icon, title, section }: { icon: string; title: string; section: SectionKey }) => (
-    <div className="flex items-center justify-between mb-4">
-      <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-        <Icon name={icon} size={18} className="text-primary-600" />
-        {title}
-      </h2>
-      {isEditing(section) ? (
+  const SectionHeader = ({ icon, title, section }: { icon: string; title: string; section: SectionKey }) => {
+    const missing = getMissingFields(profile, section);
+    return (
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <button onClick={cancelEdit} className="btn-ghost text-sm px-3 py-1.5">Cancel</button>
-          <button onClick={saveSection} disabled={saving} className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50">
-            {saving ? "Saving..." : "Save"}
-          </button>
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <Icon name={icon} size={18} className="text-primary-600" />
+            {title}
+          </h2>
+          {!isEditing(section) && missing.length > 0 && (
+            <Badge variant="danger">{missing.length} missing</Badge>
+          )}
         </div>
-      ) : (
-        <button onClick={() => startEdit(section)} className="btn-ghost text-sm px-3 py-1.5 flex items-center gap-1.5">
-          <Icon name="edit" size={14} />
-          Edit
-        </button>
-      )}
-    </div>
-  );
+        {isEditing(section) ? (
+          <div className="flex items-center gap-2">
+            <button onClick={cancelEdit} className="btn-ghost text-sm px-3 py-1.5">Cancel</button>
+            <button onClick={saveSection} disabled={saving} className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50">
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => startEdit(section)} className="btn-ghost text-sm px-3 py-1.5 flex items-center gap-1.5">
+            <Icon name="edit" size={14} />
+            Edit
+          </button>
+        )}
+      </div>
+    );
+  };
 
   // Display label lookups
   const fundingDisplay = profile.fundingScheme === "other"
@@ -339,8 +380,36 @@ export default function MentorProfilePage() {
         </div>
       </div>
 
+      {/* ── Missing fields summary ──────────────────────────────── */}
+      {(() => {
+        const allMissing = [
+          ...getMissingFields(profile, "biodata").map((f) => ({ section: "Biodata", field: f })),
+          ...getMissingFields(profile, "education").map((f) => ({ section: "Education", field: f })),
+          ...getMissingFields(profile, "preferences").map((f) => ({ section: "Preferences", field: f })),
+        ];
+        if (allMissing.length === 0) return null;
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon name="bell" size={16} className="text-amber-600" />
+              <p className="text-sm font-semibold text-amber-800">
+                {allMissing.length} field{allMissing.length > 1 ? "s" : ""} still incomplete
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {allMissing.map(({ section, field }) => (
+                <span key={`${section}-${field}`} className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg">
+                  <span className="font-medium">{field}</span>
+                  <span className="text-amber-500">({section})</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Biodata ─────────────────────────────────────────────── */}
-      <div className={`card ${isEditing("biodata") ? "bg-primary-50/50" : ""}`}>
+      <div className={`card ${isEditing("biodata") ? "bg-primary-50/50" : getMissingFields(profile, "biodata").length > 0 ? "border-amber-200" : ""}`}>
         <SectionHeader icon="user" title="Biodata" section="biodata" />
         {isEditing("biodata") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -356,7 +425,7 @@ export default function MentorProfilePage() {
       </div>
 
       {/* ── Education ───────────────────────────────────────────── */}
-      <div className={`card ${isEditing("education") ? "bg-primary-50/50" : ""}`}>
+      <div className={`card ${isEditing("education") ? "bg-primary-50/50" : getMissingFields(profile, "education").length > 0 ? "border-amber-200" : ""}`}>
         <SectionHeader icon="graduation" title="Education" section="education" />
         {isEditing("education") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -390,7 +459,7 @@ export default function MentorProfilePage() {
       </div>
 
       {/* ── Mentoring Preferences ───────────────────────────────── */}
-      <div className={`card ${isEditing("preferences") ? "bg-primary-50/50" : ""}`}>
+      <div className={`card ${isEditing("preferences") ? "bg-primary-50/50" : getMissingFields(profile, "preferences").length > 0 ? "border-amber-200" : ""}`}>
         <SectionHeader icon="settings" title="Mentoring Preferences" section="preferences" />
         {isEditing("preferences") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
