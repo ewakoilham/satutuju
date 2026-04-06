@@ -103,6 +103,11 @@ export default function LoginPage() {
                   <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
                 </button>
               </div>
+              <div className="text-right mt-1">
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button
