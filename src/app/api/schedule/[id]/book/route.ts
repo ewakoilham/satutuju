@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { createCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
 
 // POST: mentee requests a slot
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -109,7 +110,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: booking } = await supabase
     .from("ScheduleBooking")
-    .select("id, menteeId, status, requestedStart, requestedEnd")
+    .select("id, menteeId, status, requestedStart, requestedEnd, sessionId, message, googleCalendarEventId")
     .eq("id", bookingId)
     .eq("slotId", slotId)
     .single();
@@ -158,13 +159,52 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       link: "/dashboard/schedule",
       createdAt: now,
     });
+
+    // --- Google Calendar + Meet link ---
+    const [{ data: mentor }, { data: mentee }, { data: admins }] = await Promise.all([
+      supabase.from("User").select("name, email").eq("id", slot.mentorId).single(),
+      supabase.from("User").select("name, email").eq("id", booking.menteeId).single(),
+      supabase.from("User").select("email").eq("role", "admin"),
+    ]);
+
+    let sessionLabel = "Mentorship Session";
+    if (booking.sessionId) {
+      const { data: session } = await supabase
+        .from("Session").select("sessionNum, topic").eq("id", booking.sessionId).single();
+      if (session) sessionLabel = `Session ${session.sessionNum}: ${session.topic}`;
+    }
+
+    const attendeeEmails = [
+      mentor?.email, mentee?.email,
+      ...(admins || []).map((a: { email: string }) => a.email),
+    ].filter(Boolean) as string[];
+
+    const calResult = await createCalendarEvent({
+      title: `${sessionLabel} — ${mentor?.name ?? "Mentor"} & ${mentee?.name ?? "Mentee"}`,
+      date: slot.date,
+      startTime: booking.requestedStart || slot.startTime,
+      endTime: booking.requestedEnd || slot.endTime,
+      attendeeEmails,
+      description: `Satu Tuju Mentorship\n\n${booking.message ? `Mentee note: ${booking.message}` : ""}`,
+    });
+
+    if (calResult) {
+      await supabase.from("ScheduleBooking")
+        .update({ googleCalendarEventId: calResult.eventId, googleMeetLink: calResult.meetLink })
+        .eq("id", bookingId);
+    }
   } else {
     const wasCancelling = booking.status === "accepted";
+
+    // Delete Google Calendar event if one exists
+    if (booking.googleCalendarEventId) {
+      await deleteCalendarEvent(booking.googleCalendarEventId);
+    }
 
     // Reject / cancel this booking
     await supabase
       .from("ScheduleBooking")
-      .update({ status: "rejected", updatedAt: now })
+      .update({ status: "rejected", googleCalendarEventId: null, googleMeetLink: null, updatedAt: now })
       .eq("id", bookingId);
 
     // Slot always goes back to available when an accepted booking is cancelled

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { deleteCalendarEvent } from "@/lib/google-calendar";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -102,6 +103,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   if (!slot) return NextResponse.json({ error: "Slot not found" }, { status: 404 });
   if (slot.mentorId !== user.userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // Delete Google Calendar events for bookings with events
+  const bookingsWithEvents = (slot.bookings || []).filter(
+    (b: { googleCalendarEventId?: string }) => b.googleCalendarEventId
+  );
+  if (bookingsWithEvents.length > 0) {
+    await Promise.all(
+      bookingsWithEvents.map((b: { googleCalendarEventId: string }) => deleteCalendarEvent(b.googleCalendarEventId))
+    );
+  }
 
   // Notify mentees with active bookings before deleting
   const activeBookings = (slot.bookings || []).filter(

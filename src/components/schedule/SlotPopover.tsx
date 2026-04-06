@@ -102,6 +102,13 @@ export default function SlotPopover({
                     </p>
                   )}
                 </div>
+                {acceptedBooking.googleMeetLink && (
+                  <a href={acceptedBooking.googleMeetLink} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+                    <Icon name="video" size={14} />
+                    Join Google Meet
+                  </a>
+                )}
                 <button
                   onClick={() => onReject?.(acceptedBooking.id)}
                   className="w-full flex items-center justify-center gap-1.5 text-xs px-2 py-2 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition"
@@ -241,6 +248,13 @@ export default function SlotPopover({
                 )}
               </div>
             )}
+            {myBooking && myBooking.status === "accepted" && myBooking.googleMeetLink && (
+              <a href={myBooking.googleMeetLink} target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+                <Icon name="video" size={14} />
+                Join Google Meet
+              </a>
+            )}
             {myBooking && myBooking.status === "rejected" && (
               <div className="space-y-2.5">
                 <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 space-y-1">
@@ -298,6 +312,13 @@ export default function SlotPopover({
                     <p className="text-[11px] text-emerald-700 font-medium">
                       Session {accepted.session.sessionNum}: {accepted.session.topic}
                     </p>
+                  )}
+                  {accepted.googleMeetLink && (
+                    <a href={accepted.googleMeetLink} target="_blank" rel="noopener noreferrer"
+                      className="mt-1.5 flex items-center justify-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+                      <Icon name="video" size={13} />
+                      Join Google Meet
+                    </a>
                   )}
                 </div>
               );

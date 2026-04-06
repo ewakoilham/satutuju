@@ -95,9 +95,11 @@ model ScheduleBooking {
   sessionId      String?  // FK to Session being discussed
   requestedStart String?  // "HH:MM" — chosen 90-min window start
   requestedEnd   String?  // "HH:MM" — chosen 90-min window end
-  status         String   @default("pending") // "pending" | "accepted" | "rejected"
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  status                String   @default("pending") // "pending" | "accepted" | "rejected"
+  googleCalendarEventId String?  // Google Calendar event ID for cleanup
+  googleMeetLink        String?  // Google Meet join URL
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   slot   ScheduleSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
   mentee User         @relation("MenteeBookings", fields: [menteeId], references: [id], onDelete: Cascade)
