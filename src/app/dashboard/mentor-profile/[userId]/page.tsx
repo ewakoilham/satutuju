@@ -16,12 +16,6 @@ const FIELD_LABELS: Record<string, string> = {
   health: "Health & Medicine", education: "Education & Research",
   government: "Government & Public Policy", other: "Other",
 };
-const PERSONALITY_LABELS: Record<string, string> = {
-  introvert: "Introvert",
-  extrovert: "Extrovert",
-  ambivert: "Ambivert",
-  "not-sure": "Not sure",
-};
 const MENTOR_STYLE_LABELS: Record<string, string> = {
   gentle: "Gentle", "somewhat-gentle": "Somewhat gentle", "no-preference": "No preference",
   "somewhat-direct": "Somewhat direct", direct: "Direct",
@@ -166,7 +160,6 @@ export default function MentorProfileAdminView() {
           {/* Preferences */}
           <SectionCard icon="settings" title="Mentoring Preferences">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FieldDisplay label="Personality" value={label(PERSONALITY_LABELS, str("personality"))} />
               <FieldDisplay label="Mentoring Style" value={label(MENTOR_STYLE_LABELS, str("mentorStyle"))} />
               <FieldDisplay label="Working Style" value={label(WORK_STYLE_LABELS, str("workStyle"))} />
               <FieldDisplay label="Communication Style" value={label(COMM_STYLE_LABELS, str("communicationStyle"))} />

@@ -30,7 +30,7 @@ const REQUIRED_PROFILE_FIELDS = [
   "fullName", "city", "undergradMajor", "undergradUniversity",
   "postgradMajor", "postgradUniversity",
   "fundingScheme", "currentField",
-  "personality", "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
+  "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
 ];
 
 function profileCompleteness(profile: Record<string, unknown> | null): { complete: boolean; filled: number; total: number } {

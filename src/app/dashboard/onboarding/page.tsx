@@ -55,7 +55,6 @@ const QUESTIONS: Question[] = [
   { id: "q27", field: "fundingSource", question: "Who will fund your study?", type: "text", placeholder: "e.g. Parents, Self, LPDP Scholarship, Company", section: "Funding" },
   { id: "q28", field: "studyBudget", question: "What is your study budget?", subtitle: "Approximate annual budget", type: "select", options: ["Government / Scholarship", "Institution covers", "< 10K USD", "10 – 20K USD", "20 – 30K USD", "30 – 40K USD", "> 40K USD"], section: "Funding" },
   // Mentoring Preferences
-  { id: "q29", field: "preferredPersonality", question: "What personality type do you prefer in a mentor?", type: "select", options: ["Introvert", "Extrovert", "Ambivert", "No preference"], section: "Preferences" },
   { id: "q30", field: "preferredMentoringStyle", question: "What mentoring style suits you best?", type: "select", options: ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"], section: "Preferences" },
   { id: "q31", field: "preferredWorkingStyle", question: "What working style do you prefer from your mentor?", type: "select", options: ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"], section: "Preferences" },
   { id: "q32", field: "preferredCommStyle", question: "How would you like your mentor to communicate?", type: "select", options: ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"], section: "Preferences" },

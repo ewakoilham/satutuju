@@ -45,7 +45,6 @@ interface ProfileData {
   fundingSource: string;
   studyBudget: string;
   // Mentoring Preferences
-  preferredPersonality: string;
   preferredMentoringStyle: string;
   preferredWorkingStyle: string;
   preferredCommStyle: string;
@@ -83,14 +82,12 @@ const EMPTY_PROFILE: ProfileData = {
   hasPermanentResidency: false,
   fundingSource: "",
   studyBudget: "",
-  preferredPersonality: "",
   preferredMentoringStyle: "",
   preferredWorkingStyle: "",
   preferredCommStyle: "",
   preferredRoles: "",
 };
 
-const PERSONALITY_OPTIONS = ["Introvert", "Extrovert", "Ambivert", "No preference"];
 const MENTORING_STYLE_OPTIONS = ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"];
 const WORKING_STYLE_OPTIONS = ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"];
 const COMM_STYLE_OPTIONS = ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"];
@@ -706,12 +703,6 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <SelectInput
-                label="Preferred Mentor Personality"
-                value={draft.preferredPersonality}
-                onChange={(v) => updateDraft("preferredPersonality", v)}
-                options={PERSONALITY_OPTIONS}
-              />
-              <SelectInput
                 label="Preferred Mentoring Style"
                 value={draft.preferredMentoringStyle}
                 onChange={(v) => updateDraft("preferredMentoringStyle", v)}
@@ -770,7 +761,6 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FieldDisplay label="Preferred Mentor Personality" value={profile.preferredPersonality} />
               <FieldDisplay label="Preferred Mentoring Style" value={profile.preferredMentoringStyle} />
               <FieldDisplay label="Preferred Working Style" value={profile.preferredWorkingStyle} />
               <FieldDisplay label="Preferred Communication Style" value={profile.preferredCommStyle} />

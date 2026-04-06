@@ -19,7 +19,6 @@ interface MentorProfileData {
   fundingOther: string;
   currentField: string;
   currentFieldOther: string;
-  personality: string;
   mentorStyle: string;
   workStyle: string;
   communicationStyle: string;
@@ -32,7 +31,7 @@ const EMPTY: MentorProfileData = {
   postgradMajor: "", postgradUniversity: "",
   fundingScheme: "", fundingOther: "",
   currentField: "", currentFieldOther: "",
-  personality: "", mentorStyle: "", workStyle: "",
+  mentorStyle: "", workStyle: "",
   communicationStyle: "", primaryRoles: [],
 };
 
@@ -49,9 +48,6 @@ const FIELD_VALUES = [
   "technology", "business", "finance", "consulting",
   "health", "education", "government", "other",
 ];
-
-const PERSONALITY_OPTIONS = ["Introvert", "Extrovert", "Ambivert", "Not sure"];
-const PERSONALITY_VALUES  = ["introvert", "extrovert", "ambivert", "not-sure"];
 
 const MENTOR_STYLE_OPTIONS = ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"];
 const MENTOR_STYLE_VALUES  = ["gentle", "somewhat-gentle", "no-preference", "somewhat-direct", "direct"];
@@ -217,7 +213,6 @@ const SECTION_FIELDS: Record<string, { key: keyof MentorProfileData; label: stri
     { key: "currentField", label: "Current Field" },
   ],
   preferences: [
-    { key: "personality", label: "Personality" },
     { key: "mentorStyle", label: "Mentoring Style" },
     { key: "workStyle", label: "Working Style" },
     { key: "communicationStyle", label: "Communication Style" },
@@ -276,7 +271,6 @@ export default function MentorProfilePage() {
       fundingOther:       String(data.fundingOther       ?? ""),
       currentField:       String(data.currentField       ?? ""),
       currentFieldOther:  String(data.currentFieldOther  ?? ""),
-      personality:        String(data.personality        ?? ""),
       mentorStyle:        String(data.mentorStyle        ?? ""),
       workStyle:          String(data.workStyle          ?? ""),
       communicationStyle: String(data.communicationStyle ?? ""),
@@ -463,7 +457,6 @@ export default function MentorProfilePage() {
         <SectionHeader icon="settings" title="Mentoring Preferences" section="preferences" />
         {isEditing("preferences") ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <SelectInput label="Personality" value={draft.personality} onChange={(v) => upd("personality", v)} options={PERSONALITY_OPTIONS} values={PERSONALITY_VALUES} />
             <SelectInput label="Mentoring Style" value={draft.mentorStyle} onChange={(v) => upd("mentorStyle", v)} options={MENTOR_STYLE_OPTIONS} values={MENTOR_STYLE_VALUES} />
             <SelectInput label="Working Style" value={draft.workStyle} onChange={(v) => upd("workStyle", v)} options={WORK_STYLE_OPTIONS} values={WORK_STYLE_VALUES} />
             <SelectInput label="Communication Style" value={draft.communicationStyle} onChange={(v) => upd("communicationStyle", v)} options={COMM_STYLE_OPTIONS} values={COMM_STYLE_VALUES} />
@@ -480,7 +473,6 @@ export default function MentorProfilePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldDisplay label="Personality" value={labelFor(profile.personality, PERSONALITY_VALUES, PERSONALITY_OPTIONS)} />
             <FieldDisplay label="Mentoring Style" value={labelFor(profile.mentorStyle, MENTOR_STYLE_VALUES, MENTOR_STYLE_OPTIONS)} />
             <FieldDisplay label="Working Style" value={labelFor(profile.workStyle, WORK_STYLE_VALUES, WORK_STYLE_OPTIONS)} />
             <FieldDisplay label="Communication Style" value={labelFor(profile.communicationStyle, COMM_STYLE_VALUES, COMM_STYLE_OPTIONS)} />

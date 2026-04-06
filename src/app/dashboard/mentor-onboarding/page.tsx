@@ -91,13 +91,6 @@ const QUESTIONS: Question[] = [
 
   // ── Mentoring Preference ──────────────────────────────────────
   {
-    id: "m11", field: "personality", section: "Mentoring Preference",
-    question: "How would you describe yourself?",
-    type: "select",
-    options: ["Introvert", "Extrovert", "Ambivert", "Not sure"],
-    optionValues: ["introvert", "extrovert", "ambivert", "not-sure"],
-  },
-  {
     id: "m12", field: "mentorStyle", section: "Mentoring Preference",
     question: "What's your mentoring style?",
     type: "select",
