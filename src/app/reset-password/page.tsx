@@ -31,10 +31,6 @@ function ResetPasswordForm() {
     e.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
     if (password !== confirm) {
       setError("Passwords do not match");
       return;
@@ -130,7 +126,7 @@ function ResetPasswordForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="input-field pr-11"
-              placeholder="At least 8 characters"
+              placeholder="Enter new password"
             />
             <button
               type="button"
