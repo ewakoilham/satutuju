@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const resetLink = `${appUrl}/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from: "Satu Tuju <noreply@satutuju.com>",
+      from: "Satu Tuju <onboarding@resend.dev>",
       to: user.email,
       subject: "Reset your Satu Tuju password",
       html: `
