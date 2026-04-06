@@ -1,16 +1,18 @@
 import { google } from "googleapis";
 
+const tz = process.env.CALENDAR_TIMEZONE || "Asia/Jakarta";
+const CALENDAR_OWNER = process.env.GOOGLE_CALENDAR_ID || "primary";
+
 function getCalendar() {
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground",
-  );
-  auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    },
+    scopes: ["https://www.googleapis.com/auth/calendar"],
+  });
   return google.calendar({ version: "v3", auth });
 }
-
-const tz = process.env.CALENDAR_TIMEZONE || "Asia/Jakarta";
 
 export async function createCalendarEvent(params: {
   title: string;
@@ -20,15 +22,15 @@ export async function createCalendarEvent(params: {
   attendeeEmails: string[];
   description?: string;
 }): Promise<{ eventId: string; meetLink: string } | null> {
-  if (!process.env.GOOGLE_REFRESH_TOKEN) {
-    console.error("Google Calendar: GOOGLE_REFRESH_TOKEN not set");
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    console.error("Google Calendar: service account credentials not set");
     return null;
   }
 
   try {
     const calendar = getCalendar();
     const event = await calendar.events.insert({
-      calendarId: "primary",
+      calendarId: CALENDAR_OWNER,
       conferenceDataVersion: 1,
       sendUpdates: "all",
       requestBody: {
@@ -52,33 +54,31 @@ export async function createCalendarEvent(params: {
 
     return {
       eventId: event.data.id!,
-      meetLink: event.data.hangoutLink!,
+      meetLink: event.data.hangoutLink || "",
     };
   } catch (err: unknown) {
-    const gErr = err as { response?: { status?: number; data?: { error?: { message?: string; errors?: unknown[] } } }; message?: string };
+    const gErr = err as { response?: { status?: number; data?: unknown }; message?: string };
     console.error("Google Calendar create error:", JSON.stringify({
       status: gErr.response?.status,
-      message: gErr.response?.data?.error?.message || gErr.message,
-      errors: gErr.response?.data?.error?.errors,
-      clientId: process.env.GOOGLE_CLIENT_ID?.slice(0, 10) + "...",
-      hasRefreshToken: !!process.env.GOOGLE_REFRESH_TOKEN,
+      data: gErr.response?.data,
+      message: gErr.message,
     }));
     return null;
   }
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
-  if (!process.env.GOOGLE_REFRESH_TOKEN) return;
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) return;
 
   try {
     const calendar = getCalendar();
     await calendar.events.delete({
-      calendarId: "primary",
+      calendarId: CALENDAR_OWNER,
       eventId,
       sendUpdates: "all",
     });
   } catch (err: unknown) {
-    const gErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-    console.error("Google Calendar delete error:", gErr.response?.data?.error?.message || gErr.message);
+    const gErr = err as { response?: { data?: unknown }; message?: string };
+    console.error("Google Calendar delete error:", gErr.response?.data || gErr.message);
   }
 }

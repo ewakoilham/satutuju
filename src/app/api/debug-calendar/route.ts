@@ -8,39 +8,32 @@ export async function GET() {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
-  const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
-  const hasRefreshToken = !!process.env.GOOGLE_REFRESH_TOKEN;
-  const clientIdPreview = process.env.GOOGLE_CLIENT_ID?.slice(0, 15) || "MISSING";
-  const tokenPreview = process.env.GOOGLE_REFRESH_TOKEN
-    ? `${process.env.GOOGLE_REFRESH_TOKEN.slice(0, 20)}...${process.env.GOOGLE_REFRESH_TOKEN.slice(-10)}`
-    : "MISSING";
-  const tokenLength = process.env.GOOGLE_REFRESH_TOKEN?.length || 0;
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  const calId = process.env.GOOGLE_CALENDAR_ID || "primary";
 
-  if (!hasClientId || !hasClientSecret || !hasRefreshToken) {
+  if (!email || !key) {
     return NextResponse.json({
       error: "Missing env vars",
-      hasClientId,
-      hasClientSecret,
-      hasRefreshToken,
-      clientIdPreview,
-      tokenPreview,
+      hasEmail: !!email,
+      hasKey: !!key,
+      emailValue: email || "MISSING",
     });
   }
 
   try {
-    const auth = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      "https://developers.google.com/oauthplayground",
-    );
-    auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: email,
+        private_key: key.replace(/\\n/g, "\n"),
+      },
+      scopes: ["https://www.googleapis.com/auth/calendar"],
+    });
 
     const calendar = google.calendar({ version: "v3", auth });
 
-    // Try listing 1 event — minimal test
     const result = await calendar.events.list({
-      calendarId: "primary",
+      calendarId: calId,
       maxResults: 1,
     });
 
@@ -48,6 +41,7 @@ export async function GET() {
       success: true,
       calendarId: result.data.summary,
       eventCount: result.data.items?.length ?? 0,
+      serviceAccount: email,
     });
   } catch (err: unknown) {
     const gErr = err as {
@@ -61,9 +55,8 @@ export async function GET() {
       message: gErr.message,
       code: gErr.code,
       data: gErr.response?.data,
-      clientIdPreview,
-      tokenPreview,
-      tokenLength,
+      serviceAccount: email,
+      calendarId: calId,
     });
   }
 }
