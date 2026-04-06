@@ -97,7 +97,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { data: slot } = await supabase
     .from("ScheduleSlot")
-    .select("id, mentorId, date, startTime, endTime, bookings:ScheduleBooking(id, menteeId, status)")
+    .select("id, mentorId, date, startTime, endTime, bookings:ScheduleBooking(id, menteeId, status, googleCalendarEventId)")
     .eq("id", id)
     .single();
 
@@ -106,7 +106,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   // Delete Google Calendar events for bookings with events
   const bookingsWithEvents = (slot.bookings || []).filter(
-    (b: { googleCalendarEventId?: string }) => b.googleCalendarEventId
+    (b: { googleCalendarEventId?: string | null }) => b.googleCalendarEventId
   );
   if (bookingsWithEvents.length > 0) {
     await Promise.all(
