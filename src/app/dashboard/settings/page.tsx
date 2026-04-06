@@ -4,6 +4,42 @@ import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
+function PasswordField({
+  label,
+  value,
+  onChange,
+  showPassword,
+  onToggleShow,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  showPassword: boolean;
+  onToggleShow: () => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          className="input-field w-full pr-12"
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -45,38 +81,6 @@ export default function SettingsPage() {
     setLoading(false);
   }
 
-  const PasswordField = ({
-    label,
-    value,
-    onChange,
-    showKey,
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    showKey: keyof typeof show;
-  }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-      <div className="relative">
-        <input
-          type={show[showKey] ? "text" : "password"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required
-          className="input-field w-full pr-12"
-        />
-        <button
-          type="button"
-          onClick={() => setShow((s) => ({ ...s, [showKey]: !s[showKey] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-        >
-          <Icon name={show[showKey] ? "eye-off" : "eye"} size={18} />
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="max-w-lg space-y-6">
       <div>
@@ -103,19 +107,22 @@ export default function SettingsPage() {
             label="Current Password"
             value={currentPassword}
             onChange={setCurrentPassword}
-            showKey="current"
+            showPassword={show.current}
+            onToggleShow={() => setShow((s) => ({ ...s, current: !s.current }))}
           />
           <PasswordField
             label="New Password"
             value={newPassword}
             onChange={setNewPassword}
-            showKey="new"
+            showPassword={show.new}
+            onToggleShow={() => setShow((s) => ({ ...s, new: !s.new }))}
           />
           <PasswordField
             label="Confirm New Password"
             value={confirmPassword}
             onChange={setConfirmPassword}
-            showKey="confirm"
+            showPassword={show.confirm}
+            onToggleShow={() => setShow((s) => ({ ...s, confirm: !s.confirm }))}
           />
           <button
             type="submit"
