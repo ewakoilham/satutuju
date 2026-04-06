@@ -32,15 +32,28 @@ export async function GET() {
 
     const calendar = google.calendar({ version: "v3", auth });
 
-    const result = await calendar.events.list({
+    // Test: create a real event
+    const event = await calendar.events.insert({
       calendarId: calId,
-      maxResults: 1,
+      conferenceDataVersion: 1,
+      requestBody: {
+        summary: "Test Event — Delete Me",
+        start: { dateTime: "2026-04-08T10:00:00", timeZone: "Asia/Jakarta" },
+        end: { dateTime: "2026-04-08T11:00:00", timeZone: "Asia/Jakarta" },
+        conferenceData: {
+          createRequest: {
+            requestId: crypto.randomUUID(),
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
-      calendarId: result.data.summary,
-      eventCount: result.data.items?.length ?? 0,
+      eventId: event.data.id,
+      meetLink: event.data.hangoutLink || "NO_MEET_LINK",
+      calendarId: calId,
       serviceAccount: email,
     });
   } catch (err: unknown) {
