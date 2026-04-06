@@ -11,6 +11,11 @@ export async function GET() {
   const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
   const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
   const hasRefreshToken = !!process.env.GOOGLE_REFRESH_TOKEN;
+  const clientIdPreview = process.env.GOOGLE_CLIENT_ID?.slice(0, 15) || "MISSING";
+  const tokenPreview = process.env.GOOGLE_REFRESH_TOKEN
+    ? `${process.env.GOOGLE_REFRESH_TOKEN.slice(0, 20)}...${process.env.GOOGLE_REFRESH_TOKEN.slice(-10)}`
+    : "MISSING";
+  const tokenLength = process.env.GOOGLE_REFRESH_TOKEN?.length || 0;
 
   if (!hasClientId || !hasClientSecret || !hasRefreshToken) {
     return NextResponse.json({
@@ -18,6 +23,8 @@ export async function GET() {
       hasClientId,
       hasClientSecret,
       hasRefreshToken,
+      clientIdPreview,
+      tokenPreview,
     });
   }
 
@@ -53,6 +60,9 @@ export async function GET() {
       message: gErr.message,
       code: gErr.code,
       data: gErr.response?.data,
+      clientIdPreview,
+      tokenPreview,
+      tokenLength,
     });
   }
 }
