@@ -11,8 +11,9 @@ interface Question {
   field: string;
   question: string;
   subtitle?: string;
-  type: "text" | "date" | "select" | "toggle" | "textarea" | "tel" | "month-year";
+  type: "text" | "date" | "select" | "toggle" | "textarea" | "tel" | "month-year" | "multiselect";
   options?: string[];
+  maxSelect?: number;
   placeholder?: string;
   section: string;
 }
@@ -53,6 +54,18 @@ const QUESTIONS: Question[] = [
   // Funding
   { id: "q27", field: "fundingSource", question: "Who will fund your study?", type: "text", placeholder: "e.g. Parents, Self, LPDP Scholarship, Company", section: "Funding" },
   { id: "q28", field: "studyBudget", question: "What is your study budget?", subtitle: "Approximate annual budget", type: "select", options: ["Government / Scholarship", "Institution covers", "< 10K USD", "10 – 20K USD", "20 – 30K USD", "30 – 40K USD", "> 40K USD"], section: "Funding" },
+  // Mentoring Preferences
+  { id: "q29", field: "preferredPersonality", question: "What personality type do you prefer in a mentor?", type: "select", options: ["Introvert", "Extrovert", "Ambivert", "No preference"], section: "Preferences" },
+  { id: "q30", field: "preferredMentoringStyle", question: "What mentoring style suits you best?", type: "select", options: ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"], section: "Preferences" },
+  { id: "q31", field: "preferredWorkingStyle", question: "What working style do you prefer from your mentor?", type: "select", options: ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"], section: "Preferences" },
+  { id: "q32", field: "preferredCommStyle", question: "How would you like your mentor to communicate?", type: "select", options: ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"], section: "Preferences" },
+  { id: "q33", field: "preferredRoles", question: "What mentor approach do you prefer?", subtitle: "Pick up to 2 that resonate most with you", type: "multiselect", maxSelect: 2, options: [
+    "Listener — give me space to reflect",
+    "Problem solver — help me find concrete solutions",
+    "Challenger — push me out of my comfort zone",
+    "Motivator — keep my energy and confidence up",
+    "Advisor — share personal experience and perspective",
+  ], section: "Preferences" },
 ];
 
 const MONTHS = [
@@ -73,6 +86,18 @@ const buildEmptyProfile = (): ProfileData => {
   });
   return p;
 };
+
+// ── Multi-select helpers ──────────────────────────────────────
+function parseRoles(v: string): string[] {
+  if (!v) return [];
+  try { return JSON.parse(v); } catch { return []; }
+}
+function toggleRole(current: string, role: string, max: number): string {
+  const arr = parseRoles(current);
+  if (arr.includes(role)) return JSON.stringify(arr.filter(r => r !== role));
+  if (arr.length >= max) return current;
+  return JSON.stringify([...arr, role]);
+}
 
 // ── Component ─────────────────────────────────────────────────
 export default function OnboardingPage() {
@@ -373,6 +398,35 @@ export default function OnboardingPage() {
                 </div>
               )}
 
+              {q.type === "multiselect" && q.options && (
+                <div className="grid grid-cols-1 gap-2 mt-2">
+                  {q.options.map((opt) => {
+                    const selected = parseRoles(value as string).includes(opt);
+                    const maxReached = parseRoles(value as string).length >= (q.maxSelect ?? 2) && !selected;
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => updateField(q.field, toggleRole(value as string, opt, q.maxSelect ?? 2))}
+                        disabled={maxReached}
+                        className={`text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          selected
+                            ? "border-primary bg-primary text-white scale-[1.02]"
+                            : maxReached
+                              ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {selected && <Icon name="check" size={14} className="inline mr-2" />}
+                        {opt}
+                      </button>
+                    );
+                  })}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {parseRoles(value as string).length}/{q.maxSelect ?? 2} selected
+                  </p>
+                </div>
+              )}
+
               {q.type === "month-year" && (
                 <div className="flex gap-3 mt-2">
                   <div className="flex-1">
@@ -406,7 +460,7 @@ export default function OnboardingPage() {
             </div>
 
             {/* Hint */}
-            {q.type !== "toggle" && q.type !== "select" && (
+            {q.type !== "toggle" && q.type !== "select" && q.type !== "multiselect" && (
               <p className="text-xs text-gray-300 mt-4">
                 Press <span className="font-medium text-gray-400">Enter ↵</span> to continue, or skip if not applicable
               </p>

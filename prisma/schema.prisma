@@ -117,6 +117,13 @@ model MenteeProfile {
   fundingSource      String?
   studyBudget        String?
 
+  // Mentoring Preferences
+  preferredPersonality    String?  // "introvert" | "extrovert" | "ambivert" | "not-sure"
+  preferredMentoringStyle String?  // "gentle" … "direct"
+  preferredWorkingStyle   String?  // "structured" … "flexible"
+  preferredCommStyle      String?  // "formal" … "casual"
+  preferredRoles          String?  // JSON array, max 2
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

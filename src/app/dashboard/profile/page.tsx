@@ -44,6 +44,12 @@ interface ProfileData {
   // Funding
   fundingSource: string;
   studyBudget: string;
+  // Mentoring Preferences
+  preferredPersonality: string;
+  preferredMentoringStyle: string;
+  preferredWorkingStyle: string;
+  preferredCommStyle: string;
+  preferredRoles: string;
 }
 
 const EMPTY_PROFILE: ProfileData = {
@@ -77,7 +83,24 @@ const EMPTY_PROFILE: ProfileData = {
   hasPermanentResidency: false,
   fundingSource: "",
   studyBudget: "",
+  preferredPersonality: "",
+  preferredMentoringStyle: "",
+  preferredWorkingStyle: "",
+  preferredCommStyle: "",
+  preferredRoles: "",
 };
+
+const PERSONALITY_OPTIONS = ["Introvert", "Extrovert", "Ambivert", "No preference"];
+const MENTORING_STYLE_OPTIONS = ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"];
+const WORKING_STYLE_OPTIONS = ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"];
+const COMM_STYLE_OPTIONS = ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"];
+const PREFERRED_ROLE_OPTIONS = [
+  "Listener — give me space to reflect",
+  "Problem solver — help me find concrete solutions",
+  "Challenger — push me out of my comfort zone",
+  "Motivator — keep my energy and confidence up",
+  "Advisor — share personal experience and perspective",
+];
 
 const LEVEL_OPTIONS = ["High School", "Diploma", "Bachelor's", "Master's", "PhD"];
 const TEST_TYPE_OPTIONS = ["IELTS", "TOEFL iBT", "TOEFL ITP", "Duolingo", "PTE", "Cambridge", "Other"];
@@ -103,7 +126,8 @@ type SectionKey =
   | "goals"
   | "testPrep"
   | "visa"
-  | "funding";
+  | "funding"
+  | "mentoringPrefs";
 
 function MissingBadge() {
   return (
@@ -671,6 +695,102 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FieldDisplay label="Who Funds Your Study?" value={profile.fundingSource} />
             <FieldDisplay label="Study Budget" value={profile.studyBudget} />
+          </div>
+        )}
+      </div>
+
+      {/* Mentoring Preferences */}
+      <div className={`card ${isEditing("mentoringPrefs") ? "bg-primary-50/50" : ""}`}>
+        {sectionHeader("settings", "Mentoring Preferences", "mentoringPrefs")}
+        {isEditing("mentoringPrefs") ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectInput
+                label="Preferred Mentor Personality"
+                value={draft.preferredPersonality}
+                onChange={(v) => updateDraft("preferredPersonality", v)}
+                options={PERSONALITY_OPTIONS}
+              />
+              <SelectInput
+                label="Preferred Mentoring Style"
+                value={draft.preferredMentoringStyle}
+                onChange={(v) => updateDraft("preferredMentoringStyle", v)}
+                options={MENTORING_STYLE_OPTIONS}
+              />
+              <SelectInput
+                label="Preferred Working Style"
+                value={draft.preferredWorkingStyle}
+                onChange={(v) => updateDraft("preferredWorkingStyle", v)}
+                options={WORKING_STYLE_OPTIONS}
+              />
+              <SelectInput
+                label="Preferred Communication Style"
+                value={draft.preferredCommStyle}
+                onChange={(v) => updateDraft("preferredCommStyle", v)}
+                options={COMM_STYLE_OPTIONS}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 font-medium mb-2">
+                Mentor Approach Preference (up to 2)
+              </label>
+              <div className="space-y-2">
+                {PREFERRED_ROLE_OPTIONS.map((opt) => {
+                  const selected = (() => { try { return JSON.parse(draft.preferredRoles || "[]").includes(opt); } catch { return false; } })();
+                  const count = (() => { try { return JSON.parse(draft.preferredRoles || "[]").length; } catch { return 0; } })();
+                  const maxReached = count >= 2 && !selected;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      disabled={maxReached}
+                      onClick={() => {
+                        const arr: string[] = (() => { try { return JSON.parse(draft.preferredRoles || "[]"); } catch { return []; } })();
+                        const next = selected ? arr.filter(r => r !== opt) : [...arr, opt];
+                        updateDraft("preferredRoles", JSON.stringify(next));
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                        selected
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : maxReached
+                            ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      {selected && <span className="mr-1.5">✓</span>}{opt}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {(() => { try { return JSON.parse(draft.preferredRoles || "[]").length; } catch { return 0; } })()}/2 selected
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FieldDisplay label="Preferred Mentor Personality" value={profile.preferredPersonality} />
+              <FieldDisplay label="Preferred Mentoring Style" value={profile.preferredMentoringStyle} />
+              <FieldDisplay label="Preferred Working Style" value={profile.preferredWorkingStyle} />
+              <FieldDisplay label="Preferred Communication Style" value={profile.preferredCommStyle} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium mb-1.5">Mentor Approach Preference</p>
+              {(() => {
+                try {
+                  const roles: string[] = JSON.parse(profile.preferredRoles || "[]");
+                  if (roles.length === 0) return <MissingBadge />;
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      {roles.map(r => (
+                        <span key={r} className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium">{r}</span>
+                      ))}
+                    </div>
+                  );
+                } catch { return <MissingBadge />; }
+              })()}
+            </div>
           </div>
         )}
       </div>
