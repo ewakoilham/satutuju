@@ -94,10 +94,10 @@ export default function SchedulePage() {
     await refresh();
   }
 
-  async function handleBookingAction(slotId: string, bookingId: string, action: "accept" | "reject") {
+  async function handleBookingAction(slotId: string, bookingId: string, action: "accept" | "reject", reason?: string) {
     await fetch(`/api/schedule/${slotId}/book`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, action }),
+      body: JSON.stringify({ bookingId, action, ...(reason ? { rejectionReason: reason } : {}) }),
     });
     dispatch({ type: "DISMISS" });
     await refresh();
@@ -319,7 +319,7 @@ export default function SchedulePage() {
             });
           }}
           onAccept={id => handleBookingAction(mode.slot.id, id, "accept")}
-          onReject={id => handleBookingAction(mode.slot.id, id, "reject")}
+          onReject={(id, reason) => handleBookingAction(mode.slot.id, id, "reject", reason)}
           onDismissRejection={id => handleDismissRejection(mode.slot.id, id)}
         />
       )}

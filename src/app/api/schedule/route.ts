@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     // Return own slots with nested bookings (mentee name)
     const { data: slots, error } = await supabase
       .from("ScheduleSlot")
-      .select("*, bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, googleMeetLink, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
+      .select("*, bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, rejectionReason, googleMeetLink, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
       .eq("mentorId", user.userId)
       .order("date", { ascending: true })
       .order("startTime", { ascending: true });
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
     const { data: slots, error } = await supabase
       .from("ScheduleSlot")
-      .select("*, bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, googleMeetLink)")
+      .select("*, bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, rejectionReason, googleMeetLink)")
       .eq("mentorId", pairing.mentorId)
       .order("date", { ascending: true })
       .order("startTime", { ascending: true });

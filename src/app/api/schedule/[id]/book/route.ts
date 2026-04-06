@@ -93,9 +93,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const user = await getCurrentUser();
   if (!user || user.role !== "mentor") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { bookingId, action } = await req.json();
+  const { bookingId, action, rejectionReason } = await req.json();
   if (!bookingId || !["accept", "reject"].includes(action)) {
     return NextResponse.json({ error: "bookingId and action (accept|reject) required" }, { status: 400 });
+  }
+  if (action === "reject" && !rejectionReason?.trim()) {
+    return NextResponse.json({ error: "A reason is required when rejecting a request" }, { status: 400 });
   }
 
   // Verify slot ownership
@@ -204,7 +207,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Reject / cancel this booking
     await supabase
       .from("ScheduleBooking")
-      .update({ status: "rejected", googleCalendarEventId: null, googleMeetLink: null, updatedAt: now })
+      .update({ status: "rejected", rejectionReason: rejectionReason?.trim() ?? null, googleCalendarEventId: null, googleMeetLink: null, updatedAt: now })
       .eq("id", bookingId);
 
     // Slot always goes back to available when an accepted booking is cancelled
@@ -226,13 +229,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const cancelledTimeDisplay = booking.requestedStart && booking.requestedEnd
       ? `${booking.requestedStart}–${booking.requestedEnd}`
       : `${slot.startTime}–${slot.endTime}`;
+    const reason = rejectionReason?.trim();
     await supabase.from("Notification").insert({
       id: crypto.randomUUID(),
       userId: booking.menteeId,
       title: wasCancelling ? "Session Cancelled" : "Request Rejected",
       message: wasCancelling
-        ? `Your mentor cancelled the confirmed session on ${slot.date} (${cancelledTimeDisplay}).`
-        : `Your request for ${slot.date} (${cancelledTimeDisplay}) was rejected.`,
+        ? `Your mentor cancelled the confirmed session on ${slot.date} (${cancelledTimeDisplay}).${reason ? ` Reason: ${reason}` : ""}`
+        : `Your request for ${slot.date} (${cancelledTimeDisplay}) was rejected.${reason ? ` Reason: ${reason}` : ""}`,
       type: "schedule",
       read: false,
       link: "/dashboard/schedule",

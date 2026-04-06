@@ -8,6 +8,7 @@ export interface Booking {
   requestedStart?: string | null;
   requestedEnd?: string | null;
   status: "pending" | "accepted" | "rejected";
+  rejectionReason?: string | null;
   googleMeetLink?: string | null;
   createdAt: string;
   mentee?: { name: string; email: string };

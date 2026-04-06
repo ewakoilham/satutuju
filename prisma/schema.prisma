@@ -151,6 +151,7 @@ model ScheduleBooking {
   requestedStart String?  // "HH:MM" — chosen 90-min window start
   requestedEnd   String?  // "HH:MM" — chosen 90-min window end
   status                String   @default("pending") // "pending" | "accepted" | "rejected"
+  rejectionReason       String?  // Mandatory reason filled by mentor on rejection
   googleCalendarEventId String?  // Google Calendar event ID for cleanup
   googleMeetLink        String?  // Google Meet join URL
   createdAt             DateTime @default(now())

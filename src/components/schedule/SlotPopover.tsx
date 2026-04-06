@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { calcPopoverPos, fmtDate, slotColorClass } from "./helpers";
@@ -18,7 +18,7 @@ interface SlotPopoverProps {
   onDelete?: () => void;
   onBook?: () => void;
   onAccept?: (bookingId: string) => void;
-  onReject?: (bookingId: string) => void;
+  onReject?: (bookingId: string, reason: string) => void;
   /** Mentee: dismiss a rejected booking so they can rebook */
   onDismissRejection?: (bookingId: string) => void;
 }
@@ -28,6 +28,9 @@ export default function SlotPopover({
   onClose, onEdit, onDelete, onBook, onAccept, onReject, onDismissRejection,
 }: SlotPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
+  // Track which booking is showing the rejection reason form: bookingId | null
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -42,20 +45,35 @@ export default function SlotPopover({
   const myBooking = slot.myBooking;
 
   // Header color
-  const headerBgClass = mentorColor ? "" : slotColorClass(slot, role).split(" ")[0]; // first class only (no hover)
+  const headerBgClass = mentorColor ? "" : slotColorClass(slot, role).split(" ")[0];
   const headerBgStyle = mentorColor ? { backgroundColor: mentorColor } : {};
 
-  // Dark text on amber backgrounds
   const isAmber = headerBgClass.includes("amber");
   const headerTextColor = isAmber ? "text-gray-900" : "text-white";
 
-  // Display time: mentee with booking shows requested window
   const headerTime = (() => {
     if (role === "mentee" && myBooking?.requestedStart && myBooking?.requestedEnd) {
       return `${myBooking.requestedStart} \u2013 ${myBooking.requestedEnd}`;
     }
     return `${slot.startTime} \u2013 ${slot.endTime}`;
   })();
+
+  function startRejecting(bookingId: string) {
+    setRejectingId(bookingId);
+    setRejectReason("");
+  }
+
+  function cancelRejecting() {
+    setRejectingId(null);
+    setRejectReason("");
+  }
+
+  function confirmReject() {
+    if (!rejectingId || !rejectReason.trim()) return;
+    onReject?.(rejectingId, rejectReason.trim());
+    setRejectingId(null);
+    setRejectReason("");
+  }
 
   return (
     <div
@@ -109,36 +127,61 @@ export default function SlotPopover({
                     Join Google Meet
                   </a>
                 )}
-                <button
-                  onClick={() => onReject?.(acceptedBooking.id)}
-                  className="w-full flex items-center justify-center gap-1.5 text-xs px-2 py-2 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition"
-                >
-                  <Icon name="x" size={13} /> Cancel session
-                </button>
-                <p className="text-[10px] text-gray-400 text-center leading-snug px-1">
-                  Cancelling will notify the mentee and make this slot available again.
-                </p>
+
+                {/* Cancel session — show reason form inline */}
+                {rejectingId === acceptedBooking.id ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-700">Reason for cancellation <span className="text-red-500">*</span></p>
+                    <textarea
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="e.g. Schedule conflict, need to reschedule…"
+                      rows={3}
+                      className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    />
+                    <div className="flex gap-1.5">
+                      <button onClick={cancelRejecting}
+                        className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                        Back
+                      </button>
+                      <button
+                        onClick={confirmReject}
+                        disabled={!rejectReason.trim()}
+                        className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                        Confirm Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => startRejecting(acceptedBooking.id)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs px-2 py-2 rounded-lg text-red-500 border border-red-100 hover:bg-red-50 transition"
+                    >
+                      <Icon name="x" size={13} /> Cancel session
+                    </button>
+                    <p className="text-[10px] text-gray-400 text-center leading-snug px-1">
+                      Cancelling will notify the mentee and make this slot available again.
+                    </p>
+                  </>
+                )}
               </>
             );
           }
 
-          // ── State 2: Pending requests exist — no edit or delete allowed ─
+          // ── State 2: Pending requests — no edit or delete ─────────────
           if (hasPending) {
             return (
               <>
                 <div className="flex gap-1.5">
-                  <button
-                    disabled
+                  <button disabled
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-gray-300 border border-gray-100 cursor-not-allowed"
-                    title="Reject all requests before editing"
-                  >
+                    title="Reject all requests before editing">
                     <Icon name="edit" size={13} /> Edit
                   </button>
-                  <button
-                    disabled
+                  <button disabled
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-gray-300 border border-gray-100 cursor-not-allowed"
-                    title="Reject all requests before deleting"
-                  >
+                    title="Reject all requests before deleting">
                     <Icon name="trash" size={13} /> Delete
                   </button>
                 </div>
@@ -150,7 +193,7 @@ export default function SlotPopover({
             );
           }
 
-          // ── State 3: Clean slot — full edit/delete ────────────────────
+          // ── State 3: Clean slot ───────────────────────────────────────
           return (
             <>
               <div className="flex items-center gap-2 py-0.5 px-0.5">
@@ -201,14 +244,42 @@ export default function SlotPopover({
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => onAccept?.(b.id)}
-                      className="btn-primary text-xs px-2 py-1 flex-1">Accept</button>
-                    <button onClick={() => onReject?.(b.id)}
-                      className="text-xs px-2 py-1 flex-1 rounded border border-gray-200 hover:bg-gray-100 transition text-gray-500">
-                      Reject
-                    </button>
-                  </div>
+
+                  {/* Rejection reason form for this booking */}
+                  {rejectingId === b.id ? (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-gray-700">Reason for rejection <span className="text-red-500">*</span></p>
+                      <textarea
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                        placeholder="e.g. Already have another session booked…"
+                        rows={3}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5">
+                        <button onClick={cancelRejecting}
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                          Back
+                        </button>
+                        <button
+                          onClick={confirmReject}
+                          disabled={!rejectReason.trim()}
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                          Confirm Reject
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <button onClick={() => onAccept?.(b.id)}
+                        className="btn-primary text-xs px-2 py-1 flex-1">Accept</button>
+                      <button onClick={() => startRejecting(b.id)}
+                        className="text-xs px-2 py-1 flex-1 rounded border border-gray-200 hover:bg-gray-100 transition text-gray-500">
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -264,9 +335,15 @@ export default function SlotPopover({
                       Session {myBooking.session.sessionNum}: {myBooking.session.topic}
                     </p>
                   )}
-                  <p className="text-[11px] text-red-400 leading-snug">
-                    Your mentor declined this request. You can dismiss and try booking again.
-                  </p>
+                  {myBooking.rejectionReason ? (
+                    <p className="text-[11px] text-red-500 leading-snug">
+                      <span className="font-medium">Reason: </span>{myBooking.rejectionReason}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-red-400 leading-snug">
+                      Your mentor declined this request. You can dismiss and try booking again.
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => onDismissRejection?.(myBooking.id)}
