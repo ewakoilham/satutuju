@@ -27,8 +27,9 @@ const PHASE_COLORS: Record<string, string> = {
 };
 
 const REQUIRED_PROFILE_FIELDS = [
-  "fullName", "city", "undergradUniversity", "postgradUniversity",
-  "fundingScheme", "currentField", "weeklyHours", "availability",
+  "fullName", "city", "undergradMajor", "undergradUniversity",
+  "postgradMajor", "postgradUniversity",
+  "fundingScheme", "currentField",
   "personality", "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
 ];
 

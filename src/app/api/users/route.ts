@@ -44,12 +44,13 @@ export async function GET(req: NextRequest) {
   if (mentorIds.length > 0) {
     const { data: mentorProfiles } = await supabase
       .from("MentorProfile")
-      .select("userId, fullName, city, undergradUniversity, postgradUniversity, fundingScheme, currentField, weeklyHours, availability, personality, mentorStyle, workStyle, communicationStyle, primaryRoles")
+      .select("userId, fullName, city, undergradMajor, undergradUniversity, postgradMajor, postgradUniversity, fundingScheme, currentField, personality, mentorStyle, workStyle, communicationStyle, primaryRoles")
       .in("userId", mentorIds);
 
     const REQUIRED_FIELDS = [
-      "fullName", "city", "undergradUniversity", "postgradUniversity",
-      "fundingScheme", "currentField", "weeklyHours", "availability",
+      "fullName", "city", "undergradMajor", "undergradUniversity",
+      "postgradMajor", "postgradUniversity",
+      "fundingScheme", "currentField",
       "personality", "mentorStyle", "workStyle", "communicationStyle", "primaryRoles",
     ] as const;
 
