@@ -59,18 +59,20 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="text-center py-4">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-red-50 rounded-2xl mb-4">
-          <Icon name="x" size={22} className="text-red-500" />
+      <>
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-red-50 rounded-2xl mb-3">
+            <Icon name="x" size={22} className="text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)]">
+            Invalid link
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">This reset link is missing a token.</p>
         </div>
-        <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)] mb-2">
-          Invalid link
-        </h2>
-        <p className="text-sm text-gray-500 mb-6">This reset link is missing a token.</p>
-        <Link href="/forgot-password" className="text-sm text-primary font-semibold hover:underline">
+        <Link href="/forgot-password" className="btn-primary w-full py-3 rounded-xl text-base text-center block">
           Request a new reset link
         </Link>
-      </div>
+      </>
     );
   }
 
@@ -183,43 +185,22 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left branded panel - desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 flex-col items-center justify-center p-12 relative overflow-hidden">
-        <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-20" />
-        <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-20" />
-        <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-15" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 relative overflow-hidden px-4 py-12">
+      {/* Decorative illustrations */}
+      <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-10 pointer-events-none" />
 
-        <div className="relative text-center">
-          <Logo variant="main" size="lg" className="mx-auto mb-8" />
-          <h2 className="text-2xl font-bold text-primary-800 mb-3 font-[family-name:var(--font-heading)]">
-            Secure your account
-          </h2>
-          <p className="text-primary-600/80 text-base max-w-sm leading-relaxed">
-            Set a new password to regain access to your mentorship journey.
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-10">
-            <div className="w-2 h-2 rounded-full bg-brand-yellow" />
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2 h-2 rounded-full bg-brand-lavender" />
-          </div>
+      <div className="relative w-full max-w-md">
+        <div className="text-center mb-6">
+          <Logo variant="main" size="md" className="mx-auto mb-2" />
+          <p className="text-sm text-primary-600/70">Mentorship Platform</p>
         </div>
-      </div>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-8 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <Logo variant="main" size="md" className="mx-auto mb-2" />
-            <p className="text-sm text-gray-400">Mentorship Platform</p>
-          </div>
-
-          <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl">
-            <Suspense fallback={<div className="text-center py-8 text-gray-400 text-sm">Loading...</div>}>
-              <ResetPasswordForm />
-            </Suspense>
-          </div>
+        <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl bg-white/95 backdrop-blur-sm">
+          <Suspense fallback={<div className="text-center py-8 text-gray-400 text-sm">Loading...</div>}>
+            <ResetPasswordForm />
+          </Suspense>
         </div>
       </div>
     </div>
