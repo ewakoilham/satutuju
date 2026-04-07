@@ -14,7 +14,7 @@ export async function GET(
   const { data: pairing, error } = await supabase
     .from("Pairing")
     .select(
-      "*, mentor:User!mentorId(id, name, email), mentee:User!menteeId(id, name, email), sessions:Session(*), tasks:Task(*), progressNotes:ProgressNote(*)"
+      "*, mentor:User!mentorId(id, name, email, avatar), mentee:User!menteeId(id, name, email, avatar), sessions:Session(*), tasks:Task(*), progressNotes:ProgressNote(*)"
     )
     .eq("id", id)
     .single();
@@ -119,7 +119,7 @@ export async function PATCH(
   // Fetch current pairing with mentor/mentee names
   const { data: pairing, error: fetchErr } = await supabase
     .from("Pairing")
-    .select("*, mentor:User!mentorId(id, name), mentee:User!menteeId(id, name)")
+    .select("*, mentor:User!mentorId(id, name, avatar), mentee:User!menteeId(id, name, avatar)")
     .eq("id", id)
     .single();
 
@@ -224,7 +224,7 @@ export async function PUT(
 
   const { data: pairing, error: fetchErr } = await supabase
     .from("Pairing")
-    .select("*, mentor:User!mentorId(id, name), mentee:User!menteeId(id, name)")
+    .select("*, mentor:User!mentorId(id, name, avatar), mentee:User!menteeId(id, name, avatar)")
     .eq("id", id)
     .single();
 
@@ -308,7 +308,7 @@ export async function DELETE(
   // Fetch pairing with names
   const { data: pairing, error: fetchErr } = await supabase
     .from("Pairing")
-    .select("*, mentor:User!mentorId(id, name), mentee:User!menteeId(id, name)")
+    .select("*, mentor:User!mentorId(id, name, avatar), mentee:User!menteeId(id, name, avatar)")
     .eq("id", id)
     .single();
 

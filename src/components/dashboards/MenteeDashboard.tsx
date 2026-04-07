@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PHASES, CURRICULUM } from "@/lib/curriculum";
 import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import ProgressBar from "@/components/ui/ProgressBar";
 import EmptyState from "@/components/ui/EmptyState";
@@ -36,7 +37,7 @@ interface Pairing {
   id: string;
   status: string;
   targetProgram?: string;
-  mentor: { id: string; name: string; email: string };
+  mentor: { id: string; name: string; email: string; avatar?: string | null };
   sessions: Session[];
   tasks: Task[];
   documents: Document[];
@@ -150,7 +151,9 @@ export default function MenteeDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <div className="flex items-center gap-2 mt-1">
+          <Avatar name={pairing.mentor.name} size="sm" src={pairing.mentor.avatar || undefined} />
+          <p className="text-gray-500 text-sm">
           Your mentor:{" "}
           <span className="font-medium text-gray-700">{pairing.mentor.name}</span>
           {(() => {
@@ -168,6 +171,7 @@ export default function MenteeDashboard() {
             );
           })()}
         </p>
+        </div>
       </div>
 
       {/* Top cards row */}
