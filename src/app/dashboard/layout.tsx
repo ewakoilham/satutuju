@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifs,     setShowNotifs]     = useState(false);
   const [showUserMenu,   setShowUserMenu]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileGateCleared, setProfileGateCleared] = useState(false);
 
   const notifRef    = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -59,6 +60,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  // ── Onboarding gate ────────────────────────────────────────────────────────
+  // Runs whenever pathname or user changes; short-circuits once cleared.
+  useEffect(() => {
+    if (!user || loading) return;
+
+    // Admins are never gated
+    if (user.role === "admin") { setProfileGateCleared(true); return; }
+
+    // Already cleared — no repeat fetch needed
+    if (profileGateCleared) return;
+
+    // While on the onboarding page itself, lift the gate so the form renders
+    const isOnboardingPage =
+      pathname.startsWith("/dashboard/onboarding") ||
+      pathname.startsWith("/dashboard/mentor-onboarding");
+    if (isOnboardingPage) { setProfileGateCleared(true); return; }
+
+    const apiPath      = user.role === "mentor" ? "/api/mentor-profile" : "/api/profile";
+    const redirectPath = user.role === "mentor" ? "/dashboard/mentor-onboarding" : "/dashboard/onboarding";
+
+    fetch(apiPath)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.profile) {
+          router.replace(redirectPath);
+          // Keep gate closed while redirect is in flight
+        } else {
+          setProfileGateCleared(true);
+        }
+      })
+      .catch(() => setProfileGateCleared(true)); // Network error → let through
+  }, [user, loading, pathname, profileGateCleared, router]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -73,6 +107,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="h-16 bg-white/90 backdrop-blur-sm border-b border-border" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <SkeletonDashboard />
+        </div>
+      </div>
+    );
+  }
+
+  // Hold all content while profile gate is being checked (mentee / mentor only)
+  const isOnboardingPage =
+    pathname.startsWith("/dashboard/onboarding") ||
+    pathname.startsWith("/dashboard/mentor-onboarding");
+  if ((user.role === "mentee" || user.role === "mentor") && !profileGateCleared && !isOnboardingPage) {
     return (
       <div className="min-h-screen bg-background">
         <div className="h-16 bg-white/90 backdrop-blur-sm border-b border-border" />
