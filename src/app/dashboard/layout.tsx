@@ -62,21 +62,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [loading, user, router]);
 
   // ── Onboarding gate ────────────────────────────────────────────────────────
-  // Runs whenever pathname or user changes; short-circuits once cleared.
+  // Checks whether the mentor/mentee has actually filled in their profile.
+  // Runs on pathname changes; short-circuits once cleared.
   useEffect(() => {
     if (!user || loading) return;
 
     // Admins are never gated
     if (user.role === "admin") { setProfileGateCleared(true); return; }
 
-    // Already cleared — no repeat fetch needed
-    if (profileGateCleared) return;
-
-    // While on the onboarding page itself, lift the gate so the form renders
+    // On the onboarding page itself: skip check, let the form render.
+    // Do NOT set profileGateCleared — so leaving without finishing re-triggers the check.
     const isOnboardingPage =
       pathname.startsWith("/dashboard/onboarding") ||
       pathname.startsWith("/dashboard/mentor-onboarding");
-    if (isOnboardingPage) { setProfileGateCleared(true); return; }
+    if (isOnboardingPage) return;
+
+    // Already cleared from a previous successful check — skip the fetch
+    if (profileGateCleared) return;
 
     const apiPath      = user.role === "mentor" ? "/api/mentor-profile" : "/api/profile";
     const redirectPath = user.role === "mentor" ? "/dashboard/mentor-onboarding" : "/dashboard/onboarding";
@@ -84,9 +86,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetch(apiPath)
       .then((r) => r.json())
       .then((data) => {
-        if (!data.profile) {
+        const p = data.profile;
+        // Check that the profile exists AND has meaningful content filled in
+        const hasFilled = user.role === "mentor"
+          ? p && p.fullName && p.mentorStyle   // First + last onboarding fields
+          : p && p.fullLegalName;              // First onboarding field
+        if (!hasFilled) {
           router.replace(redirectPath);
-          // Keep gate closed while redirect is in flight
         } else {
           setProfileGateCleared(true);
         }
