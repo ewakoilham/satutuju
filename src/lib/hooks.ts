@@ -7,6 +7,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  avatar?: string | null;
 }
 
 export function useUser() {
@@ -27,7 +28,11 @@ export function useUser() {
     window.location.href = "/login";
   }, []);
 
-  return { user, loading, logout };
+  const updateAvatar = useCallback((avatar: string) => {
+    setUser((prev) => prev ? { ...prev, avatar } : prev);
+  }, []);
+
+  return { user, loading, logout, updateAvatar };
 }
 
 export function useNotifications() {

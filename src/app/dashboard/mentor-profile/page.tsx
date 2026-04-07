@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
-import Avatar from "@/components/ui/Avatar";
+import AvatarUpload from "@/components/ui/AvatarUpload";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { useUser } from "@/lib/hooks";
@@ -235,7 +235,7 @@ type SectionKey = "biodata" | "education" | "preferences";
 
 // ── Main page ─────────────────────────────────────────────────
 export default function MentorProfilePage() {
-  const { user } = useUser();
+  const { user, updateAvatar } = useUser();
   const [profile, setProfile] = useState<MentorProfileData>(EMPTY);
   const [draft, setDraft]     = useState<MentorProfileData>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -367,7 +367,11 @@ export default function MentorProfilePage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Avatar name={profile.fullName || user?.name || "Mentor"} size="lg" />
+        <AvatarUpload
+          name={profile.fullName || user?.name || "Mentor"}
+          src={user?.avatar}
+          onUploaded={updateAvatar}
+        />
         <div>
           <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
           <p className="text-sm text-gray-500 mt-0.5">Your mentor profile visible to the admin team and mentees.</p>

@@ -12,7 +12,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let query = supabase.from("Pairing").select(
-    "*, mentor:User!mentorId(id, name, email), mentee:User!menteeId(id, name, email), sessions:Session(*), documents:Document(id), tasks:Task(id)"
+    "*, mentor:User!mentorId(id, name, email, avatar), mentee:User!menteeId(id, name, email, avatar), sessions:Session(*), documents:Document(id), tasks:Task(id)"
   );
 
   if (user.role === "mentor") {

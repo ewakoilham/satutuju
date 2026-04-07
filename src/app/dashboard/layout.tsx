@@ -199,7 +199,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
                   className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-gray-50 ${showUserMenu ? "bg-gray-50" : ""}`}
                 >
-                  <Avatar name={user.name} size="sm" />
+                  <Avatar name={user.name} size="sm" src={user.avatar || undefined} />
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-medium text-foreground leading-tight">{user.name}</p>
                     <p className="text-xs text-gray-400 capitalize leading-tight">{user.role}</p>
@@ -274,7 +274,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* User info */}
             <div className="px-5 py-4 bg-brand-blue-soft/30 border-b border-border">
               <div className="flex items-center gap-3">
-                <Avatar name={user.name} size="md" />
+                <Avatar name={user.name} size="md" src={user.avatar || undefined} />
                 <div>
                   <p className="text-sm font-semibold text-foreground">{user.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{user.role}</p>

@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
+import AvatarUpload from "@/components/ui/AvatarUpload";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { useUser } from "@/lib/hooks";
 
 interface ProfileData {
   // Personal
@@ -265,6 +267,7 @@ function TextareaInput({
 }
 
 export default function ProfilePage() {
+  const { user, updateAvatar } = useUser();
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -379,7 +382,11 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-4">
-        <Avatar name={profile.fullLegalName || email || "User"} size="lg" />
+        <AvatarUpload
+          name={profile.fullLegalName || email || "User"}
+          src={user?.avatar}
+          onUploaded={updateAvatar}
+        />
         <div>
           <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
           <p className="text-sm text-gray-500 mt-0.5">

@@ -13,7 +13,7 @@ interface Pairing {
   id: string;
   status: string;
   targetProgram?: string;
-  mentee: { id: string; name: string; email: string };
+  mentee: { id: string; name: string; email: string; avatar?: string | null };
   sessions: Array<{ sessionNum: number; status: string; phase: string; menteeEnergy?: number }>;
   _count: { documents: number; tasks: number };
 }
@@ -130,7 +130,7 @@ export default function MentorDashboard() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-3">
-                  <Avatar name={p.mentee.name} size="lg" />
+                  <Avatar name={p.mentee.name} size="lg" src={p.mentee.avatar || undefined} />
                   <div>
                     <h3 className="text-lg font-semibold">{p.mentee.name}</h3>
                     <p className="text-sm text-gray-500">{p.mentee.email}</p>

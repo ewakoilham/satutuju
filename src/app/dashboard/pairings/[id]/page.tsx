@@ -57,8 +57,8 @@ interface Pairing {
   targetProgram?: string;
   priorityUnis?: string;
   ieltsScore?: string;
-  mentor: { id: string; name: string; email: string };
-  mentee: { id: string; name: string; email: string };
+  mentor: { id: string; name: string; email: string; avatar?: string | null };
+  mentee: { id: string; name: string; email: string; avatar?: string | null };
   sessions: Session[];
   documents: Doc[];
   tasks: Task[];
@@ -201,12 +201,12 @@ export default function PairingDetailPage() {
           </button>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">
             <span className="flex items-center gap-3">
-              <Avatar name={pairing.mentee.name} size="md" />
+              <Avatar name={pairing.mentee.name} size="md" src={pairing.mentee.avatar || undefined} />
               {pairing.mentee.name}
               <span className="text-gray-400 font-normal text-lg">
                 &times;
               </span>
-              <Avatar name={pairing.mentor.name} size="md" />
+              <Avatar name={pairing.mentor.name} size="md" src={pairing.mentor.avatar || undefined} />
               <span className="text-gray-400 font-normal text-lg">
                 {pairing.mentor.name}
               </span>

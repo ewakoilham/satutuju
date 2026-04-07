@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PHASES, CURRICULUM } from "@/lib/curriculum";
 import Icon from "@/components/ui/Icon";
+import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import ProgressBar from "@/components/ui/ProgressBar";
 import EmptyState from "@/components/ui/EmptyState";
@@ -36,7 +37,7 @@ interface Pairing {
   id: string;
   status: string;
   targetProgram?: string;
-  mentor: { id: string; name: string; email: string };
+  mentor: { id: string; name: string; email: string; avatar?: string | null };
   sessions: Session[];
   tasks: Task[];
   documents: Document[];
@@ -150,24 +151,26 @@ export default function MenteeDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Your mentor:{" "}
-          <span className="font-medium text-gray-700">{pairing.mentor.name}</span>
-          {(() => {
-            const target = profile?.intendedStudyProgram || pairing.targetProgram;
-            const destinations = profile?.preferredDestinations;
-            if (!target) return null;
-            return (
-              <>
-                {" "}&middot; Target:{" "}
-                <span className="text-[var(--primary)]">{target}</span>
-                {destinations && (
-                  <span className="text-gray-400"> &middot; {destinations}</span>
-                )}
-              </>
-            );
-          })()}
-        </p>
+        <div className="flex items-center gap-3 mt-3">
+          <Avatar name={pairing.mentor.name} size="lg" src={pairing.mentor.avatar || undefined} />
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Your mentor</p>
+            <p className="text-base font-semibold text-gray-800 truncate">{pairing.mentor.name}</p>
+            {(() => {
+              const target = profile?.intendedStudyProgram || pairing.targetProgram;
+              const destinations = profile?.preferredDestinations;
+              if (!target) return null;
+              return (
+                <p className="text-sm text-gray-500 mt-0.5 truncate">
+                  <span className="text-[var(--primary)] font-medium">{target}</span>
+                  {destinations && (
+                    <span className="text-gray-400"> &middot; {destinations}</span>
+                  )}
+                </p>
+              );
+            })()}
+          </div>
+        </div>
       </div>
 
       {/* Top cards row */}
