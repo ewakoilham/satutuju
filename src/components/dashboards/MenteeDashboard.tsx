@@ -151,26 +151,25 @@ export default function MenteeDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
-        <div className="flex items-center gap-2 mt-1">
-          <Avatar name={pairing.mentor.name} size="sm" src={pairing.mentor.avatar || undefined} />
-          <p className="text-gray-500 text-sm">
-          Your mentor:{" "}
-          <span className="font-medium text-gray-700">{pairing.mentor.name}</span>
-          {(() => {
-            const target = profile?.intendedStudyProgram || pairing.targetProgram;
-            const destinations = profile?.preferredDestinations;
-            if (!target) return null;
-            return (
-              <>
-                {" "}&middot; Target:{" "}
-                <span className="text-[var(--primary)]">{target}</span>
-                {destinations && (
-                  <span className="text-gray-400"> &middot; {destinations}</span>
-                )}
-              </>
-            );
-          })()}
-        </p>
+        <div className="flex items-center gap-3 mt-3">
+          <Avatar name={pairing.mentor.name} size="lg" src={pairing.mentor.avatar || undefined} />
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Your mentor</p>
+            <p className="text-base font-semibold text-gray-800 truncate">{pairing.mentor.name}</p>
+            {(() => {
+              const target = profile?.intendedStudyProgram || pairing.targetProgram;
+              const destinations = profile?.preferredDestinations;
+              if (!target) return null;
+              return (
+                <p className="text-sm text-gray-500 mt-0.5 truncate">
+                  <span className="text-[var(--primary)] font-medium">{target}</span>
+                  {destinations && (
+                    <span className="text-gray-400"> &middot; {destinations}</span>
+                  )}
+                </p>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
