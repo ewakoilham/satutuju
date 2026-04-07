@@ -181,7 +181,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 relative overflow-hidden px-4 py-12">
+    <div className="force-light min-h-screen flex items-center justify-center bg-brand-blue-soft relative overflow-hidden px-4 py-12">
       {/* Decorative illustrations */}
       <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-15 pointer-events-none" />
       <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-15 pointer-events-none" />

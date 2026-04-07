@@ -154,17 +154,17 @@ export default function MenteeDashboard() {
         <div className="flex items-center gap-3 mt-3">
           <Avatar name={pairing.mentor.name} size="lg" src={pairing.mentor.avatar || undefined} />
           <div className="min-w-0">
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Your mentor</p>
-            <p className="text-base font-semibold text-gray-800 truncate">{pairing.mentor.name}</p>
+            <p className="text-xs text-text-muted-2 font-medium uppercase tracking-wide">Your mentor</p>
+            <p className="text-base font-semibold text-foreground truncate">{pairing.mentor.name}</p>
             {(() => {
               const target = profile?.intendedStudyProgram || pairing.targetProgram;
               const destinations = profile?.preferredDestinations;
               if (!target) return null;
               return (
-                <p className="text-sm text-gray-500 mt-0.5 truncate">
+                <p className="text-sm text-text-muted mt-0.5 truncate">
                   <span className="text-[var(--primary)] font-medium">{target}</span>
                   {destinations && (
-                    <span className="text-gray-400"> &middot; {destinations}</span>
+                    <span className="text-text-muted-2"> &middot; {destinations}</span>
                   )}
                 </p>
               );
@@ -184,14 +184,14 @@ export default function MenteeDashboard() {
             <div className="w-9 h-9 rounded-xl bg-brand-blue-soft flex items-center justify-center">
               <Icon name="calendar" size={18} className="text-primary" />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase">Next Session</p>
+            <p className="text-xs text-text-muted-2 font-medium uppercase">Next Session</p>
           </div>
           {nextSession ? (
             <>
               <p className="text-sm font-semibold">
                 Session {nextSession.sessionNum}: {nextSession.topic}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-text-muted mt-1">
                 {nextSession.scheduledAt
                   ? new Date(nextSession.scheduledAt).toLocaleDateString("en-GB", {
                       weekday: "short",
@@ -222,10 +222,10 @@ export default function MenteeDashboard() {
             <div className="w-9 h-9 rounded-xl bg-brand-yellow flex items-center justify-center">
               <Icon name="clipboard-check" size={18} className="text-primary" />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase">Tasks</p>
+            <p className="text-xs text-text-muted-2 font-medium uppercase">Tasks</p>
           </div>
           <p className="text-3xl font-bold">{pendingTasks.length}</p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             {pendingTasks.length === 0 ? "All caught up!" : "pending tasks"}
           </p>
           {docsNeedingRevision.length > 0 && (
@@ -244,12 +244,12 @@ export default function MenteeDashboard() {
             <div className="w-9 h-9 rounded-xl bg-brand-lavender flex items-center justify-center">
               <Icon name="document" size={18} className="text-primary" />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase">Documents</p>
+            <p className="text-xs text-text-muted-2 font-medium uppercase">Documents</p>
           </div>
           <p className="text-3xl font-bold">
-            {uploadedCount}<span className="text-lg text-gray-400 font-normal">/{totalChecklist}</span>
+            {uploadedCount}<span className="text-lg text-text-muted-2 font-normal">/{totalChecklist}</span>
           </p>
-          <p className="text-xs text-gray-500 mt-1">checklist items uploaded</p>
+          <p className="text-xs text-text-muted mt-1">checklist items uploaded</p>
           <p className="text-xs text-green-600 mt-0.5">{approvedDocs} approved</p>
         </Link>
       </div>
@@ -258,7 +258,7 @@ export default function MenteeDashboard() {
       <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Session Progress</h3>
-          <span className="text-sm text-gray-500">{completed}/10 completed</span>
+          <span className="text-sm text-text-muted">{completed}/10 completed</span>
         </div>
         <ProgressBar
           value={(completed / 10) * 100}
@@ -290,14 +290,14 @@ export default function MenteeDashboard() {
                     ? "bg-success-light border-green-200 hover:border-green-300"
                     : phaseActive
                     ? "bg-brand-blue-soft border-[var(--primary)]"
-                    : "bg-gray-50 border-gray-200 hover:border-gray-300"
+                    : "bg-surface-elevated border-border hover:border-border"
                 }`}
               >
                 <div className="flex justify-center">
                   <Icon name={phaseIconName} size={20} className={isExpanded ? "text-white" : ""} />
                 </div>
                 <p className={`text-xs font-medium mt-1 ${isExpanded ? "text-white" : ""}`}>{phase.label}</p>
-                <p className={`text-[10px] mt-0.5 ${isExpanded ? "text-white/70" : "text-gray-400"}`}>
+                <p className={`text-[10px] mt-0.5 ${isExpanded ? "text-white/70" : "text-text-muted-2"}`}>
                   {phaseSessions.filter((s) => s.status === "completed").length}/{phaseSessions.length} sessions
                 </p>
               </button>
@@ -314,9 +314,9 @@ export default function MenteeDashboard() {
             .sort((a, b) => a.sessionNum - b.sessionNum);
 
           return (
-            <div className="mt-4 border-t border-gray-100 pt-4 space-y-3 animate-fade-in">
+            <div className="mt-4 border-t border-border pt-4 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   <Icon name={phaseIconName} size={16} /> {phaseInfo.label} Phase
                 </h4>
                 <Link
@@ -340,7 +340,7 @@ export default function MenteeDashboard() {
                         ? "bg-green-50 border-green-200 hover:border-green-300"
                         : isNext
                         ? "bg-blue-50 border-blue-200 hover:border-blue-300"
-                        : "bg-gray-50 border-gray-100 hover:border-gray-200"
+                        : "bg-surface-elevated border-border hover:border-border"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -350,19 +350,19 @@ export default function MenteeDashboard() {
                             ? "bg-green-100 text-green-600"
                             : isNext
                             ? "bg-blue-100 text-blue-600"
-                            : "bg-gray-200 text-gray-400"
+                            : "bg-surface-elevated text-text-muted-2"
                         }`}>
                           {isCompleted ? <Icon name="check" size={16} /> : session.sessionNum}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-800">
+                          <p className="text-sm font-medium text-foreground">
                             Session {session.sessionNum}: {session.topic}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-text-muted mt-0.5">
                             {currItem?.duration || "75 Min"}
                           </p>
                           {session.scheduledAt && (
-                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                            <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1">
                               <Icon name="calendar" size={12} />
                               {new Date(session.scheduledAt).toLocaleDateString("en-GB", {
                                 weekday: "short",
@@ -416,7 +416,7 @@ export default function MenteeDashboard() {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">My Tasks</h3>
-            <span className="text-xs text-gray-400">{pendingTasks.length} pending</span>
+            <span className="text-xs text-text-muted-2">{pendingTasks.length} pending</span>
           </div>
 
           {/* Upcoming deadlines */}
@@ -428,9 +428,9 @@ export default function MenteeDashboard() {
                 const daysLeft = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                 return (
                   <div key={task.id} className="flex items-center justify-between py-1">
-                    <span className="text-sm text-gray-700">{task.title}</span>
+                    <span className="text-sm text-foreground">{task.title}</span>
                     <span className={`text-xs font-medium ${
-                      daysLeft <= 1 ? "text-red-600" : daysLeft <= 3 ? "text-amber-600" : "text-gray-500"
+                      daysLeft <= 1 ? "text-danger" : daysLeft <= 3 ? "text-amber-600" : "text-text-muted"
                     }`}>
                       {daysLeft <= 0 ? "Overdue!" : daysLeft === 1 ? "Tomorrow" : `${daysLeft} days`}
                     </span>
@@ -441,7 +441,7 @@ export default function MenteeDashboard() {
           )}
 
           {pendingTasks.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">No pending tasks</p>
+            <p className="text-sm text-text-muted-2 py-4 text-center">No pending tasks</p>
           ) : (
             <div className="space-y-3">
               {pendingTasks.map((task) => (
@@ -470,7 +470,7 @@ export default function MenteeDashboard() {
               size="sm"
               className="flex-1"
             />
-            <span className="text-xs text-gray-500 whitespace-nowrap">
+            <span className="text-xs text-text-muted whitespace-nowrap">
               {uploadedCount}/{totalChecklist}
             </span>
           </div>
@@ -503,12 +503,12 @@ export default function MenteeDashboard() {
               ).length;
 
               return (
-                <div key={session.sessionNum} className="border-b border-gray-50 pb-2 last:border-0">
+                <div key={session.sessionNum} className="border-b border-border/50 pb-2 last:border-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <span className="text-xs font-medium text-text-muted flex items-center gap-1">
                       <Icon name={phaseIconName} size={12} /> S{session.sessionNum}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-text-muted-2">
                       {itemsUploaded}/{session.docChecklist.length}
                     </span>
                   </div>
@@ -520,11 +520,11 @@ export default function MenteeDashboard() {
                           {uploaded ? (
                             <Icon name="check" size={12} className="text-green-500" />
                           ) : (
-                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-gray-300">
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-text-muted-2">
                               <circle cx="12" cy="12" r="9" />
                             </svg>
                           )}
-                          <span className={`text-xs ${uploaded ? "text-gray-600" : "text-gray-400"}`}>
+                          <span className={`text-xs ${uploaded ? "text-text-muted-3" : "text-text-muted-2"}`}>
                             {item}
                           </span>
                         </div>
@@ -570,7 +570,7 @@ function TaskItem({ task }: { task: Task }) {
       <div>
         <p className="text-sm font-medium">{task.title}</p>
         {task.dueDate && (
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-text-muted-2 mt-0.5">
             Due: {new Date(task.dueDate).toLocaleDateString()}
           </p>
         )}
@@ -578,7 +578,7 @@ function TaskItem({ task }: { task: Task }) {
       <button
         onClick={markComplete}
         disabled={completing}
-        className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium hover:bg-green-200 transition disabled:opacity-50 inline-flex items-center gap-1"
+        className="text-xs bg-green-100 text-success px-3 py-1 rounded-full font-medium hover:bg-green-200 transition disabled:opacity-50 inline-flex items-center gap-1"
       >
         <Icon name="clipboard-check" size={12} />
         {completing ? "..." : "Complete"}

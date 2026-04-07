@@ -44,7 +44,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue-soft via-brand-blue-soft/80 to-brand-lavender/60 relative overflow-hidden px-4 py-12">
+    <div className="force-light min-h-screen flex items-center justify-center bg-brand-blue-soft relative overflow-hidden px-4 py-12">
       {/* Decorative illustrations */}
       <Image src="/illustrations/lightbulb.png" alt="" width={130} height={130} className="absolute top-12 left-16 opacity-15 pointer-events-none" />
       <Image src="/illustrations/notebook.png" alt="" width={110} height={110} className="absolute top-16 right-12 opacity-10 pointer-events-none" />

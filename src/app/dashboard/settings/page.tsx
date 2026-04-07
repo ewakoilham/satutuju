@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
-import { SkeletonCard } from "@/components/ui/Skeleton";
+import { useTheme } from "@/lib/theme";
+
+type Theme = "light" | "dark" | "system";
+
+const THEME_OPTIONS: { value: Theme; label: string; icon: string; desc: string }[] = [
+  { value: "light",  label: "Light",  icon: "sun",     desc: "Always use light theme" },
+  { value: "dark",   label: "Dark",   icon: "moon",    desc: "Always use dark theme" },
+  { value: "system", label: "System", icon: "monitor", desc: "Match your device setting" },
+];
 
 function PasswordField({
   label,
@@ -19,7 +27,7 @@ function PasswordField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-text-muted mb-1">{label}</label>
       <div className="relative">
         <input
           type={showPassword ? "text" : "password"}
@@ -31,7 +39,7 @@ function PasswordField({
         <button
           type="button"
           onClick={onToggleShow}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-2 hover:text-foreground"
         >
           <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
         </button>
@@ -48,6 +56,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  const { theme, setTheme } = useTheme();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,19 +95,53 @@ export default function SettingsPage() {
     <div className="max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage your account settings</p>
+        <p className="text-text-muted text-sm mt-1">Manage your account settings</p>
       </div>
 
+      {/* ── Appearance ─────────────────────────────────────────────────── */}
+      <div className="card rounded-2xl p-6">
+        <h2 className="text-base font-semibold mb-1">Appearance</h2>
+        <p className="text-text-muted text-sm mb-4">Choose how the dashboard looks to you</p>
+
+        <div className="grid grid-cols-3 gap-3">
+          {THEME_OPTIONS.map((opt) => {
+            const selected = theme === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setTheme(opt.value)}
+                className={`flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 transition-all text-center ${
+                  selected
+                    ? "border-primary bg-primary-50 text-primary"
+                    : "border-border bg-surface hover:border-border-hover text-text-muted hover:text-foreground"
+                }`}
+              >
+                <div
+                  className={`rounded-lg p-2 ${
+                    selected ? "bg-primary/10" : "bg-surface-elevated"
+                  }`}
+                >
+                  <Icon name={opt.icon} size={22} className={selected ? "text-primary" : ""} />
+                </div>
+                <span className="text-sm font-medium">{opt.label}</span>
+                <span className="text-[11px] leading-tight text-text-muted-2">{opt.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Change Password ────────────────────────────────────────────── */}
       <div className="card rounded-2xl p-6">
         <h2 className="text-base font-semibold mb-4">Change Password</h2>
 
         {success && (
-          <div className="bg-success-light text-green-700 text-sm px-4 py-2 rounded-lg mb-4 animate-slide-in-up">
+          <div className="bg-success-light text-success text-sm px-4 py-2 rounded-lg mb-4 animate-slide-in-up">
             Password changed successfully.
           </div>
         )}
         {error && (
-          <div className="bg-danger-light text-red-600 text-sm px-4 py-2 rounded-lg mb-4 animate-slide-in-up">
+          <div className="bg-danger-light text-danger text-sm px-4 py-2 rounded-lg mb-4 animate-slide-in-up">
             {error}
           </div>
         )}

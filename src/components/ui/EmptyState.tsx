@@ -28,7 +28,7 @@ export default function EmptyState({
       </h3>
 
       {description && (
-        <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto leading-relaxed">
+        <p className="text-sm text-text-muted mt-2 max-w-sm mx-auto leading-relaxed">
           {description}
         </p>
       )}

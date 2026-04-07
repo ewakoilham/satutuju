@@ -25,7 +25,7 @@ export default function ProgressBar({
     <div className={className}>
       {(label || showValue) && (
         <div className="flex items-center justify-between mb-1.5">
-          {label && <span className="text-xs font-medium text-gray-600">{label}</span>}
+          {label && <span className="text-xs font-medium text-text-muted-3">{label}</span>}
           {showValue && (
             <span className="text-xs font-semibold text-primary">{Math.round(clamped)}%</span>
           )}

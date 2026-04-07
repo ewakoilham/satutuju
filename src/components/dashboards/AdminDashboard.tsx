@@ -253,7 +253,7 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Admin Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-text-muted text-sm mt-1">
             Manage mentors, mentees, and pairings
           </p>
         </div>
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex flex-wrap gap-1 bg-surface-elevated rounded-xl p-1 w-fit">
         {[
           { key: "pairings" as AdminTab, label: "Pairings", icon: "link" },
           { key: "quality" as AdminTab, label: "Quality Control", icon: "star" },
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition ${
               tab === t.key
                 ? "bg-brand-blue-soft text-primary shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-text-muted hover:text-foreground"
             }`}
           >
             <Icon name={t.icon} size={16} />
@@ -325,7 +325,7 @@ export default function AdminDashboard() {
           <div>
             <h3 className="font-semibold mb-3 font-[family-name:var(--font-heading)]">Mentor Performance</h3>
             {mentorSummaries.length === 0 ? (
-              <div className="card px-6 py-8 text-center text-gray-400 text-sm">
+              <div className="card px-6 py-8 text-center text-text-muted-2 text-sm">
                 No ratings or feedback yet.
               </div>
             ) : (
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                                 className={`text-sm ${
                                   s <= Math.round(m.avgRating)
                                     ? "text-amber-400"
-                                    : "text-gray-300"
+                                    : "text-text-muted-2"
                                 }`}
                               >
                                 ★
@@ -366,13 +366,13 @@ export default function AdminDashboard() {
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-text-muted-2">
                           {m.totalRatings} rating{m.totalRatings !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-text-muted">
                         {m.feedbackCount} feedback comment{m.feedbackCount !== 1 ? "s" : ""}
                       </div>
                       {m.feedbackCount > 0 && (
@@ -389,7 +389,7 @@ export default function AdminDashboard() {
           <div>
             <h3 className="font-semibold mb-3 font-[family-name:var(--font-heading)]">Recent Mentee Feedback</h3>
             {recentFeedback.length === 0 ? (
-              <div className="card px-6 py-8 text-center text-gray-400 text-sm">
+              <div className="card px-6 py-8 text-center text-text-muted-2 text-sm">
                 No feedback yet.
               </div>
             ) : (
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
                 {recentFeedback.map((fb, i) => (
                   <div
                     key={i}
-                    className="card cursor-pointer hover:border-gray-300 transition"
+                    className="card cursor-pointer hover:border-border transition"
                     onClick={() =>
                       (window.location.href = `/dashboard/pairings/${fb.pairingId}`)
                     }
@@ -409,15 +409,15 @@ export default function AdminDashboard() {
                           <span className="text-sm font-medium">
                             {fb.menteeName}
                           </span>
-                          <Icon name="arrow-right" size={12} className="text-gray-400" />
-                          <span className="text-xs text-gray-400">
+                          <Icon name="arrow-right" size={12} className="text-text-muted-2" />
+                          <span className="text-xs text-text-muted-2">
                             {fb.mentorName}
                           </span>
                           <Badge variant="neutral">
                             Session {fb.sessionNum}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-700 ml-9">
+                        <p className="text-sm text-foreground ml-9">
                           {fb.menteeFeedback}
                         </p>
                       </div>
@@ -430,12 +430,12 @@ export default function AdminDashboard() {
                                 () => "★"
                               ).join("")}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-text-muted-2">
                               {fb.mentorRating}/5
                             </span>
                           </div>
                         )}
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-text-muted-2 mt-0.5">
                           {new Date(fb.updatedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -450,7 +450,7 @@ export default function AdminDashboard() {
 
       {tab === "pairings" && <>
       {/* Pairings Sub-tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-surface-elevated rounded-xl p-1 w-fit">
         {([
           { key: "active" as PairingsTab, label: "Active" },
           { key: "archived" as PairingsTab, label: "Archived" },
@@ -461,11 +461,11 @@ export default function AdminDashboard() {
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               pairingsTab === t.key
                 ? "bg-brand-blue-soft text-primary shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-text-muted hover:text-foreground"
             }`}
           >
             {t.label}
-            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-white/60 text-gray-500">
+            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-surface/60 text-text-muted">
               {t.key === "active"
                 ? pairings.filter((p) => p.status === "active").length
                 : pairings.filter((p) => p.status !== "active").length}
@@ -483,13 +483,13 @@ export default function AdminDashboard() {
         >
           <h3 className="font-semibold font-[family-name:var(--font-heading)]">Create New Pairing</h3>
           {createError && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">
+            <div className="bg-red-50 text-danger text-sm px-4 py-2 rounded-lg">
               {createError}
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Mentor
               </label>
               <select
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
               })()}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Mentee
               </label>
               {(() => {
@@ -577,14 +577,14 @@ export default function AdminDashboard() {
         );
         return (
       <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-border">
           <h3 className="font-semibold font-[family-name:var(--font-heading)]">
             {pairingsTab === "active" ? "Active Pairings" : "Archived Pairings"}
           </h3>
         </div>
         {visiblePairings.length === 0 ? (
-          <div className="card mx-6 my-8 text-center text-gray-400 text-sm">
-            <Icon name="link" size={32} className="mx-auto text-gray-300 mb-3" />
+          <div className="card mx-6 my-8 text-center text-text-muted-2 text-sm">
+            <Icon name="link" size={32} className="mx-auto text-text-muted-2 mb-3" />
             {pairingsTab === "active"
               ? "No active pairings. Create one to get started."
               : "No archived pairings."}
@@ -593,30 +593,30 @@ export default function AdminDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50/50 text-left">
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
+                <tr className="bg-surface-elevated/50 text-left">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
                     Mentor
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
                     Mentee
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
                     Program
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
                     Progress
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
                     Status
                   </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Actions</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visiblePairings.map((p) => (
                   <tr
                     key={p.id}
-                    className="border-t border-gray-50 cursor-pointer hover:bg-gray-50/50 transition"
+                    className="border-t border-border/50 cursor-pointer hover:bg-surface-elevated/50 transition"
                     onClick={() => window.location.href = `/dashboard/pairings/${p.id}`}
                   >
                     <td className="px-3 sm:px-6 py-3">
@@ -653,7 +653,7 @@ export default function AdminDashboard() {
                         )}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-6 py-3 text-gray-500">
+                    <td className="px-3 sm:px-6 py-3 text-text-muted">
                       {p.targetProgram || "-"}
                     </td>
                     <td className="px-3 sm:px-6 py-3">
@@ -663,7 +663,7 @@ export default function AdminDashboard() {
                           size="sm"
                           className="w-20"
                         />
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-text-muted">
                           {completedSessions(p)}/10
                         </span>
                       </div>
@@ -688,7 +688,7 @@ export default function AdminDashboard() {
                         {/* View icon */}
                         <button
                           onClick={(e) => { e.stopPropagation(); window.location.href = `/dashboard/pairings/${p.id}`; }}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+                          className="p-1.5 rounded-lg hover:bg-surface-elevated transition"
                           title="View pairing"
                         >
                           <Icon name="eye" size={16} className="text-primary" />
@@ -716,7 +716,7 @@ export default function AdminDashboard() {
                                 </button>
                                 <button
                                   onClick={() => { setReplacingPairingId(null); setReplaceMentorId(""); }}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                                  className="p-1 rounded-lg text-text-muted-2 hover:text-foreground hover:bg-surface-elevated transition"
                                 >
                                   <Icon name="x" size={14} />
                                 </button>
@@ -771,7 +771,7 @@ export default function AdminDashboard() {
                                 className="p-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
                                 title="Permanently delete pairing"
                               >
-                                <Icon name="trash" size={16} className="text-red-600" />
+                                <Icon name="trash" size={16} className="text-danger" />
                               </button>
                             </>
                           );
@@ -793,29 +793,29 @@ export default function AdminDashboard() {
       {selectedMentor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-primary-900/30 backdrop-blur-sm" onClick={() => setSelectedMentor(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div className="relative bg-surface rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-start justify-between px-6 py-4 border-b border-border">
               <div>
                 <h3 className="font-semibold text-lg font-[family-name:var(--font-heading)]">{selectedMentor.mentorName}</h3>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-2xl font-bold text-primary">{selectedMentor.avgRating}</span>
                   <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(s => (
-                      <span key={s} className={`text-sm ${s <= Math.round(selectedMentor.avgRating) ? "text-amber-400" : "text-gray-300"}`}>★</span>
+                      <span key={s} className={`text-sm ${s <= Math.round(selectedMentor.avgRating) ? "text-amber-400" : "text-text-muted-2"}`}>★</span>
                     ))}
                   </div>
-                  <span className="text-xs text-gray-400">avg from {selectedMentor.totalRatings} rating{selectedMentor.totalRatings !== 1 ? "s" : ""}</span>
+                  <span className="text-xs text-text-muted-2">avg from {selectedMentor.totalRatings} rating{selectedMentor.totalRatings !== 1 ? "s" : ""}</span>
                 </div>
               </div>
-              <button onClick={() => setSelectedMentor(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-400">
+              <button onClick={() => setSelectedMentor(null)} className="p-1.5 rounded-lg hover:bg-surface-elevated transition text-text-muted-2">
                 <Icon name="x" size={20} />
               </button>
             </div>
             {/* Feedback list */}
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
               {selectedMentor.feedbackItems.map((fb, i) => (
-                <div key={i} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50/50 transition cursor-pointer"
+                <div key={i} className="border border-border rounded-xl p-4 hover:bg-surface-elevated/50 transition cursor-pointer"
                   onClick={() => { setSelectedMentor(null); window.location.href = `/dashboard/pairings/${fb.pairingId}`; }}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -826,13 +826,13 @@ export default function AdminDashboard() {
                     {fb.mentorRating && (
                       <div className="flex gap-0.5">
                         {[1,2,3,4,5].map(s => (
-                          <span key={s} className={`text-xs ${s <= fb.mentorRating! ? "text-amber-400" : "text-gray-300"}`}>★</span>
+                          <span key={s} className={`text-xs ${s <= fb.mentorRating! ? "text-amber-400" : "text-text-muted-2"}`}>★</span>
                         ))}
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{fb.menteeFeedback}</p>
-                  <p className="text-xs text-gray-400 mt-2">{new Date(fb.updatedAt).toLocaleDateString()}</p>
+                  <p className="text-sm text-foreground leading-relaxed">{fb.menteeFeedback}</p>
+                  <p className="text-xs text-text-muted-2 mt-2">{new Date(fb.updatedAt).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>

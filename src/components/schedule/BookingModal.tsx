@@ -81,11 +81,11 @@ export default function BookingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 z-10">
+      <div className="relative bg-surface rounded-2xl shadow-xl w-full max-w-sm p-5 z-10">
         {/* Header row */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold font-[family-name:var(--font-heading)]">Request Slot</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition text-gray-400">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-elevated transition text-text-muted-2">
             <Icon name="x" size={16} />
           </button>
         </div>
@@ -107,7 +107,7 @@ export default function BookingModal({
         <div className="space-y-4">
           {/* Session selector */}
           <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">
+            <label className="text-xs text-text-muted font-medium block mb-1">
               Session to discuss <span className="text-red-400">*</span>
             </label>
             <select value={sessionId}
@@ -125,7 +125,7 @@ export default function BookingModal({
           {/* Time-frame selector (only when slot > 90 min) */}
           {timeFrameOptions.length > 1 && (
             <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1">
+              <label className="text-xs text-text-muted font-medium block mb-1">
                 90-min window
               </label>
               <select value={timeFrame}
@@ -145,8 +145,8 @@ export default function BookingModal({
 
           {/* Message */}
           <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">
-              Message <span className="text-gray-300">(optional)</span>
+            <label className="text-xs text-text-muted font-medium block mb-1">
+              Message <span className="text-text-muted-2">(optional)</span>
             </label>
             <textarea value={msg} onChange={e => setMsg(e.target.value)}
               rows={2} placeholder="Any notes for your mentor?"

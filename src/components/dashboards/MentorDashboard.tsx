@@ -106,7 +106,7 @@ export default function MentorDashboard() {
       {incompleteBanner}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Mentees</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-text-muted text-sm mt-1">
           Track progress and guide your mentees
         </p>
       </div>
@@ -133,7 +133,7 @@ export default function MentorDashboard() {
                   <Avatar name={p.mentee.name} size="lg" src={p.mentee.avatar || undefined} />
                   <div>
                     <h3 className="text-lg font-semibold">{p.mentee.name}</h3>
-                    <p className="text-sm text-gray-500">{p.mentee.email}</p>
+                    <p className="text-sm text-text-muted">{p.mentee.email}</p>
                     {p.targetProgram && (
                       <p className="text-sm text-[var(--primary)] mt-1">
                         {p.targetProgram}
@@ -148,7 +148,7 @@ export default function MentorDashboard() {
 
               {/* Progress bar */}
               <div className="mb-4">
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <div className="flex items-center justify-between text-xs text-text-muted mb-1">
                   <span>Session Progress</span>
                   <span>{completed}/10</span>
                 </div>
@@ -160,16 +160,16 @@ export default function MentorDashboard() {
                 {currentSession && (
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      PHASE_COLORS[currentSession.phase] || "bg-gray-100"
+                      PHASE_COLORS[currentSession.phase] || "bg-surface-elevated"
                     }`}
                   >
                     Session {currentSession.sessionNum}: {currentSession.phase}
                   </span>
                 )}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-text-muted-2">
                   {p._count.documents} docs
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-text-muted-2">
                   {p._count.tasks} tasks
                 </span>
                 {latestEnergy && latestEnergy <= 2 && (

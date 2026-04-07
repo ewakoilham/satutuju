@@ -244,13 +244,13 @@ export default function MentorOnboardingPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center px-6">
         <div className="max-w-md text-center space-y-6">
           <span className="text-sm font-semibold text-[var(--primary)] tracking-wide">SATU TUJU</span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
             Welcome, Mentor!
           </h1>
-          <p className="text-gray-500 text-base sm:text-lg leading-relaxed">
+          <p className="text-text-muted text-base sm:text-lg leading-relaxed">
             Before you start, let&apos;s set up your mentor profile so mentees and the admin team can get to know you better.
           </p>
-          <p className="text-sm text-gray-400">This will only take a few minutes.</p>
+          <p className="text-sm text-text-muted-2">This will only take a few minutes.</p>
           <button
             onClick={() => setShowIntro(false)}
             className="bg-[var(--primary)] text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
@@ -268,17 +268,17 @@ export default function MentorOnboardingPage() {
       <div className="px-4 sm:px-8 pt-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <span className="text-sm font-semibold text-[var(--primary)]">SATU TUJU</span>
-          <span className="text-xs text-gray-400">{current + 1} / {total}</span>
+          <span className="text-xs text-text-muted-2">{current + 1} / {total}</span>
         </div>
         <div className="max-w-2xl mx-auto mt-3">
-          <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-full h-1 bg-surface-elevated rounded-full overflow-hidden">
             <div className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
         </div>
         <div className="max-w-2xl mx-auto mt-3 flex gap-2 flex-wrap">
           {sections.map((s) => (
             <span key={s} className={`text-xs px-2.5 py-1 rounded-full transition-all ${
-              s === q.section ? "bg-[var(--primary)] text-white font-medium" : "bg-white text-gray-400 border border-gray-200"
+              s === q.section ? "bg-[var(--primary)] text-white font-medium" : "bg-surface text-text-muted-2 border border-border"
             }`}>{s}</span>
           ))}
         </div>
@@ -291,9 +291,9 @@ export default function MentorOnboardingPage() {
             animating ? (direction === "next" ? "opacity-0 translate-x-8" : "opacity-0 -translate-x-8") : "opacity-100 translate-x-0"
           }`}>
             <p className="text-xs text-[var(--primary)] font-semibold mb-2 tracking-wide">QUESTION {current + 1}</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-1">{q.question}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight mb-1">{q.question}</h2>
             {q.subtitle ? (
-              <p className="text-sm text-gray-400 mb-6">{q.subtitle}</p>
+              <p className="text-sm text-text-muted-2 mb-6">{q.subtitle}</p>
             ) : (
               <div className="mb-6" />
             )}
@@ -305,7 +305,7 @@ export default function MentorOnboardingPage() {
                 type="text"
                 value={profile[q.field] || ""}
                 onChange={(e) => setProfile((p) => ({ ...p, [q.field]: e.target.value }))}
-                className="w-full text-xl sm:text-2xl bg-transparent border-0 border-b-2 border-gray-300 focus:border-[var(--primary)] outline-none py-3 text-gray-900 placeholder-gray-300 transition-colors"
+                className="w-full text-xl sm:text-2xl bg-transparent border-0 border-b-2 border-gray-300 focus:border-[var(--primary)] outline-none py-3 text-foreground placeholder-gray-300 transition-colors"
                 placeholder="Type your answer..."
               />
             )}
@@ -320,7 +320,7 @@ export default function MentorOnboardingPage() {
                       className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
                         profile[q.field] === val
                           ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                          : "border-border bg-surface text-foreground hover:border-gray-300"
                       }`}>
                       {opt}
                     </button>
@@ -341,7 +341,7 @@ export default function MentorOnboardingPage() {
                         className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
                           profile[q.field] === val
                             ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            : "border-border bg-surface text-foreground hover:border-gray-300"
                         }`}>
                         {opt}
                       </button>
@@ -372,7 +372,7 @@ export default function MentorOnboardingPage() {
                       className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium flex items-center gap-3 ${
                         selected
                           ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                          : "border-border bg-surface text-foreground hover:border-gray-300"
                       }`}>
                       <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
                         selected ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
@@ -384,7 +384,7 @@ export default function MentorOnboardingPage() {
                   );
                 })}
                 {q.maxSelect && (
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-2 mt-1">
                     {getMultiselectValues().length}/{q.maxSelect} selected
                   </p>
                 )}
@@ -403,7 +403,7 @@ export default function MentorOnboardingPage() {
                         className={`flex-1 py-3 px-1 rounded-xl border-2 transition-all text-xs sm:text-sm font-medium text-center ${
                           selected
                             ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                            : "border-border bg-surface text-text-muted-3 hover:border-gray-300"
                         }`}>
                         {opt}
                       </button>
@@ -411,7 +411,7 @@ export default function MentorOnboardingPage() {
                   })}
                 </div>
                 {q.options && (
-                  <div className="flex justify-between text-[10px] text-gray-400 px-1">
+                  <div className="flex justify-between text-[10px] text-text-muted-2 px-1">
                     <span>{q.options[0]}</span>
                     <span>{q.options[q.options.length - 1]}</span>
                   </div>
@@ -425,7 +425,7 @@ export default function MentorOnboardingPage() {
           {/* Navigation */}
           <div className="flex items-center justify-between mt-10">
             <button onClick={handleBack} disabled={current === 0}
-              className="px-5 py-2.5 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-30 transition rounded-lg hover:bg-gray-100">
+              className="px-5 py-2.5 text-sm text-text-muted hover:text-foreground disabled:opacity-30 transition rounded-lg hover:bg-surface-elevated">
               ← Back
             </button>
             {isLast ? (

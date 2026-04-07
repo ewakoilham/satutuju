@@ -24,13 +24,13 @@ export function SkeletonCard({ className = "" }: SkeletonProps) {
 export function SkeletonTable({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
     <div className="card p-0 overflow-hidden">
-      <div className="px-6 py-3 bg-gray-50/50 flex gap-4">
+      <div className="px-6 py-3 bg-surface-elevated/50 flex gap-4">
         {Array.from({ length: cols }).map((_, i) => (
           <div key={i} className="skeleton h-3 flex-1" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="px-6 py-4 flex gap-4 border-t border-gray-50">
+        <div key={r} className="px-6 py-4 flex gap-4 border-t border-border/50">
           {Array.from({ length: cols }).map((_, c) => (
             <div key={c} className={`skeleton h-3 flex-1 ${c === 0 ? "w-32" : ""}`} />
           ))}

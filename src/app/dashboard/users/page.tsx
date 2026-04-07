@@ -71,11 +71,11 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Users</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-text-muted text-sm mt-1">
             All registered users on the platform
           </p>
         </div>
-        <div className="bg-gray-100 rounded-xl p-1 flex flex-wrap gap-0.5">
+        <div className="bg-surface-elevated rounded-xl p-1 flex flex-wrap gap-0.5">
           {["", "mentor", "mentee", "admin"].map((r) => (
             <button
               key={r}
@@ -83,7 +83,7 @@ export default function UsersPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                 filter === r
                   ? "bg-brand-blue-soft text-primary"
-                  : "text-gray-600 hover:text-gray-800"
+                  : "text-text-muted-3 hover:text-foreground"
               }`}
             >
               {r || "All"}
@@ -98,30 +98,30 @@ export default function UsersPage() {
         <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50/50 text-left">
-                <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Name</th>
-                <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Email</th>
-                <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Role</th>
-                <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Joined</th>
-                <th className="px-3 sm:px-6 py-3 font-medium text-gray-500">Actions</th>
+              <tr className="bg-surface-elevated/50 text-left">
+                <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Name</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Email</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Role</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Joined</th>
+                <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((u) => (
-                <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition">
+                <tr key={u.id} className="border-t border-border/50 hover:bg-surface-elevated/50 transition">
                   <td className="px-3 sm:px-6 py-3 font-medium">
                     <div className="flex items-center gap-3">
                       <Avatar name={u.name} size="sm" />
                       <span>{u.name}</span>
                     </div>
                   </td>
-                  <td className="px-3 sm:px-6 py-3 text-gray-500">{u.email}</td>
+                  <td className="px-3 sm:px-6 py-3 text-text-muted">{u.email}</td>
                   <td className="px-3 sm:px-6 py-3">
                     <Badge variant={ROLE_BADGE_VARIANT[u.role] || "neutral"}>
                       {u.role}
                     </Badge>
                   </td>
-                  <td className="px-3 sm:px-6 py-3 text-gray-400">
+                  <td className="px-3 sm:px-6 py-3 text-text-muted-2">
                     {new Date(u.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-3 sm:px-6 py-3">

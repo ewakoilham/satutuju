@@ -20,18 +20,18 @@ export default function WeekToolbar({ weekStart, dispatch }: WeekToolbarProps) {
       <div className="flex">
         <button
           onClick={() => dispatch({ type: "PREV_WEEK" })}
-          className="p-2 rounded-lg hover:bg-gray-100 transition text-gray-500"
+          className="p-2 rounded-lg hover:bg-surface-elevated transition text-text-muted"
         >
           <Icon name="chevron-left" size={16} />
         </button>
         <button
           onClick={() => dispatch({ type: "NEXT_WEEK" })}
-          className="p-2 rounded-lg hover:bg-gray-100 transition text-gray-500"
+          className="p-2 rounded-lg hover:bg-surface-elevated transition text-text-muted"
         >
           <Icon name="chevron-right" size={16} />
         </button>
       </div>
-      <span className="text-base font-semibold text-gray-800">
+      <span className="text-base font-semibold text-foreground">
         {weekStart.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
       </span>
     </div>

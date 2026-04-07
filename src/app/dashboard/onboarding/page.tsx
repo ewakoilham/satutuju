@@ -231,14 +231,14 @@ export default function OnboardingPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center px-6">
         <div className="max-w-md text-center space-y-6">
           <Logo variant="main" size="lg" className="mx-auto" />
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight font-[family-name:var(--font-heading)]">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight font-[family-name:var(--font-heading)]">
             Hey there!<br />Welcome to SatuTuju
           </h1>
-          <p className="text-gray-500 text-base sm:text-lg leading-relaxed">
+          <p className="text-text-muted text-base sm:text-lg leading-relaxed">
             Before we start, let&apos;s get to know you a little deeper so we can
             understand you better and personalise your study-abroad journey.
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-text-muted-2">
             This will only take a few minutes.
           </p>
           <button
@@ -258,11 +258,11 @@ export default function OnboardingPage() {
       <div className="px-4 sm:px-8 pt-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <span className="text-sm font-semibold text-primary">SATU TUJU</span>
-          <span className="text-xs text-gray-400">{current + 1} / {total}</span>
+          <span className="text-xs text-text-muted-2">{current + 1} / {total}</span>
         </div>
         {/* Progress bar */}
         <div className="max-w-2xl mx-auto mt-3">
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary-deep rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
@@ -281,8 +281,8 @@ export default function OnboardingPage() {
                   s === currentSection
                     ? "bg-brand-blue-soft text-primary font-medium"
                     : passed
-                      ? "bg-white text-gray-500 border border-gray-200"
-                      : "bg-white text-gray-400 border border-gray-200"
+                      ? "bg-surface text-text-muted border border-border"
+                      : "bg-surface text-text-muted-2 border border-border"
                 }`}
               >
                 {completed && <Icon name="check" size={12} className="text-primary" />}
@@ -311,11 +311,11 @@ export default function OnboardingPage() {
             </p>
 
             {/* Question text */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-1 font-[family-name:var(--font-heading)]">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight mb-1 font-[family-name:var(--font-heading)]">
               {q.question}
             </h2>
             {q.subtitle && (
-              <p className="text-sm text-gray-400 mb-6">{q.subtitle}</p>
+              <p className="text-sm text-text-muted-2 mb-6">{q.subtitle}</p>
             )}
             {!q.subtitle && <div className="mb-6" />}
 
@@ -362,7 +362,7 @@ export default function OnboardingPage() {
                       className={`text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                         value === opt
                           ? "border-primary bg-primary text-white scale-[1.02]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                          : "border-border bg-surface text-foreground hover:border-gray-300 hover:bg-surface-elevated"
                       }`}
                     >
                       {value === opt && <Icon name="check" size={14} className="inline mr-2" />}
@@ -379,7 +379,7 @@ export default function OnboardingPage() {
                     className={`flex-1 py-4 rounded-xl border-2 text-base font-semibold transition-all ${
                       value === true
                         ? "border-primary bg-primary text-white scale-[1.02]"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                        : "border-border bg-surface text-foreground hover:border-gray-300"
                     }`}
                   >
                     Yes
@@ -388,8 +388,8 @@ export default function OnboardingPage() {
                     onClick={() => updateField(q.field, false)}
                     className={`flex-1 py-4 rounded-xl border-2 text-base font-semibold transition-all ${
                       value === false
-                        ? "border-gray-400 bg-gray-100 text-gray-700 scale-[1.02]"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                        ? "border-gray-400 bg-surface-elevated text-foreground scale-[1.02]"
+                        : "border-border bg-surface text-foreground hover:border-gray-300"
                     }`}
                   >
                     No
@@ -411,8 +411,8 @@ export default function OnboardingPage() {
                           selected
                             ? "border-primary bg-primary text-white scale-[1.02]"
                             : maxReached
-                              ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
-                              : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                              ? "border-border bg-surface-elevated text-text-muted-2 cursor-not-allowed"
+                              : "border-border bg-surface text-foreground hover:border-gray-300 hover:bg-surface-elevated"
                         }`}
                       >
                         {selected && <Icon name="check" size={14} className="inline mr-2" />}
@@ -420,7 +420,7 @@ export default function OnboardingPage() {
                       </button>
                     );
                   })}
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-2 mt-1">
                     {parseRoles(value as string).length}/{q.maxSelect ?? 2} selected
                   </p>
                 </div>
@@ -429,7 +429,7 @@ export default function OnboardingPage() {
               {q.type === "month-year" && (
                 <div className="flex gap-3 mt-2">
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1 font-medium">Month</label>
+                    <label className="block text-xs text-text-muted-2 mb-1 font-medium">Month</label>
                     <select
                       value={intakeMonth}
                       onChange={(e) => setIntakeMonth(e.target.value)}
@@ -442,7 +442,7 @@ export default function OnboardingPage() {
                     </select>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1 font-medium">Year</label>
+                    <label className="block text-xs text-text-muted-2 mb-1 font-medium">Year</label>
                     <select
                       value={intakeYear}
                       onChange={(e) => setIntakeYear(e.target.value)}
@@ -460,15 +460,15 @@ export default function OnboardingPage() {
 
             {/* Hint */}
             {q.type !== "toggle" && q.type !== "select" && q.type !== "multiselect" && (
-              <p className="text-xs text-gray-300 mt-4">
-                Press <span className="font-medium text-gray-400">Enter ↵</span> to continue, or skip if not applicable
+              <p className="text-xs text-text-muted-2 mt-4">
+                Press <span className="font-medium text-text-muted-2">Enter ↵</span> to continue, or skip if not applicable
               </p>
             )}
           </div>
 
           {/* Error */}
           {error && (
-            <div className="mt-6 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl">
+            <div className="mt-6 bg-red-50 text-danger text-sm px-4 py-3 rounded-xl">
               {error}
             </div>
           )}
@@ -481,7 +481,7 @@ export default function OnboardingPage() {
           {current > 0 ? (
             <button
               onClick={handleBack}
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 px-4 py-2.5 rounded-lg hover:bg-white transition"
+              className="flex items-center gap-1 text-sm text-text-muted-2 hover:text-foreground px-4 py-2.5 rounded-lg hover:bg-surface transition"
             >
               <Icon name="chevron-left" size={16} />
               Back
@@ -494,7 +494,7 @@ export default function OnboardingPage() {
             {!isLast && (
               <button
                 onClick={handleNext}
-                className="text-xs text-gray-400 hover:text-gray-600 px-3 py-2 transition"
+                className="text-xs text-text-muted-2 hover:text-foreground px-3 py-2 transition"
               >
                 Skip
               </button>

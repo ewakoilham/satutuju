@@ -233,14 +233,14 @@ export default function UniversitiesPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Partner Universities</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-text-muted text-sm mt-1">
           {total.toLocaleString()} partner institutions worldwide
         </p>
       </div>
 
       {/* Search bar */}
       <div className="relative">
-        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-2" />
         <input
           type="text"
           placeholder="Search by university name or country..."
@@ -250,14 +250,14 @@ export default function UniversitiesPage() {
         />
         {search && (
           <button onClick={() => handleSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-2 hover:text-foreground">
             <Icon name="x" size={14} />
           </button>
         )}
       </div>
 
       {/* Region Tabs — segmented control */}
-      <div className="bg-gray-100 rounded-xl p-1 overflow-hidden">
+      <div className="bg-surface-elevated rounded-xl p-1 overflow-hidden">
         <div className="flex overflow-x-auto gap-0.5" style={{ scrollbarWidth: "none" }}>
           {REGION_TABS.map((tab) => (
             <button
@@ -265,8 +265,8 @@ export default function UniversitiesPage() {
               onClick={() => handleRegion(tab.key)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-lg transition flex-shrink-0 ${
                 region === tab.key
-                  ? "bg-white text-[var(--primary)] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-surface text-[var(--primary)] shadow-sm"
+                  : "text-text-muted hover:text-foreground"
               }`}
             >
               <span>{tab.icon}</span>
@@ -307,13 +307,13 @@ export default function UniversitiesPage() {
 
         {hasFilters && (
           <button onClick={clearFilters}
-            className="btn-ghost text-sm px-3 py-2 text-gray-500 hover:text-red-500 hover:bg-red-50">
+            className="btn-ghost text-sm px-3 py-2 text-text-muted hover:text-red-500 hover:bg-red-50">
             <Icon name="x" size={14} className="inline mr-1" />
             Clear filters
           </button>
         )}
 
-        <span className="ml-auto text-xs text-gray-400">
+        <span className="ml-auto text-xs text-text-muted-2">
           {loading ? "Searching..." : `${universities.length.toLocaleString()} results`}
         </span>
       </div>
@@ -323,8 +323,8 @@ export default function UniversitiesPage() {
         <SkeletonTable rows={8} cols={4} />
       ) : universities.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-20 text-center">
-          <Icon name="search" size={40} className="text-gray-300 mb-3" />
-          <p className="text-gray-500 font-medium">No universities found</p>
+          <Icon name="search" size={40} className="text-text-muted-2 mb-3" />
+          <p className="text-text-muted font-medium">No universities found</p>
           <button onClick={clearFilters} className="mt-4 text-sm text-[var(--primary)] hover:underline">
             Clear all filters
           </button>
@@ -339,7 +339,7 @@ export default function UniversitiesPage() {
               <div key={u.id} className="card-hover overflow-hidden p-0">
                 {/* Row */}
                 <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/50 transition"
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-elevated/50 transition"
                   onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
                 >
                   <span className="flex-shrink-0 w-8 flex items-center justify-center">
@@ -349,7 +349,7 @@ export default function UniversitiesPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{u.name}</p>
-                    <p className="text-xs text-gray-400">{u.country}</p>
+                    <p className="text-xs text-text-muted-2">{u.country}</p>
                   </div>
                   <span className="hidden sm:inline-flex flex-shrink-0">
                     <Badge variant={DEGREE_BADGE_VARIANT[u.degreeLevel] || "neutral"}>
@@ -370,20 +370,20 @@ export default function UniversitiesPage() {
                   <Icon
                     name="chevron-down"
                     size={16}
-                    className={`text-gray-400 flex-shrink-0 transition-transform ${expandedId === u.id ? "rotate-180" : ""}`}
+                    className={`text-text-muted-2 flex-shrink-0 transition-transform ${expandedId === u.id ? "rotate-180" : ""}`}
                   />
                 </div>
 
                 {/* Expanded */}
                 {expandedId === u.id && (
-                  <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-4">
+                  <div className="border-t border-border px-4 py-4 bg-surface-elevated space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">University</p>
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">University</p>
                         <p className="text-sm font-medium">{u.name}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Country</p>
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">Country</p>
                         <p className="text-sm flex items-center gap-1.5">
                           {COUNTRY_CODES[u.country]
                             ? <FlagIcon code={COUNTRY_CODES[u.country]} className="w-5 h-auto rounded-sm" />
@@ -394,7 +394,7 @@ export default function UniversitiesPage() {
 
                       {/* Programs Offered -- admin can edit */}
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">
                           Programs Offered
                           {isAdmin && <span className="ml-1 text-amber-500 normal-case">(editable)</span>}
                         </p>
@@ -435,7 +435,7 @@ export default function UniversitiesPage() {
                       </div>
 
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Admission Website</p>
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">Admission Website</p>
                         {u.website ? (
                           <a
                             href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
@@ -445,14 +445,14 @@ export default function UniversitiesPage() {
                             {u.website}
                           </a>
                         ) : (
-                          <span className="text-sm text-gray-400">&mdash;</span>
+                          <span className="text-sm text-text-muted-2">&mdash;</span>
                         )}
                       </div>
                     </div>
 
                     {/* Admin-only commission */}
                     {isAdmin && (u.commissionFee || u.commissionNote || u.agency) && (
-                      <div className="pt-3 border-t border-gray-200 space-y-3">
+                      <div className="pt-3 border-t border-border space-y-3">
                         <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -462,20 +462,20 @@ export default function UniversitiesPage() {
                         </p>
                         {u.agency && (
                           <div>
-                            <p className="text-xs text-gray-500 mb-0.5">Agency</p>
+                            <p className="text-xs text-text-muted mb-0.5">Agency</p>
                             <p className="text-sm font-medium">{u.agency}</p>
                           </div>
                         )}
                         {u.commissionFee && (
                           <div>
-                            <p className="text-xs text-gray-500 mb-0.5">Commission Fee</p>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{u.commissionFee}</p>
+                            <p className="text-xs text-text-muted mb-0.5">Commission Fee</p>
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{u.commissionFee}</p>
                           </div>
                         )}
                         {u.commissionNote && (
                           <div>
-                            <p className="text-xs text-gray-500 mb-0.5">Commission Note</p>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{u.commissionNote}</p>
+                            <p className="text-xs text-text-muted mb-0.5">Commission Note</p>
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{u.commissionNote}</p>
                           </div>
                         )}
                       </div>
@@ -491,7 +491,7 @@ export default function UniversitiesPage() {
       {/* Pagination — pill-shaped */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-muted">
             Showing {((page - 1) * PAGE_SIZE + 1).toLocaleString()}&ndash;
             {Math.min(page * PAGE_SIZE, universities.length).toLocaleString()} of{" "}
             {universities.length.toLocaleString()}
@@ -500,13 +500,13 @@ export default function UniversitiesPage() {
             <button
               disabled={page === 1}
               onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-gray-100 transition"
+              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-surface-elevated transition"
             >
               <Icon name="chevron-left" size={16} />
             </button>
             {getPageNumbers().map((p, i) =>
               p === "..." ? (
-                <span key={`dots-${i}`} className="px-2 py-1.5 text-sm text-gray-400">...</span>
+                <span key={`dots-${i}`} className="px-2 py-1.5 text-sm text-text-muted-2">...</span>
               ) : (
                 <button
                   key={p}
@@ -514,7 +514,7 @@ export default function UniversitiesPage() {
                   className={`min-w-[2rem] px-2 py-1.5 text-sm rounded-full transition font-medium ${
                     page === p
                       ? "bg-[var(--primary)] text-white shadow-sm"
-                      : "text-gray-600 hover:bg-gray-100"
+                      : "text-text-muted-3 hover:bg-surface-elevated"
                   }`}
                 >
                   {p}
@@ -524,7 +524,7 @@ export default function UniversitiesPage() {
             <button
               disabled={page === totalPages}
               onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-gray-100 transition"
+              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-surface-elevated transition"
             >
               <Icon name="chevron-right" size={16} />
             </button>

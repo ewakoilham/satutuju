@@ -98,27 +98,27 @@ export default function InlineCreateCard({
   return (
     <div
       ref={ref}
-      className="fixed z-[60] bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden"
+      className="fixed z-[60] bg-surface rounded-xl border border-border shadow-xl overflow-hidden"
       style={{ left, top, width: 280 }}
     >
       <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-sm bg-blue-600" />
-          <span className="text-xs font-semibold text-gray-600">New Slot</span>
+          <span className="text-xs font-semibold text-text-muted-3">New Slot</span>
         </div>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition text-gray-400">
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-elevated transition text-text-muted-2">
           <Icon name="x" size={14} />
         </button>
       </div>
 
       <div className="px-4 pb-4 space-y-3">
-        <p className="text-sm font-semibold text-gray-800 leading-tight">{fmtDateLong(date)}</p>
+        <p className="text-sm font-semibold text-foreground leading-tight">{fmtDateLong(date)}</p>
 
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <input type="time" value={st} onChange={e => changeSt(e.target.value)}
               className="input-field text-sm py-1.5 flex-1 min-w-0" />
-            <span className="text-gray-400 text-sm flex-shrink-0">&ndash;</span>
+            <span className="text-text-muted-2 text-sm flex-shrink-0">&ndash;</span>
             <input type="time" value={et} onChange={e => changeEt(e.target.value)}
               className="input-field text-sm py-1.5 flex-1 min-w-0" />
           </div>

@@ -44,7 +44,7 @@ export default function StatCard({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-500 font-medium">{label}</p>
+          <p className="text-sm text-text-muted font-medium">{label}</p>
           <div className="flex items-baseline gap-2 mt-0.5">
             <p className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">
               {value}
@@ -56,7 +56,7 @@ export default function StatCard({
                     ? "text-success"
                     : trend === "down"
                     ? "text-danger"
-                    : "text-gray-400"
+                    : "text-text-muted-2"
                 }`}
               >
                 {change}
@@ -65,7 +65,7 @@ export default function StatCard({
           </div>
         </div>
         {href && (
-          <Icon name="chevron-right" size={16} className="text-gray-300 mt-1 flex-shrink-0" />
+          <Icon name="chevron-right" size={16} className="text-text-muted-2 mt-1 flex-shrink-0" />
         )}
       </div>
       {children && <div className="mt-3">{children}</div>}

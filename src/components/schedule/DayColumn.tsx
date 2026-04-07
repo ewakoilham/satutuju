@@ -40,7 +40,7 @@ export default function DayColumn({
 
   return (
     <div
-      className={`relative border-r border-gray-100 last:border-r-0 ${
+      className={`relative border-r border-border last:border-r-0 ${
         isToday ? "bg-blue-50/20" : ""
       } ${isMentor ? "cursor-pointer" : ""}`}
       style={{ height: TOTAL_H * HOUR_H }}
@@ -48,12 +48,12 @@ export default function DayColumn({
     >
       {/* Hour grid lines */}
       {Array.from({ length: TOTAL_H }, (_, i) => (
-        <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
+        <div key={i} className="absolute left-0 right-0 border-t border-border"
           style={{ top: i * HOUR_H }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: TOTAL_H }, (_, i) => (
-        <div key={`h${i}`} className="absolute left-0 right-0 border-t border-gray-50"
+        <div key={`h${i}`} className="absolute left-0 right-0 border-t border-border/50"
           style={{ top: i * HOUR_H + HOUR_H / 2 }} />
       ))}
 

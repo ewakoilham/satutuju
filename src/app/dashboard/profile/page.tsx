@@ -143,9 +143,9 @@ function FieldDisplay({ label, value }: { label: string; value: string | boolean
       : value;
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500 font-medium">{label}</p>
+      <p className="text-xs text-text-muted font-medium">{label}</p>
       {display ? (
-        <p className="text-sm text-gray-900">{String(display)}</p>
+        <p className="text-sm text-foreground">{String(display)}</p>
       ) : (
         <MissingBadge />
       )}
@@ -168,7 +168,7 @@ function TextInput({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <input
         type={type}
         value={value || ""}
@@ -195,7 +195,7 @@ function SelectInput({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <select
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
@@ -223,16 +223,16 @@ function ToggleInput({
 }) {
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-sm text-gray-700">{label}</span>
+      <span className="text-sm text-foreground">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!value)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          value ? "bg-[var(--primary)]" : "bg-gray-200"
+          value ? "bg-[var(--primary)]" : "bg-surface-elevated"
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
             value ? "translate-x-6" : "translate-x-1"
           }`}
         />
@@ -254,7 +254,7 @@ function TextareaInput({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <textarea
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
@@ -348,7 +348,7 @@ export default function ProfilePage() {
     section: SectionKey
   ) => (
     <div className="flex items-center justify-between mb-4">
-      <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+      <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
         <Icon name={iconName} size={18} className="text-primary-600" /> {title}
       </h2>
       {isEditing(section) ? (
@@ -388,8 +388,8 @@ export default function ProfilePage() {
           onUploaded={updateAvatar}
         />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">My Profile</h1>
+          <p className="text-sm text-text-muted mt-0.5">
             Complete your profile to help your mentor guide you better.
           </p>
         </div>
@@ -423,12 +423,12 @@ export default function ProfilePage() {
               type="tel"
             />
             <div className="space-y-1">
-              <label className="block text-xs text-gray-500 font-medium">Email</label>
+              <label className="block text-xs text-text-muted font-medium">Email</label>
               <input
                 type="email"
                 value={email}
                 disabled
-                className="input-field bg-gray-50 text-gray-500 cursor-not-allowed"
+                className="input-field bg-surface-elevated text-text-muted cursor-not-allowed"
               />
             </div>
           </div>
@@ -551,7 +551,7 @@ export default function ProfilePage() {
               placeholder="e.g. UK, Australia, Canada"
             />
             <div className="sm:col-span-2">
-              <label className="block text-xs text-gray-500 font-medium mb-1">Preferred Earliest Intake</label>
+              <label className="block text-xs text-text-muted font-medium mb-1">Preferred Earliest Intake</label>
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={draft.preferredIntakeMonth || ""}
@@ -729,7 +729,7 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 font-medium mb-2">
+              <label className="block text-xs text-text-muted font-medium mb-2">
                 Mentor Approach Preference (up to 2)
               </label>
               <div className="space-y-2">
@@ -751,8 +751,8 @@ export default function ProfilePage() {
                         selected
                           ? "border-primary bg-primary/10 text-primary font-medium"
                           : maxReached
-                            ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            ? "border-border bg-surface-elevated text-text-muted-2 cursor-not-allowed"
+                            : "border-border bg-surface text-foreground hover:border-gray-300"
                       }`}
                     >
                       {selected && <span className="mr-1.5">✓</span>}{opt}
@@ -760,7 +760,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="text-xs text-text-muted-2 mt-1.5">
                 {(() => { try { return JSON.parse(draft.preferredRoles || "[]").length; } catch { return 0; } })()}/2 selected
               </p>
             </div>
@@ -773,7 +773,7 @@ export default function ProfilePage() {
               <FieldDisplay label="Preferred Communication Style" value={profile.preferredCommStyle} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium mb-1.5">Mentor Approach Preference</p>
+              <p className="text-xs text-text-muted font-medium mb-1.5">Mentor Approach Preference</p>
               {(() => {
                 try {
                   const roles: string[] = JSON.parse(profile.preferredRoles || "[]");

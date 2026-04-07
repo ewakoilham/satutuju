@@ -10,13 +10,13 @@ interface LegendProps {
 
 export default function Legend({ role, mentors, mentorColorMap }: LegendProps) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-500 px-0.5">
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-text-muted px-0.5">
       {role === "mentor" && (
         <>
           <LegendItem color="bg-blue-600" label="Available" />
           <LegendItem color="bg-amber-400" label="Pending request" />
           <LegendItem color="bg-emerald-500" label="Booked" />
-          <span className="text-gray-300 ml-1">&middot; Click any empty area to add a slot</span>
+          <span className="text-text-muted-2 ml-1">&middot; Click any empty area to add a slot</span>
         </>
       )}
       {role === "mentee" && (
@@ -49,7 +49,7 @@ export default function Legend({ role, mentors, mentorColorMap }: LegendProps) {
           {/* Mentor palette */}
           {mentors.length > 0 && (
             <>
-              <span className="text-gray-300">&middot;</span>
+              <span className="text-text-muted-2">&middot;</span>
               {mentors.map(m => {
                 const color = mentorColorMap.get(m.id);
                 if (!color) return null;

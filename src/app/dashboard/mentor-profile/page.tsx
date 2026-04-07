@@ -81,8 +81,8 @@ function MissingBadge() {
 function FieldDisplay({ label, value }: { label: string; value: string | undefined | null }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500 font-medium">{label}</p>
-      {value ? <p className="text-sm text-gray-900">{value}</p> : <MissingBadge />}
+      <p className="text-xs text-text-muted font-medium">{label}</p>
+      {value ? <p className="text-sm text-foreground">{value}</p> : <MissingBadge />}
     </div>
   );
 }
@@ -92,7 +92,7 @@ function TextInput({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <input
         type="text"
         value={value || ""}
@@ -110,7 +110,7 @@ function SelectInput({ label, value, onChange, options, values, placeholder = "S
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
         <option value="">{placeholder}</option>
         {options.map((opt, i) => (
@@ -128,7 +128,7 @@ function SelectOtherInput({ label, value, otherValue, onChange, onOtherChange, o
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">{label}</label>
+      <label className="block text-xs text-text-muted font-medium">{label}</label>
       <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
         <option value="">Select...</option>
         {options.map((opt, i) => (
@@ -161,7 +161,7 @@ function MultiSelectInput({ label, selected, onChange, options, values, maxSelec
   };
   return (
     <div className="space-y-1">
-      <label className="block text-xs text-gray-500 font-medium">
+      <label className="block text-xs text-text-muted font-medium">
         {label}{maxSelect ? ` (up to ${maxSelect})` : ""}
       </label>
       <div className="space-y-2 mt-1">
@@ -176,8 +176,8 @@ function MultiSelectInput({ label, selected, onChange, options, values, maxSelec
                 checked
                   ? "border-[var(--primary)] bg-[var(--primary-light)] cursor-pointer"
                   : disabled
-                  ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-50"
-                  : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                  ? "border-border bg-surface-elevated cursor-not-allowed opacity-50"
+                  : "border-border hover:border-gray-300 cursor-pointer"
               }`}
             >
               <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -185,14 +185,14 @@ function MultiSelectInput({ label, selected, onChange, options, values, maxSelec
               }`}>
                 {checked && <span className="text-white text-[10px] font-bold">✓</span>}
               </span>
-              <span className={`text-sm ${checked ? "text-[var(--primary)] font-medium" : "text-gray-700"}`}>{opt}</span>
+              <span className={`text-sm ${checked ? "text-[var(--primary)] font-medium" : "text-foreground"}`}>{opt}</span>
               <input type="checkbox" className="sr-only" checked={checked} disabled={disabled} onChange={() => toggle(val)} />
             </label>
           );
         })}
       </div>
       {maxSelect && (
-        <p className="text-xs text-gray-400 mt-1">{selected.length}/{maxSelect} selected</p>
+        <p className="text-xs text-text-muted-2 mt-1">{selected.length}/{maxSelect} selected</p>
       )}
     </div>
   );
@@ -330,7 +330,7 @@ export default function MentorProfilePage() {
     return (
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Icon name={icon} size={18} className="text-primary-600" />
             {title}
           </h2>
@@ -373,8 +373,8 @@ export default function MentorProfilePage() {
           onUploaded={updateAvatar}
         />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">My Profile</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Your mentor profile visible to the admin team and mentees.</p>
+          <h1 className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">My Profile</h1>
+          <p className="text-sm text-text-muted mt-0.5">Your mentor profile visible to the admin team and mentees.</p>
         </div>
       </div>
 

@@ -112,7 +112,7 @@ export function slotColorClass(slot: Slot, role: string): string {
     if (bs === "rejected") return "bg-red-400 hover:bg-red-500";
     // No booking by this mentee — check slot availability
     const hasAccepted = slot.bookings?.some(b => b.status === "accepted");
-    if (hasAccepted) return "bg-gray-300 hover:bg-gray-400";
+    if (hasAccepted) return "bg-text-muted-2 hover:bg-text-muted";
     return "bg-blue-600 hover:bg-blue-700";
   }
   // Mentor or fallback
@@ -125,11 +125,11 @@ export function slotColorClass(slot: Slot, role: string): string {
 
 /** Text color: dark on amber, white on everything else */
 export function slotTextClass(slot: Slot, role: string): string {
-  if (role === "mentee" && slot.myBooking?.status === "pending") return "text-gray-900";
+  if (role === "mentee" && slot.myBooking?.status === "pending") return "text-foreground";
   if (role !== "mentee") {
     const hasPending = slot.bookings?.some(b => b.status === "pending");
     const hasAccepted = slot.bookings?.some(b => b.status === "accepted");
-    if (hasPending && !hasAccepted) return "text-gray-900";
+    if (hasPending && !hasAccepted) return "text-foreground";
   }
   return "text-white";
 }

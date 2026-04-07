@@ -194,7 +194,7 @@ export default function PairingDetailPage() {
         <div>
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-sm text-gray-400 hover:text-gray-600 mb-2 inline-flex items-center gap-1"
+            className="text-sm text-text-muted-2 hover:text-foreground mb-2 inline-flex items-center gap-1"
           >
             <Icon name="arrow-left" size={14} />
             Back to Dashboard
@@ -203,11 +203,11 @@ export default function PairingDetailPage() {
             <span className="flex items-center gap-3">
               <Avatar name={pairing.mentee.name} size="md" src={pairing.mentee.avatar || undefined} />
               {pairing.mentee.name}
-              <span className="text-gray-400 font-normal text-lg">
+              <span className="text-text-muted-2 font-normal text-lg">
                 &times;
               </span>
               <Avatar name={pairing.mentor.name} size="md" src={pairing.mentor.avatar || undefined} />
-              <span className="text-gray-400 font-normal text-lg">
+              <span className="text-text-muted-2 font-normal text-lg">
                 {pairing.mentor.name}
               </span>
             </span>
@@ -225,7 +225,7 @@ export default function PairingDetailPage() {
                 aria-label="View Mentee Profile"
               >
                 <Icon name="user" size={16} />
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-surface-elevated rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
                   View Mentee Profile
                 </span>
               </button>
@@ -237,7 +237,7 @@ export default function PairingDetailPage() {
                 aria-label="View Mentor Profile"
               >
                 <Icon name="graduation" size={16} />
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-surface-elevated rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
                   View Mentor Profile
                 </span>
               </button>
@@ -245,11 +245,11 @@ export default function PairingDetailPage() {
             {isAdmin && pairing.status !== "cancelled" && (
               <>
                 {showReplaceMentor ? (
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                     <select
                       value={newMentorId}
                       onChange={(e) => setNewMentorId(e.target.value)}
-                      className="text-sm border border-gray-300 rounded-lg px-2 py-1"
+                      className="text-sm border border-border rounded-lg px-2 py-1"
                     >
                       <option value="">Select new mentor...</option>
                       {allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => (
@@ -265,7 +265,7 @@ export default function PairingDetailPage() {
                     </button>
                     <button
                       onClick={() => { setShowReplaceMentor(false); setNewMentorId(""); }}
-                      className="text-sm text-gray-400 hover:text-gray-600"
+                      className="text-sm text-text-muted-2 hover:text-foreground"
                     >
                       Cancel
                     </button>
@@ -277,7 +277,7 @@ export default function PairingDetailPage() {
                     aria-label="Replace Mentor"
                   >
                     <Icon name="refresh" size={16} />
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-surface-elevated rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
                       Replace Mentor
                     </span>
                   </button>
@@ -289,7 +289,7 @@ export default function PairingDetailPage() {
                   aria-label="Remove Pairing"
                 >
                   <Icon name="trash" size={16} />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-surface-elevated rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
                     Remove Pairing
                   </span>
                 </button>
@@ -301,7 +301,7 @@ export default function PairingDetailPage() {
           )}
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-500">Progress</div>
+          <div className="text-sm text-text-muted">Progress</div>
           <div className="text-2xl font-bold text-primary">
             {completed}/10
           </div>
@@ -312,21 +312,21 @@ export default function PairingDetailPage() {
       <ProgressBar value={(completed / 10) * 100} size="lg" />
 
       {/* Tabs */}
-      <div className="bg-gray-100 p-1 rounded-xl inline-flex">
+      <div className="bg-surface-elevated p-1 rounded-xl inline-flex">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               tab === t.key
-                ? "bg-white text-primary shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-surface text-primary shadow-sm"
+                : "text-text-muted hover:text-foreground"
             }`}
           >
             {t.label}
             {t.count !== undefined && (
               <span className={`ml-1.5 text-xs rounded-full px-2 py-0.5 ${
-                tab === t.key ? "bg-primary/10 text-primary" : "bg-gray-200 text-gray-500"
+                tab === t.key ? "bg-primary/10 text-primary" : "bg-surface-elevated text-text-muted"
               }`}>
                 {t.count}
               </span>
@@ -370,14 +370,14 @@ export default function PairingDetailPage() {
           onClick={() => setPreviewDoc(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-surface rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
                 <h3 className="font-semibold text-sm">{previewDoc.name}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-text-muted-2 mt-0.5">
                   {previewDoc.fileName} &middot; {(previewDoc.fileSize / 1024).toFixed(0)} KB &middot; v{previewDoc.version}
                 </p>
               </div>
@@ -391,23 +391,23 @@ export default function PairingDetailPage() {
                 </a>
                 <button
                   onClick={() => setPreviewDoc(null)}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition"
+                  className="text-text-muted-2 hover:text-foreground p-2 rounded-lg hover:bg-surface-elevated transition"
                 >
                   <Icon name="x" size={18} />
                 </button>
               </div>
             </div>
             {/* Modal body */}
-            <div className="flex-1 overflow-auto p-6 bg-gray-50 min-h-[400px]">
+            <div className="flex-1 overflow-auto p-6 bg-surface-elevated min-h-[400px]">
               {isOfficeFile(previewDoc.fileName) ? (
                 <iframe
                   src={`https://docs.google.com/gview?url=${encodeURIComponent(window.location.origin + getDocUrl(previewDoc))}&embedded=true`}
-                  className="w-full h-full min-h-[500px] rounded-lg border border-gray-200 bg-white"
+                  className="w-full h-full min-h-[500px] rounded-lg border border-border bg-surface"
                 />
               ) : getFileExt(previewDoc.fileName) === "pdf" ? (
                 <iframe
                   src={getDocUrl(previewDoc)}
-                  className="w-full h-full min-h-[500px] rounded-lg border border-gray-200"
+                  className="w-full h-full min-h-[500px] rounded-lg border border-border"
                 />
               ) : isImageFile(previewDoc.fileName) ? (
                 <div className="flex items-center justify-center">
@@ -419,8 +419,8 @@ export default function PairingDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-gray-400">
-                  <Icon name="document" size={48} className="mb-4 text-gray-300" />
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-text-muted-2">
+                  <Icon name="document" size={48} className="mb-4 text-text-muted-2" />
                   <p className="text-sm font-medium mb-1">Preview not available for this file type</p>
                   <p className="text-xs">Click Download to view the file</p>
                 </div>
@@ -428,9 +428,9 @@ export default function PairingDetailPage() {
             </div>
             {/* Feedback if any */}
             {previewDoc.feedback && (
-              <div className="px-6 py-3 border-t border-gray-200 bg-amber-50">
-                <p className="text-xs font-medium text-gray-500 mb-1">Mentor Feedback</p>
-                <p className="text-sm text-gray-700">{previewDoc.feedback}</p>
+              <div className="px-6 py-3 border-t border-border bg-amber-50">
+                <p className="text-xs font-medium text-text-muted mb-1">Mentor Feedback</p>
+                <p className="text-sm text-foreground">{previewDoc.feedback}</p>
               </div>
             )}
           </div>
@@ -484,7 +484,7 @@ function SessionsTab({
   const STATUS_BORDER: Record<string, string> = {
     completed: "border-l-green-500",
     scheduled: "border-l-blue-500",
-    upcoming: "border-l-gray-300",
+    upcoming: "border-l-border",
   };
 
   return (
@@ -503,7 +503,7 @@ function SessionsTab({
           <div
             key={session.id}
             className={`card card-hover border-l-4 ${
-              STATUS_BORDER[session.status] || PHASE_STYLES[session.phase] || "border-l-gray-300"
+              STATUS_BORDER[session.status] || PHASE_STYLES[session.phase] || "border-l-border"
             } overflow-hidden !p-0`}
           >
             <div
@@ -516,8 +516,8 @@ function SessionsTab({
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                     session.status === "completed"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
+                      ? "bg-green-100 text-success"
+                      : "bg-surface-elevated text-text-muted"
                   }`}
                 >
                   {session.status === "completed" ? (
@@ -528,7 +528,7 @@ function SessionsTab({
                 </div>
                 <div>
                   <p className="font-medium text-sm">{session.topic}</p>
-                  <p className="text-xs text-gray-400 capitalize flex items-center gap-1">
+                  <p className="text-xs text-text-muted-2 capitalize flex items-center gap-1">
                     {session.phase} &middot; {template?.duration || 75} min
                     {session.scheduledAt && (
                       <>
@@ -570,7 +570,7 @@ function SessionsTab({
                 <Icon
                   name={isExpanded ? "chevron-down" : "chevron-right"}
                   size={16}
-                  className="text-gray-400"
+                  className="text-text-muted-2"
                 />
               </div>
             </div>
@@ -598,7 +598,7 @@ const PHASE_CURRICULUM_COLORS: Record<string, { bg: string; border: string; text
   planning: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", icon: "text-amber-500", badge: "warning" },
   writing: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", icon: "text-purple-500", badge: "primary" },
   execution: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", icon: "text-orange-500", badge: "danger" },
-  closing: { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", icon: "text-green-500", badge: "success" },
+  closing: { bg: "bg-green-50", border: "border-green-200", text: "text-success", icon: "text-green-500", badge: "success" },
 };
 
 // Maps curriculum doc checklist keywords to document categories
@@ -716,21 +716,21 @@ function SessionDetail({
   const [showCurriculum, setShowCurriculum] = useState(false);
 
   return (
-    <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
+    <div className="px-6 pb-6 border-t border-border pt-4 space-y-4">
       {/* SESSION RESULTS -- always shown first */}
       {hasResults && !editing ? (
         <div className="space-y-4">
           {/* Info cards */}
           <div className={`grid gap-3 ${isMentor ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
-            <div className="card bg-gray-50 !p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Status</p>
+            <div className="card bg-surface-elevated !p-3 text-center">
+              <p className="text-xs text-text-muted-2 mb-1">Status</p>
               <p className={`text-sm font-semibold capitalize ${
-                session.status === "completed" ? "text-green-600" : "text-gray-600"
+                session.status === "completed" ? "text-green-600" : "text-text-muted-3"
               }`}>{session.status}</p>
             </div>
             {isMentor && (
-              <div className="card bg-gray-50 !p-3 text-center">
-                <p className="text-xs text-gray-400 mb-1">Mentor Rating</p>
+              <div className="card bg-surface-elevated !p-3 text-center">
+                <p className="text-xs text-text-muted-2 mb-1">Mentor Rating</p>
                 <p className="text-sm font-semibold">
                   {session.mentorRating ? (
                     <span className="flex items-center justify-center gap-1">
@@ -747,12 +747,12 @@ function SessionDetail({
                   ? "bg-red-50"
                   : session.menteeEnergy && session.menteeEnergy <= 3
                   ? "bg-amber-50"
-                  : "bg-gray-50"
+                  : "bg-surface-elevated"
               }`}>
-                <p className="text-xs text-gray-400 mb-1">Mentee Energy</p>
+                <p className="text-xs text-text-muted-2 mb-1">Mentee Energy</p>
                 <p className={`text-sm font-semibold ${
                   session.menteeEnergy && session.menteeEnergy <= 2
-                    ? "text-red-600"
+                    ? "text-danger"
                     : session.menteeEnergy && session.menteeEnergy <= 3
                     ? "text-amber-600"
                     : ""
@@ -761,10 +761,10 @@ function SessionDetail({
                 </p>
               </div>
             )}
-            <div className="card bg-gray-50 !p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Completed</p>
+            <div className="card bg-surface-elevated !p-3 text-center">
+              <p className="text-xs text-text-muted-2 mb-1">Completed</p>
               <p className="text-sm font-semibold flex items-center justify-center gap-1">
-                <Icon name="calendar" size={14} className="text-gray-400" />
+                <Icon name="calendar" size={14} className="text-text-muted-2" />
                 {session.completedAt
                   ? new Date(session.completedAt).toLocaleDateString()
                   : "---"}
@@ -775,10 +775,10 @@ function SessionDetail({
           {/* Topic of Discussion */}
           {session.keyOutput && (
             <div className="bg-green-50 border border-green-100 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-green-700 uppercase mb-1">
+              <h4 className="text-xs font-semibold text-success uppercase mb-1">
                 Topic of Discussion
               </h4>
-              <p className="text-sm text-gray-700">{session.keyOutput}</p>
+              <p className="text-sm text-foreground">{session.keyOutput}</p>
             </div>
           )}
 
@@ -788,7 +788,7 @@ function SessionDetail({
               <h4 className="text-xs font-semibold text-amber-700 uppercase mb-1">
                 Session Summary
               </h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {session.summaryNotes}
               </p>
             </div>
@@ -800,7 +800,7 @@ function SessionDetail({
               <h4 className="text-xs font-semibold text-red-700 uppercase mb-1">
                 Obstacles / Concerns
               </h4>
-              <p className="text-sm text-gray-700">{session.obstacles}</p>
+              <p className="text-sm text-foreground">{session.obstacles}</p>
             </div>
           )}
 
@@ -810,10 +810,10 @@ function SessionDetail({
               <h4 className="text-xs font-semibold text-purple-700 uppercase mb-1">
                 Mentee Feedback
               </h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{session.menteeFeedback}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{session.menteeFeedback}</p>
               {session.mentorRating && (
                 <div className="mt-2 flex items-center gap-1">
-                  <span className="text-xs text-gray-400">Rating:</span>
+                  <span className="text-xs text-text-muted-2">Rating:</span>
                   <span className="text-sm flex gap-0.5">
                     {Array.from({ length: session.mentorRating }, (_, i) => (
                       <Icon key={i} name="star" size={14} className="text-brand-yellow" />
@@ -826,8 +826,8 @@ function SessionDetail({
           )}
         </div>
       ) : !editing ? (
-        <div className="card bg-gray-50 text-center">
-          <p className="text-sm text-gray-400">
+        <div className="card bg-surface-elevated text-center">
+          <p className="text-sm text-text-muted-2">
             No session results yet. {isMentor ? "Click \"Edit session details\" to log results after the session." : "Your mentor will log results after the session."}
           </p>
         </div>
@@ -869,7 +869,7 @@ function SessionDetail({
       {isMentor && (() => {
         const phaseColors = PHASE_CURRICULUM_COLORS[template.phase] || PHASE_CURRICULUM_COLORS.discovery;
         return (
-          <div className="border-t border-gray-100 pt-3">
+          <div className="border-t border-border pt-3">
             <button
               onClick={() => setShowCurriculum(!showCurriculum)}
               className={`text-sm font-medium flex items-center gap-2 ${phaseColors.text} hover:opacity-80 transition`}
@@ -889,14 +889,14 @@ function SessionDetail({
                       <Icon name="lightbulb" size={13} className={phaseColors.icon} />
                       Objective
                     </h4>
-                    <p className="text-sm text-gray-700">{template.objective}</p>
+                    <p className="text-sm text-foreground">{template.objective}</p>
                   </div>
                   <div>
                     <h4 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${phaseColors.text}`}>
                       <Icon name="clipboard-check" size={13} className={phaseColors.icon} />
                       Deliverables
                     </h4>
-                    <ul className="text-sm text-gray-700 space-y-1">
+                    <ul className="text-sm text-foreground space-y-1">
                       {template.deliverables.map((d, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
@@ -910,7 +910,7 @@ function SessionDetail({
                       <Icon name="user" size={13} className={phaseColors.icon} />
                       Mentee Preparation
                     </h4>
-                    <ul className="text-sm text-gray-700 space-y-1">
+                    <ul className="text-sm text-foreground space-y-1">
                       {template.menteePrep.map((p, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
@@ -924,7 +924,7 @@ function SessionDetail({
                       <Icon name="document" size={13} className={phaseColors.icon} />
                       Document Checklist
                     </h4>
-                    <ul className="text-sm text-gray-700 space-y-1">
+                    <ul className="text-sm text-foreground space-y-1">
                       {template.docChecklist.map((d, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <Icon name="check" size={12} className={`${phaseColors.icon} mt-0.5 flex-shrink-0`} />
@@ -941,10 +941,10 @@ function SessionDetail({
       })()}
 
       {editing && (
-        <div className="space-y-4 card bg-gray-50">
+        <div className="space-y-4 card bg-surface-elevated">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Status
               </label>
               <select
@@ -961,7 +961,7 @@ function SessionDetail({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Scheduled
               </label>
               <input
@@ -974,7 +974,7 @@ function SessionDetail({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Mentee Energy (1-5)
               </label>
               <input
@@ -993,7 +993,7 @@ function SessionDetail({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               Topic of Discussion
             </label>
             <input
@@ -1007,7 +1007,7 @@ function SessionDetail({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               Obstacles / Notes
             </label>
             <input
@@ -1021,7 +1021,7 @@ function SessionDetail({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               Session Summary (sent to mentee)
             </label>
             <textarea
@@ -1044,7 +1044,7 @@ function SessionDetail({
             </button>
             <button
               onClick={() => setEditing(false)}
-              className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+              className="px-4 py-2 rounded-lg text-sm text-text-muted-3 hover:bg-surface-elevated"
             >
               Cancel
             </button>
@@ -1111,7 +1111,7 @@ function DeliverablesList({
 
   return (
     <div className="card">
-      <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">
+      <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">
         Session Deliverables
       </h4>
       <div className="space-y-2">
@@ -1119,24 +1119,24 @@ function DeliverablesList({
           const matched = findMatchingDocs(item, documents);
           const isUploading = uploadingItem === item;
           return (
-            <div key={i} className="flex items-start justify-between gap-3 py-1.5 border-b border-gray-50 last:border-0">
+            <div key={i} className="flex items-start justify-between gap-3 py-1.5 border-b border-border/50 last:border-0">
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
                   matched.some((d) => d.status === "approved")
                     ? "bg-green-100 text-green-600"
                     : matched.length > 0
                     ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-gray-400"
+                    : "bg-surface-elevated text-text-muted-2"
                 }`}>
                   {matched.some((d) => d.status === "approved") ? (
                     <Icon name="check" size={12} />
                   ) : matched.length > 0 ? (
                     <span className="w-2 h-2 rounded-full bg-blue-500" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-gray-300" />
+                    <span className="w-2 h-2 rounded-full bg-text-muted-2" />
                   )}
                 </span>
-                <span className="text-sm text-gray-700">{item}</span>
+                <span className="text-sm text-foreground">{item}</span>
               </div>
               <div className="flex-shrink-0 flex items-center gap-2">
                 {matched.length > 0 ? (
@@ -1163,10 +1163,10 @@ function DeliverablesList({
                               {doc.status === "approved" ? "Verified" : doc.status === "needs_revision" ? "Needs Changes" : doc.status === "under_review" ? "Under Review" : "Uploaded"}
                               <span className="opacity-60 ml-1">v{doc.version}</span>
                             </Badge>
-                            <Icon name="eye" size={14} className="text-gray-400" />
+                            <Icon name="eye" size={14} className="text-text-muted-2" />
                           </button>
                           {/* Replace icon */}
-                          <label className="p-1 rounded hover:bg-gray-100 transition cursor-pointer" title="Replace document">
+                          <label className="p-1 rounded hover:bg-surface-elevated transition cursor-pointer" title="Replace document">
                             <Icon name="upload" size={14} className="text-amber-500" />
                             <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReplace(f, doc); e.target.value = ""; }} />
                           </label>
@@ -1287,25 +1287,25 @@ function MenteeFeedback({
           </h4>
         </div>
 
-        <div className="bg-white rounded-lg border border-green-100 p-4 space-y-2">
+        <div className="bg-surface rounded-lg border border-green-100 p-4 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Your rating:</span>
+            <span className="text-xs text-text-muted">Your rating:</span>
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (
                 <Icon
                   key={s}
                   name="star"
                   size={14}
-                  className={s <= (rating || currentRating) ? "text-brand-yellow" : "text-gray-200"}
+                  className={s <= (rating || currentRating) ? "text-brand-yellow" : "text-text-muted-2"}
                 />
               ))}
             </div>
-            <span className="text-xs font-medium text-gray-600">{rating || currentRating}/5</span>
+            <span className="text-xs font-medium text-text-muted-3">{rating || currentRating}/5</span>
           </div>
           {(feedback || currentFeedback) && (
             <div>
-              <span className="text-xs text-gray-500">Your feedback:</span>
-              <p className="text-sm text-gray-700 mt-0.5">&ldquo;{feedback || currentFeedback}&rdquo;</p>
+              <span className="text-xs text-text-muted">Your feedback:</span>
+              <p className="text-sm text-foreground mt-0.5">&ldquo;{feedback || currentFeedback}&rdquo;</p>
             </div>
           )}
         </div>
@@ -1329,7 +1329,7 @@ function MenteeFeedback({
 
       {/* Star rating */}
       <div>
-        <p className="text-xs text-gray-500 mb-1.5">Rate your mentor</p>
+        <p className="text-xs text-text-muted mb-1.5">Rate your mentor</p>
         <div className="flex items-center gap-3">
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -1344,7 +1344,7 @@ function MenteeFeedback({
                 <Icon
                   name="star"
                   size={24}
-                  className={star <= (hoveredStar || rating) ? "text-brand-yellow" : "text-gray-200"}
+                  className={star <= (hoveredStar || rating) ? "text-brand-yellow" : "text-text-muted-2"}
                 />
               </button>
             ))}
@@ -1357,12 +1357,12 @@ function MenteeFeedback({
 
       {/* Comment */}
       <div>
-        <p className="text-xs text-gray-500 mb-1.5">Share your impression</p>
+        <p className="text-xs text-text-muted mb-1.5">Share your impression</p>
         <textarea
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 border border-purple-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-purple-300 focus:border-transparent outline-none"
+          className="w-full px-3 py-2 border border-purple-200 rounded-lg text-sm bg-surface focus:ring-2 focus:ring-purple-300 focus:border-transparent outline-none"
           placeholder="How was the session? Any thoughts for your mentor?"
         />
         <div className="flex items-center gap-2 mt-2">
@@ -1376,7 +1376,7 @@ function MenteeFeedback({
           {isEditing && (
             <button
               onClick={() => { setIsEditing(false); setFeedback(currentFeedback); setRating(currentRating); }}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="text-xs text-text-muted hover:text-foreground"
             >
               Cancel
             </button>
@@ -1514,7 +1514,7 @@ function DocumentsTab({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Document Name
               </label>
               <input
@@ -1529,7 +1529,7 @@ function DocumentsTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Category
               </label>
               <select
@@ -1548,7 +1548,7 @@ function DocumentsTab({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-text-muted mb-1">
               File
             </label>
             <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:border-primary/50 transition">
@@ -1582,7 +1582,7 @@ function DocumentsTab({
             <button
               type="button"
               onClick={() => setShowUpload(false)}
-              className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+              className="px-4 py-2 rounded-lg text-sm text-text-muted-3 hover:bg-surface-elevated"
             >
               Cancel
             </button>
@@ -1591,10 +1591,10 @@ function DocumentsTab({
       )}
 
       {docsLoading ? (
-        <div className="card py-10 animate-pulse bg-gray-50" />
+        <div className="card py-10 animate-pulse bg-surface-elevated" />
       ) : docs.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400 text-sm">
-          <Icon name="document" size={36} className="mx-auto mb-3 text-gray-300" />
+        <div className="card text-center py-12 text-text-muted-2 text-sm">
+          <Icon name="document" size={36} className="mx-auto mb-3 text-text-muted-2" />
           No documents uploaded yet
         </div>
       ) : (
@@ -1607,11 +1607,11 @@ function DocumentsTab({
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Icon name="document" size={16} className="text-gray-400" />
+                    <Icon name="document" size={16} className="text-text-muted-2" />
                     <h4 className="font-medium text-sm">{doc.name}</h4>
-                    <span className="text-xs text-gray-400">v{doc.version}</span>
+                    <span className="text-xs text-text-muted-2">v{doc.version}</span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5 ml-6">
+                  <p className="text-xs text-text-muted-2 mt-0.5 ml-6">
                     {DOCUMENT_CATEGORIES.find((c) => c.value === doc.category)?.label} &middot;{" "}
                     {(doc.fileSize / 1024).toFixed(0)} KB &middot;{" "}
                     {new Date(doc.createdAt).toLocaleDateString()}
@@ -1675,10 +1675,10 @@ function DocumentsTab({
 
               {doc.feedback && reviewingDoc !== doc.id && (
                 <div className="mt-3 p-3 bg-[var(--accent)] rounded-lg">
-                  <p className="text-xs font-medium text-gray-500 mb-1">
+                  <p className="text-xs font-medium text-text-muted mb-1">
                     Mentor Feedback
                   </p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {doc.feedback}
                   </p>
                 </div>
@@ -1687,7 +1687,7 @@ function DocumentsTab({
               {replacingDocId === doc.id && replacingFile && (
                 <div className="mt-3 p-4 bg-amber-50 border border-amber-100 rounded-lg space-y-3">
                   <p className="text-xs font-semibold text-amber-700 uppercase">Replace Document</p>
-                  <p className="text-xs text-gray-600">New file: <span className="font-medium">{replacingFile.name}</span></p>
+                  <p className="text-xs text-text-muted-3">New file: <span className="font-medium">{replacingFile.name}</span></p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReplace(doc)}
@@ -1698,7 +1698,7 @@ function DocumentsTab({
                     </button>
                     <button
                       onClick={() => { setReplacingDocId(null); setReplacingFile(null); }}
-                      className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5"
+                      className="text-xs text-text-muted hover:text-foreground px-3 py-1.5"
                     >
                       Cancel
                     </button>
@@ -1707,9 +1707,9 @@ function DocumentsTab({
               )}
 
               {reviewingDoc === doc.id && (
-                <div className="mt-3 space-y-3 p-4 bg-gray-50 rounded-lg">
+                <div className="mt-3 space-y-3 p-4 bg-surface-elevated rounded-lg">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-text-muted mb-1">
                       Status
                     </label>
                     <select
@@ -1723,7 +1723,7 @@ function DocumentsTab({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-text-muted mb-1">
                       Feedback
                     </label>
                     <textarea
@@ -1743,7 +1743,7 @@ function DocumentsTab({
                     </button>
                     <button
                       onClick={() => setReviewingDoc(null)}
-                      className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+                      className="px-4 py-2 rounded-lg text-sm text-text-muted-3 hover:bg-surface-elevated"
                     >
                       Cancel
                     </button>
@@ -1846,7 +1846,7 @@ function TasksTab({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Task Title
               </label>
               <input
@@ -1861,7 +1861,7 @@ function TasksTab({
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Description (optional)
               </label>
               <textarea
@@ -1875,7 +1875,7 @@ function TasksTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Related Session (optional)
               </label>
               <select
@@ -1894,7 +1894,7 @@ function TasksTab({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-text-muted mb-1">
                 Due Date (optional)
               </label>
               <input
@@ -1917,7 +1917,7 @@ function TasksTab({
             <button
               type="button"
               onClick={() => setShowCreate(false)}
-              className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+              className="px-4 py-2 rounded-lg text-sm text-text-muted-3 hover:bg-surface-elevated"
             >
               Cancel
             </button>
@@ -1928,7 +1928,7 @@ function TasksTab({
       {/* Pending tasks */}
       {pending.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
+          <p className="text-xs font-semibold text-text-muted-2 uppercase mb-2">
             Pending ({pending.length})
           </p>
           <div className="space-y-2">
@@ -1938,22 +1938,22 @@ function TasksTab({
                 className="card card-hover flex items-center justify-between"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-gray-300 flex-shrink-0 mt-0.5" />
+                  <div className="w-5 h-5 rounded border-2 border-border flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">{task.title}</p>
                     {task.description && (
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-text-muted mt-0.5">
                         {task.description}
                       </p>
                     )}
                     <div className="flex items-center gap-3 mt-1">
                       {task.sessionNum && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-text-muted-2">
                           Session {task.sessionNum}
                         </span>
                       )}
                       {task.dueDate && (
-                        <span className="text-xs text-gray-400 inline-flex items-center gap-1">
+                        <span className="text-xs text-text-muted-2 inline-flex items-center gap-1">
                           <Icon name="calendar" size={12} />
                           Due: {new Date(task.dueDate).toLocaleDateString()}
                         </span>
@@ -1966,7 +1966,7 @@ function TasksTab({
                 </div>
                 <button
                   onClick={() => updateTaskStatus(task.id, "completed")}
-                  className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium hover:bg-green-200 transition inline-flex items-center gap-1"
+                  className="text-xs bg-green-100 text-success px-3 py-1.5 rounded-full font-medium hover:bg-green-200 transition inline-flex items-center gap-1"
                 >
                   <Icon name="check" size={12} />
                   Mark Complete
@@ -1980,7 +1980,7 @@ function TasksTab({
       {/* Completed tasks */}
       {completed.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
+          <p className="text-xs font-semibold text-text-muted-2 uppercase mb-2">
             Completed ({completed.length})
           </p>
           <div className="space-y-2">
@@ -2003,8 +2003,8 @@ function TasksTab({
       )}
 
       {tasks.length === 0 && (
-        <div className="card text-center py-12 text-gray-400 text-sm">
-          <Icon name="clipboard-check" size={36} className="mx-auto mb-3 text-gray-300" />
+        <div className="card text-center py-12 text-text-muted-2 text-sm">
+          <Icon name="clipboard-check" size={36} className="mx-auto mb-3 text-text-muted-2" />
           No tasks yet.{" "}
           {isMentor
             ? "Assign a task to your mentee."

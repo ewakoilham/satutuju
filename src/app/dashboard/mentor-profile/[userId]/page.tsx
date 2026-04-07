@@ -51,15 +51,15 @@ function MissingBadge() {
 function FieldDisplay({ label: lbl, value }: { label: string; value: string | undefined | null }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500 font-medium">{lbl}</p>
-      {value && value !== "—" ? <p className="text-sm text-gray-900">{value}</p> : <MissingBadge />}
+      <p className="text-xs text-text-muted font-medium">{lbl}</p>
+      {value && value !== "—" ? <p className="text-sm text-foreground">{value}</p> : <MissingBadge />}
     </div>
   );
 }
 function SectionCard({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
     <div className="card">
-      <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+      <h2 className="text-base font-semibold text-foreground flex items-center gap-2 mb-4">
         <Icon name={icon} size={18} className="text-primary-600" />
         {title}
       </h2>
@@ -110,7 +110,7 @@ export default function MentorProfileAdminView() {
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="text-sm text-gray-400 hover:text-gray-600 inline-flex items-center gap-1"
+        className="text-sm text-text-muted-2 hover:text-foreground inline-flex items-center gap-1"
       >
         <Icon name="arrow-left" size={14} />
         Back
@@ -120,10 +120,10 @@ export default function MentorProfileAdminView() {
       <div className="flex items-center gap-4">
         <Avatar name={mentorUser?.name || "Mentor"} size="lg" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-heading)]">
+          <h1 className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">
             {mentorUser?.name || "Mentor Profile"}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{mentorUser?.email}</p>
+          <p className="text-sm text-text-muted mt-0.5">{mentorUser?.email}</p>
         </div>
         {!profile && (
           <Badge variant="warning">Profile not filled</Badge>
@@ -131,8 +131,8 @@ export default function MentorProfileAdminView() {
       </div>
 
       {!profile ? (
-        <div className="card text-center py-12 text-gray-400">
-          <Icon name="user" size={32} className="mx-auto mb-3 text-gray-300" />
+        <div className="card text-center py-12 text-text-muted-2">
+          <Icon name="user" size={32} className="mx-auto mb-3 text-text-muted-2" />
           <p className="text-sm font-medium">This mentor has not filled in their profile yet.</p>
         </div>
       ) : (

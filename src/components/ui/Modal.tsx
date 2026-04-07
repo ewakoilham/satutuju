@@ -67,7 +67,7 @@ export default function Modal({
       {/* Modal content */}
       <div
         ref={contentRef}
-        className={`relative w-full ${SIZE_CLASSES[size]} bg-white rounded-2xl shadow-xl animate-scale-in overflow-hidden`}
+        className={`relative w-full ${SIZE_CLASSES[size]} bg-surface rounded-2xl shadow-xl animate-scale-in overflow-hidden`}
       >
         {/* Header */}
         {(title || description) && (
@@ -84,12 +84,12 @@ export default function Modal({
                   </h3>
                 )}
                 {description && (
-                  <p className="text-sm text-gray-500 mt-1">{description}</p>
+                  <p className="text-sm text-text-muted mt-1">{description}</p>
                 )}
               </div>
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="p-1 rounded-lg text-text-muted-2 hover:text-foreground hover:bg-surface-elevated transition"
               >
                 <Icon name="x" size={18} />
               </button>
@@ -102,7 +102,7 @@ export default function Modal({
 
         {/* Actions */}
         {actions && (
-          <div className="px-6 py-4 bg-gray-50/50 flex items-center justify-end gap-3">
+          <div className="px-6 py-4 bg-surface-elevated/50 flex items-center justify-end gap-3">
             {actions}
           </div>
         )}

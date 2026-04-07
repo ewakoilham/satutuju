@@ -49,7 +49,7 @@ export default function SlotPopover({
   const headerBgStyle = mentorColor ? { backgroundColor: mentorColor } : {};
 
   const isAmber = headerBgClass.includes("amber");
-  const headerTextColor = isAmber ? "text-gray-900" : "text-white";
+  const headerTextColor = isAmber ? "text-foreground" : "text-white";
 
   const headerTime = (() => {
     if (role === "mentee" && myBooking?.requestedStart && myBooking?.requestedEnd) {
@@ -78,7 +78,7 @@ export default function SlotPopover({
   return (
     <div
       ref={ref}
-      className="fixed z-[60] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+      className="fixed z-[60] bg-surface rounded-xl shadow-xl border border-border overflow-hidden"
       style={{ left, top, width: 272 }}
     >
       {/* Colored header */}
@@ -131,17 +131,17 @@ export default function SlotPopover({
                 {/* Cancel session — show reason form inline */}
                 {rejectingId === acceptedBooking.id ? (
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-700">Reason for cancellation <span className="text-red-500">*</span></p>
+                    <p className="text-xs font-medium text-foreground">Reason for cancellation <span className="text-red-500">*</span></p>
                     <textarea
                       value={rejectReason}
                       onChange={e => setRejectReason(e.target.value)}
                       placeholder="e.g. Schedule conflict, need to reschedule…"
                       rows={3}
-                      className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
                     />
                     <div className="flex gap-1.5">
                       <button onClick={cancelRejecting}
-                        className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                        className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-border text-text-muted hover:bg-surface-elevated transition">
                         Back
                       </button>
                       <button
@@ -160,7 +160,7 @@ export default function SlotPopover({
                     >
                       <Icon name="x" size={13} /> Cancel session
                     </button>
-                    <p className="text-[10px] text-gray-400 text-center leading-snug px-1">
+                    <p className="text-[10px] text-text-muted-2 text-center leading-snug px-1">
                       Cancelling will notify the mentee and make this slot available again.
                     </p>
                   </>
@@ -175,12 +175,12 @@ export default function SlotPopover({
               <>
                 <div className="flex gap-1.5">
                   <button disabled
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-gray-300 border border-gray-100 cursor-not-allowed"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-text-muted-2 border border-border cursor-not-allowed"
                     title="Reject all requests before editing">
                     <Icon name="edit" size={13} /> Edit
                   </button>
                   <button disabled
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-gray-300 border border-gray-100 cursor-not-allowed"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-lg text-text-muted-2 border border-border cursor-not-allowed"
                     title="Reject all requests before deleting">
                     <Icon name="trash" size={13} /> Delete
                   </button>
@@ -198,7 +198,7 @@ export default function SlotPopover({
             <>
               <div className="flex items-center gap-2 py-0.5 px-0.5">
                 <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                <p className="text-xs text-gray-600">Available time slot for mentoring</p>
+                <p className="text-xs text-text-muted-3">Available time slot for mentoring</p>
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => onEdit?.()}
@@ -216,13 +216,13 @@ export default function SlotPopover({
 
         {/* Mentor: pending requests list */}
         {role === "mentor" && pending.length > 0 && (
-          <div className="border-t border-gray-100 pt-2.5">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+          <div className="border-t border-border pt-2.5">
+            <p className="text-[10px] font-semibold text-text-muted-2 uppercase tracking-wider mb-2">
               Requests ({pending.length})
             </p>
             <div className="space-y-2">
               {pending.map(b => (
-                <div key={b.id} className="bg-gray-50 rounded-lg p-2 space-y-2">
+                <div key={b.id} className="bg-surface-elevated rounded-lg p-2 space-y-2">
                   <div className="flex items-center gap-2">
                     <Avatar name={b.mentee?.name || "?"} size="sm" />
                     <div className="min-w-0">
@@ -233,12 +233,12 @@ export default function SlotPopover({
                         </p>
                       )}
                       {b.session && (
-                        <p className="text-[11px] text-gray-600 font-medium truncate">
+                        <p className="text-[11px] text-text-muted-3 font-medium truncate">
                           Session {b.session.sessionNum}: {b.session.topic}
                         </p>
                       )}
                       {b.message && (
-                        <p className="text-[11px] text-gray-400 italic truncate">
+                        <p className="text-[11px] text-text-muted-2 italic truncate">
                           &ldquo;{b.message}&rdquo;
                         </p>
                       )}
@@ -248,18 +248,18 @@ export default function SlotPopover({
                   {/* Rejection reason form for this booking */}
                   {rejectingId === b.id ? (
                     <div className="space-y-1.5">
-                      <p className="text-xs font-medium text-gray-700">Reason for rejection <span className="text-red-500">*</span></p>
+                      <p className="text-xs font-medium text-foreground">Reason for rejection <span className="text-red-500">*</span></p>
                       <textarea
                         value={rejectReason}
                         onChange={e => setRejectReason(e.target.value)}
                         placeholder="e.g. Already have another session booked…"
                         rows={3}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
+                        className="w-full text-xs border border-border rounded-lg px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary/40"
                         autoFocus
                       />
                       <div className="flex gap-1.5">
                         <button onClick={cancelRejecting}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-border text-text-muted hover:bg-surface-elevated transition">
                           Back
                         </button>
                         <button
@@ -275,7 +275,7 @@ export default function SlotPopover({
                       <button onClick={() => onAccept?.(b.id)}
                         className="btn-primary text-xs px-2 py-1 flex-1">Accept</button>
                       <button onClick={() => startRejecting(b.id)}
-                        className="text-xs px-2 py-1 flex-1 rounded border border-gray-200 hover:bg-gray-100 transition text-gray-500">
+                        className="text-xs px-2 py-1 flex-1 rounded border border-border hover:bg-surface-elevated transition text-text-muted">
                         Reject
                       </button>
                     </div>
@@ -354,7 +354,7 @@ export default function SlotPopover({
               </div>
             )}
             {!myBooking && slot.bookings?.some(b => b.status === "accepted") && (
-              <p className="text-xs text-gray-400 py-0.5">This slot is already booked.</p>
+              <p className="text-xs text-text-muted-2 py-0.5">This slot is already booked.</p>
             )}
           </>
         )}
@@ -367,7 +367,7 @@ export default function SlotPopover({
                 <Avatar name={slot.mentor.name} size="sm" />
                 <div>
                   <p className="text-xs font-medium">{slot.mentor.name}</p>
-                  <p className="text-xs text-gray-400">{slot.mentor.email}</p>
+                  <p className="text-xs text-text-muted-2">{slot.mentor.email}</p>
                 </div>
               </div>
             )}
@@ -407,7 +407,7 @@ export default function SlotPopover({
               if (pendingList.length === 0) return null;
               return (
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                  <p className="text-[10px] font-semibold text-text-muted-2 uppercase tracking-wider">
                     Pending ({pendingList.length})
                   </p>
                   {pendingList.map(b => (
@@ -433,7 +433,7 @@ export default function SlotPopover({
             {(slot.bookings || []).length === 0 && (
               <div className="flex items-center gap-2 py-0.5 px-0.5">
                 <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                <p className="text-xs text-gray-600">Available time slot</p>
+                <p className="text-xs text-text-muted-3">Available time slot</p>
               </div>
             )}
           </>

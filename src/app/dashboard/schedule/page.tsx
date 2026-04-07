@@ -177,7 +177,7 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Schedule</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-text-muted mt-0.5">
             {isMentor && "Click any empty time slot to add your availability."}
             {isMentee && "Click a slot to request a session with your mentor."}
             {isAdmin  && "View all mentor schedules."}
@@ -209,8 +209,8 @@ export default function SchedulePage() {
 
       {/* No pairing (mentee) */}
       {isMentee && !hasPairing && (
-        <div className="card text-center py-14 text-gray-400">
-          <Icon name="calendar" size={32} className="mx-auto mb-3 text-gray-300" />
+        <div className="card text-center py-14 text-text-muted-2">
+          <Icon name="calendar" size={32} className="mx-auto mb-3 text-text-muted-2" />
           <p className="text-sm font-medium">No active pairing found.</p>
           <p className="text-xs mt-1">You&apos;ll see your mentor&apos;s availability once you&apos;re paired.</p>
         </div>
@@ -222,19 +222,19 @@ export default function SchedulePage() {
           <div className="overflow-x-auto">
             <div style={{ minWidth: 640 }}>
               {/* Day headers */}
-              <div className="grid border-b border-gray-100"
+              <div className="grid border-b border-border"
                 style={{ gridTemplateColumns: "52px repeat(7, 1fr)" }}>
-                <div className="border-r border-gray-100" />
+                <div className="border-r border-border" />
                 {weekDays.map((day, i) => {
                   const ds = toDateStr(day);
                   const isToday = ds === today;
                   return (
-                    <div key={i} className={`text-center py-3 border-r border-gray-100 last:border-r-0 ${isToday ? "bg-blue-50/40" : ""}`}>
-                      <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">
+                    <div key={i} className={`text-center py-3 border-r border-border last:border-r-0 ${isToday ? "bg-blue-50/40" : ""}`}>
+                      <p className="text-[11px] text-text-muted-2 font-semibold uppercase tracking-wide">
                         {DAY_ABBR[day.getDay()]}
                       </p>
                       <div className={`text-lg font-bold mt-0.5 w-9 h-9 flex items-center justify-center rounded-full mx-auto leading-none ${
-                        isToday ? "bg-blue-600 text-white" : "text-gray-800"
+                        isToday ? "bg-blue-600 text-white" : "text-foreground"
                       }`}>
                         {day.getDate()}
                       </div>
@@ -245,15 +245,15 @@ export default function SchedulePage() {
 
               {/* Time grid */}
               {loading ? (
-                <div className="p-6"><div className="h-80 bg-gray-50 rounded-lg animate-pulse" /></div>
+                <div className="p-6"><div className="h-80 bg-surface-elevated rounded-lg animate-pulse" /></div>
               ) : (
                 <div className="grid" style={{ gridTemplateColumns: "52px repeat(7, 1fr)" }}>
                   {/* Hour labels */}
-                  <div className="border-r border-gray-100">
+                  <div className="border-r border-border">
                     {Array.from({ length: TOTAL_H }, (_, i) => (
                       <div key={i} style={{ height: HOUR_H }}
-                        className="relative border-b border-gray-50 last:border-b-0">
-                        <span className="absolute -top-2.5 right-2 text-[10px] text-gray-400 select-none">
+                        className="relative border-b border-border/50 last:border-b-0">
+                        <span className="absolute -top-2.5 right-2 text-[10px] text-text-muted-2 select-none">
                           {fmtHour(HOUR_START + i)}
                         </span>
                       </div>

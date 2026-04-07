@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser, useNotifications } from "@/lib/hooks";
+import { useTheme } from "@/lib/theme";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -45,6 +46,8 @@ const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon:
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useUser();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-white.png" : "/logo-wordmark.png";
   const { notifications, unreadCount, markRead } = useNotifications();
   const router   = useRouter();
   const pathname = usePathname();
@@ -76,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="h-16 bg-white/90 backdrop-blur-sm border-b border-border" />
+        <div className="h-16 bg-surface/90 backdrop-blur-sm border-b border-border" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <SkeletonDashboard />
         </div>
@@ -94,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background">
       {/* ── Top Nav ──────────────────────────────────────────────────────── */}
-      <header className="bg-white/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
+      <header className="bg-surface/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
 
@@ -102,14 +105,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden p-2 text-gray-500 hover:bg-brand-blue-soft rounded-lg transition"
+                className="sm:hidden p-2 text-text-muted hover:bg-brand-blue-soft rounded-lg transition"
                 aria-label="Toggle menu"
               >
                 <Icon name={mobileMenuOpen ? "x" : "menu"} size={22} />
               </button>
 
               <Link href="/dashboard" className="flex items-center">
-                <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40}
+                <Image src={logoSrc} alt="Satu Tuju" width={120} height={40}
                   className="object-contain" priority />
               </Link>
 
@@ -122,7 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive
                           ? "bg-brand-blue-soft text-primary"
-                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                          : "text-text-muted hover:bg-surface-elevated hover:text-foreground"
                       }`}
                     >
                       <Icon name={item.icon} size={16} className={isActive ? "text-primary" : ""} />
@@ -145,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => { setShowNotifs(!showNotifs); setShowUserMenu(false); }}
-                  className="relative p-2 text-gray-500 hover:bg-brand-blue-soft hover:text-primary rounded-lg transition"
+                  className="relative p-2 text-text-muted hover:bg-brand-blue-soft hover:text-primary rounded-lg transition"
                 >
                   <Icon name="bell" size={20} />
                   {unreadCount > 0 && (
@@ -156,8 +159,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
 
                 {showNotifs && (
-                  <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50/50">
+                  <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-elevated/50">
                       <span className="font-semibold text-sm font-[family-name:var(--font-heading)]">Notifications</span>
                       {unreadCount > 0 && (
                         <button onClick={() => markRead()} className="text-xs text-primary font-medium hover:underline">
@@ -167,7 +170,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-sm text-gray-400">
+                        <div className="px-4 py-8 text-center text-sm text-text-muted-2">
                           <Icon name="bell" size={24} className="mx-auto mb-2 text-brand-lavender" />
                           No notifications yet
                         </div>
@@ -175,12 +178,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         notifications.slice(0, 10).map((n) => (
                           <div key={n.id}
                             onClick={() => { markRead(n.id); if (n.link) router.push(n.link); setShowNotifs(false); }}
-                            className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition flex gap-3 ${!n.read ? "bg-primary-50/50" : ""}`}
+                            className={`px-4 py-3 border-b border-border/50 cursor-pointer hover:bg-surface-elevated transition flex gap-3 ${!n.read ? "bg-primary-50/50" : ""}`}
                           >
                             {!n.read && <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
                             <div className={!n.read ? "" : "ml-5"}>
                               <p className="text-sm font-medium text-foreground">{n.title}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                              <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
                             </div>
                           </div>
                         ))
@@ -197,23 +200,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
-                  className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-gray-50 ${showUserMenu ? "bg-gray-50" : ""}`}
+                  className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-surface-elevated ${showUserMenu ? "bg-surface-elevated" : ""}`}
                 >
                   <Avatar name={user.name} size="sm" src={user.avatar || undefined} />
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-medium text-foreground leading-tight">{user.name}</p>
-                    <p className="text-xs text-gray-400 capitalize leading-tight">{user.role}</p>
+                    <p className="text-xs text-text-muted-2 capitalize leading-tight">{user.role}</p>
                   </div>
                   <Icon name="chevron-down" size={14}
-                    className={`hidden sm:block text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
+                    className={`hidden sm:block text-text-muted-2 transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down">
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-surface rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down">
                     {/* User identity */}
-                    <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="px-4 py-3 border-b border-border">
                       <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                      <p className="text-xs text-text-muted-2 truncate">{user.email}</p>
                     </div>
 
                     {/* Profile + Settings links */}
@@ -227,10 +230,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                               className={`flex items-center gap-2.5 px-4 py-2 text-sm transition ${
                                 isActive
                                   ? "text-primary font-medium bg-brand-blue-soft/50"
-                                  : "text-gray-600 hover:bg-gray-50"
+                                  : "text-text-muted hover:bg-surface-elevated"
                               }`}
                             >
-                              <Icon name={item.icon} size={15} className={isActive ? "text-primary" : "text-gray-400"} />
+                              <Icon name={item.icon} size={15} className={isActive ? "text-primary" : "text-text-muted-2"} />
                               {item.label}
                             </Link>
                           );
@@ -239,7 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
 
                     {/* Logout */}
-                    <div className="border-t border-gray-100 py-1.5">
+                    <div className="border-t border-border py-1.5">
                       <button
                         onClick={() => { setShowUserMenu(false); logout(); }}
                         className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
@@ -261,12 +264,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sm:hidden fixed inset-0 z-40">
           <div className="fixed inset-0 bg-primary-900/30 backdrop-blur-sm animate-fade-in"
             onClick={() => setMobileMenuOpen(false)} />
-          <div className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-[var(--shadow-xl)] z-50 flex flex-col animate-slide-in-left">
+          <div className="fixed top-0 left-0 bottom-0 w-72 bg-surface shadow-[var(--shadow-xl)] z-50 flex flex-col animate-slide-in-left">
             <div className="flex items-center justify-between px-5 h-16 border-b border-border">
               <Image src="/logo-wordmark.png" alt="Satu Tuju" width={120} height={40}
                 className="object-contain" priority />
               <button onClick={() => setMobileMenuOpen(false)}
-                className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition" aria-label="Close menu">
+                className="p-2 text-text-muted-2 hover:bg-surface-elevated rounded-lg transition" aria-label="Close menu">
                 <Icon name="x" size={18} />
               </button>
             </div>
@@ -277,7 +280,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Avatar name={user.name} size="md" src={user.avatar || undefined} />
                 <div>
                   <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  <p className="text-xs text-text-muted capitalize">{user.role}</p>
                 </div>
               </div>
             </div>
@@ -291,7 +294,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link key={item.href} href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                      isActive ? "bg-brand-blue-soft text-primary" : "text-gray-500 hover:bg-gray-50"
+                      isActive ? "bg-brand-blue-soft text-primary" : "text-text-muted hover:bg-surface-elevated"
                     }`}
                   >
                     <Icon name={item.icon} size={18} className={isActive ? "text-primary" : ""} />
@@ -314,7 +317,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link key={item.href} href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                      isActive ? "bg-brand-blue-soft text-primary" : "text-gray-500 hover:bg-gray-50"
+                      isActive ? "bg-brand-blue-soft text-primary" : "text-text-muted hover:bg-surface-elevated"
                     }`}
                   >
                     <Icon name={item.icon} size={18} className={isActive ? "text-primary" : ""} />
