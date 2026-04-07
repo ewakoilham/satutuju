@@ -53,14 +53,14 @@ export async function createCalendarEvent(params: {
     const meetLink =
       event.data.hangoutLink ||
       event.data.conferenceData?.entryPoints?.find(
-        (ep: { entryPointType?: string; uri?: string }) => ep.entryPointType === "video"
+        (ep) => ep.entryPointType === "video"
       )?.uri ||
       "";
 
     console.log("Google Calendar event created:", {
       eventId: event.data.id,
       meetLink,
-      conferenceStatus: event.data.conferenceData?.status?.statusCode,
+      conferenceStatus: (event.data.conferenceData as Record<string, unknown>)?.status,
     });
 
     return { eventId: event.data.id!, meetLink };
