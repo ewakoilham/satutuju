@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 /* Inline script that runs before React to prevent dark-mode flash (FOUC) */
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()`;
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()`;
 
 export default function RootLayout({
   children,

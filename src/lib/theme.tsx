@@ -54,10 +54,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // On mount, read stored preference
+  // On mount, read stored preference (default to light if nothing saved)
   useEffect(() => {
     const stored = localStorage.getItem("theme") as Theme | null;
-    const initial = stored ?? "system";
+    const initial = stored ?? "light";
     setThemeState(initial);
     apply(resolve(initial));
   }, [apply, resolve]);
