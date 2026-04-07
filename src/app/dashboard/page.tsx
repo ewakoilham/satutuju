@@ -30,6 +30,20 @@ export default function DashboardPage() {
           setProfileChecked(true);
         })
         .finally(() => setCheckingProfile(false));
+    } else if (user.role === "mentor") {
+      fetch("/api/mentor-profile")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data.profile) {
+            router.push("/dashboard/mentor-onboarding");
+            return;
+          }
+          setProfileChecked(true);
+        })
+        .catch(() => {
+          setProfileChecked(true);
+        })
+        .finally(() => setCheckingProfile(false));
     } else {
       setCheckingProfile(false);
       setProfileChecked(true);
@@ -37,7 +51,7 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   if (loading || !user) return null;
-  if (user.role === "mentee" && (checkingProfile || !profileChecked)) return null;
+  if ((user.role === "mentee" || user.role === "mentor") && (checkingProfile || !profileChecked)) return null;
 
   switch (user.role) {
     case "admin":

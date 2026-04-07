@@ -152,6 +152,16 @@ export default function MentorOnboardingPage() {
   const [animating, setAnimating] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // If the mentor already has a profile, skip onboarding
+  useEffect(() => {
+    fetch("/api/mentor-profile")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.profile) router.replace("/dashboard");
+      })
+      .catch(() => {});
+  }, [router]);
+
   const total = QUESTIONS.length;
   const q = QUESTIONS[current];
   const progress = ((current + 1) / total) * 100;
