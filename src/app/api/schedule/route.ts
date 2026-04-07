@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const mentorId = searchParams.get("mentorId");
     let query = supabase
       .from("ScheduleSlot")
-      .select("*, mentor:User!ScheduleSlot_mentorId_fkey(name, email), bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
+      .select("*, mentor:User!ScheduleSlot_mentorId_fkey(name, email), bookings:ScheduleBooking(id, menteeId, message, sessionId, requestedStart, requestedEnd, status, rejectionReason, googleMeetLink, createdAt, mentee:User!ScheduleBooking_menteeId_fkey(name, email))")
       .order("date", { ascending: true })
       .order("startTime", { ascending: true });
 

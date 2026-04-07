@@ -52,10 +52,21 @@ export async function createCalendarEvent(params: {
       },
     });
 
-    return {
-      eventId: event.data.id!,
-      meetLink: event.data.hangoutLink || "",
-    };
+    // hangoutLink is the classic field; newer Meet links appear in conferenceData.entryPoints
+    const meetLink =
+      event.data.hangoutLink ||
+      event.data.conferenceData?.entryPoints?.find(
+        (ep: { entryPointType?: string; uri?: string }) => ep.entryPointType === "video"
+      )?.uri ||
+      "";
+
+    console.log("Google Calendar event created:", {
+      eventId: event.data.id,
+      meetLink,
+      conferenceStatus: event.data.conferenceData?.status?.statusCode,
+    });
+
+    return { eventId: event.data.id!, meetLink };
   } catch (err: unknown) {
     const gErr = err as { response?: { status?: number; data?: unknown }; message?: string };
     console.error("Google Calendar create error:", JSON.stringify({
