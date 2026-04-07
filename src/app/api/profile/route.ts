@@ -63,12 +63,14 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ profile: updated });
   } else {
     // Insert
+    const now = new Date().toISOString();
     const { data: created, error } = await supabase
       .from("MenteeProfile")
       .insert({
         id: crypto.randomUUID(),
         userId: user.userId,
         ...body,
+        updatedAt: now,
       })
       .select()
       .single();
