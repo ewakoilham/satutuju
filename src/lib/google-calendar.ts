@@ -1,16 +1,13 @@
 import { google } from "googleapis";
 
 const tz = process.env.CALENDAR_TIMEZONE || "Asia/Jakarta";
-const CALENDAR_OWNER = process.env.GOOGLE_CALENDAR_ID || "primary";
 
 function getCalendar() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    },
-    scopes: ["https://www.googleapis.com/auth/calendar"],
-  });
+  const auth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+  );
+  auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
   return google.calendar({ version: "v3", auth });
 }
 
@@ -22,15 +19,15 @@ export async function createCalendarEvent(params: {
   attendeeEmails: string[];
   description?: string;
 }): Promise<{ eventId: string; meetLink: string } | null> {
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-    console.error("Google Calendar: service account credentials not set");
+  if (!process.env.GOOGLE_REFRESH_TOKEN) {
+    console.error("Google Calendar: GOOGLE_REFRESH_TOKEN not set");
     return null;
   }
 
   try {
     const calendar = getCalendar();
     const event = await calendar.events.insert({
-      calendarId: CALENDAR_OWNER,
+      calendarId: "primary",
       conferenceDataVersion: 1,
       sendUpdates: "all",
       requestBody: {
@@ -79,12 +76,12 @@ export async function createCalendarEvent(params: {
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) return;
+  if (!process.env.GOOGLE_REFRESH_TOKEN) return;
 
   try {
     const calendar = getCalendar();
     await calendar.events.delete({
-      calendarId: CALENDAR_OWNER,
+      calendarId: "primary",
       eventId,
       sendUpdates: "all",
     });

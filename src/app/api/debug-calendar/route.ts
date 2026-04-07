@@ -8,33 +8,45 @@ export async function GET() {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  const calId = process.env.GOOGLE_CALENDAR_ID || "primary";
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-  if (!email || !key) {
+  if (!clientId || !clientSecret || !refreshToken) {
     return NextResponse.json({
       error: "Missing env vars",
-      hasEmail: !!email,
-      hasKey: !!key,
-      emailValue: email || "MISSING",
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasRefreshToken: !!refreshToken,
     });
   }
 
+  // Step 1: test that the refresh token can get an access token
+  const auth = new google.auth.OAuth2(clientId, clientSecret);
+  auth.setCredentials({ refresh_token: refreshToken });
+
   try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: email,
-        private_key: key.replace(/\\n/g, "\n"),
-      },
-      scopes: ["https://www.googleapis.com/auth/calendar"],
+    const { token } = await auth.getAccessToken();
+    if (!token) {
+      return NextResponse.json({ error: "getAccessToken returned null", tokenPreview: refreshToken.slice(0, 20) });
+    }
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: unknown }; message?: string };
+    return NextResponse.json({
+      error: "Failed to get access token",
+      message: e.message,
+      data: e.response?.data,
+      tokenLength: refreshToken.length,
+      tokenPreview: `${refreshToken.slice(0, 20)}...${refreshToken.slice(-10)}`,
+      clientIdPreview: clientId.slice(0, 15),
     });
+  }
 
+  // Step 2: try creating a test event with Meet link
+  try {
     const calendar = google.calendar({ version: "v3", auth });
-
-    // Test: create a real event
     const event = await calendar.events.insert({
-      calendarId: calId,
+      calendarId: "primary",
       conferenceDataVersion: 1,
       requestBody: {
         summary: "Test Event — Delete Me",
@@ -53,23 +65,14 @@ export async function GET() {
       success: true,
       eventId: event.data.id,
       meetLink: event.data.hangoutLink || "NO_MEET_LINK",
-      calendarId: calId,
-      serviceAccount: email,
     });
   } catch (err: unknown) {
-    const gErr = err as {
-      response?: { status?: number; data?: unknown };
-      message?: string;
-      code?: string;
-    };
+    const gErr = err as { response?: { status?: number; data?: unknown }; message?: string };
     return NextResponse.json({
-      error: "Google API failed",
+      error: "Event creation failed (but auth works!)",
       status: gErr.response?.status,
       message: gErr.message,
-      code: gErr.code,
       data: gErr.response?.data,
-      serviceAccount: email,
-      calendarId: calId,
     });
   }
 }
