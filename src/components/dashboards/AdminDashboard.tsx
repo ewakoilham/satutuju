@@ -15,6 +15,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
   mentorProfileComplete?: boolean;
 }
 
@@ -338,7 +339,7 @@ export default function AdminDashboard() {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <Avatar name={m.mentorName} size="sm" />
+                        <Avatar name={m.mentorName} size="sm" src={mentors.find((u) => u.id === m.mentorId)?.avatar || undefined} />
                         <h4 className="font-medium">{m.mentorName}</h4>
                       </div>
                       <Badge variant="neutral">
@@ -621,7 +622,7 @@ export default function AdminDashboard() {
                   >
                     <td className="px-3 sm:px-6 py-3">
                       <span className="flex items-center gap-2 flex-wrap">
-                        {p.mentor?.name && <Avatar name={p.mentor.name} size="sm" />}
+                        {p.mentor?.name && <Avatar name={p.mentor.name} size="sm" src={p.mentor.avatar || undefined} />}
                         <span>{p.mentor?.name}</span>
                         {(() => {
                           const mentor = mentors.find((m) => m.id === p.mentor?.id);
@@ -640,7 +641,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-3 sm:px-6 py-3">
                       <span className="flex items-center gap-2">
-                        {p.mentee?.name && <Avatar name={p.mentee.name} size="sm" />}
+                        {p.mentee?.name && <Avatar name={p.mentee.name} size="sm" src={p.mentee.avatar || undefined} />}
                         {p.mentee?.name}
                         {p.mentee?.id && (
                           <a
