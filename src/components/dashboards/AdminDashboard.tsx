@@ -9,6 +9,7 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import StatCard from "@/components/ui/StatCard";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { ConfirmModal } from "@/components/ui/Modal";
+import { useTheme } from "@/lib/theme";
 
 interface User {
   id: string;
@@ -61,6 +62,7 @@ type AdminTab = "pairings" | "quality";
 type PairingsTab = "active" | "archived";
 
 export default function AdminDashboard() {
+  const { resolvedTheme, setTheme } = useTheme();
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [mentors, setMentors] = useState<User[]>([]);
   const [mentees, setMentees] = useState<User[]>([]);
@@ -257,13 +259,22 @@ export default function AdminDashboard() {
             Manage mentors, mentees, and pairings
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="btn-primary"
-        >
-          <Icon name="plus" size={16} />
-          New Pairing
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="btn-secondary p-2.5"
+            title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <Icon name={resolvedTheme === "dark" ? "sun" : "moon"} size={16} />
+          </button>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="btn-primary"
+          >
+            <Icon name="plus" size={16} />
+            New Pairing
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
