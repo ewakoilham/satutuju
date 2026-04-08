@@ -428,7 +428,7 @@ export default function PairingDetailPage() {
             </div>
             {/* Feedback if any */}
             {previewDoc.feedback && (
-              <div className="px-6 py-3 border-t border-border bg-amber-50">
+              <div className="px-6 py-3 border-t border-border bg-surface-amber">
                 <p className="text-xs font-medium text-text-muted mb-1">Mentor Feedback</p>
                 <p className="text-sm text-foreground">{previewDoc.feedback}</p>
               </div>
@@ -516,7 +516,7 @@ function SessionsTab({
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                     session.status === "completed"
-                      ? "bg-green-100 text-success"
+                      ? "bg-surface-green text-text-green"
                       : "bg-surface-elevated text-text-muted"
                   }`}
                 >
@@ -594,11 +594,11 @@ function SessionsTab({
 }
 
 const PHASE_CURRICULUM_COLORS: Record<string, { bg: string; border: string; text: string; icon: string; badge: "info" | "warning" | "primary" | "danger" | "success" }> = {
-  discovery: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", icon: "text-blue-500", badge: "info" },
-  planning: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", icon: "text-amber-500", badge: "warning" },
-  writing: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", icon: "text-purple-500", badge: "primary" },
-  execution: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", icon: "text-orange-500", badge: "danger" },
-  closing: { bg: "bg-green-50", border: "border-green-200", text: "text-success", icon: "text-green-500", badge: "success" },
+  discovery: { bg: "bg-surface-blue", border: "border-surface-blue-border", text: "text-text-blue", icon: "text-text-blue", badge: "info" },
+  planning: { bg: "bg-surface-amber", border: "border-surface-amber-border", text: "text-text-amber", icon: "text-text-amber", badge: "warning" },
+  writing: { bg: "bg-surface-purple", border: "border-surface-purple-border", text: "text-text-purple", icon: "text-text-purple", badge: "primary" },
+  execution: { bg: "bg-surface-orange", border: "border-surface-orange-border", text: "text-text-orange", icon: "text-text-orange", badge: "danger" },
+  closing: { bg: "bg-surface-green", border: "border-surface-green-border", text: "text-text-green", icon: "text-text-green", badge: "success" },
 };
 
 // Maps curriculum doc checklist keywords to document categories
@@ -744,9 +744,9 @@ function SessionDetail({
             {isMentor && (
               <div className={`card !p-3 text-center ${
                 session.menteeEnergy && session.menteeEnergy <= 2
-                  ? "bg-red-50"
+                  ? "bg-surface-red"
                   : session.menteeEnergy && session.menteeEnergy <= 3
-                  ? "bg-amber-50"
+                  ? "bg-surface-amber"
                   : "bg-surface-elevated"
               }`}>
                 <p className="text-xs text-text-muted-2 mb-1">Mentee Energy</p>
@@ -774,8 +774,8 @@ function SessionDetail({
 
           {/* Topic of Discussion */}
           {session.keyOutput && (
-            <div className="bg-green-50 border border-green-100 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-success uppercase mb-1">
+            <div className="bg-surface-green border border-surface-green-border rounded-lg p-4">
+              <h4 className="text-xs font-semibold text-text-green uppercase mb-1">
                 Topic of Discussion
               </h4>
               <p className="text-sm text-foreground">{session.keyOutput}</p>
@@ -784,8 +784,8 @@ function SessionDetail({
 
           {/* Session Summary */}
           {session.summaryNotes && (
-            <div className="bg-[var(--accent)] border border-amber-100 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-amber-700 uppercase mb-1">
+            <div className="bg-surface-amber border border-surface-amber-border rounded-lg p-4">
+              <h4 className="text-xs font-semibold text-text-amber uppercase mb-1">
                 Session Summary
               </h4>
               <p className="text-sm text-foreground whitespace-pre-wrap">
@@ -796,8 +796,8 @@ function SessionDetail({
 
           {/* Obstacles -- mentor/admin only */}
           {isMentor && session.obstacles && (
-            <div className="bg-red-50 border border-red-100 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-red-700 uppercase mb-1">
+            <div className="bg-surface-red border border-surface-red-border rounded-lg p-4">
+              <h4 className="text-xs font-semibold text-text-red uppercase mb-1">
                 Obstacles / Concerns
               </h4>
               <p className="text-sm text-foreground">{session.obstacles}</p>
@@ -806,8 +806,8 @@ function SessionDetail({
 
           {/* Mentee feedback -- visible to mentor/admin */}
           {isMentor && session.menteeFeedback && (
-            <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-purple-700 uppercase mb-1">
+            <div className="bg-surface-purple border border-surface-purple-border rounded-lg p-4">
+              <h4 className="text-xs font-semibold text-text-purple uppercase mb-1">
                 Mentee Feedback
               </h4>
               <p className="text-sm text-foreground whitespace-pre-wrap">{session.menteeFeedback}</p>
@@ -1123,15 +1123,15 @@ function DeliverablesList({
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
                   matched.some((d) => d.status === "approved")
-                    ? "bg-green-100 text-green-600"
+                    ? "bg-surface-green text-text-green"
                     : matched.length > 0
-                    ? "bg-blue-100 text-blue-600"
+                    ? "bg-surface-blue text-text-blue"
                     : "bg-surface-elevated text-text-muted-2"
                 }`}>
                   {matched.some((d) => d.status === "approved") ? (
                     <Icon name="check" size={12} />
                   ) : matched.length > 0 ? (
-                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="w-2 h-2 rounded-full bg-text-blue" />
                   ) : (
                     <span className="w-2 h-2 rounded-full bg-text-muted-2" />
                   )}
@@ -1279,15 +1279,15 @@ function MenteeFeedback({
   // Show submitted confirmation view
   if ((hasSubmitted || justSubmitted) && !isEditing) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
+      <div className="bg-surface-green border border-surface-green-border rounded-lg p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Icon name="check" size={18} className="text-green-600" />
-          <h4 className="text-sm font-semibold text-green-800">
+          <Icon name="check" size={18} className="text-text-green" />
+          <h4 className="text-sm font-semibold text-text-green">
             Thanks! Your feedback has been submitted to your mentor.
           </h4>
         </div>
 
-        <div className="bg-surface rounded-lg border border-green-100 p-4 space-y-2">
+        <div className="bg-surface rounded-lg border border-surface-green-border p-4 space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">Your rating:</span>
             <div className="flex gap-0.5">
@@ -1322,8 +1322,8 @@ function MenteeFeedback({
 
   // Editable form
   return (
-    <div className="bg-purple-50 border border-purple-100 rounded-lg p-5 space-y-4">
-      <h4 className="text-xs font-semibold text-purple-700 uppercase">
+    <div className="bg-surface-purple border border-surface-purple-border rounded-lg p-5 space-y-4">
+      <h4 className="text-xs font-semibold text-text-purple uppercase">
         Your Feedback
       </h4>
 
@@ -1685,8 +1685,8 @@ function DocumentsTab({
               )}
 
               {replacingDocId === doc.id && replacingFile && (
-                <div className="mt-3 p-4 bg-amber-50 border border-amber-100 rounded-lg space-y-3">
-                  <p className="text-xs font-semibold text-amber-700 uppercase">Replace Document</p>
+                <div className="mt-3 p-4 bg-surface-amber border border-surface-amber-border rounded-lg space-y-3">
+                  <p className="text-xs font-semibold text-text-amber uppercase">Replace Document</p>
                   <p className="text-xs text-text-muted-3">New file: <span className="font-medium">{replacingFile.name}</span></p>
                   <div className="flex gap-2">
                     <button
@@ -1966,7 +1966,7 @@ function TasksTab({
                 </div>
                 <button
                   onClick={() => updateTaskStatus(task.id, "completed")}
-                  className="text-xs bg-green-100 text-success px-3 py-1.5 rounded-full font-medium hover:bg-green-200 transition inline-flex items-center gap-1"
+                  className="text-xs bg-surface-green text-text-green px-3 py-1.5 rounded-full font-medium hover:opacity-80 transition inline-flex items-center gap-1"
                 >
                   <Icon name="check" size={12} />
                   Mark Complete
@@ -1990,8 +1990,8 @@ function TasksTab({
                 className="card opacity-60"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Icon name="check" size={12} className="text-green-600" />
+                  <div className="w-5 h-5 rounded bg-surface-green flex items-center justify-center flex-shrink-0">
+                    <Icon name="check" size={12} className="text-text-green" />
                   </div>
                   <p className="text-sm line-through">{task.title}</p>
                   <Badge variant="success" size="sm">Done</Badge>
