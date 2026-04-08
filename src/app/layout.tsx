@@ -22,10 +22,6 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Satu Tuju — Mentorship Platform",
   description: "Connecting mentors who have studied abroad with those who dream of doing the same. Your journey, guided by experience.",
-  icons: {
-    icon: "/logo-circle.png",
-    apple: "/logo-circle.png",
-  },
 };
 
 /* Inline script that runs before React to prevent dark-mode flash (FOUC) */
