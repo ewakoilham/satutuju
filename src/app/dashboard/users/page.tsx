@@ -14,6 +14,7 @@ interface UserRow {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
   createdAt: string;
   hasActivePairing: boolean;
 }
@@ -111,7 +112,7 @@ export default function UsersPage() {
                 <tr key={u.id} className="border-t border-border/50 hover:bg-surface-elevated/50 transition">
                   <td className="px-3 sm:px-6 py-3 font-medium">
                     <div className="flex items-center gap-3">
-                      <Avatar name={u.name} size="sm" />
+                      <Avatar name={u.name} size="sm" src={u.avatar || undefined} />
                       <span>{u.name}</span>
                     </div>
                   </td>

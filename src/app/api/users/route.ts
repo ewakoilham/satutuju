@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("User")
-    .select("id, email, name, role, createdAt")
+    .select("id, email, name, role, avatar, createdAt")
     .order("createdAt", { ascending: false });
 
   if (role) {

@@ -151,11 +151,16 @@ export default function MenteeDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
-        <div className="flex items-center gap-3 mt-3">
-          <Avatar name={pairing.mentor.name} size="lg" src={pairing.mentor.avatar || undefined} />
+        <div className="flex items-center gap-4 mt-3">
+          {pairing.mentor.avatar ? (
+            <img src={pairing.mentor.avatar} alt={pairing.mentor.name}
+              className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20 flex-shrink-0" />
+          ) : (
+            <Avatar name={pairing.mentor.name} size="lg" className="!w-14 !h-14 !text-lg ring-2 ring-primary/20" />
+          )}
           <div className="min-w-0">
             <p className="text-xs text-text-muted-2 font-medium uppercase tracking-wide">Your mentor</p>
-            <p className="text-base font-semibold text-foreground truncate">{pairing.mentor.name}</p>
+            <p className="text-lg font-semibold text-foreground truncate">{pairing.mentor.name}</p>
             {(() => {
               const target = profile?.intendedStudyProgram || pairing.targetProgram;
               const destinations = profile?.preferredDestinations;
