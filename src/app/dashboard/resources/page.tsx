@@ -1,7 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import { useUser } from "@/lib/hooks";
 
-const RESOURCES = [
+interface ResourceCard {
+  href: string | null;
+  icon: string;
+  title: string;
+  description: string;
+  badge: string | null;
+  note: string | null;
+  color: string;
+  bg: string;
+  roles: string[] | null; // null = all roles
+}
+
+const ALL_RESOURCES: ResourceCard[] = [
   {
     href: "/dashboard/curriculum",
     icon: "book",
@@ -9,8 +24,22 @@ const RESOURCES = [
     description:
       "Explore all 10 mentoring sessions across 5 phases — objectives, deliverables, prep tasks, and required documents.",
     badge: null,
+    note: null,
     color: "text-primary",
     bg: "bg-primary-50",
+    roles: null,
+  },
+  {
+    href: "/dashboard/mentor-toolkit",
+    icon: "graduation",
+    title: "Mentor Toolkit",
+    description:
+      "A comprehensive guide to mindset, methodology, and best practices for mentors — from understanding mentee psychology to running effective sessions.",
+    badge: null,
+    note: "Visible to mentors & admins only",
+    color: "text-text-purple",
+    bg: "bg-surface-purple",
+    roles: ["mentor", "admin"],
   },
   {
     href: null,
@@ -18,8 +47,10 @@ const RESOURCES = [
     title: "Document Templates",
     description: "Ready-to-use templates for CVs, motivation letters, application trackers, and more.",
     badge: "Coming soon",
+    note: null,
     color: "text-text-muted",
     bg: "bg-surface-elevated",
+    roles: null,
   },
   {
     href: null,
@@ -27,12 +58,21 @@ const RESOURCES = [
     title: "1000 Winning Scholarship Essays",
     description: "A curated collection of real essays that secured top scholarships — study what works and inspire your own writing.",
     badge: "Coming soon",
+    note: null,
     color: "text-text-muted",
     bg: "bg-surface-elevated",
+    roles: null,
   },
 ];
 
 export default function ResourcesPage() {
+  const { user } = useUser();
+  const role = user?.role ?? "mentee";
+
+  const visibleResources = ALL_RESOURCES.filter(
+    (r) => r.roles === null || r.roles.includes(role)
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -43,7 +83,7 @@ export default function ResourcesPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {RESOURCES.map((r) => {
+        {visibleResources.map((r) => {
           const card = (
             <div
               className={`card-hover h-full flex flex-col gap-4 ${
@@ -64,6 +104,12 @@ export default function ResourcesPage() {
                   )}
                 </div>
                 <p className="text-sm text-text-muted mt-1.5 leading-relaxed">{r.description}</p>
+                {r.note && (
+                  <p className="text-[11px] text-text-muted-2 mt-2 flex items-center gap-1">
+                    <Icon name="lock" size={11} className="flex-shrink-0" />
+                    {r.note}
+                  </p>
+                )}
               </div>
 
               {r.href && (
