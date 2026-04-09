@@ -663,52 +663,87 @@ export default function MentorToolkitPage() {
       {/* Document panel — full width */}
       <div className="border border-border rounded-2xl bg-surface overflow-hidden shadow-[var(--shadow-xs)]">
 
-        {/* ── Chapter tab bar — top of panel, full width ── */}
-        <div className="border-b border-border bg-surface-elevated/40">
-          <div className="flex overflow-x-auto no-scrollbar">
-            {CHAPTERS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setActive(c.id)}
-                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors border-b-2 ${
-                  active === c.id
-                    ? "border-primary text-primary bg-surface"
-                    : "border-transparent text-text-muted hover:text-foreground hover:bg-surface/60"
-                }`}
-              >
-                <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ── Body: sidebar + content column ── */}
+        <div className="flex items-start">
 
-        {/* ── Content area ── */}
-        <div className="px-6 py-6 md:px-10 md:py-8">
-          <div key={active} className="animate-fade-in space-y-8">
-            {CHAPTER_MAP[active]}
-          </div>
+          {/* Sidebar — full height, right border */}
+          <aside className="hidden md:flex flex-col w-52 flex-shrink-0 self-stretch border-r border-border bg-surface-elevated/30">
+            {/* Sidebar header — same height as tab bar */}
+            <div className="h-[49px] flex items-center px-4 border-b border-border">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted-2">Chapters</p>
+            </div>
+            {/* Sidebar nav items — sticky */}
+            <div className="sticky top-20 p-3 pt-3">
+              <nav className="flex flex-col gap-0.5">
+                {CHAPTERS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setActive(c.id)}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                      active === c.id
+                        ? "bg-brand-blue-soft text-primary"
+                        : "text-text-muted hover:bg-surface-elevated hover:text-foreground"
+                    }`}
+                  >
+                    <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
+                    {c.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
 
-          {/* Prev / Next */}
-          <div className="flex items-center justify-between mt-10 pt-5 border-t border-border">
-            {prev ? (
-              <button
-                onClick={() => setActive(prev.id)}
-                className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
-              >
-                <Icon name="arrow-left" size={14} />
-                {prev.label}
-              </button>
-            ) : <span />}
-            {next ? (
-              <button
-                onClick={() => setActive(next.id)}
-                className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
-              >
-                {next.label}
-                <Icon name="arrow-right" size={14} />
-              </button>
-            ) : <span />}
+          {/* Content column */}
+          <div className="flex-1 min-w-0 flex flex-col">
+
+            {/* ── Tab bar — top of content column, aligns with sidebar header ── */}
+            <div className="border-b border-border bg-surface-elevated/40">
+              <div className="flex overflow-x-auto no-scrollbar">
+                {CHAPTERS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setActive(c.id)}
+                    className={`flex-shrink-0 flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                      active === c.id
+                        ? "border-primary text-primary bg-surface"
+                        : "border-transparent text-text-muted hover:text-foreground hover:bg-surface/60"
+                    }`}
+                  >
+                    <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Chapter content ── */}
+            <div className="px-6 py-6 md:px-10 md:py-8">
+              <div key={active} className="animate-fade-in space-y-8">
+                {CHAPTER_MAP[active]}
+              </div>
+
+              {/* Prev / Next */}
+              <div className="flex items-center justify-between mt-10 pt-5 border-t border-border">
+                {prev ? (
+                  <button
+                    onClick={() => setActive(prev.id)}
+                    className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
+                  >
+                    <Icon name="arrow-left" size={14} />
+                    {prev.label}
+                  </button>
+                ) : <span />}
+                {next ? (
+                  <button
+                    onClick={() => setActive(next.id)}
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
+                  >
+                    {next.label}
+                    <Icon name="arrow-right" size={14} />
+                  </button>
+                ) : <span />}
+              </div>
+            </div>
           </div>
         </div>
       </div>
