@@ -230,18 +230,19 @@ const DONTS = [
 
 function ChapterNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted-2 px-3 pb-2">Chapters</p>
       {CHAPTERS.map((c) => (
         <button
           key={c.id}
           onClick={() => onSelect(c.id)}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all text-left ${
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
             active === c.id
               ? "bg-brand-blue-soft text-primary"
               : "text-text-muted hover:bg-surface-elevated hover:text-foreground"
           }`}
         >
-          <Icon name={c.icon} size={15} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
+          <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
           {c.label}
         </button>
       ))}
@@ -251,7 +252,15 @@ function ChapterNav({ active, onSelect }: { active: string; onSelect: (id: strin
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xl font-bold font-[family-name:var(--font-heading)] mb-1">{children}</h2>
+    <div className="border-b border-border pb-3 mb-1">
+      <h2 className="text-xl font-bold font-[family-name:var(--font-heading)]">{children}</h2>
+    </div>
+  );
+}
+
+function SubHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-base font-semibold text-foreground pl-3 border-l-2 border-border">{children}</h3>
   );
 }
 
@@ -354,7 +363,7 @@ function RoleChapter() {
       </p>
 
       <div className="space-y-4">
-        <h3 className="text-base font-semibold">Three Pillars to Guide Every Session</h3>
+        <SubHeading>Three Pillars to Guide Every Session</SubHeading>
         <p className="text-sm text-text-muted">When things don't go as planned, these three pillars are your compass.</p>
         {PILLARS.map((p) => (
           <div key={p.num} className="card rounded-2xl space-y-3">
@@ -553,7 +562,7 @@ function PracticesChapter() {
 
       {/* Session rituals */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Three Rituals for Every Session</h3>
+        <SubHeading>Three Rituals for Every Session</SubHeading>
         <p className="text-sm text-text-muted">These three things must happen in every meeting — regardless of milestone, regardless of agenda.</p>
         {[
           { icon: "bell", title: "Opening: Genuine Check-in", body: "Not 'ok, let's get straight to the agenda' — but two genuine minutes: 'How have you been since our last session?' And actually listen to the answer. Your mentee's condition will heavily influence how this session should run." },
@@ -574,7 +583,7 @@ function PracticesChapter() {
 
       {/* Story mining */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Story Mining Technique (Milestone 3)</h3>
+        <SubHeading>Story Mining Technique (Milestone 3)</SubHeading>
         <p className="text-sm text-text-muted">Milestone 3 is where mentors are most tempted to "take over" — because they can see what the narrative should contain, and the mentee looks stuck. Story mining helps you excavate without taking over.</p>
         <div className="card rounded-2xl space-y-3">
           <p className="text-xs font-bold text-text-purple uppercase">Most effective questions to ask</p>
@@ -596,7 +605,7 @@ function PracticesChapter() {
 
       {/* Don'ts */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Things You Must Never Do</h3>
+        <SubHeading>Things You Must Never Do</SubHeading>
         <p className="text-sm text-text-muted">These are not just guidelines — they are principles that, if broken, will undermine what we are trying to build.</p>
         <div className="card rounded-2xl space-y-2">
           {DONTS.map((d, i) => (
@@ -610,7 +619,7 @@ function PracticesChapter() {
 
       {/* 24h summary */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Send a Summary Within 24 Hours</h3>
+        <SubHeading>Send a Summary Within 24 Hours</SubHeading>
         <Callout color="green">
           <p className="font-semibold mb-2">After every session, send a brief summary to your mentee within 24 hours.</p>
           <p>Not a long report — just three things:</p>
@@ -653,9 +662,10 @@ export default function MentorToolkitPage() {
   const currentIdx = CHAPTERS.findIndex((c) => c.id === active);
   const prev = CHAPTERS[currentIdx - 1];
   const next = CHAPTERS[currentIdx + 1];
+  const activeChapter = CHAPTERS[currentIdx];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-5xl">
       {/* Back link */}
       <Link
         href="/dashboard/resources"
@@ -671,58 +681,77 @@ export default function MentorToolkitPage() {
         <p className="text-text-muted text-sm mt-1">Your complete guide to effective mentoring at Satu Tuju</p>
       </div>
 
-      {/* Layout: sidebar + content */}
-      <div className="flex gap-6 items-start">
-        {/* Sidebar nav — sticky on desktop */}
-        <aside className="hidden md:block w-48 flex-shrink-0 sticky top-20">
-          <ChapterNav active={active} onSelect={setActive} />
-        </aside>
+      {/* Document panel */}
+      <div className="border border-border rounded-2xl bg-surface overflow-hidden shadow-[var(--shadow-xs)]">
 
-        {/* Mobile chapter selector */}
-        <div className="md:hidden w-full">
-          <div className="flex gap-1 overflow-x-auto pb-2 no-scrollbar">
+        {/* Mobile tab strip */}
+        <div className="md:hidden border-b border-border bg-surface-elevated/50">
+          <div className="flex overflow-x-auto no-scrollbar">
             {CHAPTERS.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setActive(c.id)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-3 text-xs font-medium transition border-b-2 ${
                   active === c.id
-                    ? "bg-brand-blue-soft text-primary"
-                    : "bg-surface-elevated text-text-muted"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-text-muted hover:text-foreground"
                 }`}
               >
+                <Icon name={c.icon} size={13} />
                 {c.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-8">
-          <div key={active} className="animate-fade-in">
-            {CHAPTER_MAP[active]}
-          </div>
+        {/* Body: sidebar + content */}
+        <div className="flex items-start">
 
-          {/* Prev / Next */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
-            {prev ? (
-              <button
-                onClick={() => setActive(prev.id)}
-                className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
-              >
-                <Icon name="arrow-left" size={14} />
-                {prev.label}
-              </button>
-            ) : <span />}
-            {next ? (
-              <button
-                onClick={() => setActive(next.id)}
-                className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
-              >
-                {next.label}
-                <Icon name="arrow-right" size={14} />
-              </button>
-            ) : <span />}
+          {/* Sidebar — sticky, separated by right border */}
+          <aside className="hidden md:block w-52 flex-shrink-0 self-stretch border-r border-border bg-surface-elevated/30">
+            <div className="sticky top-20 p-4">
+              <ChapterNav active={active} onSelect={setActive} />
+            </div>
+          </aside>
+
+          {/* Content area */}
+          <div className="flex-1 min-w-0 px-6 py-6 md:px-8 md:py-7">
+
+            {/* Active chapter breadcrumb */}
+            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-border">
+              <Icon name={activeChapter.icon} size={14} className="text-text-muted-2" />
+              <span className="text-xs text-text-muted-2 font-medium">
+                {currentIdx + 1} / {CHAPTERS.length}
+              </span>
+              <span className="text-xs text-text-muted-2">·</span>
+              <span className="text-xs font-semibold text-foreground">{activeChapter.label}</span>
+            </div>
+
+            <div key={active} className="animate-fade-in space-y-8">
+              {CHAPTER_MAP[active]}
+            </div>
+
+            {/* Prev / Next */}
+            <div className="flex items-center justify-between mt-10 pt-5 border-t border-border">
+              {prev ? (
+                <button
+                  onClick={() => setActive(prev.id)}
+                  className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
+                >
+                  <Icon name="arrow-left" size={14} />
+                  {prev.label}
+                </button>
+              ) : <span />}
+              {next ? (
+                <button
+                  onClick={() => setActive(next.id)}
+                  className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
+                >
+                  {next.label}
+                  <Icon name="arrow-right" size={14} />
+                </button>
+              ) : <span />}
+            </div>
           </div>
         </div>
       </div>
