@@ -3,6 +3,7 @@
 import { useMemo, useCallback } from "react";
 import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
+import Select from "@/components/ui/Select";
 import { ConfirmModal } from "@/components/ui/Modal";
 import {
   useScheduleReducer,
@@ -185,12 +186,15 @@ export default function SchedulePage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && mentors.length > 0 && (
-            <select value={mentorFilter}
-              onChange={e => dispatch({ type: "SET_MENTOR_FILTER", value: e.target.value })}
-              className="input-field text-sm py-1.5">
-              <option value="">All Mentors</option>
-              {mentors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <Select
+              value={mentorFilter}
+              onChange={(v) => dispatch({ type: "SET_MENTOR_FILTER", value: v })}
+              options={[
+                { value: "", label: "All Mentors" },
+                ...mentors.map(m => ({ value: m.id, label: m.name })),
+              ]}
+              className="text-sm py-1.5"
+            />
           )}
           {isMentor && pendingCount > 0 && (
             <span className="flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-amber-200">

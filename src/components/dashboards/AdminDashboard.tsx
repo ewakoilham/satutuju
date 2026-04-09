@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import Select from "@/components/ui/Select";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
@@ -504,21 +505,17 @@ export default function AdminDashboard() {
               <label className="block text-sm font-medium text-foreground mb-1">
                 Mentor
               </label>
-              <select
+              <Select
                 value={newPairing.mentorId}
-                onChange={(e) =>
-                  setNewPairing({ ...newPairing, mentorId: e.target.value })
-                }
-                required
-                className="input-field"
-              >
-                <option value="">Select mentor...</option>
-                {mentors.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.mentorProfileComplete ? "✓" : "⚠"} {m.name} ({m.email}){m.mentorProfileComplete ? "" : " — profile incomplete"}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setNewPairing({ ...newPairing, mentorId: v })}
+                options={[
+                  { value: "", label: "Select mentor..." },
+                  ...mentors.map((m) => ({
+                    value: m.id,
+                    label: `${m.mentorProfileComplete ? "✓" : "⚠"} ${m.name} (${m.email})${m.mentorProfileComplete ? "" : " — profile incomplete"}`,
+                  })),
+                ]}
+              />
               {/* Profile status legend */}
               {newPairing.mentorId && (() => {
                 const selected = mentors.find((m) => m.id === newPairing.mentorId);
@@ -544,21 +541,17 @@ export default function AdminDashboard() {
                 );
                 const availableMentees = mentees.filter((m) => !activeMenteeIds.has(m.id));
                 return (
-                  <select
+                  <Select
                     value={newPairing.menteeId}
-                    onChange={(e) =>
-                      setNewPairing({ ...newPairing, menteeId: e.target.value })
-                    }
-                    required
-                    className="input-field"
-                  >
-                    <option value="">Select mentee...</option>
-                    {availableMentees.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.email})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setNewPairing({ ...newPairing, menteeId: v })}
+                    options={[
+                      { value: "", label: "Select mentee..." },
+                      ...availableMentees.map((m) => ({
+                        value: m.id,
+                        label: `${m.name} (${m.email})`,
+                      })),
+                    ]}
+                  />
                 );
               })()}
             </div>
@@ -709,16 +702,18 @@ export default function AdminDashboard() {
                           <>
                             {replacingPairingId === p.id ? (
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                <select
+                                <Select
                                   value={replaceMentorId}
-                                  onChange={(e) => setReplaceMentorId(e.target.value)}
-                                  className="input-field text-xs !py-1 !px-1.5"
-                                >
-                                  <option value="">New mentor...</option>
-                                  {mentors.filter((m) => m.id !== p.mentor?.id).map((m) => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => setReplaceMentorId(v)}
+                                  options={[
+                                    { value: "", label: "New mentor..." },
+                                    ...mentors.filter((m) => m.id !== p.mentor?.id).map((m) => ({
+                                      value: m.id,
+                                      label: m.name,
+                                    })),
+                                  ]}
+                                  className="text-xs !py-1 !px-1.5"
+                                />
                                 <button
                                   onClick={() => replaceMentor(p.id)}
                                   disabled={!replaceMentorId || actionLoading === p.id}

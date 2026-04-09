@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import SelectComponent from "@/components/ui/Select";
 
 interface ProfileData {
   // Personal
@@ -193,18 +194,12 @@ function SelectInput({
   return (
     <div className="space-y-1">
       <label className="block text-xs text-text-muted font-medium">{label}</label>
-      <select
+      <SelectComponent
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        placeholder={placeholder}
+        options={options.map((opt) => ({ value: opt, label: opt }))}
+      />
     </div>
   );
 }
@@ -557,32 +552,28 @@ export default function MenteeProfilePage() {
             <div className="sm:col-span-2">
               <label className="block text-xs text-text-muted font-medium mb-1">Preferred Earliest Intake</label>
               <div className="grid grid-cols-2 gap-3">
-                <select
+                <SelectComponent
                   value={draft.preferredIntakeMonth || ""}
-                  onChange={(e) => {
-                    updateDraft("preferredIntakeMonth", e.target.value);
-                    updateDraft("preferredEarliestIntake", `${e.target.value} ${draft.preferredIntakeYear || ""}`.trim());
+                  onChange={(v) => {
+                    updateDraft("preferredIntakeMonth", v);
+                    updateDraft("preferredEarliestIntake", `${v} ${draft.preferredIntakeYear || ""}`.trim());
                   }}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                >
-                  <option value="">Month</option>
-                  {INTAKE_MONTH_OPTIONS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-                <select
+                  options={[
+                    { value: "", label: "Month" },
+                    ...INTAKE_MONTH_OPTIONS.map((m) => ({ value: m, label: m })),
+                  ]}
+                />
+                <SelectComponent
                   value={draft.preferredIntakeYear || ""}
-                  onChange={(e) => {
-                    updateDraft("preferredIntakeYear", e.target.value);
-                    updateDraft("preferredEarliestIntake", `${draft.preferredIntakeMonth || ""} ${e.target.value}`.trim());
+                  onChange={(v) => {
+                    updateDraft("preferredIntakeYear", v);
+                    updateDraft("preferredEarliestIntake", `${draft.preferredIntakeMonth || ""} ${v}`.trim());
                   }}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
-                >
-                  <option value="">Year</option>
-                  {INTAKE_YEAR_OPTIONS.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Year" },
+                    ...INTAKE_YEAR_OPTIONS.map((y) => ({ value: y, label: y })),
+                  ]}
+                />
               </div>
             </div>
             <div className="sm:col-span-2">

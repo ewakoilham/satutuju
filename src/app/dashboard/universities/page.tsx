@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
+import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
@@ -279,31 +280,31 @@ export default function UniversitiesPage() {
       {/* Filter row */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Country filter */}
-        <select
+        <Select
           value={country}
-          onChange={(e) => handleCountry(e.target.value)}
-          className="input-field w-auto"
-        >
-          <option value="">All Countries</option>
-          {visibleCountries.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          onChange={(v) => handleCountry(v)}
+          options={[
+            { value: "", label: "All Countries" },
+            ...visibleCountries.map((c) => ({ value: c, label: c })),
+          ]}
+          className="w-auto"
+        />
 
         {/* Degree level filter */}
-        <select
+        <Select
           value={level}
-          onChange={(e) => handleLevel(e.target.value)}
-          className="input-field w-auto"
-        >
-          <option value="">All Levels</option>
-          <option value="Undergraduate">Undergraduate / Bachelor</option>
-          <option value="Graduate">Postgraduate / Master</option>
-          <option value="English Language">English Language</option>
-          <option value="English Language / Foundation">English Language / Foundation</option>
-          <option value="Summer Programs">Summer Programs</option>
-          <option value="All">All Programs</option>
-        </select>
+          onChange={(v) => handleLevel(v)}
+          options={[
+            { value: "", label: "All Levels" },
+            { value: "Undergraduate", label: "Undergraduate / Bachelor" },
+            { value: "Graduate", label: "Postgraduate / Master" },
+            { value: "English Language", label: "English Language" },
+            { value: "English Language / Foundation", label: "English Language / Foundation" },
+            { value: "Summer Programs", label: "Summer Programs" },
+            { value: "All", label: "All Programs" },
+          ]}
+          className="w-auto"
+        />
 
         {hasFilters && (
           <button onClick={clearFilters}
@@ -400,18 +401,17 @@ export default function UniversitiesPage() {
                         </p>
                         {isAdmin ? (
                           <div className="flex items-center gap-2 flex-wrap">
-                            <select
+                            <Select
                               value={pendingLevel}
-                              onChange={(e) =>
-                                setEditingLevel((prev) => ({ ...prev, [u.id]: e.target.value }))
+                              onChange={(v) =>
+                                setEditingLevel((prev) => ({ ...prev, [u.id]: v }))
                               }
-                              onClick={(e) => e.stopPropagation()}
-                              className="input-field w-auto text-sm"
-                            >
-                              {DEGREE_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>{DEGREE_LABELS[opt]?.label || opt}</option>
-                              ))}
-                            </select>
+                              options={DEGREE_OPTIONS.map((opt) => ({
+                                value: opt,
+                                label: DEGREE_LABELS[opt]?.label || opt,
+                              }))}
+                              className="w-auto text-sm"
+                            />
                             {isDirty && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); saveLevel(u); }}

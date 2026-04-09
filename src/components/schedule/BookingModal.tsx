@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Icon from "@/components/ui/Icon";
+import Select from "@/components/ui/Select";
 import { fmtDate, getTimeFrameOptions } from "./helpers";
 import type { Slot, Session } from "./types";
 
@@ -110,16 +111,18 @@ export default function BookingModal({
             <label className="text-xs text-text-muted font-medium block mb-1">
               Session to discuss <span className="text-red-400">*</span>
             </label>
-            <select value={sessionId}
-              onChange={e => { setSessionId(e.target.value); setErr(""); }}
-              className="input-field w-full text-sm">
-              <option value="">Select a session&hellip;</option>
-              {sessions.map(s => (
-                <option key={s.id} value={s.id}>
-                  Session {s.sessionNum}: {s.topic}{s.status === "completed" ? " \u2713" : ""}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={sessionId}
+              onChange={(v) => { setSessionId(v); setErr(""); }}
+              options={[
+                { value: "", label: "Select a session\u2026" },
+                ...sessions.map(s => ({
+                  value: s.id,
+                  label: `Session ${s.sessionNum}: ${s.topic}${s.status === "completed" ? " \u2713" : ""}`,
+                })),
+              ]}
+              className="w-full text-sm"
+            />
           </div>
 
           {/* Time-frame selector (only when slot > 90 min) */}
@@ -128,18 +131,15 @@ export default function BookingModal({
               <label className="text-xs text-text-muted font-medium block mb-1">
                 90-min window
               </label>
-              <select value={timeFrame}
-                onChange={e => handleTimeFrameChange(e.target.value)}
-                className="input-field w-full text-sm">
-                {timeFrameOptions.map(opt => {
+              <Select
+                value={timeFrame}
+                onChange={(v) => handleTimeFrameChange(v)}
+                options={timeFrameOptions.map(opt => {
                   const key = `${opt.startTime}|${opt.endTime}`;
-                  return (
-                    <option key={key} value={key}>
-                      {opt.startTime} &ndash; {opt.endTime}
-                    </option>
-                  );
+                  return { value: key, label: `${opt.startTime} \u2013 ${opt.endTime}` };
                 })}
-              </select>
+                className="w-full text-sm"
+              />
             </div>
           )}
 

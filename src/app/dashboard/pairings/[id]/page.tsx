@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/lib/hooks";
+import Select from "@/components/ui/Select";
 import { CURRICULUM, DOCUMENT_CATEGORIES } from "@/lib/curriculum";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
@@ -246,16 +247,18 @@ export default function PairingDetailPage() {
               <>
                 {showReplaceMentor ? (
                   <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
-                    <select
+                    <Select
                       value={newMentorId}
-                      onChange={(e) => setNewMentorId(e.target.value)}
-                      className="text-sm border border-border rounded-lg px-2 py-1"
-                    >
-                      <option value="">Select new mentor...</option>
-                      {allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setNewMentorId(v)}
+                      options={[
+                        { value: "", label: "Select new mentor..." },
+                        ...allMentors.filter((m) => m.id !== pairing.mentor.id).map((m) => ({
+                          value: m.id,
+                          label: `${m.name} (${m.email})`,
+                        })),
+                      ]}
+                      className="text-sm"
+                    />
                     <button
                       onClick={handleReplaceMentor}
                       disabled={!newMentorId || adminActionLoading}
@@ -947,18 +950,16 @@ function SessionDetail({
               <label className="block text-xs font-medium text-text-muted mb-1">
                 Status
               </label>
-              <select
+              <Select
                 value={form.status}
-                onChange={(e) =>
-                  setForm({ ...form, status: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="completed">Completed</option>
-                <option value="skipped">Skipped</option>
-              </select>
+                onChange={(v) => setForm({ ...form, status: v })}
+                options={[
+                  { value: "upcoming", label: "Upcoming" },
+                  { value: "scheduled", label: "Scheduled" },
+                  { value: "completed", label: "Completed" },
+                  { value: "skipped", label: "Skipped" },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-text-muted mb-1">
@@ -1532,19 +1533,11 @@ function DocumentsTab({
               <label className="block text-xs font-medium text-text-muted mb-1">
                 Category
               </label>
-              <select
+              <Select
                 value={uploadForm.category}
-                onChange={(e) =>
-                  setUploadForm({ ...uploadForm, category: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              >
-                {DOCUMENT_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setUploadForm({ ...uploadForm, category: v })}
+                options={DOCUMENT_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+              />
             </div>
           </div>
           <div>
@@ -1712,15 +1705,15 @@ function DocumentsTab({
                     <label className="block text-xs font-medium text-text-muted mb-1">
                       Status
                     </label>
-                    <select
+                    <Select
                       value={reviewStatus}
-                      onChange={(e) => setReviewStatus(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                    >
-                      <option value="under_review">Under Review</option>
-                      <option value="needs_revision">Needs Revision</option>
-                      <option value="approved">Approved</option>
-                    </select>
+                      onChange={(v) => setReviewStatus(v)}
+                      options={[
+                        { value: "under_review", label: "Under Review" },
+                        { value: "needs_revision", label: "Needs Revision" },
+                        { value: "approved", label: "Approved" },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-muted mb-1">
@@ -1878,20 +1871,17 @@ function TasksTab({
               <label className="block text-xs font-medium text-text-muted mb-1">
                 Related Session (optional)
               </label>
-              <select
+              <Select
                 value={newTask.sessionNum}
-                onChange={(e) =>
-                  setNewTask({ ...newTask, sessionNum: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              >
-                <option value="">None</option>
-                {CURRICULUM.map((s) => (
-                  <option key={s.sessionNum} value={s.sessionNum}>
-                    Session {s.sessionNum}: {s.topic}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setNewTask({ ...newTask, sessionNum: v })}
+                options={[
+                  { value: "", label: "None" },
+                  ...CURRICULUM.map((s) => ({
+                    value: String(s.sessionNum),
+                    label: `Session ${s.sessionNum}: ${s.topic}`,
+                  })),
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-text-muted mb-1">

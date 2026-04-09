@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
+import SelectComponent from "@/components/ui/Select";
 import AvatarUpload from "@/components/ui/AvatarUpload";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
@@ -111,12 +112,12 @@ function SelectInput({ label, value, onChange, options, values, placeholder = "S
   return (
     <div className="space-y-1">
       <label className="block text-xs text-text-muted font-medium">{label}</label>
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
-        <option value="">{placeholder}</option>
-        {options.map((opt, i) => (
-          <option key={opt} value={values?.[i] ?? opt}>{opt}</option>
-        ))}
-      </select>
+      <SelectComponent
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        options={options.map((opt, i) => ({ value: values?.[i] ?? opt, label: opt }))}
+      />
     </div>
   );
 }
@@ -129,12 +130,12 @@ function SelectOtherInput({ label, value, otherValue, onChange, onOtherChange, o
   return (
     <div className="space-y-1">
       <label className="block text-xs text-text-muted font-medium">{label}</label>
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)} className="input-field">
-        <option value="">Select...</option>
-        {options.map((opt, i) => (
-          <option key={opt} value={values[i]}>{opt}</option>
-        ))}
-      </select>
+      <SelectComponent
+        value={value || ""}
+        onChange={onChange}
+        placeholder="Select..."
+        options={options.map((opt, i) => ({ value: values[i], label: opt }))}
+      />
       {value === "other" && (
         <input
           type="text"

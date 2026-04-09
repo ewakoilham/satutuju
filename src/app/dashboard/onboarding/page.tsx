@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/ui/Icon";
+import Select from "@/components/ui/Select";
 import Logo from "@/components/ui/Logo";
 
 // ── Question definitions ──────────────────────────────────────
@@ -430,29 +431,25 @@ export default function OnboardingPage() {
                 <div className="flex gap-3 mt-2">
                   <div className="flex-1">
                     <label className="block text-xs text-text-muted-2 mb-1 font-medium">Month</label>
-                    <select
+                    <Select
                       value={intakeMonth}
-                      onChange={(e) => setIntakeMonth(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select month...</option>
-                      {MONTHS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setIntakeMonth(v)}
+                      options={[
+                        { value: "", label: "Select month..." },
+                        ...MONTHS.map((m) => ({ value: m, label: m })),
+                      ]}
+                    />
                   </div>
                   <div className="flex-1">
                     <label className="block text-xs text-text-muted-2 mb-1 font-medium">Year</label>
-                    <select
+                    <Select
                       value={intakeYear}
-                      onChange={(e) => setIntakeYear(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select year...</option>
-                      {YEARS.map((y) => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setIntakeYear(v)}
+                      options={[
+                        { value: "", label: "Select year..." },
+                        ...YEARS.map((y) => ({ value: y, label: y })),
+                      ]}
+                    />
                   </div>
                 </div>
               )}
