@@ -449,6 +449,19 @@ body {
     box-shadow: 0 0 0 3px var(--primary-100);
   }
 
+  /* Native select/option dark mode — browser renders the popup natively,
+     so we must set background-color & color on both <select> and <option> */
+  select.input-field,
+  select.input-field option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+  select.input-field option:hover,
+  select.input-field option:checked {
+    background-color: var(--brand-blue-soft);
+    color: var(--primary);
+  }
+
   /* --- Badges --- */
   .badge {
     display: inline-flex;
