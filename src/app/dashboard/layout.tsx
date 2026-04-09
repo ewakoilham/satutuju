@@ -17,16 +17,19 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
     { href: "/dashboard/users",        label: "Users",        icon: "users"       },
     { href: "/dashboard/pairings",     label: "Pairings",     icon: "link"        },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/curriculum",   label: "Curriculum",   icon: "book"        },
     { href: "/dashboard/universities", label: "Universities", icon: "graduation"  },
   ],
   mentor: [
     { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/curriculum",   label: "Curriculum",   icon: "book"        },
     { href: "/dashboard/universities", label: "Universities", icon: "school"      },
   ],
   mentee: [
     { href: "/dashboard",              label: "My Journey",   icon: "map"         },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/curriculum",   label: "Curriculum",   icon: "book"        },
     { href: "/dashboard/universities", label: "Universities", icon: "school"      },
   ],
 };
