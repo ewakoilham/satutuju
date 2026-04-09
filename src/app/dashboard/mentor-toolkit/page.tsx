@@ -228,27 +228,6 @@ const DONTS = [
 
 /* ─── Sub-components ───────────────────────────────────────────────── */
 
-function ChapterNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
-  return (
-    <nav className="flex flex-col gap-0.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted-2 px-3 pb-2">Chapters</p>
-      {CHAPTERS.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => onSelect(c.id)}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
-            active === c.id
-              ? "bg-brand-blue-soft text-primary"
-              : "text-text-muted hover:bg-surface-elevated hover:text-foreground"
-          }`}
-        >
-          <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
-          {c.label}
-        </button>
-      ))}
-    </nav>
-  );
-}
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -665,7 +644,7 @@ export default function MentorToolkitPage() {
   const activeChapter = CHAPTERS[currentIdx];
 
   return (
-    <div className="space-y-4 max-w-5xl">
+    <div className="space-y-4">
       {/* Back link */}
       <Link
         href="/dashboard/resources"
@@ -681,77 +660,55 @@ export default function MentorToolkitPage() {
         <p className="text-text-muted text-sm mt-1">Your complete guide to effective mentoring at Satu Tuju</p>
       </div>
 
-      {/* Document panel */}
+      {/* Document panel — full width */}
       <div className="border border-border rounded-2xl bg-surface overflow-hidden shadow-[var(--shadow-xs)]">
 
-        {/* Mobile tab strip */}
-        <div className="md:hidden border-b border-border bg-surface-elevated/50">
+        {/* ── Chapter tab bar — top of panel, full width ── */}
+        <div className="border-b border-border bg-surface-elevated/40">
           <div className="flex overflow-x-auto no-scrollbar">
             {CHAPTERS.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setActive(c.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-3 text-xs font-medium transition border-b-2 ${
+                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors border-b-2 ${
                   active === c.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-text-muted hover:text-foreground"
+                    ? "border-primary text-primary bg-surface"
+                    : "border-transparent text-text-muted hover:text-foreground hover:bg-surface/60"
                 }`}
               >
-                <Icon name={c.icon} size={13} />
+                <Icon name={c.icon} size={14} className={active === c.id ? "text-primary" : "text-text-muted-2"} />
                 {c.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Body: sidebar + content */}
-        <div className="flex items-start">
+        {/* ── Content area ── */}
+        <div className="px-6 py-6 md:px-10 md:py-8">
+          <div key={active} className="animate-fade-in space-y-8">
+            {CHAPTER_MAP[active]}
+          </div>
 
-          {/* Sidebar — sticky, separated by right border */}
-          <aside className="hidden md:block w-52 flex-shrink-0 self-stretch border-r border-border bg-surface-elevated/30">
-            <div className="sticky top-20 p-4">
-              <ChapterNav active={active} onSelect={setActive} />
-            </div>
-          </aside>
-
-          {/* Content area */}
-          <div className="flex-1 min-w-0 px-6 py-6 md:px-8 md:py-7">
-
-            {/* Active chapter breadcrumb */}
-            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-border">
-              <Icon name={activeChapter.icon} size={14} className="text-text-muted-2" />
-              <span className="text-xs text-text-muted-2 font-medium">
-                {currentIdx + 1} / {CHAPTERS.length}
-              </span>
-              <span className="text-xs text-text-muted-2">·</span>
-              <span className="text-xs font-semibold text-foreground">{activeChapter.label}</span>
-            </div>
-
-            <div key={active} className="animate-fade-in space-y-8">
-              {CHAPTER_MAP[active]}
-            </div>
-
-            {/* Prev / Next */}
-            <div className="flex items-center justify-between mt-10 pt-5 border-t border-border">
-              {prev ? (
-                <button
-                  onClick={() => setActive(prev.id)}
-                  className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
-                >
-                  <Icon name="arrow-left" size={14} />
-                  {prev.label}
-                </button>
-              ) : <span />}
-              {next ? (
-                <button
-                  onClick={() => setActive(next.id)}
-                  className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
-                >
-                  {next.label}
-                  <Icon name="arrow-right" size={14} />
-                </button>
-              ) : <span />}
-            </div>
+          {/* Prev / Next */}
+          <div className="flex items-center justify-between mt-10 pt-5 border-t border-border">
+            {prev ? (
+              <button
+                onClick={() => setActive(prev.id)}
+                className="flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition"
+              >
+                <Icon name="arrow-left" size={14} />
+                {prev.label}
+              </button>
+            ) : <span />}
+            {next ? (
+              <button
+                onClick={() => setActive(next.id)}
+                className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
+              >
+                {next.label}
+                <Icon name="arrow-right" size={14} />
+              </button>
+            ) : <span />}
           </div>
         </div>
       </div>
