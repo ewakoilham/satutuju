@@ -660,14 +660,14 @@ export default function MentorToolkitPage() {
         <p className="text-text-muted text-sm mt-1">Your complete guide to effective mentoring at Satu Tuju</p>
       </div>
 
-      {/* Document panel — full width */}
-      <div className="border border-border rounded-2xl bg-surface overflow-hidden shadow-[var(--shadow-xs)]">
+      {/* Document panel — full width. NO overflow-hidden so sticky works */}
+      <div className="border border-border rounded-2xl bg-surface shadow-[var(--shadow-xs)]">
 
         {/* ── Body: sidebar + content column ── */}
         <div className="flex items-start">
 
-          {/* Sidebar — sticky scrolling, right border */}
-          <aside className="hidden md:block w-52 flex-shrink-0 self-start sticky top-6 border-r border-border bg-surface-elevated/30">
+          {/* Sidebar — sticky. rounded left corners to compensate for no overflow-hidden on parent */}
+          <aside className="hidden md:block w-52 flex-shrink-0 self-start sticky top-6 border-r border-border bg-surface-elevated/30 rounded-tl-2xl rounded-bl-2xl">
             <div className="px-4 pt-5 pb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted-2">Chapters</p>
             </div>
