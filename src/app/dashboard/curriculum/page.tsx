@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CURRICULUM, PHASES, DOCUMENT_CATEGORIES, type SessionTemplate } from "@/lib/curriculum";
 import Icon from "@/components/ui/Icon";
+import Link from "next/link";
 import { useUser } from "@/lib/hooks";
 
 /* ── Phase colour map (matches globals.css semantic vars) ──────────── */
@@ -212,6 +213,13 @@ export default function CurriculumPage() {
 
       {/* Page header */}
       <div>
+        <Link
+          href="/dashboard/resources"
+          className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground transition mb-3"
+        >
+          <Icon name="arrow-left" size={14} />
+          Resources
+        </Link>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">
           Curriculum Guide
         </h1>
