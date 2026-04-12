@@ -47,6 +47,7 @@ export interface MentorOption {
 
 export type Mode =
   | { type: "idle" }
+  | { type: "dragging"; date: string; startTime: string; endTime: string }
   | { type: "creating"; date: string; startTime: string; endTime: string; anchorX: number; anchorY: number }
   | { type: "viewing"; slot: Slot; anchorX: number; anchorY: number }
   | { type: "editing"; slot: Slot }
@@ -77,6 +78,9 @@ export type ScheduleAction =
   | { type: "TODAY" }
   | { type: "SET_MENTOR_FILTER"; value: string }
   | { type: "SET_MENTORS"; mentors: MentorOption[] }
+  | { type: "START_DRAG"; date: string; startTime: string; endTime: string }
+  | { type: "UPDATE_DRAG"; endTime: string }
+  | { type: "FINISH_DRAG"; anchorX: number; anchorY: number }
   | { type: "START_CREATING"; date: string; startTime: string; endTime: string; anchorX: number; anchorY: number }
   | { type: "UPDATE_CREATE_TIME"; startTime: string; endTime: string }
   | { type: "VIEW_SLOT"; slot: Slot; anchorX: number; anchorY: number }

@@ -38,6 +38,32 @@ function reducer(state: ScheduleState, action: ScheduleAction): ScheduleState {
     case "SET_MENTORS":
       return { ...state, mentors: action.mentors };
 
+    // ── Drag-to-create ─────────────────────────────────────────────
+    case "START_DRAG":
+      return {
+        ...state,
+        mode: { type: "dragging", date: action.date, startTime: action.startTime, endTime: action.endTime },
+      };
+    case "UPDATE_DRAG":
+      if (state.mode.type !== "dragging") return state;
+      return {
+        ...state,
+        mode: { ...state.mode, endTime: action.endTime },
+      };
+    case "FINISH_DRAG":
+      if (state.mode.type !== "dragging") return state;
+      return {
+        ...state,
+        mode: {
+          type: "creating",
+          date: state.mode.date,
+          startTime: state.mode.startTime,
+          endTime: state.mode.endTime,
+          anchorX: action.anchorX,
+          anchorY: action.anchorY,
+        },
+      };
+
     // ── Mode transitions ──────────────────────────────────────────────
     case "START_CREATING":
       return {

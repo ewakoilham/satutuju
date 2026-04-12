@@ -55,6 +55,7 @@ export default function SlotBlock({
   return (
     <div
       onMouseDown={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
       onClick={onClick}
       className={`absolute rounded-md overflow-hidden transition-all select-none cursor-pointer
         ${colorCls} ${textCls}

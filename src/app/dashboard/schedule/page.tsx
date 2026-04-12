@@ -8,6 +8,7 @@ import { ConfirmModal } from "@/components/ui/Modal";
 import {
   useScheduleReducer,
   useScheduleData,
+  useDragToCreate,
   DayColumn,
   computeGhostFromClick,
   snapCellClick,
@@ -55,6 +56,9 @@ export default function SchedulePage() {
   const isMentor = user?.role === "mentor";
   const isMentee = user?.role === "mentee";
   const isAdmin  = user?.role === "admin";
+
+  // Drag-to-create hook (mentor only)
+  const drag = useDragToCreate(user?.role, mode, weekSlots, dispatch);
 
   // ── API actions ─────────────────────────────────────────────────────────
 
@@ -117,6 +121,8 @@ export default function SchedulePage() {
 
   function handleCellClick(e: React.MouseEvent<HTMLDivElement>, dateStr: string) {
     if (!isMentor) return;
+    // After a drag, skip the synthetic click
+    if (drag.skipNextClick.current) { drag.skipNextClick.current = false; return; }
     // If already in a mode, dismiss first
     if (mode.type !== "idle") { dispatch({ type: "DISMISS" }); return; }
 
@@ -276,6 +282,9 @@ export default function SchedulePage() {
                       mentorColorMap={mentorColorMap}
                       onCellClick={handleCellClick}
                       onSlotClick={handleSlotClick}
+                      onPointerDown={drag.handlePointerDown}
+                      onPointerMove={drag.handlePointerMove}
+                      onPointerUp={drag.handlePointerUp}
                     />
                   ))}
                 </div>

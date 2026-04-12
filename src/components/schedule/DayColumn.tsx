@@ -16,11 +16,15 @@ interface DayColumnProps {
   mentorColorMap: Map<string, string>;
   onCellClick: (e: React.MouseEvent<HTMLDivElement>, dateStr: string) => void;
   onSlotClick: (e: React.MouseEvent, slot: Slot) => void;
+  onPointerDown?: (e: React.PointerEvent<HTMLDivElement>, dateStr: string) => void;
+  onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (e: React.PointerEvent<HTMLDivElement>) => void;
 }
 
 export default function DayColumn({
   day, today, slots, role, mode, mentorColorMap,
   onCellClick, onSlotClick,
+  onPointerDown, onPointerMove, onPointerUp,
 }: DayColumnProps) {
   const dateStr = toDateStr(day);
   const isToday = dateStr === today;
@@ -30,10 +34,16 @@ export default function DayColumn({
   const isMentor = role === "mentor";
   const isAdmin  = role === "admin";
 
-  // Ghost block for creating (mentor)
+  // Ghost block for dragging or creating (mentor)
+  const showDragGhost   = mode.type === "dragging" && mode.date === dateStr;
   const showCreateGhost = mode.type === "creating" && mode.date === dateStr;
   // Ghost block for booking (mentee)
   const showBookGhost = mode.type === "booking" && mode.slot.date === dateStr;
+
+  // Under-minimum feedback during drag (< 60 min)
+  const dragUnderMin = showDragGhost && mode.type === "dragging"
+    ? (toMins(mode.endTime) - toMins(mode.startTime)) < 60
+    : false;
 
   // Determine selected slot for highlight
   const selectedSlotId = (mode.type === "viewing" ? mode.slot.id : null);
@@ -43,8 +53,11 @@ export default function DayColumn({
       className={`relative border-r border-border last:border-r-0 ${
         isToday ? "bg-blue-50/20" : ""
       } ${isMentor ? "cursor-pointer" : ""}`}
-      style={{ height: TOTAL_H * HOUR_H }}
+      style={{ height: TOTAL_H * HOUR_H, touchAction: isMentor ? "none" : undefined }}
       onClick={e => onCellClick(e, dateStr)}
+      onPointerDown={onPointerDown ? e => onPointerDown(e, dateStr) : undefined}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
     >
       {/* Hour grid lines */}
       {Array.from({ length: TOTAL_H }, (_, i) => (
@@ -64,6 +77,17 @@ export default function DayColumn({
 
       {/* Current time indicator */}
       {isToday && <NowLine />}
+
+      {/* Ghost: drag preview */}
+      {showDragGhost && mode.type === "dragging" && (
+        <GhostBlock
+          startTime={mode.startTime}
+          endTime={mode.endTime}
+          label={`${mode.startTime}\u2013${mode.endTime}`}
+          variant="create"
+          isUnderMinimum={dragUnderMin}
+        />
+      )}
 
       {/* Ghost: mentor creation */}
       {showCreateGhost && mode.type === "creating" && (
