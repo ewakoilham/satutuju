@@ -3,6 +3,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
+import { useLang } from "@/lib/i18n";
+import { landingCopy } from "@/lib/landing-copy";
 
 const MENTORS = [
   { name: "Siti Nurhaliza", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "SN", color: "bg-primary" },
@@ -52,6 +54,8 @@ export default function MentorMarquee() {
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const autoScrollRef = useRef<number | null>(null);
   const allMentors = [...MENTORS, ...MENTORS];
+  const { lang } = useLang();
+  const t = landingCopy[lang].mentorShowcase;
 
   // Auto-scroll logic using requestAnimationFrame for smooth pixel-level scrolling
   useEffect(() => {
@@ -134,8 +138,8 @@ export default function MentorMarquee() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 relative z-10">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight font-[family-name:var(--font-heading)] max-w-lg">
-          Mentor kami telah ada di posisi kamu.{" "}
-          <span className="text-primary-300">Klik ceritanya lebih lanjut</span>
+          {t.heading}{" "}
+          <span className="text-primary-300">{t.highlight}</span>
         </h2>
       </div>
 

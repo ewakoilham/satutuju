@@ -40,6 +40,19 @@ async function menteeProfileFilled(userId: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Signed-in users skip the login page and the landing page — send them to /dashboard
+  if (pathname === "/login" || pathname === "/") {
+    const token = req.cookies.get("token")?.value;
+    if (!token) return NextResponse.next();
+    try {
+      await jwtVerify(token, JWT_SECRET);
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    } catch {
+      // Invalid/expired token — let them see the page normally
+      return NextResponse.next();
+    }
+  }
+
   // Only run on dashboard routes
   if (!pathname.startsWith("/dashboard")) return NextResponse.next();
 
@@ -100,5 +113,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/login", "/"],
 };

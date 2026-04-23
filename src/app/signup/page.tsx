@@ -1,180 +1,92 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import Script from "next/script";
 import Logo from "@/components/ui/Logo";
 import Icon from "@/components/ui/Icon";
 
-const ROLES = [
-  { value: "mentee", label: "Mentee", icon: "graduation", desc: "I want guidance" },
-  { value: "mentor", label: "Mentor", icon: "star", desc: "I want to guide" },
-];
-
 export default function SignupPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("mentee");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role }),
-    });
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error || "Signup failed");
-      return;
-    }
-
-    router.push("/dashboard");
-  }
-
   return (
-    <div className="force-light min-h-screen flex items-center justify-center bg-brand-blue-soft relative overflow-hidden px-4 py-12">
+    <div className="force-light min-h-screen bg-brand-blue-soft relative overflow-hidden px-4 py-10">
       {/* Decorative illustrations */}
-      <Image src="/illustrations/lightbulb.png" alt="" width={130} height={130} className="absolute top-12 left-16 opacity-15 pointer-events-none" />
-      <Image src="/illustrations/notebook.png" alt="" width={110} height={110} className="absolute top-16 right-12 opacity-10 pointer-events-none" />
-      <Image src="/illustrations/globe.png" alt="" width={140} height={140} className="absolute bottom-16 right-16 opacity-15 pointer-events-none" />
+      <Image
+        src="/illustrations/lightbulb.png"
+        alt=""
+        width={130}
+        height={130}
+        className="absolute top-12 left-16 opacity-15 pointer-events-none hidden md:block"
+      />
+      <Image
+        src="/illustrations/notebook.png"
+        alt=""
+        width={110}
+        height={110}
+        className="absolute top-16 right-12 opacity-10 pointer-events-none hidden md:block"
+      />
+      <Image
+        src="/illustrations/globe.png"
+        alt=""
+        width={140}
+        height={140}
+        className="absolute bottom-16 right-16 opacity-15 pointer-events-none hidden md:block"
+      />
 
-      <div className="relative w-full max-w-md">
+      <div className="relative max-w-2xl mx-auto">
+        {/* Back to landing */}
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-700 transition-colors"
+          >
+            <Icon name="arrow-right" size={16} className="rotate-180" />
+            Kembali ke Beranda
+          </Link>
+        </div>
+
+        {/* Header */}
         <div className="text-center mb-6">
           <Logo variant="main" size="md" className="mx-auto mb-2" />
           <p className="text-sm text-primary-600/70">Mentorship Platform</p>
         </div>
 
-        <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl bg-white/95 backdrop-blur-sm">
+        {/* Card */}
+        <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-6 sm:p-8 rounded-2xl bg-white/95 backdrop-blur-sm">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-yellow/60 rounded-2xl mb-3">
-              <Icon name="plus" size={22} className="text-primary" />
+              <Icon name="graduation" size={22} className="text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)]">
-              Create Account
-            </h2>
-            <p className="text-sm text-gray-400 mt-1">Join the Satu Tuju mentorship community</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">
+              Daftar sebagai Mentee
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Ready to fulfill your dreams with Satu Tuju?
+            </p>
           </div>
 
-          {error && (
-            <div className="bg-danger-light text-danger text-sm px-4 py-2.5 rounded-xl mb-4 flex items-center gap-2 animate-slide-in-up">
-              <Icon name="x" size={14} />
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="input-field"
-                placeholder="Your full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input-field"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="input-field pr-11"
-                  placeholder="Min. 6 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
-                >
-                  <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                I am a...
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {ROLES.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setRole(r.value)}
-                    className={`relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl text-sm font-medium border transition-all ${
-                      role === r.value
-                        ? "bg-primary text-white border-primary shadow-[var(--shadow-sm)]"
-                        : "bg-white text-gray-500 border-border hover:border-primary-200 hover:bg-primary-50"
-                    }`}
-                  >
-                    {role === r.value && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand-yellow rounded-full flex items-center justify-center">
-                        <Icon name="check" size={10} className="text-primary-800" />
-                      </div>
-                    )}
-                    <Icon name={r.icon} size={18} />
-                    <span>{r.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-3 rounded-xl text-base mt-2"
-            >
-              {loading ? "Creating account..." : "Create Account"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-400 mt-6">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="text-primary font-semibold hover:underline"
-            >
-              Sign In
-            </Link>
-          </p>
+          {/* Tally embed */}
+          <iframe
+            data-tally-src="https://tally.so/embed/9qO65Q?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
+            loading="lazy"
+            width="100%"
+            height={545}
+            frameBorder={0}
+            marginHeight={0}
+            marginWidth={0}
+            title="Ready to fulfill your dreams with Satu Tuju?"
+            className="w-full"
+          />
         </div>
       </div>
+
+      {/* Tally loader */}
+      <Script id="tally-embed-loader" strategy="afterInteractive">
+        {`
+          var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};
+          if("undefined"!=typeof Tally){v();}
+          else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w;s.onload=v;s.onerror=v;d.body.appendChild(s);}
+        `}
+      </Script>
     </div>
   );
 }

@@ -3,32 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
+import { useLang } from "@/lib/i18n";
+import { landingCopy } from "@/lib/landing-copy";
 
-const STEPS = [
-  {
-    number: 1,
-    icon: "user" as const,
-    title: "Buat Profil",
-    description: "Daftar dan ceritakan tujuan beasiswamu. Kami perlu tahu impianmu untuk mencocokkan mentor terbaik.",
-    visual: "profile",
-  },
-  {
-    number: 2,
-    icon: "puzzle" as const,
-    title: "Dapat Mentor",
-    description: "Kami cocokkan kamu dengan mentor yang paling sesuai berdasarkan beasiswa, universitas, dan bidang studi.",
-    visual: "match",
-  },
-  {
-    number: 3,
-    icon: "calendar" as const,
-    title: "Mulai Sesi",
-    description: "Booking jadwal mentoring dan mulai perjalanan persiapan beasiswamu bersama mentor berpengalaman.",
-    visual: "calendar",
-  },
-];
+type Copy = (typeof landingCopy)["id"];
 
-function ProfileVisual({ active }: { active: boolean }) {
+const STEP_ICONS = ["user", "puzzle", "calendar"] as const;
+
+function ProfileVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["profile"] }) {
   return (
     <div className={`transition-all duration-700 ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
       <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] p-6 w-72 mx-auto">
@@ -38,34 +20,34 @@ function ProfileVisual({ active }: { active: boolean }) {
         </div>
         {/* Name */}
         <h4 className="text-center font-bold text-foreground font-[family-name:var(--font-heading)] text-base">
-          Muhammad Razak
+          {copy.name}
         </h4>
         {/* Details */}
         <div className="mt-4 space-y-2.5">
           <div className="flex items-start gap-2.5 bg-primary-50 rounded-lg px-3 py-2.5">
             <Icon name="graduation" size={14} className="text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-text-muted-2 uppercase tracking-wider font-medium">Target Universitas</p>
-              <p className="text-xs text-foreground font-medium">Monash University — Master of Business</p>
+              <p className="text-[10px] text-text-muted-2 uppercase tracking-wider font-medium">{copy.targetUniLabel}</p>
+              <p className="text-xs text-foreground font-medium">{copy.targetUniValue}</p>
             </div>
           </div>
           <div className="flex items-start gap-2.5 bg-brand-blue-soft rounded-lg px-3 py-2.5">
             <Icon name="document" size={14} className="text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-text-muted-2 uppercase tracking-wider font-medium">Beasiswa</p>
-              <p className="text-xs text-foreground font-medium">LPDP 2026</p>
+              <p className="text-[10px] text-text-muted-2 uppercase tracking-wider font-medium">{copy.scholarshipLabel}</p>
+              <p className="text-xs text-foreground font-medium">{copy.scholarshipValue}</p>
             </div>
           </div>
         </div>
         <div className="mt-4 h-10 bg-primary rounded-lg flex items-center justify-center">
-          <span className="text-white text-sm font-medium">Daftar Sekarang</span>
+          <span className="text-white text-sm font-medium">{copy.cta}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function MatchVisual({ active }: { active: boolean }) {
+function MatchVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["match"] }) {
   return (
     <div className={`transition-all duration-700 ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
       <div className="flex items-center justify-center gap-4">
@@ -103,24 +85,24 @@ function MatchVisual({ active }: { active: boolean }) {
         </div>
       </div>
       <p className="text-center text-sm text-primary-700 mt-4 font-medium">
-        Mencocokkan mentor terbaik...
+        {copy.caption}
       </p>
     </div>
   );
 }
 
-function CalendarVisual({ active }: { active: boolean }) {
+function CalendarVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["calendar"] }) {
   return (
     <div className={`transition-all duration-700 ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
       <div className="relative flex items-start gap-4">
         {/* Calendar card - shown alongside session */}
         <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] p-4 w-48 flex-shrink-0 mt-8">
           <div className="flex items-center justify-between mb-3">
-            <span className="font-bold text-foreground text-xs font-[family-name:var(--font-heading)]">April 2026</span>
+            <span className="font-bold text-foreground text-xs font-[family-name:var(--font-heading)]">{copy.month}</span>
             <Icon name="calendar" size={14} className="text-primary" />
           </div>
           <div className="grid grid-cols-7 gap-0.5 text-center text-[10px]">
-            {["S", "S", "R", "K", "J", "S", "M"].map((d, i) => (
+            {copy.dayHeaders.map((d, i) => (
               <div key={i} className="text-text-muted-2 font-medium py-0.5">{d}</div>
             ))}
             {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
@@ -146,7 +128,7 @@ function CalendarVisual({ active }: { active: boolean }) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-semibold text-success">Sesi Berlangsung</span>
+              <span className="text-xs font-semibold text-success">{copy.live}</span>
             </div>
             <span className="text-[10px] text-text-muted-2">45:12</span>
           </div>
@@ -159,7 +141,7 @@ function CalendarVisual({ active }: { active: boolean }) {
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-1">
                   <Icon name="graduation" size={18} className="text-white" />
                 </div>
-                <span className="text-[10px] text-white/90 font-medium">Mentor</span>
+                <span className="text-[10px] text-white/90 font-medium">{copy.mentor}</span>
               </div>
               {/* Speaking indicator */}
               <div className="absolute bottom-2 left-2 flex items-center gap-0.5">
@@ -182,7 +164,7 @@ function CalendarVisual({ active }: { active: boolean }) {
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-1">
                   <Icon name="user" size={18} className="text-white" />
                 </div>
-                <span className="text-[10px] text-white/90 font-medium">Mentee</span>
+                <span className="text-[10px] text-white/90 font-medium">{copy.mentee}</span>
               </div>
             </div>
           </div>
@@ -194,12 +176,12 @@ function CalendarVisual({ active }: { active: boolean }) {
                 <Icon name="graduation" size={10} className="text-white" />
               </div>
               <div className="bg-primary-50 rounded-lg rounded-tl-none px-3 py-1.5 text-[10px] text-primary-800">
-                Ayo kita review esai motivasimu...
+                {copy.mentorMsg}
               </div>
             </div>
             <div className="flex items-start gap-2 justify-end">
               <div className="bg-brand-blue-soft rounded-lg rounded-tr-none px-3 py-1.5 text-[10px] text-primary-800">
-                Siap, kak! Sudah saya revisi
+                {copy.menteeMsg}
               </div>
               <div className="w-5 h-5 rounded-full bg-primary-400 flex-shrink-0 flex items-center justify-center">
                 <Icon name="user" size={10} className="text-white" />
@@ -216,6 +198,9 @@ export default function HowItWorks() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const { lang } = useLang();
+  const t = landingCopy[lang].howItWorks;
+  const v = landingCopy[lang].visuals;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -234,10 +219,10 @@ export default function HowItWorks() {
   useEffect(() => {
     if (!isVisible) return;
     const interval = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % STEPS.length);
+      setActiveStep((prev) => (prev + 1) % t.steps.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [isVisible]);
+  }, [isVisible, t.steps.length]);
 
   return (
     <section ref={sectionRef} className="py-24 bg-white relative overflow-hidden">
@@ -284,20 +269,20 @@ export default function HowItWorks() {
         <div className="text-center mb-16">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-100 text-sm text-primary-700 font-medium mb-4">
             <Icon name="lightbulb" size={16} />
-            Cara Kerja
+            {t.label}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
-            Bagaimana Cara Kerjanya?
+            {t.heading}
           </h2>
           <p className="mt-4 text-text-muted text-lg max-w-2xl mx-auto">
-            Tiga langkah sederhana untuk memulai perjalanan beasiswamu
+            {t.subheading}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Steps */}
           <div className="space-y-8">
-            {STEPS.map((step, i) => (
+            {t.steps.map((step, i) => (
               <div
                 key={i}
                 className={`flex gap-5 cursor-pointer transition-all duration-500 ${
@@ -316,12 +301,12 @@ export default function HowItWorks() {
                     }`}
                   >
                     <Icon
-                      name={step.icon}
+                      name={STEP_ICONS[i]}
                       size={22}
                       className={activeStep === i ? "text-white" : "text-primary"}
                     />
                   </div>
-                  {i < STEPS.length - 1 && (
+                  {i < t.steps.length - 1 && (
                     <div className="w-0.5 h-12 mt-2 bg-primary-200 relative overflow-hidden">
                       <div
                         className={`absolute inset-x-0 top-0 bg-primary transition-all duration-1000 ${
@@ -336,7 +321,7 @@ export default function HowItWorks() {
                 <div className={`pt-1 transition-all duration-300 ${activeStep === i ? "opacity-100" : "opacity-60"}`}>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-mono text-primary-400 tracking-widest">
-                      LANGKAH {step.number}
+                      {t.stepLabel} {i + 1}
                     </span>
                   </div>
                   <h3 className="text-xl font-bold text-foreground mt-1 font-[family-name:var(--font-heading)]">
@@ -354,9 +339,9 @@ export default function HowItWorks() {
           <div className="relative h-96 flex items-center justify-center">
             <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-soft/30 to-transparent rounded-3xl" />
             <div className="relative">
-              {activeStep === 0 && <ProfileVisual active={activeStep === 0} />}
-              {activeStep === 1 && <MatchVisual active={activeStep === 1} />}
-              {activeStep === 2 && <CalendarVisual active={activeStep === 2} />}
+              {activeStep === 0 && <ProfileVisual active={activeStep === 0} copy={v.profile} />}
+              {activeStep === 1 && <MatchVisual active={activeStep === 1} copy={v.match} />}
+              {activeStep === 2 && <CalendarVisual active={activeStep === 2} copy={v.calendar} />}
             </div>
           </div>
         </div>

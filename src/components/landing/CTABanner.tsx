@@ -3,8 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
+import { useLang } from "@/lib/i18n";
+import { landingCopy } from "@/lib/landing-copy";
 
 export default function CTABanner() {
+  const { lang } = useLang();
+  const t = landingCopy[lang].finalCta;
   return (
     <section className="relative bg-primary py-20 overflow-hidden">
       {/* Organic gradient blobs */}
@@ -60,10 +64,10 @@ export default function CTABanner() {
         />
 
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight font-[family-name:var(--font-heading)]">
-          Siap mulai perjalanan beasiswamu?
+          {t.headline}
         </h2>
         <p className="mt-4 text-primary-200/90 text-lg max-w-2xl mx-auto">
-          Gabung Program Mentorship sekarang atau gabung komunitas pencari beasiswa
+          {t.subheading}
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -71,14 +75,14 @@ export default function CTABanner() {
             href="/signup"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary font-bold rounded-xl hover:bg-primary-50 shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-xl)] transition-all text-base"
           >
-            Gabung Mentorship sekarang
+            {t.primary}
             <Icon name="arrow-right" size={18} />
           </Link>
           <Link
             href="/signup"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-white font-semibold rounded-xl border-2 border-white/30 hover:border-white/60 hover:bg-white/10 transition-all text-base"
           >
-            Gabung komunitas SatuTuju
+            {t.secondary}
           </Link>
         </div>
       </div>

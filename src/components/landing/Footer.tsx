@@ -3,27 +3,41 @@
 import Image from "next/image";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
-
-const FOOTER_LINKS = {
-  "Tentang": [
-    { label: "Tentang Kami", href: "#" },
-    { label: "Tim Kami", href: "#" },
-    { label: "Karir", href: "#" },
-  ],
-  "Program": [
-    { label: "Mentorship", href: "/signup" },
-    { label: "Komunitas", href: "#" },
-    { label: "Events", href: "#" },
-  ],
-  "Bantuan & Panduan": [
-    { label: "FAQ", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Syarat & Ketentuan", href: "#" },
-    { label: "Kebijakan Privasi", href: "#" },
-  ],
-};
+import { useLang } from "@/lib/i18n";
+import { landingCopy } from "@/lib/landing-copy";
 
 export default function Footer() {
+  const { lang } = useLang();
+  const t = landingCopy[lang].footer;
+
+  const columns: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
+    {
+      title: t.columns.about,
+      links: [
+        { label: t.links.aboutUs, href: "#" },
+        { label: t.links.team, href: "#" },
+        { label: t.links.careers, href: "#" },
+      ],
+    },
+    {
+      title: t.columns.program,
+      links: [
+        { label: t.links.mentorship, href: "/signup" },
+        { label: t.links.community, href: "#" },
+        { label: t.links.events, href: "#" },
+      ],
+    },
+    {
+      title: t.columns.help,
+      links: [
+        { label: t.links.faq, href: "#" },
+        { label: t.links.blog, href: "#" },
+        { label: t.links.terms, href: "#" },
+        { label: t.links.privacy, href: "#" },
+      ],
+    },
+  ];
+
   return (
     <footer className="bg-white border-t border-border relative overflow-hidden">
       {/* Organic gradient blobs */}
@@ -59,8 +73,7 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Image src="/logo-main.png" alt="SatuTuju" width={100} height={67} />
             <p className="mt-4 text-text-muted text-sm leading-relaxed max-w-sm">
-              Connecting mentors who have studied abroad with those who dream of doing the same.
-              Your journey, guided by experience.
+              {t.supporting}
             </p>
 
             {/* Contact */}
@@ -87,13 +100,13 @@ export default function Footer() {
           </div>
 
           {/* Link columns */}
-          {Object.entries(FOOTER_LINKS).map(([title, links]) => (
-            <div key={title}>
+          {columns.map((col) => (
+            <div key={col.title}>
               <h4 className="font-bold text-foreground text-sm font-[family-name:var(--font-heading)] mb-4">
-                {title}
+                {col.title}
               </h4>
               <ul className="space-y-3">
-                {links.map((link) => (
+                {col.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
@@ -108,21 +121,26 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Social icons */}
-        <div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-text-muted-2">
-            © 2026 SatuTuju. Hak cipta dilindungi.
-          </p>
-          <div className="flex items-center gap-3">
-            {["globe", "book", "link"].map((icon) => (
-              <a
-                key={icon}
-                href="#"
-                className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center text-primary hover:bg-primary-100 transition-colors"
-              >
-                <Icon name={icon} size={16} />
-              </a>
-            ))}
+        {/* Tagline + copyright */}
+        <div className="mt-10 pt-8 border-t border-border">
+          {t.tagline && (
+            <p className="text-sm text-foreground font-medium max-w-2xl mb-6">
+              {t.tagline}
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-text-muted-2">{t.copyright}</p>
+            <div className="flex items-center gap-3">
+              {["globe", "book", "link"].map((icon) => (
+                <a
+                  key={icon}
+                  href="#"
+                  className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center text-primary hover:bg-primary-100 transition-colors"
+                >
+                  <Icon name={icon} size={16} />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>

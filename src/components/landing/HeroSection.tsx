@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
+import { useLang } from "@/lib/i18n";
+import { landingCopy } from "@/lib/landing-copy";
 
 const MENTORS = [
   { name: "Ahmad R.", scholarship: "Beasiswa LPDP", university: "University of Melbourne", initials: "AR", color: "bg-primary" },
@@ -14,6 +16,8 @@ const MENTORS = [
 
 export default function HeroSection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { lang } = useLang();
+  const t = landingCopy[lang].hero;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -89,18 +93,17 @@ export default function HeroSection() {
           <div className="animate-fade-in-up">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 backdrop-blur-sm text-sm text-primary-700 font-medium mb-4">
               <Icon name="puzzle" size={16} />
-              Free 1-on-1 Mentoring
+              {t.badge}
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary-900 leading-[1.15] font-[family-name:var(--font-heading)]">
-              Perjalanan Beasiswamu,
+              {t.headlineLine1}
               <br />
-              <span className="text-primary">Dipandu oleh Pengalaman.</span>
+              <span className="text-primary">{t.headlineLine2}</span>
             </h1>
 
             <p className="mt-4 text-base lg:text-lg text-primary-800/70 max-w-lg leading-relaxed">
-              Mentoring gratis 1-on-1 dari alumni yang sudah lolos beasiswa.
-              Kami bantu kamu dari persiapan dokumen hingga wawancara.
+              {t.subheadline}
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -108,14 +111,14 @@ export default function HeroSection() {
                 href="/signup"
                 className="btn-primary px-8 py-4 rounded-xl text-base font-bold shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-xl)] transition-all"
               >
-                Gabung Mentorship Sekarang
+                {t.primaryCta}
                 <Icon name="arrow-right" size={18} />
               </Link>
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/70 backdrop-blur-sm text-primary font-semibold rounded-xl border border-primary-200/50 hover:bg-white hover:shadow-[var(--shadow-md)] transition-all text-base"
               >
-                Gabung Komunitas
+                {t.secondaryCta}
               </Link>
             </div>
 
@@ -125,19 +128,19 @@ export default function HeroSection() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Icon name="users" size={16} className="text-primary" />
                 </div>
-                <span><strong className="text-primary-900">20+</strong> Mentor</span>
+                <span><strong className="text-primary-900">20+</strong> {t.statMentors}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Icon name="globe" size={16} className="text-primary" />
                 </div>
-                <span><strong className="text-primary-900">20+</strong> Negara Tujuan</span>
+                <span><strong className="text-primary-900">20+</strong> {t.statCountries}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Icon name="graduation" size={16} className="text-primary" />
                 </div>
-                <span><strong className="text-primary-900">100%</strong> Gratis</span>
+                <span className="text-primary-900 font-bold">{t.statFree}</span>
               </div>
             </div>
           </div>

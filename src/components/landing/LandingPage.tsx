@@ -1,5 +1,6 @@
 "use client";
 
+import { LanguageProvider } from "@/lib/i18n";
 import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
 import StickyValueProps from "./StickyValueProps";
@@ -10,16 +11,18 @@ import Footer from "./Footer";
 
 export default function LandingPage() {
   return (
-    <div className="force-light min-h-screen">
-      <Navbar />
-      <main>
-        <HeroSection />
-        <StickyValueProps />
-        <MentorMarquee />
-        <HowItWorks />
-        <CTABanner />
-      </main>
-      <Footer />
-    </div>
+    <LanguageProvider defaultLang="id">
+      <div className="force-light min-h-screen">
+        <Navbar />
+        <main>
+          <HeroSection />
+          <StickyValueProps />
+          <MentorMarquee />
+          <HowItWorks />
+          <CTABanner />
+        </main>
+        <Footer />
+      </div>
+    </LanguageProvider>
   );
 }
