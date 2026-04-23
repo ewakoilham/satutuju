@@ -6,7 +6,7 @@ import Icon from "@/components/ui/Icon";
 import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
-type Copy = (typeof landingCopy)["id"];
+type Copy = (typeof landingCopy)["id"] | (typeof landingCopy)["en"];
 
 /* ── Visual 01: Roadmap Timeline (Planning) ── */
 function RoadmapVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["roadmap"] }) {
