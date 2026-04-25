@@ -25,21 +25,21 @@ export const landingCopy = {
       slides: [
         {
           number: "01",
+          title: "Semua persiapan beasiswa yang kamu butuhkan Ada disini",
+          description:
+            "Kami membimbing kamu di setiap tahap — dari persiapan dokumen, esai motivasi, simulasi wawancara, hingga kamu benar-benar lolos. Dipandu langsung oleh alumni yang sudah melalui proses yang sama.",
+        },
+        {
+          number: "02",
           title: "Mulai dengan Peta Jalan yang Jelas",
           description:
             "Mentor kami bantu kamu memetakan target beasiswa yang paling sesuai profilmu, menyusun timeline aplikasi, dan membangun narasi diri yang kuat sejak awal.",
         },
         {
-          number: "02",
+          number: "03",
           title: "Esai yang Benar-Benar Mencerminkan Kamu.",
           description:
             "Bukan template, bukan copy-paste. Mentor kami bantu kamu menemukan cerita yang autentik — yang membuat reviewer beasiswa berhenti membaca dan mulai mempertimbangkan.",
-        },
-        {
-          number: "03",
-          title: "Semua persiapan beasiswa yang kamu butuhkan Ada disini",
-          description:
-            "Kami membimbing kamu di setiap tahap — dari persiapan dokumen, esai motivasi, simulasi wawancara, hingga kamu benar-benar lolos. Dipandu langsung oleh alumni yang sudah melalui proses yang sama.",
         },
         {
           number: "04",
@@ -196,21 +196,21 @@ export const landingCopy = {
       slides: [
         {
           number: "01",
+          title: "Every document, done right.",
+          description:
+            "CV, motivation letter, research proposal, recommendation letters — your mentor has written all of them before. They know what reviewers are looking for, because they've been reviewed.",
+        },
+        {
+          number: "02",
           title: "Strategic Planning",
           description:
             "Most applicants scramble at the last minute. Your mentor helps you map out a realistic timeline from day one — so you're never rushing a deadline or second-guessing your strategy.",
         },
         {
-          number: "02",
+          number: "03",
           title: "Essays that sound like you.",
           description:
             "Reviewers read hundreds of essays that all sound the same. Your mentor helps you find the part of your story that's actually worth telling — and cuts everything that isn't.",
-        },
-        {
-          number: "03",
-          title: "Every document, done right.",
-          description:
-            "CV, motivation letter, research proposal, recommendation letters — your mentor has written all of them before. They know what reviewers are looking for, because they've been reviewed.",
         },
         {
           number: "04",

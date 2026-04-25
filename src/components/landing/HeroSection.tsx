@@ -8,10 +8,10 @@ import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 const MENTORS = [
-  { name: "Ahmad R.", scholarship: "Beasiswa LPDP", university: "University of Melbourne", initials: "AR", color: "bg-primary" },
-  { name: "Siti N.", scholarship: "Australia Awards", university: "University of Sydney", initials: "SN", color: "bg-primary-700" },
-  { name: "Dewi L.", scholarship: "Chevening", university: "University of Oxford", initials: "DL", color: "bg-primary-600" },
-  { name: "Budi S.", scholarship: "Fulbright", university: "Harvard University", initials: "BS", color: "bg-primary-800" },
+  { name: "Akmal F.", scholarship: "Beasiswa LPDP", university: "University of Cambridge", initials: "AF", color: "bg-primary" },
+  { name: "Buna R.", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "BR", color: "bg-primary-700" },
+  { name: "Hanan H.", scholarship: "Imperial Scholarship", university: "Imperial College London", initials: "HH", color: "bg-primary-600" },
+  { name: "Hasna H.", scholarship: "Beasiswa LPDP", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800" },
 ];
 
 export default function HeroSection() {

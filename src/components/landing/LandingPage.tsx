@@ -16,8 +16,8 @@ export default function LandingPage() {
         <Navbar />
         <main>
           <HeroSection />
-          <StickyValueProps />
           <MentorMarquee />
+          <StickyValueProps />
           <HowItWorks />
           <CTABanner />
         </main>

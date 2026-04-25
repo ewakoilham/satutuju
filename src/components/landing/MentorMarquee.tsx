@@ -7,14 +7,20 @@ import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 const MENTORS = [
-  { name: "Siti Nurhaliza", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "SN", color: "bg-primary" },
-  { name: "Ahmad Rizki", scholarship: "Chevening", university: "University of Oxford", initials: "AR", color: "bg-primary-700" },
-  { name: "Dewi Lestari", scholarship: "Australia Awards", university: "University of Sydney", initials: "DL", color: "bg-primary-600" },
-  { name: "Budi Santoso", scholarship: "Fulbright", university: "Harvard University", initials: "BS", color: "bg-primary-800" },
-  { name: "Rina Kartika", scholarship: "MEXT Japan", university: "University of Tokyo", initials: "RK", color: "bg-primary-deep" },
-  { name: "Fajar Pratama", scholarship: "Erasmus Mundus", university: "TU Delft", initials: "FP", color: "bg-primary-700" },
-  { name: "Maya Putri", scholarship: "DAAD", university: "TU Munich", initials: "MP", color: "bg-primary" },
-  { name: "Dani Wijaya", scholarship: "NZ Scholarship", university: "Victoria Univ. Wellington", initials: "DW", color: "bg-primary-600" },
+  { name: "Akmal Firmansyah", scholarship: "Beasiswa LPDP", university: "University of Cambridge", initials: "AF", color: "bg-primary" },
+  { name: "Buna Rizal Rachman", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "BR", color: "bg-primary-700" },
+  { name: "Hanan Hakim", scholarship: "Imperial Scholarship", university: "Imperial College London", initials: "HH", color: "bg-primary-600" },
+  { name: "Hasna Hafida", scholarship: "Beasiswa LPDP", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800" },
+  { name: "Muhammad Haekal Shafi", scholarship: "Beasiswa LPDP", university: "University of Warwick", initials: "HS", color: "bg-primary-deep" },
+  { name: "Muhammad Aqil Maulana", scholarship: "Beasiswa LPDP", university: "University of Melbourne", initials: "AM", color: "bg-primary-700" },
+  { name: "Fika Rizkyanti", scholarship: "Beasiswa LPDP", university: "University of Sydney", initials: "FR", color: "bg-primary" },
+  { name: "Muhammad Ilham", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "MI", color: "bg-primary-600" },
+  { name: "Angela Benedicta Horta", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "AH", color: "bg-primary-800" },
+  { name: "Raihan Bagus Sakti Aji", scholarship: "Beasiswa LPDP", university: "LPDP Dalam Negeri", initials: "RA", color: "bg-primary-deep" },
+  { name: "Arifansyah Wicaksono", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "AW", color: "bg-primary-700" },
+  { name: "Isna Arifah Rahmawati", scholarship: "Beasiswa LPDP", university: "University of Sydney", initials: "IR", color: "bg-primary" },
+  { name: "Megawati Refra", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "MR", color: "bg-primary-600" },
+  { name: "Nyoman Krisna", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "NK", color: "bg-primary-800" },
 ];
 
 const CARD_WIDTH = 240; // w-60 = 15rem = 240px

@@ -50,38 +50,41 @@ function ProfileVisual({ active, copy }: { active: boolean; copy: Copy["visuals"
 function MatchVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["match"] }) {
   return (
     <div className={`transition-all duration-700 ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-2 md:gap-4">
         {/* Mentee */}
-        <div className="w-20 h-20 rounded-2xl bg-white shadow-[var(--shadow-md)] flex items-center justify-center">
-          <Icon name="user" size={28} className="text-primary-400" />
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white shadow-[var(--shadow-md)] flex items-center justify-center flex-shrink-0">
+          <Icon name="user" size={24} className="text-primary-400 md:hidden" />
+          <Icon name="user" size={28} className="text-primary-400 hidden md:block" />
         </div>
         {/* Connection animation */}
         <div className="flex items-center gap-1">
           {[0, 1, 2].map((j) => (
             <div
               key={j}
-              className="w-3 h-3 rounded-full bg-primary animate-pulse-glow"
+              className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary animate-pulse-glow"
               style={{ animationDelay: `${j * 0.3}s` }}
             />
           ))}
         </div>
         {/* Puzzle piece */}
-        <div className="w-16 h-16 flex items-center justify-center">
-          <Icon name="puzzle" size={40} className="text-primary animate-float" />
+        <div className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center flex-shrink-0">
+          <Icon name="puzzle" size={32} className="text-primary animate-float md:hidden" />
+          <Icon name="puzzle" size={40} className="text-primary animate-float hidden md:block" />
         </div>
         {/* Connection animation */}
         <div className="flex items-center gap-1">
           {[0, 1, 2].map((j) => (
             <div
               key={j}
-              className="w-3 h-3 rounded-full bg-primary animate-pulse-glow"
+              className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-primary animate-pulse-glow"
               style={{ animationDelay: `${j * 0.3 + 0.5}s` }}
             />
           ))}
         </div>
         {/* Mentor */}
-        <div className="w-20 h-20 rounded-2xl bg-white shadow-[var(--shadow-md)] flex items-center justify-center">
-          <Icon name="graduation" size={28} className="text-primary" />
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white shadow-[var(--shadow-md)] flex items-center justify-center flex-shrink-0">
+          <Icon name="graduation" size={24} className="text-primary md:hidden" />
+          <Icon name="graduation" size={28} className="text-primary hidden md:block" />
         </div>
       </div>
       <p className="text-center text-sm text-primary-700 mt-4 font-medium">
@@ -94,9 +97,9 @@ function MatchVisual({ active, copy }: { active: boolean; copy: Copy["visuals"][
 function CalendarVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["calendar"] }) {
   return (
     <div className={`transition-all duration-700 ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
-      <div className="relative flex items-start gap-4">
-        {/* Calendar card - shown alongside session */}
-        <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] p-4 w-48 flex-shrink-0 mt-8">
+      <div className="relative flex flex-col md:flex-row items-center md:items-start gap-4">
+        {/* Calendar card - shown alongside session on md+, stacks on mobile */}
+        <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] p-4 w-48 flex-shrink-0 md:mt-8">
           <div className="flex items-center justify-between mb-3">
             <span className="font-bold text-foreground text-xs font-[family-name:var(--font-heading)]">{copy.month}</span>
             <Icon name="calendar" size={14} className="text-primary" />
@@ -279,64 +282,78 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
           {/* Left: Steps */}
-          <div className="space-y-8">
+          <div className="space-y-12 md:space-y-8">
             {t.steps.map((step, i) => (
               <div
                 key={i}
-                className={`flex gap-5 cursor-pointer transition-all duration-500 ${
+                className={`transition-all duration-500 ${
                   isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
                 }`}
                 style={{ transitionDelay: `${i * 200}ms` }}
                 onClick={() => setActiveStep(i)}
               >
-                {/* Step number & line */}
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                      activeStep === i
-                        ? "bg-primary shadow-[var(--shadow-md)] scale-110"
-                        : "bg-primary-100"
-                    }`}
-                  >
-                    <Icon
-                      name={STEP_ICONS[i]}
-                      size={22}
-                      className={activeStep === i ? "text-white" : "text-primary"}
-                    />
-                  </div>
-                  {i < t.steps.length - 1 && (
-                    <div className="w-0.5 h-12 mt-2 bg-primary-200 relative overflow-hidden">
-                      <div
-                        className={`absolute inset-x-0 top-0 bg-primary transition-all duration-1000 ${
-                          activeStep > i ? "h-full" : "h-0"
-                        }`}
+                {/* Step row (icon + content) */}
+                <div className="flex gap-5 cursor-pointer">
+                  {/* Step number & line */}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                        activeStep === i
+                          ? "bg-primary shadow-[var(--shadow-md)] scale-110"
+                          : "bg-primary-100"
+                      }`}
+                    >
+                      <Icon
+                        name={STEP_ICONS[i]}
+                        size={22}
+                        className={activeStep === i ? "text-white" : "text-primary"}
                       />
                     </div>
-                  )}
+                    {i < t.steps.length - 1 && (
+                      <div className="w-0.5 h-12 mt-2 bg-primary-200 relative overflow-hidden hidden md:block">
+                        <div
+                          className={`absolute inset-x-0 top-0 bg-primary transition-all duration-1000 ${
+                            activeStep > i ? "h-full" : "h-0"
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className={`pt-1 flex-1 min-w-0 transition-all duration-300 ${activeStep === i ? "opacity-100" : "opacity-60"}`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono text-primary-400 tracking-widest">
+                        {t.stepLabel} {i + 1}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground mt-1 font-[family-name:var(--font-heading)]">
+                      {step.title}
+                    </h3>
+                    <p className="text-text-muted mt-2 text-sm leading-relaxed md:max-w-sm">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Content */}
-                <div className={`pt-1 transition-all duration-300 ${activeStep === i ? "opacity-100" : "opacity-60"}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-primary-400 tracking-widest">
-                      {t.stepLabel} {i + 1}
-                    </span>
+                {/* Mobile-only inline visual paired with this step.
+                    Always active on mobile; desktop uses the shared cycling visual on the right. */}
+                <div className="md:hidden mt-6 relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-soft/30 to-transparent rounded-3xl" />
+                  <div className="relative py-8 flex items-center justify-center">
+                    {i === 0 && <ProfileVisual active copy={v.profile} />}
+                    {i === 1 && <MatchVisual active copy={v.match} />}
+                    {i === 2 && <CalendarVisual active copy={v.calendar} />}
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mt-1 font-[family-name:var(--font-heading)]">
-                    {step.title}
-                  </h3>
-                  <p className="text-text-muted mt-2 text-sm leading-relaxed max-w-sm">
-                    {step.description}
-                  </p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Right: Animated Visual */}
-          <div className="relative h-96 flex items-center justify-center">
+          {/* Right: Shared cycling visual — desktop only (md+) */}
+          <div className="hidden md:flex relative h-96 items-center justify-center">
             <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-soft/30 to-transparent rounded-3xl" />
             <div className="relative">
               {activeStep === 0 && <ProfileVisual active={activeStep === 0} copy={v.profile} />}

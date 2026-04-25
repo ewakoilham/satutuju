@@ -375,7 +375,7 @@ export default function StickyValueProps() {
       )}
 
       <div className="max-w-7xl mx-auto">
-        <div className="lg:grid lg:grid-cols-2">
+        <div className="md:grid md:grid-cols-2">
           {/* Left: Scrollable text sections */}
           <div>
             {t.slides.map((vp, i) => (
@@ -384,7 +384,7 @@ export default function StickyValueProps() {
                 data-vp-section={i}
                 className="min-h-[70vh] flex items-center py-16 px-6 lg:px-12"
               >
-                <div className="max-w-lg">
+                <div className="max-w-lg w-full">
                   <span className="text-primary-300 text-sm font-mono tracking-widest">
                     {vp.number} / 04
                   </span>
@@ -394,15 +394,26 @@ export default function StickyValueProps() {
                   <p className="mt-4 lg:mt-6 text-primary-200/80 text-base lg:text-lg leading-relaxed">
                     {vp.description}
                   </p>
+
+                  {/* Mobile-only inline visual (< md). Tablet/desktop (md+) use the sticky column
+                      on the right. Always active here since each visual is inline with its own
+                      text and shouldn't fade with the sticky-column activeIndex.
+                      Order matches landingCopy.features.slides: Checklist → Roadmap → Essay → Interview */}
+                  <div className="md:hidden mt-10">
+                    {i === 0 && <ChecklistVisual active copy={v.checklist} />}
+                    {i === 1 && <RoadmapVisual active copy={v.roadmap} />}
+                    {i === 2 && <EssayVisual active copy={v.essay} />}
+                    {i === 3 && <InterviewVisual active copy={v.interview} />}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Right: Sticky visual display */}
-          <div className="hidden lg:block relative">
+          {/* Right: Sticky visual display (md+, includes tablets and small laptops) */}
+          <div className="hidden md:block relative">
             <div className="sticky top-0 h-screen flex items-center justify-center px-8 lg:px-12">
-              {/* Visual 01 — Planning / Roadmap */}
+              {/* Visual 01 — Documents Checklist */}
               <div
                 className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
                 style={{
@@ -412,9 +423,9 @@ export default function StickyValueProps() {
                   pointerEvents: activeIndex === 0 ? "auto" : "none",
                 }}
               >
-                <RoadmapVisual active={activeIndex === 0} copy={v.roadmap} />
+                <ChecklistVisual active={activeIndex === 0} copy={v.checklist} />
               </div>
-              {/* Visual 02 — Essay */}
+              {/* Visual 02 — Planning / Roadmap */}
               <div
                 className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
                 style={{
@@ -424,9 +435,9 @@ export default function StickyValueProps() {
                   pointerEvents: activeIndex === 1 ? "auto" : "none",
                 }}
               >
-                <EssayVisual active={activeIndex === 1} copy={v.essay} />
+                <RoadmapVisual active={activeIndex === 1} copy={v.roadmap} />
               </div>
-              {/* Visual 03 — Documents Checklist */}
+              {/* Visual 03 — Essay */}
               <div
                 className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
                 style={{
@@ -436,7 +447,7 @@ export default function StickyValueProps() {
                   pointerEvents: activeIndex === 2 ? "auto" : "none",
                 }}
               >
-                <ChecklistVisual active={activeIndex === 2} copy={v.checklist} />
+                <EssayVisual active={activeIndex === 2} copy={v.essay} />
               </div>
               {/* Visual 04 — Interview */}
               <div
