@@ -8,10 +8,10 @@ import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 const MENTORS = [
-  { name: "Akmal F.", scholarship: "Beasiswa LPDP", university: "University of Cambridge", initials: "AF", color: "bg-primary" },
-  { name: "Buna R.", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "BR", color: "bg-primary-700" },
-  { name: "Hanan H.", scholarship: "Imperial Scholarship", university: "Imperial College London", initials: "HH", color: "bg-primary-600" },
-  { name: "Hasna H.", scholarship: "Beasiswa LPDP", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800" },
+  { name: "Akmal F.", scholarship: "Beasiswa LPDP", university: "University of Cambridge", initials: "AF", color: "bg-primary", photo: "/mentors/akmal-firmansyah.jpg" },
+  { name: "Buna R.", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "BR", color: "bg-primary-700", photo: "/mentors/buna-rizal-rachman-v2.jpg" },
+  { name: "Hanan H.", scholarship: "Imperial Scholarship", university: "Imperial College London", initials: "HH", color: "bg-primary-600", photo: "/mentors/hanan-hakim.jpg" },
+  { name: "Hasna H.", scholarship: "Beasiswa LPDP", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800", photo: "/mentors/hasna-hafida-v2.jpg" },
 ];
 
 export default function HeroSection() {
@@ -169,11 +169,22 @@ export default function HeroSection() {
                   }}
                 >
                   <div className="w-64 bg-white rounded-2xl shadow-[var(--shadow-xl)] overflow-hidden">
-                    {/* Avatar placeholder */}
-                    <div className={`h-48 ${mentor.color} flex items-center justify-center`}>
-                      <span className="text-5xl font-bold text-white/80 font-[family-name:var(--font-heading)]">
-                        {mentor.initials}
-                      </span>
+                    {/* Avatar — photo if available, initials fallback */}
+                    <div className={`h-48 ${mentor.color} flex items-center justify-center relative overflow-hidden`}>
+                      {mentor.photo ? (
+                        <Image
+                          src={mentor.photo}
+                          alt={mentor.name}
+                          fill
+                          sizes="256px"
+                          className="object-cover"
+                          priority={isActive}
+                        />
+                      ) : (
+                        <span className="text-5xl font-bold text-white/80 font-[family-name:var(--font-heading)]">
+                          {mentor.initials}
+                        </span>
+                      )}
                     </div>
                     {/* Info */}
                     <div className="p-5">

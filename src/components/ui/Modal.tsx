@@ -11,13 +11,14 @@ interface ModalProps {
   children?: ReactNode;
   actions?: ReactNode;
   variant?: "default" | "danger";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const SIZE_CLASSES = {
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-lg",
+  xl: "max-w-2xl",
 };
 
 export default function Modal({

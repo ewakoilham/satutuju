@@ -53,6 +53,15 @@ export const landingCopy = {
       heading: "Mentor kami telah ada di posisi kamu.",
       highlight: "Klik ceritanya lebih lanjut",
     },
+    mentorBio: {
+      from: "Asal",
+      currentStudies: "Studi Saat Ini",
+      undergrad: "S1",
+      achievement: "Pencapaian",
+      message: "Pesan untuk Kamu",
+      awards: "Beasiswa & Penghargaan",
+      close: "Tutup",
+    },
     howItWorks: {
       label: "Cara Kerja",
       heading: "Bagaimana Cara Kerjanya?",
@@ -150,7 +159,7 @@ export const landingCopy = {
         badges: ["Percaya diri", "Perjelas impact", "Kontak mata"],
       },
       profile: {
-        name: "Muhammad Razak",
+        name: "Muhammad Ilham Razak",
         targetUniLabel: "Target Universitas",
         targetUniValue: "Monash University — Master of Business",
         scholarshipLabel: "Beasiswa",
@@ -223,6 +232,15 @@ export const landingCopy = {
     mentorShowcase: {
       heading: "They were you, not long ago.",
       highlight: "Click their story to see where they ended up.",
+    },
+    mentorBio: {
+      from: "From",
+      currentStudies: "Current Studies",
+      undergrad: "Undergraduate",
+      achievement: "Achievement",
+      message: "Message For You",
+      awards: "Scholarships & Awards",
+      close: "Close",
     },
     howItWorks: {
       label: "How it works",
@@ -322,7 +340,7 @@ export const landingCopy = {
         badges: ["Confident", "Clarify impact", "Eye contact"],
       },
       profile: {
-        name: "Muhammad Razak",
+        name: "Muhammad Ilham Razak",
         targetUniLabel: "Target University",
         targetUniValue: "Monash University — Master of Business",
         scholarshipLabel: "Scholarship",

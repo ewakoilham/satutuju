@@ -8,11 +8,13 @@
     "university": "University of Cambridge",
     "country": "United Kingdom",
     "scholarship": "LPDP",
+    "major": "MPhil Earth Sciences",
     "achievement": "Penerima pendidikan gratis dari SD sampai S2",
     "message": "Dari mana kita berasal tidak lebih penting dari sekokoh apa mimpi kita dan seberapa besar keinginan kita untuk mewujudkannya.",
     "currentStudiesRaw": "University of Cambridge, MPhil in Earth Sciences, United Kingdom",
     "s1": "Sekolah Tinggi Meteorologi Klimatologi dan Geofisika",
-    "scholarshipRaw": "1. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Provinsi Kalimantan Selatan - 2011\n2. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Kabupaten Tanah Laut - 2014\n3. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Provinsi Kalimantan Selatan - 2017\n4. Beasiswa Bidikmisi - Kementerian Pendidikan dan Kebudayaan - 2017\n5. Beasiswa LPDP/Targeted PNS - LPDP - 2023"
+    "scholarshipRaw": "1. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Provinsi Kalimantan Selatan - 2011\n2. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Kabupaten Tanah Laut - 2014\n3. Beasiswa Penerima Nilai UN Tertinggi Kabupaten Tanah Laut - Dinas Pendidikan Provinsi Kalimantan Selatan - 2017\n4. Beasiswa Bidikmisi - Kementerian Pendidikan dan Kebudayaan - 2017\n5. Beasiswa LPDP/Targeted PNS - LPDP - 2023",
+    "avatarPath": "/mentors/akmal-firmansyah.jpg"
   },
   {
     "id": "buna-rizal-rachman",
@@ -23,11 +25,13 @@
     "university": "University of Auckland",
     "country": "New Zealand",
     "scholarship": "LPDP",
+    "major": "Master of Energy",
     "achievement": "\"Gagal daftar banyak beasiswa S2 pemerintah asing, alhamdulillah lolos LPDP sekali percobaan di batas umur 35 tahun, di sela padatnya pekerjaan migas di multinational company.\"",
     "message": "Perjuangkan mimpi beasiswa itu untuk dirimu sendiri dan orang-orang yang kamu sayangi. Jangan sampai menjadi penyesalan karena menyerah saat masih ada harapan.",
     "currentStudiesRaw": "The University of Auckland, Masters of Energy, New Zealand",
     "s1": "Universitas Diponegoro",
-    "scholarshipRaw": "LPDP Magister Luar Negeri - Masters of Energy at the University of Auckland New Zealand - 2024"
+    "scholarshipRaw": "LPDP Magister Luar Negeri - Masters of Energy at the University of Auckland New Zealand - 2024",
+    "avatarPath": "/mentors/buna-rizal-rachman-v2.jpg"
   },
   {
     "id": "muhammad-haekal-shafi",
@@ -38,11 +42,13 @@
     "university": "University of Warwick",
     "country": "",
     "scholarship": "LPDP",
+    "major": "Automotive Engineering",
     "achievement": "Lolos LPDP setelah 2x Coba dan disaat sedang Layoff untuk tetap mengejar mimpi menjadi Automotive R&D Engineer",
     "message": "Belum terfikirkan",
     "currentStudiesRaw": "S2 University of Warwick",
     "s1": "S1 Institut Teknologi Sepuluh Nopember",
-    "scholarshipRaw": "LPDP S2 LN-2024"
+    "scholarshipRaw": "LPDP S2 LN-2024",
+    "avatarPath": "/mentors/muhammad-haekal-shafi.jpg"
   },
   {
     "id": "hasna-hafida",
@@ -53,11 +59,13 @@
     "university": "University of Edinburgh",
     "country": "",
     "scholarship": "LPDP",
+    "major": "MSc Biochemistry",
     "achievement": "MSc Biochemistry Edinburgh dengan rekam jejak riset enzim dan bioteknologi untuk kesehatan dan industri.",
     "message": "Be resourceful, stay persistent, and always look ahead. The sky is the limit.",
     "currentStudiesRaw": "MSc in Biochemistry, University of Edinburgh",
     "s1": "S1 Biologi, FMIPA, Universitas Sebelas Maret (UNS)",
-    "scholarshipRaw": "Participant, Young Scientists Research Competition – FAO & BRIN – 2026\n\nThird Runner-up, Animal Global Writing Competition – Kompasiana X Geopix – 2025\n\nLPDP Scholarship – Ministry of Finance, Indonesia – 2024–2025\n\nBeasiswa Pengembangan Prestasi Akademik (PPA) – Universitas Sebelas Maret – 2015–2017\n\nRunner-up Mahasiswa Berprestasi (MAWAPRES) FMIPA – Universitas Sebelas Maret – 2017\n\nGold Medalist, National Scientific Writing Competition – Andalas University – 2017\n\nSecond Place, National Scientific Writing Competition – Mulawarman University – 2017\n\nActive Award (Academic Contribution) – FMIPA Universitas Sebelas Maret – 2017"
+    "scholarshipRaw": "Participant, Young Scientists Research Competition – FAO & BRIN – 2026\n\nThird Runner-up, Animal Global Writing Competition – Kompasiana X Geopix – 2025\n\nLPDP Scholarship – Ministry of Finance, Indonesia – 2024–2025\n\nBeasiswa Pengembangan Prestasi Akademik (PPA) – Universitas Sebelas Maret – 2015–2017\n\nRunner-up Mahasiswa Berprestasi (MAWAPRES) FMIPA – Universitas Sebelas Maret – 2017\n\nGold Medalist, National Scientific Writing Competition – Andalas University – 2017\n\nSecond Place, National Scientific Writing Competition – Mulawarman University – 2017\n\nActive Award (Academic Contribution) – FMIPA Universitas Sebelas Maret – 2017",
+    "avatarPath": "/mentors/hasna-hafida-v2.jpg"
   },
   {
     "id": "angela-benedicta-horta",
@@ -68,11 +76,13 @@
     "university": "University of Auckland",
     "country": "New Zealand",
     "scholarship": "LPDP",
+    "major": "Geothermal Energy",
     "achievement": "Orang pertama dikeluarga yang bisa sekolah ke universitas negeri di luar NTT sekaligus yang bisa menginjakan kaki ke luar negeri",
     "message": "Dalam melakukan apapun ingat 3K: Kerja Keras, Kejujuran, Keihklasan. Berikan 100% jangan cari jalan pintas, selalu kerjakan dengan jujur karena disitulah berkatnya, ikhlas pada hasilnya, percaya Tuhan tidak tutup mata",
     "currentStudiesRaw": "New Zealand",
     "s1": "Teknik Perminyakan",
-    "scholarshipRaw": "1. Presenter of International Geothermal Workshop-47th NEW ZEALAND GEOTHERMAL WORKSHOP- November 2025\n2. Blue Award 2025-THE UNIVERSITY OF AUCKLAND-October 2025\n3. Penerima Beasiswa LPDP-Kementrian Keuangan-2024\n4. Presenter of International Geothermal Convention & Exhibition-INDONESIAN GEOTHERMAL ASSOCIATION (INAGA)- September 2023"
+    "scholarshipRaw": "1. Presenter of International Geothermal Workshop-47th NEW ZEALAND GEOTHERMAL WORKSHOP- November 2025\n2. Blue Award 2025-THE UNIVERSITY OF AUCKLAND-October 2025\n3. Penerima Beasiswa LPDP-Kementrian Keuangan-2024\n4. Presenter of International Geothermal Convention & Exhibition-INDONESIAN GEOTHERMAL ASSOCIATION (INAGA)- September 2023",
+    "avatarPath": "/mentors/angela-benedicta-horta.jpg"
   },
   {
     "id": "raihan-bagus-sakti-aji",
@@ -80,14 +90,16 @@
     "nickname": "Raihan",
     "initials": "RA",
     "hometown": "Bogor",
-    "university": "Indonesia (LPDP DN)",
-    "country": "Indonesia",
+    "university": "TU Delft",
+    "country": "Netherlands",
     "scholarship": "LPDP",
+    "major": "Postgraduate Studies",
     "achievement": "Aku tidak pernah menjadi orang yang aku bayangkan, aku menjadi orang yang lebih baik dari bayangan itu",
     "message": "I stopped rushing and started enjoying because the best of planners already knows what's best for me - whatever is meant for me will find me in its own time, in its own way. And whatever wasn't, was never mine to begin with.",
     "currentStudiesRaw": "Indonesia",
     "s1": "ITS",
-    "scholarshipRaw": "Beasiswa LPDP - Kemenkeu - 2023"
+    "scholarshipRaw": "Beasiswa LPDP - Kemenkeu - 2023",
+    "avatarPath": "/mentors/raihan-bagus-sakti-aji.jpg"
   },
   {
     "id": "arifansyah-wicaksono",
@@ -98,11 +110,13 @@
     "university": "Monash University",
     "country": "Australia",
     "scholarship": "LPDP",
+    "major": "Master of Cybersecurity",
     "achievement": "Lolos LPDP tanpa pernah les persiapan, awalnya diterima di Warwick University tetapi memilih Monash University",
     "message": "Kejarlah mimpimu selagi ada waktu, jangan sampai jadi penyesalanmu kelak.",
     "currentStudiesRaw": "Monash University, Master of Cybersecurity, Australia",
     "s1": "ITS",
-    "scholarshipRaw": "LPDP - Monash University - 2023"
+    "scholarshipRaw": "LPDP - Monash University - 2023",
+    "avatarPath": "/mentors/arifansyah-wicaksono.jpg"
   },
   {
     "id": "hanan-hakim",
@@ -113,11 +127,13 @@
     "university": "Imperial College London",
     "country": "",
     "scholarship": "Departmental Scholarship",
+    "major": "Postgraduate Studies",
     "achievement": "Secured Departmental Scholarship from Imperial College London and Bicentenary Global Futures Scholarship from University of Manchester, demonstrating my ability to compete and stand out in highly selective environments",
     "message": "Kamu mungkin tidak mulai dari garis yang sama, tapi dengan konsistensi dan keberanian untuk mencoba, kamu tetap bisa sampai ke tempat yang kamu tuju.",
     "currentStudiesRaw": "Imperial College London",
     "s1": "Institut Teknologi Sepuluh Nopember",
-    "scholarshipRaw": "Departmental Scholarship - Imperial College London - 2024\nBicentenary Global Futures Scholarship - University of Manchester - 2024"
+    "scholarshipRaw": "Departmental Scholarship - Imperial College London - 2024\nBicentenary Global Futures Scholarship - University of Manchester - 2024",
+    "avatarPath": "/mentors/hanan-hakim.jpg"
   },
   {
     "id": "muhammad-aqil-maulana",
@@ -128,11 +144,13 @@
     "university": "University of Melbourne",
     "country": "Australia",
     "scholarship": "LPDP",
+    "major": "Master of Information Systems",
     "achievement": "Penerima beasiswa LPDP, lulus University of Melbourne dengan High Distinction dan masuk Dean’s Honour List (top 5% cohort MIS).",
     "message": "“Bersama Allah, usaha jadi bermakna”",
     "currentStudiesRaw": "Australia",
     "s1": "Institut Teknologi Kalimantan",
-    "scholarshipRaw": "LPDP Scholarship - Lembaga Pengelola Dana Pendidikan - 2024\nDean’s Honour List - University of Melbourne - 2025\n3rd Winner FEIT Hackathon - University of Melbourne - 2025"
+    "scholarshipRaw": "LPDP Scholarship - Lembaga Pengelola Dana Pendidikan - 2024\nDean’s Honour List - University of Melbourne - 2025\n3rd Winner FEIT Hackathon - University of Melbourne - 2025",
+    "avatarPath": "/mentors/muhammad-aqil-maulana.jpg"
   },
   {
     "id": "megawati-refra",
@@ -143,11 +161,13 @@
     "university": "Monash University",
     "country": "",
     "scholarship": "LPDP",
+    "major": "Postgraduate Studies",
     "achievement": "Penerima beasiswa CCIP 100% Diploma dari Fulbright yang bekerja sama dengan PT Freeport Indonesia di USA Northampton Community College",
     "message": "Keunikanmu adalah kekuatan, bukan kelemahan.",
     "currentStudiesRaw": "Monash University",
     "s1": "IAIN Sorong, Northampton Community College",
-    "scholarshipRaw": "PPAN- Pertukaran Pemuda antar Negara Malaysia\nCCIP porgram Aminef Fulbright\nLPDP"
+    "scholarshipRaw": "PPAN- Pertukaran Pemuda antar Negara Malaysia\nCCIP porgram Aminef Fulbright\nLPDP",
+    "avatarPath": "/mentors/megawati-refra.jpg"
   },
   {
     "id": "fika-rizkyanti",
@@ -158,11 +178,13 @@
     "university": "University of Sydney",
     "country": "Australia",
     "scholarship": "LPDP",
+    "major": "Master of Public Health",
     "achievement": "One Shot LPDP S2",
     "message": "Jangan takut pada hal di luar kendalimu. Takutlah saat kamu berhenti, karena waktu tak pernah menunggu.",
     "currentStudiesRaw": "The University of Sydney, Master of Public Health, Australia",
     "s1": "Universitas Brawijaya",
-    "scholarshipRaw": "Beasiswa Lembaga Pengelola Dana Pendidikan (LPDP) - The University of Sydney - 2024"
+    "scholarshipRaw": "Beasiswa Lembaga Pengelola Dana Pendidikan (LPDP) - The University of Sydney - 2024",
+    "avatarPath": "/mentors/fika-rizkyanti-v2.jpg"
   },
   {
     "id": "isna-arifah-rahmawati",
@@ -173,26 +195,30 @@
     "university": "University of Sydney",
     "country": "Australia",
     "scholarship": "LPDP",
+    "major": "Master of Biomedical Science",
     "achievement": "Working mom dengan 2 anak lolos beasiswa LPDP S2 ke Australia one shoot di usia 30 tahun.",
     "message": "Saat jalanmu terasa lebih lambat dari orang lain, bukan berarti kamu tertinggal. Kamu hanya sedang menemukan jalanmu, dengan waktumu sendiri.",
     "currentStudiesRaw": "Master of Biomedical Science, The University of Sydney, Australia",
     "s1": "Universitas Indonesia",
-    "scholarshipRaw": "Beasiswa Kemenag (MAN IC) 2008-2011\nBeasiswa PPA Dikti 2012-2014\nBeasiswa LPDP 2024"
+    "scholarshipRaw": "Beasiswa Kemenag (MAN IC) 2008-2011\nBeasiswa PPA Dikti 2012-2014\nBeasiswa LPDP 2024",
+    "avatarPath": "/mentors/isna-arifah-rahmawati-v2.jpg"
   },
   {
     "id": "muhammad-ilham",
-    "fullName": "Muhammad Ilham",
+    "fullName": "Muhammad Ilham Razak",
     "nickname": "Razak",
     "initials": "MI",
     "hometown": "Polewali Mandar",
     "university": "Monash University",
     "country": "",
     "scholarship": "LPDP",
+    "major": "Master of Business",
     "achievement": "Penerima beasiswa 100% dari SMA sampai S2",
     "message": "Bermimpi sebesar mungkin, mulai beraksi sekecil apapun",
     "currentStudiesRaw": "Monash University, S2, lagi belajar",
     "s1": "President University",
-    "scholarshipRaw": "1. Full Scholarship Beasiswa Kaltim SMA\n2. Full Scholarship Beasiswa Pertukaran Pelajar KL-YES 2014/2015 to United States\n3. Full Scholarship President University\n4. Full Scholarship Monash University LPDP"
+    "scholarshipRaw": "1. Full Scholarship Beasiswa Kaltim SMA\n2. Full Scholarship Beasiswa Pertukaran Pelajar KL-YES 2014/2015 to United States\n3. Full Scholarship President University\n4. Full Scholarship Monash University LPDP",
+    "avatarPath": "/mentors/muhammad-ilham.jpg"
   },
   {
     "id": "nyoman-krisna",
@@ -203,10 +229,12 @@
     "university": "Monash University",
     "country": "",
     "scholarship": "LPDP",
+    "major": "Master of Business",
     "achievement": "Menerima beasiswa 100% dari SMA hingga S2",
     "message": "Loneliness and loss of direction are part of learning. It's okay to make mistakes, at least you've tried.",
     "currentStudiesRaw": "Monash University, Master of Business",
     "s1": "Universitas Prasetiya Mulya",
-    "scholarshipRaw": "Beasiswa SMA Negeri Bali Mandara - Pemerintah Provinsi Bali - (2015-2018)\nBeasiswa Bakti Indonesia - Yayasan Prasetiya Mulya (2018-2022)\nBeasiswa LPDP - Kemenkeu - (2024-2026)"
+    "scholarshipRaw": "Beasiswa SMA Negeri Bali Mandara - Pemerintah Provinsi Bali - (2015-2018)\nBeasiswa Bakti Indonesia - Yayasan Prasetiya Mulya (2018-2022)\nBeasiswa LPDP - Kemenkeu - (2024-2026)",
+    "avatarPath": "/mentors/nyoman-krisna-v2.jpg"
   }
 ]

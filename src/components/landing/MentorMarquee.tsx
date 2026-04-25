@@ -5,37 +5,53 @@ import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
+import mentorsData from "@/data/mentors.json";
+import MentorBioModal, { type MentorBio } from "./MentorBioModal";
 
 const MENTORS = [
-  { name: "Akmal Firmansyah", scholarship: "Beasiswa LPDP", university: "University of Cambridge", initials: "AF", color: "bg-primary" },
-  { name: "Buna Rizal Rachman", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "BR", color: "bg-primary-700" },
-  { name: "Hanan Hakim", scholarship: "Imperial Scholarship", university: "Imperial College London", initials: "HH", color: "bg-primary-600" },
-  { name: "Hasna Hafida", scholarship: "Beasiswa LPDP", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800" },
-  { name: "Muhammad Haekal Shafi", scholarship: "Beasiswa LPDP", university: "University of Warwick", initials: "HS", color: "bg-primary-deep" },
-  { name: "Muhammad Aqil Maulana", scholarship: "Beasiswa LPDP", university: "University of Melbourne", initials: "AM", color: "bg-primary-700" },
-  { name: "Fika Rizkyanti", scholarship: "Beasiswa LPDP", university: "University of Sydney", initials: "FR", color: "bg-primary" },
-  { name: "Muhammad Ilham", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "MI", color: "bg-primary-600" },
-  { name: "Angela Benedicta Horta", scholarship: "Beasiswa LPDP", university: "University of Auckland", initials: "AH", color: "bg-primary-800" },
-  { name: "Raihan Bagus Sakti Aji", scholarship: "Beasiswa LPDP", university: "LPDP Dalam Negeri", initials: "RA", color: "bg-primary-deep" },
-  { name: "Arifansyah Wicaksono", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "AW", color: "bg-primary-700" },
-  { name: "Isna Arifah Rahmawati", scholarship: "Beasiswa LPDP", university: "University of Sydney", initials: "IR", color: "bg-primary" },
-  { name: "Megawati Refra", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "MR", color: "bg-primary-600" },
-  { name: "Nyoman Krisna", scholarship: "Beasiswa LPDP", university: "Monash University", initials: "NK", color: "bg-primary-800" },
+  { name: "Akmal Firmansyah", major: "MPhil Earth Sciences", university: "University of Cambridge", initials: "AF", color: "bg-primary", photo: "/mentors/akmal-firmansyah.jpg" },
+  { name: "Buna Rizal Rachman", major: "Master of Energy", university: "University of Auckland", initials: "BR", color: "bg-primary-700", photo: "/mentors/buna-rizal-rachman-v2.jpg" },
+  { name: "Hanan Hakim", major: "Postgraduate Studies", university: "Imperial College London", initials: "HH", color: "bg-primary-600", photo: "/mentors/hanan-hakim.jpg" },
+  { name: "Hasna Hafida", major: "MSc Biochemistry", university: "University of Edinburgh", initials: "HH", color: "bg-primary-800", photo: "/mentors/hasna-hafida-v2.jpg" },
+  { name: "Muhammad Haekal Shafi", major: "Automotive Engineering", university: "University of Warwick", initials: "HS", color: "bg-primary-deep", photo: "/mentors/muhammad-haekal-shafi.jpg" },
+  { name: "Muhammad Aqil Maulana", major: "Master of Information Systems", university: "University of Melbourne", initials: "AM", color: "bg-primary-700", photo: "/mentors/muhammad-aqil-maulana.jpg" },
+  { name: "Fika Rizkyanti", major: "Master of Public Health", university: "University of Sydney", initials: "FR", color: "bg-primary", photo: "/mentors/fika-rizkyanti-v2.jpg" },
+  { name: "Muhammad Ilham Razak", major: "Master of Business", university: "Monash University", initials: "MI", color: "bg-primary-600", photo: "/mentors/muhammad-ilham.jpg" },
+  { name: "Angela Benedicta Horta", major: "Geothermal Energy", university: "University of Auckland", initials: "AH", color: "bg-primary-800", photo: "/mentors/angela-benedicta-horta.jpg" },
+  { name: "Raihan Bagus Sakti Aji", major: "Postgraduate Studies", university: "TU Delft", initials: "RA", color: "bg-primary-deep", photo: "/mentors/raihan-bagus-sakti-aji.jpg" },
+  { name: "Arifansyah Wicaksono", major: "Master of Cybersecurity", university: "Monash University", initials: "AW", color: "bg-primary-700", photo: "/mentors/arifansyah-wicaksono.jpg" },
+  { name: "Isna Arifah Rahmawati", major: "Master of Biomedical Science", university: "University of Sydney", initials: "IR", color: "bg-primary", photo: "/mentors/isna-arifah-rahmawati-v2.jpg" },
+  { name: "Megawati Refra", major: "Postgraduate Studies", university: "Monash University", initials: "MR", color: "bg-primary-600", photo: "/mentors/megawati-refra.jpg" },
+  { name: "Nyoman Krisna", major: "Master of Business", university: "Monash University", initials: "NK", color: "bg-primary-800", photo: "/mentors/nyoman-krisna-v2.jpg" as string | null },
 ];
 
 const CARD_WIDTH = 240; // w-60 = 15rem = 240px
 const GAP = 24; // gap-6
 const SCROLL_AMOUNT = CARD_WIDTH + GAP;
 
-function MentorCard({ mentor }: { mentor: typeof MENTORS[0] }) {
+function MentorCard({ mentor, onClick }: { mentor: typeof MENTORS[0]; onClick: () => void }) {
   return (
-    <div className="flex-shrink-0 w-60 bg-white rounded-2xl shadow-[var(--shadow-md)] overflow-hidden hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 cursor-pointer group">
-      {/* Avatar placeholder */}
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-shrink-0 w-60 bg-white rounded-2xl shadow-[var(--shadow-md)] overflow-hidden hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 cursor-pointer group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+    >
+      {/* Avatar — photo if available, initials fallback */}
       <div className={`h-36 ${mentor.color} flex items-center justify-center relative overflow-hidden`}>
-        <span className="text-4xl font-bold text-white/70 font-[family-name:var(--font-heading)] group-hover:scale-110 transition-transform duration-300">
-          {mentor.initials}
-        </span>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+        {mentor.photo ? (
+          <Image
+            src={mentor.photo}
+            alt={mentor.name}
+            fill
+            sizes="240px"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <span className="text-4xl font-bold text-white/70 font-[family-name:var(--font-heading)] group-hover:scale-110 transition-transform duration-300">
+            {mentor.initials}
+          </span>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
       </div>
       {/* Info */}
       <div className="p-4">
@@ -44,20 +60,21 @@ function MentorCard({ mentor }: { mentor: typeof MENTORS[0] }) {
         </h4>
         <div className="flex items-center gap-1.5 mt-1.5">
           <Icon name="graduation" size={14} className="text-primary" />
-          <span className="text-xs text-primary font-medium">{mentor.scholarship}</span>
+          <span className="text-xs text-primary font-medium">{mentor.major}</span>
         </div>
         <div className="flex items-center gap-1.5 mt-1">
           <Icon name="school" size={14} className="text-text-muted" />
           <span className="text-xs text-text-muted">{mentor.university}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
 export default function MentorMarquee() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [selectedMentor, setSelectedMentor] = useState<MentorBio | null>(null);
   const autoScrollRef = useRef<number | null>(null);
   const allMentors = [...MENTORS, ...MENTORS];
   const { lang } = useLang();
@@ -66,7 +83,7 @@ export default function MentorMarquee() {
   // Auto-scroll logic using requestAnimationFrame for smooth pixel-level scrolling
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !isAutoScrolling) return;
+    if (!el || !isAutoScrolling || selectedMentor) return;
 
     let lastTime = 0;
     const speed = 0.5; // pixels per frame (~30px/s at 60fps)
@@ -90,7 +107,7 @@ export default function MentorMarquee() {
     return () => {
       if (autoScrollRef.current) cancelAnimationFrame(autoScrollRef.current);
     };
-  }, [isAutoScrolling]);
+  }, [isAutoScrolling, selectedMentor]);
 
   const handleManualScroll = useCallback((direction: "left" | "right") => {
     const el = scrollRef.current;
@@ -111,6 +128,11 @@ export default function MentorMarquee() {
 
   const handleMouseLeave = useCallback(() => {
     setIsAutoScrolling(true);
+  }, []);
+
+  const handleCardClick = useCallback((name: string) => {
+    const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === name);
+    if (bio) setSelectedMentor(bio);
   }, []);
 
   return (
@@ -178,10 +200,16 @@ export default function MentorMarquee() {
           className="flex gap-6 overflow-x-hidden px-6"
         >
           {allMentors.map((mentor, i) => (
-            <MentorCard key={i} mentor={mentor} />
+            <MentorCard key={i} mentor={mentor} onClick={() => handleCardClick(mentor.name)} />
           ))}
         </div>
       </div>
+
+      <MentorBioModal
+        mentor={selectedMentor}
+        open={!!selectedMentor}
+        onClose={() => setSelectedMentor(null)}
+      />
     </section>
   );
 }
