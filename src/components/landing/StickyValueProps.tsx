@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
-type Copy = (typeof landingCopy)["id"] | (typeof landingCopy)["en"];
+type Copy = (typeof landingCopy)["id"];
 
 /* ── Visual 01: Roadmap Timeline (Planning) ── */
 function RoadmapVisual({ active, copy }: { active: boolean; copy: Copy["visuals"]["roadmap"] }) {
@@ -200,9 +199,8 @@ function InterviewVisual({ active, copy }: { active: boolean; copy: Copy["visual
 export default function StickyValueProps() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const { lang } = useLang();
-  const t = landingCopy[lang].features;
-  const v = landingCopy[lang].visuals;
+  const t = landingCopy.id.features;
+  const v = landingCopy.id.visuals;
 
   useEffect(() => {
     const sections = containerRef.current?.querySelectorAll("[data-vp-section]");

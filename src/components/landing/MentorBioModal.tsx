@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import Icon from "@/components/ui/Icon";
-import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 export interface MentorBio {
@@ -38,8 +37,7 @@ function splitAwards(raw: string): string[] {
 }
 
 export default function MentorBioModal({ mentor, open, onClose }: MentorBioModalProps) {
-  const { lang } = useLang();
-  const t = landingCopy[lang].mentorBio;
+  const t = landingCopy.id.mentorBio;
 
   if (!mentor) return null;
 

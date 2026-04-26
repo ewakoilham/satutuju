@@ -3,12 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 export default function CTABanner() {
-  const { lang } = useLang();
-  const t = landingCopy[lang].finalCta;
+  const t = landingCopy.id.finalCta;
   return (
     <section className="relative bg-primary py-20 overflow-hidden">
       {/* Organic gradient blobs */}

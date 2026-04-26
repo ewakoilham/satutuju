@@ -3,12 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
-import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 export default function Footer() {
-  const { lang } = useLang();
-  const t = landingCopy[lang].footer;
+  const t = landingCopy.id.footer;
 
   const columns: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
     {

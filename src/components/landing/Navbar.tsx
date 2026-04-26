@@ -3,14 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
-import LanguageToggle from "./LanguageToggle";
-import { useLang } from "@/lib/i18n";
 import { landingCopy } from "@/lib/landing-copy";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const { lang } = useLang();
-  const t = landingCopy[lang].nav;
+  const t = landingCopy.id.nav;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -33,7 +30,6 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <LanguageToggle />
             <Link
               href="/signup"
               className="btn-primary px-5 py-2.5 rounded-xl text-sm"
