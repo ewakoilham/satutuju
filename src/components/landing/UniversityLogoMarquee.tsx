@@ -20,6 +20,7 @@ const PARTNER_UNIVERSITIES: University[] = [
   { name: "Aalto University", slug: "aalto", ext: "png" },
   { name: "University of British Columbia", slug: "ubc", ext: "svg" },
   { name: "University of Sydney", slug: "sydney", ext: "svg" },
+  { name: "UNSW Sydney", slug: "unsw", ext: "jpg" },
   { name: "University of Manchester", slug: "manchester", ext: "svg" },
   { name: "University of Glasgow", slug: "glasgow", ext: "svg" },
   { name: "University College Dublin", slug: "ucd", ext: "svg" },
@@ -45,22 +46,22 @@ export default function UniversityLogoMarquee({
       </p>
 
       <div
-        className="relative overflow-hidden group"
+        className="relative overflow-hidden group py-6"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
         {/* Edge gradient masks */}
-        <div className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-r from-white via-white/80 to-transparent" />
-        <div className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-l from-white via-white/80 to-transparent" />
+        <div className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-r from-white via-white/80 to-transparent" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none bg-gradient-to-l from-white via-white/80 to-transparent" />
 
         <div
-          className="flex items-center gap-10 animate-marquee whitespace-nowrap"
+          className="flex items-center gap-14 animate-marquee whitespace-nowrap"
           style={{ animationPlayState: paused ? "paused" : "running" }}
         >
           {doubled.map((u, i) => (
             <div
               key={`${u.slug}-${i}`}
-              className="flex-shrink-0 h-10 w-28 relative grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+              className="flex-shrink-0 h-16 w-44 relative hover:scale-105 transition-transform duration-300"
               title={u.name}
             >
               <Image
@@ -68,7 +69,7 @@ export default function UniversityLogoMarquee({
                 alt={u.name}
                 fill
                 className="object-contain"
-                sizes="112px"
+                sizes="176px"
               />
             </div>
           ))}
