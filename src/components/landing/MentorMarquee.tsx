@@ -20,7 +20,7 @@ function MentorCard({ mentor, onClick }: { mentor: Mentor; onClick: () => void }
       onClick={onClick}
       className="flex-shrink-0 w-60 flex flex-col bg-white rounded-2xl shadow-[var(--shadow-md)] overflow-hidden hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 cursor-pointer group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
     >
-      <div className={`h-36 ${mentor.color} flex items-center justify-center relative overflow-hidden`}>
+      <div className={`h-48 ${mentor.color} flex items-center justify-center relative overflow-hidden`}>
         <MentorAvatar mentor={mentor} sizes="240px" initialsClassName="text-4xl" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
       </div>
