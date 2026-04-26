@@ -5,8 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
-import { MENTORS, TRUST_UNIVERSITIES } from "@/lib/mentors";
+import { MENTORS } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
+import UniversityLogoMarquee from "./UniversityLogoMarquee";
 
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
@@ -116,19 +117,7 @@ export default function HeroSection() {
             </div>
 
             <div className="mt-5">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-primary-700/70 font-semibold mb-2">
-                {t.fromUniversities}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {TRUST_UNIVERSITIES.map((u) => (
-                  <span
-                    key={u}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/70 backdrop-blur-sm border border-primary-200/60 text-[11px] font-semibold text-primary-800 whitespace-nowrap"
-                  >
-                    {u}
-                  </span>
-                ))}
-              </div>
+              <UniversityLogoMarquee />
             </div>
           </div>
 
