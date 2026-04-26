@@ -56,16 +56,26 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
         </button>
 
         <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {/* Photo */}
-          <div className="relative bg-surface-elevated md:aspect-auto aspect-[4/5] md:min-h-[480px]">
+          {/* Photo — full subject visible (object-contain) over a blurred-photo backdrop */}
+          <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden bg-surface-elevated">
             {mentor.avatarPath ? (
-              <Image
-                src={mentor.avatarPath}
-                alt={mentor.fullName}
-                fill
-                sizes="(max-width: 768px) 100vw, 360px"
-                className="object-cover"
-              />
+              <>
+                <Image
+                  src={mentor.avatarPath}
+                  alt=""
+                  aria-hidden
+                  fill
+                  sizes="(max-width: 768px) 100vw, 360px"
+                  className="object-cover scale-110 blur-2xl opacity-50"
+                />
+                <Image
+                  src={mentor.avatarPath}
+                  alt={mentor.fullName}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 360px"
+                  className="object-contain"
+                />
+              </>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-text-muted-2 font-[family-name:var(--font-heading)]">
                 {mentor.initials}
