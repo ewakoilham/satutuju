@@ -242,6 +242,7 @@ html.dark {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-poppins);
+  --font-display-serif: var(--font-instrument-serif);
   --color-text-muted: var(--text-muted);
   --color-text-muted-2: var(--text-muted-2);
   --color-text-muted-3: var(--text-muted-3);

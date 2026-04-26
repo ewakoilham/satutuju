@@ -42,98 +42,97 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
   if (!mentor) return null;
 
   const awards = splitAwards(mentor.scholarshipRaw);
-  const location = [mentor.university, mentor.country].filter(Boolean).join(", ");
+  const subtitle = [mentor.major, mentor.university].filter(Boolean).join(" · ");
 
   return (
-    <Modal open={open} onClose={onClose} size="xl">
-      <div className="-mx-6 -my-3 max-h-[85vh] overflow-y-auto">
-        {/* Header band with avatar */}
-        <div className="relative bg-gradient-to-br from-primary-700 to-primary-900 px-6 pt-6 pb-16">
-          <button
-            onClick={onClose}
-            aria-label={t.close}
-            className="absolute top-4 right-4 p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition"
-          >
-            <Icon name="x" size={18} />
-          </button>
-        </div>
+    <Modal open={open} onClose={onClose} size="2xl">
+      <div className="-mx-6 -my-3 max-h-[88vh] overflow-y-auto">
+        <button
+          onClick={onClose}
+          aria-label={t.close}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-surface/90 backdrop-blur-sm flex items-center justify-center text-text-muted hover:text-foreground hover:bg-surface transition shadow-sm"
+        >
+          <Icon name="x" size={16} />
+        </button>
 
-        <div className="px-6 -mt-12 relative">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden bg-primary-700 ring-4 ring-surface flex-shrink-0 relative">
-              {mentor.avatarPath ? (
-                <Image
-                  src={mentor.avatarPath}
-                  alt={mentor.fullName}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                />
-              ) : (
-                <span className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-white/80 font-[family-name:var(--font-heading)]">
-                  {mentor.initials}
-                </span>
-              )}
-            </div>
-            <div className="sm:pb-2 min-w-0">
-              <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)] leading-tight break-words">
-                {mentor.fullName}
-              </h2>
-              <p className="text-sm text-text-muted mt-0.5">@{mentor.nickname}</p>
-            </div>
-          </div>
-
-          {/* Quick facts row */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-              <Icon name="graduation" size={12} />
-              {mentor.major}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-elevated text-text-muted text-xs">
-              <Icon name="school" size={12} />
-              {location}
-            </span>
-            {mentor.hometown && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-elevated text-text-muted text-xs">
-                {t.from}: {mentor.hometown}
-              </span>
+        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {/* Photo */}
+          <div className="relative bg-surface-elevated md:aspect-auto aspect-[4/5] md:min-h-[480px]">
+            {mentor.avatarPath ? (
+              <Image
+                src={mentor.avatarPath}
+                alt={mentor.fullName}
+                fill
+                sizes="(max-width: 768px) 100vw, 360px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-text-muted-2 font-[family-name:var(--font-heading)]">
+                {mentor.initials}
+              </div>
             )}
           </div>
 
-          {/* Body sections */}
-          <div className="mt-6 space-y-5 pb-6">
-            {mentor.achievement && (
-              <Section label={t.achievement}>
-                <div className="bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 text-sm text-foreground leading-relaxed">
-                  {mentor.achievement}
-                </div>
-              </Section>
+          {/* Content */}
+          <div className="px-8 md:px-10 py-8 md:py-10 flex flex-col">
+            <p className="text-xs uppercase tracking-[0.18em] text-text-muted-2 mb-3">
+              Mentor · @{mentor.nickname}
+            </p>
+
+            <h2 className="font-[family-name:var(--font-display-serif)] text-4xl md:text-5xl leading-[1.05] text-foreground tracking-tight">
+              {mentor.fullName}
+            </h2>
+
+            <p className="mt-3 text-sm text-text-muted leading-relaxed">{subtitle}</p>
+
+            {mentor.hometown && (
+              <p className="mt-1 text-sm text-text-muted-2">
+                {t.from} {mentor.hometown}
+              </p>
             )}
 
             {mentor.message && (
-              <Section label={t.message}>
-                <blockquote className="border-l-4 border-primary-300 pl-4 italic text-sm text-foreground leading-relaxed">
-                  &ldquo;{mentor.message}&rdquo;
+              <figure className="mt-8 mb-2">
+                <span
+                  aria-hidden
+                  className="font-[family-name:var(--font-display-serif)] text-6xl leading-none text-primary/40 block -mb-3"
+                >
+                  &ldquo;
+                </span>
+                <blockquote className="font-[family-name:var(--font-display-serif)] italic text-xl md:text-2xl leading-snug text-foreground">
+                  {mentor.message}
                 </blockquote>
+              </figure>
+            )}
+
+            {mentor.achievement && (
+              <Section label={t.achievement}>
+                <p className="text-[0.95rem] text-foreground leading-relaxed">
+                  {mentor.achievement}
+                </p>
               </Section>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
               <Section label={t.currentStudies}>
-                <p className="text-sm text-foreground leading-relaxed">{mentor.currentStudiesRaw}</p>
+                <p className="text-[0.95rem] text-foreground leading-relaxed">
+                  {mentor.currentStudiesRaw}
+                </p>
               </Section>
               <Section label={t.undergrad}>
-                <p className="text-sm text-foreground leading-relaxed">{mentor.s1}</p>
+                <p className="text-[0.95rem] text-foreground leading-relaxed">{mentor.s1}</p>
               </Section>
             </div>
 
             {awards.length > 0 && (
               <Section label={t.awards}>
-                <ul className="space-y-1.5">
+                <ul className="divide-y divide-border/60">
                   {awards.map((line, i) => (
-                    <li key={i} className="text-sm text-foreground leading-relaxed flex gap-2">
-                      <span className="text-primary mt-1 flex-shrink-0">•</span>
-                      <span>{line}</span>
+                    <li
+                      key={i}
+                      className="py-2 text-[0.9rem] text-foreground leading-relaxed first:pt-0"
+                    >
+                      {line}
                     </li>
                   ))}
                 </ul>
@@ -148,11 +147,9 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted-2 mb-2">
-        {label}
-      </h3>
+    <section className="mt-7 pt-7 border-t border-border/60">
+      <h3 className="text-xs font-medium tracking-wide text-text-muted-2 mb-3">{label}</h3>
       {children}
-    </div>
+    </section>
   );
 }

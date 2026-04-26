@@ -57,11 +57,11 @@ export const landingCopy = {
     },
     mentorBio: {
       from: "Asal",
-      currentStudies: "Studi Saat Ini",
-      undergrad: "S1",
+      currentStudies: "Studi saat ini",
+      undergrad: "Pendidikan S1",
       achievement: "Pencapaian",
-      message: "Pesan untuk Kamu",
-      awards: "Beasiswa & Penghargaan",
+      message: "Pesan untuk kamu",
+      awards: "Beasiswa & penghargaan",
       close: "Tutup",
     },
     howItWorks: {
