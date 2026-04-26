@@ -54,7 +54,7 @@ export const MENTORS: Mentor[] = [
     university: "University of Warwick",
     major: "MSc Sustainable Automotive Electrification",
     scholarship: "LPDP Scholar",
-    photo: "/mentors/muhammad-haekal-shafi-v2.jpg",
+    photo: "/mentors/muhammad-haekal-shafi-v3.jpg",
     color: "bg-primary-deep",
   },
   {
