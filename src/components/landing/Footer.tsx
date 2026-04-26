@@ -12,9 +12,7 @@ export default function Footer() {
     {
       title: t.columns.about,
       links: [
-        { label: t.links.aboutUs, href: "#" },
-        { label: t.links.team, href: "#" },
-        { label: t.links.careers, href: "#" },
+        { label: t.links.aboutUs, href: "/about" },
       ],
     },
     {
@@ -22,16 +20,14 @@ export default function Footer() {
       links: [
         { label: t.links.mentorship, href: "/signup" },
         { label: t.links.community, href: "#" },
-        { label: t.links.events, href: "#" },
       ],
     },
     {
       title: t.columns.help,
       links: [
-        { label: t.links.faq, href: "#" },
-        { label: t.links.blog, href: "#" },
-        { label: t.links.terms, href: "#" },
-        { label: t.links.privacy, href: "#" },
+        { label: t.links.faq, href: "/faq" },
+        { label: t.links.terms, href: "/terms" },
+        { label: t.links.privacy, href: "/privacy" },
       ],
     },
   ];
