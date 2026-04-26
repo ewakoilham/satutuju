@@ -124,7 +124,7 @@ export const MENTORS: Mentor[] = [
     fullName: "Megawati Refra",
     initials: "MR",
     university: "Monash University",
-    major: "Master of Marketing and Digital Communications",
+    major: "Master of Applied Marketing",
     scholarship: "LPDP Scholar",
     photo: "/mentors/megawati-refra.jpg",
     color: "bg-primary-600",
