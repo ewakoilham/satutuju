@@ -45,7 +45,7 @@ export const MENTORS: Mentor[] = [
     university: "University of Edinburgh",
     major: "MSc Biochemistry",
     scholarship: "LPDP Scholar",
-    photo: "/mentors/hasna-hafida-v3.jpg",
+    photo: "/mentors/hasna-hafida-v4.jpg",
     color: "bg-primary-800",
   },
   {
@@ -54,7 +54,7 @@ export const MENTORS: Mentor[] = [
     university: "University of Warwick",
     major: "MSc Sustainable Automotive Electrification",
     scholarship: "LPDP Scholar",
-    photo: "/mentors/muhammad-haekal-shafi.jpg",
+    photo: "/mentors/muhammad-haekal-shafi-v2.jpg",
     color: "bg-primary-deep",
   },
   {
