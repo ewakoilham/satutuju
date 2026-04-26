@@ -75,8 +75,8 @@ export default function TermsPage() {
           <strong>Kondisi deposit hangus (forfeit):</strong> deposit tidak dikembalikan apabila:
           <ul>
             <li>
-              Mentee memilih mendaftar ke universitas di luar daftar universitas mitra Satu
-              Tuju;
+              Mentee memilih mendaftar ke universitas di luar jaringan mitra Satu Tuju
+              (lihat poin Universitas Mitra di bawah);
             </li>
             <li>
               Mentee drop out atau berhenti merespons mentor selama lebih dari empat (4)
@@ -90,10 +90,13 @@ export default function TermsPage() {
           </ul>
         </li>
         <li>
-          <strong>Universitas mitra.</strong> Daftar universitas mitra dapat berubah dari
-          waktu ke waktu dan akan diinformasikan kepada mentee saat onboarding maupun di
-          halaman publik kami. Mentee disarankan mengonfirmasi status mitra sebelum
-          memutuskan target universitas.
+          <strong>Universitas mitra.</strong> Melalui kerja sama dengan agensi mitra resmi,
+          jaringan kami mencakup lebih dari 3000 universitas di seluruh dunia — termasuk
+          seluruh universitas di Australia, Russell Group di UK, sebagian universitas publik
+          di Amerika Serikat, dan mayoritas universitas di Kanada. Daftar lengkap dapat
+          berubah sewaktu-waktu. Mentee disarankan mengonfirmasi status kemitraan
+          universitas tujuan dengan tim kami sebelum memutuskan, untuk memastikan kelayakan
+          pengembalian deposit.
         </li>
       </ul>
 

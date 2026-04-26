@@ -21,11 +21,11 @@ const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: "Dalam kondisi apa deposit tidak dikembalikan?",
-    a: "Deposit kamu hangus jika: (1) kamu memilih mendaftar ke universitas di luar daftar mitra kami, (2) kamu drop out atau berhenti merespons mentor selama lebih dari beberapa minggu tanpa kabar, (3) kamu tidak hadir di sesi yang sudah dijadwalkan beberapa kali tanpa pemberitahuan, atau (4) kamu melanggar kode etik program. Detail lengkap ada di Syarat & Ketentuan.",
+    a: "Deposit kamu hangus jika: (1) kamu memilih mendaftar ke universitas di luar jaringan mitra kami, (2) kamu drop out atau berhenti merespons mentor selama lebih dari beberapa minggu tanpa kabar, (3) kamu tidak hadir di sesi yang sudah dijadwalkan beberapa kali tanpa pemberitahuan, atau (4) kamu melanggar kode etik program. Detail lengkap ada di Syarat & Ketentuan.",
   },
   {
     q: "Apa saja universitas mitra Satu Tuju?",
-    a: "Saat ini mitra kami mencakup Cambridge, Imperial College London, University of Edinburgh, University of Warwick, University of Melbourne, University of Sydney, Monash University, University of Auckland, dan TU Delft. Daftar ini akan terus berkembang seiring bertambahnya mentor kami.",
+    a: "Lewat kerja sama dengan agensi mitra resmi kami, jaringan universitas yang bisa kamu tuju mencakup 3000+ universitas di seluruh dunia — termasuk semua universitas di Australia, Russell Group di UK, beberapa universitas publik di Amerika Serikat, dan mayoritas universitas di Kanada. Mentor kami sendiri berasal dari Cambridge, Imperial, Edinburgh, Warwick, Melbourne, Sydney, Monash, Auckland, dan TU Delft. Untuk konfirmasi apakah universitas targetmu masuk dalam jaringan mitra, silakan hubungi tim kami saat onboarding.",
   },
   {
     q: "Siapa yang bisa mendaftar sebagai mentee?",
