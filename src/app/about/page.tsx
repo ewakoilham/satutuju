@@ -43,8 +43,11 @@ export default function AboutPage() {
 
       <ul>
         <li>
-          <strong>Gratis selamanya untuk mentee.</strong> Mentor kami menyumbangkan waktunya
-          secara sukarela. Kamu tidak akan pernah diminta membayar untuk sesi mentorship.
+          <strong>Gratis dengan deposit komitmen.</strong> Mentor kami menyumbangkan waktunya
+          secara sukarela — kamu tidak membayar untuk sesi mentorship. Yang kami minta hanya
+          deposit komitmen Rp 1 juta yang akan dikembalikan setelah hasil aplikasi
+          beasiswamu keluar (diterima maupun ditolak). Deposit ini bukan biaya layanan; ini
+          cara kami memastikan mentor kami melayani mentee yang serius mengejar mimpinya.
         </li>
         <li>
           <strong>Satu-lawan-satu, bukan kelas massal.</strong> Setiap sesi dirancang khusus

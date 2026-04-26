@@ -47,13 +47,59 @@ export default function TermsPage() {
         <li>Satu pengguna hanya boleh memiliki satu akun aktif.</li>
       </ul>
 
-      <h2>3. Layanan gratis</h2>
+      <h2>3. Biaya dan deposit komitmen</h2>
 
       <p>
-        Layanan mentorship Satu Tuju gratis untuk mentee. Mentor berpartisipasi secara sukarela.
-        Kami tidak meminta pembayaran apapun untuk akses ke mentor, sesi, atau fitur platform.
-        Jika ada pihak yang mengaku-aku dari Satu Tuju dan meminta pembayaran, mohon laporkan
-        ke{" "}
+        Sesi mentorship Satu Tuju tidak dipungut biaya. Mentor berpartisipasi secara sukarela
+        dan kamu tidak membayar untuk waktu mereka. Namun, untuk memastikan keseriusan
+        mentee, kami meminta <strong>deposit komitmen sebesar Rp 1.000.000</strong> di awal
+        program.
+      </p>
+
+      <p>
+        Ketentuan deposit:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Bukan biaya layanan.</strong> Deposit dikembalikan sepenuhnya kepada mentee
+          dan bukan merupakan pembayaran kepada mentor maupun kepada Satu Tuju.
+        </li>
+        <li>
+          <strong>Pengembalian.</strong> Deposit dikembalikan utuh sebesar Rp 1.000.000 ke
+          rekening bank yang didaftarkan mentee setelah hasil aplikasi beasiswa keluar — baik
+          diterima maupun ditolak. Pengembalian diproses dalam 14 hari kerja setelah mentee
+          menginformasikan hasil aplikasinya.
+        </li>
+        <li>
+          <strong>Kondisi deposit hangus (forfeit):</strong> deposit tidak dikembalikan apabila:
+          <ul>
+            <li>
+              Mentee memilih mendaftar ke universitas di luar daftar universitas mitra Satu
+              Tuju;
+            </li>
+            <li>
+              Mentee drop out atau berhenti merespons mentor selama lebih dari empat (4)
+              minggu berturut-turut tanpa pemberitahuan yang dapat diterima;
+            </li>
+            <li>
+              Mentee tidak hadir di sesi yang sudah dijadwalkan tiga (3) kali atau lebih
+              tanpa pemberitahuan minimal 24 jam sebelumnya;
+            </li>
+            <li>Mentee melanggar Aturan Penggunaan (Pasal 4) atau kode etik program.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Universitas mitra.</strong> Daftar universitas mitra dapat berubah dari
+          waktu ke waktu dan akan diinformasikan kepada mentee saat onboarding maupun di
+          halaman publik kami. Mentee disarankan mengonfirmasi status mitra sebelum
+          memutuskan target universitas.
+        </li>
+      </ul>
+
+      <p>
+        Jika ada pihak yang mengaku-aku dari Satu Tuju dan meminta pembayaran di luar mekanisme
+        deposit ini, mohon laporkan ke{" "}
         <a href="mailto:hello@satutuju.id" className="text-primary underline underline-offset-2">
           hello@satutuju.id
         </a>

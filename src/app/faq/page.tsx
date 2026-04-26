@@ -9,7 +9,23 @@ export const metadata: Metadata = {
 const FAQS: Array<{ q: string; a: string }> = [
   {
     q: "Apakah Satu Tuju benar-benar gratis?",
-    a: "Iya. Mentor kami menyumbangkan waktunya secara sukarela. Kamu tidak akan diminta membayar untuk sesi mentorship, baik di awal, di tengah, maupun di akhir. Tidak ada paket berbayar, tidak ada upgrade.",
+    a: "Sesi mentorshipnya gratis — mentor kami menyumbangkan waktunya secara sukarela dan kamu tidak membayar untuk waktu mereka. Yang kami minta hanya deposit komitmen Rp 1 juta yang akan dikembalikan setelah hasil aplikasi beasiswamu keluar (diterima maupun ditolak). Tidak ada paket berbayar, tidak ada upgrade.",
+  },
+  {
+    q: "Kenapa ada deposit Rp 1 juta? Bukannya katanya gratis?",
+    a: "Mentor kami adalah relawan dengan jadwal yang padat. Deposit Rp 1 juta bukan biaya layanan — ini cara kami memastikan mentor kami didampingkan dengan mentee yang serius. Saat kamu menyelesaikan program dan hasil aplikasi beasiswamu keluar, deposit dikembalikan sepenuhnya. Tanpa deposit, sebagian mentee yang sebenarnya tidak siap akan menempati slot yang seharusnya bisa membantu orang lain.",
+  },
+  {
+    q: "Kapan deposit komitmen dikembalikan?",
+    a: "Setelah hasil aplikasi beasiswamu keluar — baik diterima maupun ditolak. Hasil itu menjadi penanda bahwa kamu sudah menjalankan program sampai selesai. Deposit dikembalikan utuh Rp 1 juta ke rekening bank yang kamu daftarkan.",
+  },
+  {
+    q: "Dalam kondisi apa deposit tidak dikembalikan?",
+    a: "Deposit kamu hangus jika: (1) kamu memilih mendaftar ke universitas di luar daftar mitra kami, (2) kamu drop out atau berhenti merespons mentor selama lebih dari beberapa minggu tanpa kabar, (3) kamu tidak hadir di sesi yang sudah dijadwalkan beberapa kali tanpa pemberitahuan, atau (4) kamu melanggar kode etik program. Detail lengkap ada di Syarat & Ketentuan.",
+  },
+  {
+    q: "Apa saja universitas mitra Satu Tuju?",
+    a: "Saat ini mitra kami mencakup Cambridge, Imperial College London, University of Edinburgh, University of Warwick, University of Melbourne, University of Sydney, Monash University, University of Auckland, dan TU Delft. Daftar ini akan terus berkembang seiring bertambahnya mentor kami.",
   },
   {
     q: "Siapa yang bisa mendaftar sebagai mentee?",
