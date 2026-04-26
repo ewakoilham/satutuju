@@ -45,7 +45,7 @@ export const MENTORS: Mentor[] = [
     university: "University of Edinburgh",
     major: "MSc Biochemistry",
     scholarship: "LPDP Scholar",
-    photo: "/mentors/hasna-hafida-v2.jpg",
+    photo: "/mentors/hasna-hafida-v3.jpg",
     color: "bg-primary-800",
   },
   {
