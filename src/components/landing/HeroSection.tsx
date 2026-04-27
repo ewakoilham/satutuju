@@ -40,22 +40,34 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-[90vh] lg:min-h-screen flex items-center bg-white overflow-hidden pt-20 pb-12 lg:pt-20 lg:pb-12">
-      {/* Organic gradient blobs */}
+      {/* Background photo */}
+      <Image
+        src="/bg.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover pointer-events-none select-none"
+      />
+      {/* Soft white wash so text stays legible over the photo */}
+      <div className="absolute inset-0 bg-white/70 pointer-events-none" />
+
+      {/* Organic gradient blobs (kept, but tuned down on top of photo) */}
       <div
         className="absolute -top-20 -right-20 w-[600px] h-[600px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#c6ddef", filter: "blur(120px)", opacity: 0.7 }}
+        style={{ background: "#c6ddef", filter: "blur(120px)", opacity: 0.45 }}
       />
       <div
         className="absolute -bottom-32 -left-20 w-[550px] h-[550px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#d5c6ef", filter: "blur(120px)", opacity: 0.5, animationDelay: "3s", animationDirection: "reverse" }}
+        style={{ background: "#d5c6ef", filter: "blur(120px)", opacity: 0.35, animationDelay: "3s", animationDirection: "reverse" }}
       />
       <div
         className="absolute top-10 left-1/4 w-[400px] h-[400px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#fef3d0", filter: "blur(100px)", opacity: 0.6, animationDelay: "5s" }}
+        style={{ background: "#fef3d0", filter: "blur(100px)", opacity: 0.4, animationDelay: "5s" }}
       />
       <div
         className="absolute bottom-10 right-1/3 w-[350px] h-[350px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#b8d4ed", filter: "blur(100px)", opacity: 0.5, animationDelay: "7s", animationDirection: "reverse" }}
+        style={{ background: "#b8d4ed", filter: "blur(100px)", opacity: 0.35, animationDelay: "7s", animationDirection: "reverse" }}
       />
 
       <Image
