@@ -2,6 +2,7 @@
 
 import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
+import UniversityLogoMarquee from "./UniversityLogoMarquee";
 import StickyValueProps from "./StickyValueProps";
 import MentorMarquee from "./MentorMarquee";
 import HowItWorks from "./HowItWorks";
@@ -14,6 +15,7 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <HeroSection />
+        <UniversityLogoMarquee />
         <MentorMarquee />
         <StickyValueProps />
         <HowItWorks />

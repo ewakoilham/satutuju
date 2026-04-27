@@ -35,7 +35,7 @@ export const MENTORS: Mentor[] = [
     initials: "HH",
     university: "Imperial College London",
     major: "MSc Advanced Materials Science and Engineering",
-    scholarship: "LPDP Scholar",
+    scholarship: "Campus Scholarship",
     photo: "/mentors/hanan-hakim.jpg",
     color: "bg-primary-600",
   },

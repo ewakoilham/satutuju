@@ -7,7 +7,6 @@ import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
-import UniversityLogoMarquee from "./UniversityLogoMarquee";
 
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
@@ -116,9 +115,6 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <div className="mt-5">
-              <UniversityLogoMarquee />
-            </div>
           </div>
 
           {/* RIGHT: Mentor showcase */}
@@ -271,9 +267,9 @@ function CredentialRow({
   accent?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-center gap-2.5">
       <div
-        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
           accent ? "bg-primary text-white" : "bg-primary-50 text-primary"
         }`}
       >
