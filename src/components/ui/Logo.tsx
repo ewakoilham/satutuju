@@ -3,6 +3,8 @@ import Image from "next/image";
 interface LogoProps {
   variant?: "main" | "circle";
   size?: "xs" | "sm" | "md" | "lg";
+  /** Use the light/white variant for use on dark backgrounds. */
+  tone?: "dark" | "light";
   className?: string;
 }
 
@@ -13,9 +15,14 @@ const SIZES = {
   lg: { main: { w: 180, h: 121 }, circle: { w: 72, h: 72 } },
 };
 
-export default function Logo({ variant = "main", size = "md", className = "" }: LogoProps) {
+export default function Logo({ variant = "main", size = "md", tone = "dark", className = "" }: LogoProps) {
   const dims = SIZES[size][variant];
-  const src = variant === "main" ? "/logo-main.png" : "/logo-circle.png";
+  const src =
+    variant === "main"
+      ? tone === "light"
+        ? "/logo-main-white.png"
+        : "/logo-main.png"
+      : "/logo-circle.png";
 
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: dims.w, height: dims.h }}>

@@ -49,25 +49,10 @@ export default function HeroSection() {
         sizes="100vw"
         className="object-cover pointer-events-none select-none"
       />
-      {/* Soft white wash so text stays legible over the photo */}
-      <div className="absolute inset-0 bg-white/70 pointer-events-none" />
-
-      {/* Organic gradient blobs (kept, but tuned down on top of photo) */}
+      {/* Flat brand-blue tint over the photo (no gradient, no blobs) */}
       <div
-        className="absolute -top-20 -right-20 w-[600px] h-[600px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#c6ddef", filter: "blur(120px)", opacity: 0.45 }}
-      />
-      <div
-        className="absolute -bottom-32 -left-20 w-[550px] h-[550px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#d5c6ef", filter: "blur(120px)", opacity: 0.35, animationDelay: "3s", animationDirection: "reverse" }}
-      />
-      <div
-        className="absolute top-10 left-1/4 w-[400px] h-[400px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#fef3d0", filter: "blur(100px)", opacity: 0.4, animationDelay: "5s" }}
-      />
-      <div
-        className="absolute bottom-10 right-1/3 w-[350px] h-[350px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#b8d4ed", filter: "blur(100px)", opacity: 0.35, animationDelay: "7s", animationDirection: "reverse" }}
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: "#3F60B0", opacity: 0.82 }}
       />
 
       <Image
@@ -90,18 +75,18 @@ export default function HeroSection() {
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* LEFT: Text content */}
           <div className="lg:col-span-5 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 backdrop-blur-sm text-sm text-primary-700 font-medium mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-sm text-white font-medium mb-4 border border-white/20">
               <Icon name="puzzle" size={16} />
               {t.badge}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[2.5rem] xl:text-5xl font-extrabold text-primary-900 leading-[1.1] font-[family-name:var(--font-heading)]">
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.5rem] xl:text-5xl font-extrabold text-white leading-[1.1] font-[family-name:var(--font-heading)] [text-shadow:0_2px_24px_rgba(0,0,0,0.18)]">
               {t.headlineLine1}
               <br />
-              <span className="text-primary">{t.headlineLine2}</span>
+              <span className="text-brand-yellow">{t.headlineLine2}</span>
             </h1>
 
-            <p className="mt-3 text-base text-primary-800/70 max-w-lg leading-relaxed">
+            <p className="mt-3 text-base text-white/85 max-w-lg leading-relaxed">
               {t.subheadline}
             </p>
 
@@ -110,18 +95,18 @@ export default function HeroSection() {
             <div className="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
               <Link
                 href="/signup"
-                className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-xl)] transition-all"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap bg-brand-yellow text-primary-900 hover:bg-brand-yellow/90 shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-xl)] transition-all"
               >
                 {t.primaryCta}
                 <Icon name="arrow-right" size={16} />
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/70 backdrop-blur-sm text-primary font-semibold rounded-xl border border-primary-200/50 hover:bg-white hover:shadow-[var(--shadow-md)] transition-all text-sm whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-primary-900 font-bold rounded-xl border border-white hover:shadow-[var(--shadow-md)] transition-all text-sm whitespace-nowrap"
               >
                 {t.secondaryCta}
               </Link>
-              <div className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-yellow/40 border border-brand-yellow/60 self-start sm:self-center">
+              <div className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-yellow border border-brand-yellow self-start sm:self-center">
                 <Icon name="graduation" size={12} className="text-primary-900" />
                 <span className="text-[11px] font-bold text-primary-900 whitespace-nowrap">{t.statFree}</span>
               </div>
@@ -188,8 +173,8 @@ function FeaturedMentorPanel({
       className="flex flex-col gap-3"
     >
       <div className="flex items-center px-1">
-        <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-700">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-white/90">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow animate-pulse" />
           {t.featuredLabel}
         </div>
       </div>

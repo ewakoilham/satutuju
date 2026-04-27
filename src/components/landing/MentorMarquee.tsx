@@ -25,16 +25,16 @@ function MentorCard({ mentor, onClick }: { mentor: Mentor; onClick: () => void }
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
       </div>
       <div className="p-4">
-        <h4 className="font-bold text-foreground font-[family-name:var(--font-heading)]">
+        <h4 className="font-bold text-foreground font-[family-name:var(--font-heading)] line-clamp-2 min-h-[3rem] leading-tight">
           {mentor.fullName}
         </h4>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <Icon name="graduation" size={14} className="text-primary" />
-          <span className="text-xs text-primary font-medium">{mentor.major}</span>
+        <div className="flex items-start gap-1.5 mt-2 min-h-[2.25rem]">
+          <Icon name="graduation" size={14} className="text-primary mt-0.5 flex-shrink-0" />
+          <span className="text-xs text-primary font-medium line-clamp-2 leading-snug">{mentor.major}</span>
         </div>
-        <div className="flex items-center gap-1.5 mt-1">
-          <Icon name="school" size={14} className="text-text-muted" />
-          <span className="text-xs text-text-muted">{mentor.university}</span>
+        <div className="flex items-start gap-1.5 mt-1 min-h-[2.25rem]">
+          <Icon name="school" size={14} className="text-text-muted mt-0.5 flex-shrink-0" />
+          <span className="text-xs text-text-muted line-clamp-2 leading-snug">{mentor.university}</span>
         </div>
       </div>
     </button>
@@ -91,14 +91,6 @@ export default function MentorMarquee() {
     });
   }, []);
 
-  const handleMouseEnter = useCallback(() => {
-    setIsAutoScrolling(false);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setIsAutoScrolling(true);
-  }, []);
-
   const handleCardClick = useCallback((name: string) => {
     const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === name);
     if (bio) setSelectedMentor(bio);
@@ -134,14 +126,14 @@ export default function MentorMarquee() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 relative z-10">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight font-[family-name:var(--font-heading)] max-w-lg">
-          {t.heading}{" "}
-          <span className="text-primary-300">{t.highlight}</span>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight text-center font-[family-name:var(--font-heading)]">
+          <span className="block lg:whitespace-nowrap">{t.heading}</span>
+          <span className="block text-primary-300 lg:whitespace-nowrap">{t.highlight}</span>
         </h2>
       </div>
 
       {/* Marquee container */}
-      <div className="relative group/marquee" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <div className="relative group/marquee">
         {/* Gradient fades on edges */}
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-primary-900 to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-primary-900 to-transparent z-10 pointer-events-none" />
