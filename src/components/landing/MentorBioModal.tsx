@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
+import { getMentorPhotos } from "@/lib/mentors";
 
 export interface MentorBio {
   id: string;
@@ -39,10 +41,26 @@ function splitAwards(raw: string): string[] {
 export default function MentorBioModal({ mentor, open, onClose }: MentorBioModalProps) {
   const t = landingCopy.id.mentorBio;
 
+  // Build the photo gallery — gallery photos first, fall back to avatarPath.
+  const photos = useMemo(() => {
+    if (!mentor) return [];
+    const gallery = getMentorPhotos(mentor.id);
+    if (gallery.length > 0) return gallery;
+    return mentor.avatarPath ? [mentor.avatarPath] : [];
+  }, [mentor]);
+
+  const [activePhoto, setActivePhoto] = useState(0);
+
+  // Reset active photo when the mentor changes.
+  useEffect(() => {
+    setActivePhoto(0);
+  }, [mentor?.id]);
+
   if (!mentor) return null;
 
   const awards = splitAwards(mentor.scholarshipRaw);
   const subtitle = [mentor.major, mentor.university].filter(Boolean).join(" · ");
+  const currentPhoto = photos[activePhoto];
 
   return (
     <Modal open={open} onClose={onClose} size="2xl">
@@ -56,29 +74,50 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
         </button>
 
         <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {/* Photo — full subject visible (object-contain) over a blurred-photo backdrop */}
-          <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden bg-surface-elevated">
-            {mentor.avatarPath ? (
-              <>
+          {/* Photo gallery */}
+          <div className="flex flex-col bg-surface-elevated">
+            <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden">
+              {currentPhoto ? (
                 <Image
-                  src={mentor.avatarPath}
-                  alt=""
-                  aria-hidden
-                  fill
-                  sizes="(max-width: 768px) 100vw, 360px"
-                  className="object-cover scale-110 blur-2xl opacity-50"
-                />
-                <Image
-                  src={mentor.avatarPath}
+                  src={currentPhoto}
                   alt={mentor.fullName}
                   fill
                   sizes="(max-width: 768px) 100vw, 360px"
-                  className="object-contain"
+                  className="object-cover object-top transition-opacity duration-300"
+                  key={currentPhoto}
                 />
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-text-muted-2 font-[family-name:var(--font-heading)]">
-                {mentor.initials}
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-text-muted-2 font-[family-name:var(--font-heading)]">
+                  {mentor.initials}
+                </div>
+              )}
+              {photos.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md text-[11px] font-semibold text-white">
+                  {activePhoto + 1} / {photos.length}
+                </div>
+              )}
+            </div>
+
+            {photos.length > 1 && (
+              <div className="flex gap-2 p-3 overflow-x-auto bg-surface-elevated">
+                {photos.map((src, i) => {
+                  const active = i === activePhoto;
+                  return (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => setActivePhoto(i)}
+                      aria-label={`Foto ${i + 1}`}
+                      className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all duration-200 ${
+                        active
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-surface-elevated"
+                          : "opacity-65 hover:opacity-100"
+                      }`}
+                    >
+                      <Image src={src} alt="" fill sizes="64px" className="object-cover object-top" />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

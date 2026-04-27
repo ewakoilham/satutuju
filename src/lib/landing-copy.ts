@@ -6,10 +6,12 @@ export const landingCopy = {
     },
     hero: {
       badge: "Mentoring 1-on-1",
-      headlineLine1: "Yuk, buat perjalanan",
-      headlineLine2: "study abroad kamu jadi lebih mudah!",
+      headlineLine1:
+        "Kamu mau studi S2 di luar negeri, tapi bingung harus mulai dari mana?",
+      headlineLine2: "Mentor Satu Tuju siap bimbing kamu dari nol",
       subheadline:
-        "Mentoring 1-on-1 dengan alumni S2 dari berbagai kampus dunia. Kami bantu dari memilih kampus sampai dengan submission. Gratis, dengan deposit komitmen Rp 1 juta yang balik setelah hasil keluar.",
+        "Kami akan bimbing kamu mulai dari persiapan, sampai kamu tiba di kampus impian kamu!",
+      scrollCue: "Scroll ke bawah untuk cari tahu lebih jauh!",
       primaryCta: "Gabung Mentorship Sekarang",
       secondaryCta: "Gabung Komunitas",
       statMentors: "Mentor",

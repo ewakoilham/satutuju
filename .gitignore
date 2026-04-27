@@ -51,3 +51,7 @@ next-env.d.ts
 # claude
 .claude/
 !.claude/launch.json
+
+# editor / pipeline scratch
+.tmp-*
+public/mentors photos/

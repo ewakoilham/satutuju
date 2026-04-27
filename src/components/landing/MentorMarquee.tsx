@@ -7,35 +7,90 @@ import { landingCopy } from "@/lib/landing-copy";
 import mentorsData from "@/data/mentors.json";
 import MentorBioModal, { type MentorBio } from "./MentorBioModal";
 import { MENTORS, type Mentor } from "@/lib/mentors";
-import MentorAvatar from "./MentorAvatar";
+import EditableMentorPhoto from "./EditableMentorPhoto";
 
-const CARD_WIDTH = 240; // w-60 = 15rem
-const GAP = 24; // gap-6
+const CARD_WIDTH = 280; // w-[280px]
+const GAP = 18;
 const SCROLL_AMOUNT = CARD_WIDTH + GAP;
 
-function MentorCard({ mentor, onClick }: { mentor: Mentor; onClick: () => void }) {
+/**
+ * Cinematic dark-stage card — full-bleed photo with metadata overlaid at the
+ * bottom and a yellow "Baca cerita" hover pill.
+ */
+function MentorCard({
+  mentor,
+  index,
+  onClick,
+}: {
+  mentor: Mentor;
+  index: number;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex-shrink-0 w-60 flex flex-col bg-white rounded-2xl shadow-[var(--shadow-md)] overflow-hidden hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 cursor-pointer group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+      className="group/card relative flex-shrink-0 w-[280px] h-[420px] rounded-3xl overflow-hidden cursor-pointer text-left bg-primary-900 border border-white/10 transition-[transform,border-color] duration-300 hover:-translate-y-1.5 hover:border-[#fef3d0]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fef3d0]"
     >
-      <div className={`h-48 ${mentor.color} flex items-center justify-center relative overflow-hidden`}>
-        <MentorAvatar mentor={mentor} sizes="240px" initialsClassName="text-4xl" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-      </div>
-      <div className="p-4">
-        <h4 className="font-bold text-foreground font-[family-name:var(--font-heading)] line-clamp-2 min-h-[3rem] leading-tight">
+      {/* Photo */}
+      {mentor.photo && (
+        <EditableMentorPhoto
+          mentorId={mentor.id}
+          location="marquee-card"
+          fallbackPhoto={mentor.photo}
+          alt={mentor.fullName}
+          sizes="280px"
+        />
+      )}
+      {/* Bottom-up gradient for text legibility */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, transparent 35%, rgba(17,29,66,0.25) 60%, rgba(17,29,66,0.95) 100%)",
+        }}
+      />
+
+      {/* Number badge (top-left, monospace) */}
+      <span className="absolute top-4 left-4 z-10 inline-flex items-center px-2.5 py-1 rounded-full bg-primary-900/55 backdrop-blur-md border border-white/20 text-[11px] font-semibold tracking-[0.1em] text-white/85 font-[family-name:var(--font-geist-mono)]">
+        № {String(index + 1).padStart(2, "0")}
+      </span>
+
+      {/* Flag chip (top-right) */}
+      {mentor.flagCode && (
+        <span className="absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-primary-900/55 backdrop-blur-md border border-white/20 text-[11px] font-semibold text-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://flagcdn.com/24x18/${mentor.flagCode}.png`}
+            srcSet={`https://flagcdn.com/24x18/${mentor.flagCode}.png 1x, https://flagcdn.com/48x36/${mentor.flagCode}.png 2x`}
+            width={18}
+            height={14}
+            alt=""
+            aria-hidden
+            className="rounded-[2px]"
+          />
+          {mentor.country}
+        </span>
+      )}
+
+      {/* Meta block — visible by default, hides on hover */}
+      <div className="absolute left-[18px] right-[18px] bottom-[18px] z-[2] transition-all duration-200 group-hover/card:opacity-0 group-hover/card:-translate-y-2">
+        <h3 className="font-[family-name:var(--font-heading)] text-[22px] font-bold text-white leading-[1.15] tracking-[-0.01em] mb-2">
           {mentor.fullName}
-        </h4>
-        <div className="flex items-start gap-1.5 mt-2 min-h-[2.25rem]">
-          <Icon name="graduation" size={14} className="text-primary mt-0.5 flex-shrink-0" />
-          <span className="text-xs text-primary font-medium line-clamp-2 leading-snug">{mentor.major}</span>
+        </h3>
+        <p className="text-[16px] italic font-normal leading-[1.3] mb-1.5 text-[#fef3d0] font-[family-name:var(--font-display-serif)]">
+          {mentor.major}
+        </p>
+        <div className="flex items-center gap-1.5 text-[12px] text-white/70">
+          <Icon name="graduation" size={11} />
+          <span className="line-clamp-1">{mentor.university}</span>
         </div>
-        <div className="flex items-start gap-1.5 mt-1 min-h-[2.25rem]">
-          <Icon name="school" size={14} className="text-text-muted mt-0.5 flex-shrink-0" />
-          <span className="text-xs text-text-muted line-clamp-2 leading-snug">{mentor.university}</span>
-        </div>
+      </div>
+
+      {/* Hover-revealed CTA pill (yellow) */}
+      <div className="absolute left-[18px] right-[18px] bottom-[18px] z-[3] flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#fef3d0] text-primary-900 text-[12.5px] font-semibold opacity-0 translate-y-2 transition-all duration-200 group-hover/card:opacity-100 group-hover/card:translate-y-0">
+        <span>Baca cerita {mentor.fullName.split(" ")[0]}</span>
+        <Icon name="arrow-right" size={14} />
       </div>
     </button>
   );
@@ -46,26 +101,37 @@ export default function MentorMarquee() {
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [selectedMentor, setSelectedMentor] = useState<MentorBio | null>(null);
   const autoScrollRef = useRef<number | null>(null);
+  // Direct DOM refs for the progress UI — bypasses React re-renders so the
+  // bar/count update at 60fps without thrashing the marquee tree.
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressCountRef = useRef<HTMLSpanElement>(null);
   const allMentors = [...MENTORS, ...MENTORS];
   const t = landingCopy.id.mentorShowcase;
 
-  // Auto-scroll logic using requestAnimationFrame for smooth pixel-level scrolling
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !isAutoScrolling || selectedMentor) return;
 
     let lastTime = 0;
-    const speed = 0.5; // pixels per frame (~30px/s at 60fps)
+    const speed = 0.5;
 
     const step = (time: number) => {
       if (lastTime) {
         const delta = time - lastTime;
-        el.scrollLeft += speed * (delta / 16); // normalize to ~60fps
-
-        // Loop: when we've scrolled past the first set, jump back
+        el.scrollLeft += speed * (delta / 16);
         const halfWidth = el.scrollWidth / 2;
         if (el.scrollLeft >= halfWidth) {
           el.scrollLeft -= halfWidth;
+        }
+        // Update progress UI directly (no setState) — 0..1 across the first set.
+        const max = halfWidth || 1;
+        const p = (el.scrollLeft % max) / max;
+        if (progressBarRef.current) {
+          progressBarRef.current.style.width = `${Math.max(8, p * 100)}%`;
+        }
+        if (progressCountRef.current) {
+          const idx = Math.min(MENTORS.length - 1, Math.floor(p * MENTORS.length));
+          progressCountRef.current.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(MENTORS.length).padStart(2, "0")}`;
         }
       }
       lastTime = time;
@@ -81,10 +147,7 @@ export default function MentorMarquee() {
   const handleManualScroll = useCallback((direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-
-    // Pause auto-scroll during manual interaction
     setIsAutoScrolling(false);
-
     el.scrollBy({
       left: direction === "right" ? SCROLL_AMOUNT : -SCROLL_AMOUNT,
       behavior: "smooth",
@@ -97,17 +160,14 @@ export default function MentorMarquee() {
   }, []);
 
   return (
-    <section id="mentor-showcase" className="bg-primary-900 py-20 overflow-hidden relative scroll-mt-20">
-      {/* Organic gradient blobs (dark variants) */}
-      <div
-        className="absolute -top-20 -right-32 w-[400px] h-[400px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#233a7d", filter: "blur(100px)", opacity: 0.6 }}
-      />
-      <div
-        className="absolute -bottom-20 -left-20 w-[350px] h-[350px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#2e4a9a", filter: "blur(100px)", opacity: 0.5, animationDelay: "4s", animationDirection: "reverse" }}
-      />
-
+    <section
+      id="mentor-showcase"
+      className="relative overflow-hidden scroll-mt-20 py-20 lg:py-24 text-white"
+      style={{
+        background:
+          "radial-gradient(1200px 600px at 80% -10%, #1a2d60 0%, transparent 60%), radial-gradient(900px 500px at -10% 110%, #233a7d 0%, transparent 55%), #111d42",
+      }}
+    >
       {/* Brand illustrations */}
       <Image
         src="/illustrations/puzzle-piece.png"
@@ -125,44 +185,80 @@ export default function MentorMarquee() {
         style={{ animationDelay: "2s" }}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 relative z-10">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight text-center font-[family-name:var(--font-heading)]">
-          <span className="block lg:whitespace-nowrap">{t.heading}</span>
-          <span className="block text-primary-300 lg:whitespace-nowrap">{t.highlight}</span>
+      {/* Header */}
+      <div className="max-w-[980px] mx-auto px-6 sm:px-10 lg:px-14 mb-14 text-center relative z-10">
+        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-[12px] font-semibold tracking-[0.18em] uppercase mb-6"
+          style={{ color: "#c6ddef", background: "rgba(198,221,239,0.08)", border: "1px solid rgba(198,221,239,0.18)" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#fef3d0]" />
+          14 mentor · sudah di luar negeri
+        </div>
+        <h2 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-[44px] xl:text-[52px] font-bold leading-[1.05] tracking-[-0.02em] mb-4">
+          <span className="block">{t.heading}</span>
+          <em
+            className="block font-normal text-[#fef3d0] font-[family-name:var(--font-display-serif)] italic"
+          >
+            {t.highlight}
+          </em>
         </h2>
+        <p className="text-base sm:text-[17px] leading-[1.55] text-white/75 max-w-xl mx-auto">
+          Klik kartu untuk membaca cerita lengkap setiap mentor — kampus tujuan,
+          beasiswa, dan nasihat paling berharga yang pernah mereka dapat.
+        </p>
       </div>
 
-      {/* Marquee container */}
-      <div className="relative group/marquee">
-        {/* Gradient fades on edges */}
+      {/* Rail */}
+      <div className="relative group/marquee z-10">
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-primary-900 to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-primary-900 to-transparent z-10 pointer-events-none" />
 
-        {/* Left arrow */}
-        <button
-          onClick={() => handleManualScroll("left")}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center opacity-0 group-hover/marquee:opacity-40 hover:!opacity-100 hover:bg-white/20 transition-all duration-300 cursor-pointer"
-          aria-label="Scroll left"
-        >
-          <Icon name="chevron-left" size={20} className="text-white" />
-        </button>
-
-        {/* Right arrow */}
-        <button
-          onClick={() => handleManualScroll("right")}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center opacity-0 group-hover/marquee:opacity-40 hover:!opacity-100 hover:bg-white/20 transition-all duration-300 cursor-pointer"
-          aria-label="Scroll right"
-        >
-          <Icon name="chevron-right" size={20} className="text-white" />
-        </button>
-
         <div
           ref={scrollRef}
-          className="flex gap-6 overflow-x-hidden px-6"
+          className="flex gap-[18px] overflow-x-hidden px-6 sm:px-10 lg:px-14 py-3"
         >
           {allMentors.map((mentor, i) => (
-            <MentorCard key={i} mentor={mentor} onClick={() => handleCardClick(mentor.fullName)} />
+            <MentorCard
+              key={i}
+              mentor={mentor}
+              index={i % MENTORS.length}
+              onClick={() => handleCardClick(mentor.fullName)}
+            />
           ))}
+        </div>
+      </div>
+
+      {/* Bottom nav: count + progress + arrows */}
+      <div className="max-w-[980px] mx-auto px-6 sm:px-10 lg:px-14 mt-6 flex items-center gap-6 relative z-10">
+        <span
+          ref={progressCountRef}
+          className="font-[family-name:var(--font-geist-mono)] text-[12px] tracking-[0.08em] text-white/60 whitespace-nowrap"
+        >
+          01 / {String(MENTORS.length).padStart(2, "0")}
+        </span>
+        <div className="flex-1 h-[3px] rounded-full bg-white/10 relative overflow-hidden">
+          <div
+            ref={progressBarRef}
+            className="absolute top-0 left-0 h-full bg-[#fef3d0] rounded-full"
+            style={{ width: "8%" }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleManualScroll("left")}
+            aria-label="Scroll left"
+            className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/[0.18] text-white flex items-center justify-center transition-all duration-200 hover:bg-[#fef3d0]/15 hover:border-[#fef3d0] hover:text-[#fef3d0]"
+          >
+            <Icon name="chevron-left" size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleManualScroll("right")}
+            aria-label="Scroll right"
+            className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/[0.18] text-white flex items-center justify-center transition-all duration-200 hover:bg-[#fef3d0]/15 hover:border-[#fef3d0] hover:text-[#fef3d0]"
+          >
+            <Icon name="chevron-right" size={16} />
+          </button>
         </div>
       </div>
 
