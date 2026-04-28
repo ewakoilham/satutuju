@@ -83,6 +83,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
                   alt={mentor.fullName}
                   fill
                   sizes="(max-width: 768px) 100vw, 360px"
+                  quality={95}
                   className="object-cover object-top transition-opacity duration-300"
                   key={currentPhoto}
                 />
@@ -114,7 +115,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
                           : "opacity-65 hover:opacity-100"
                       }`}
                     >
-                      <Image src={src} alt="" fill sizes="64px" className="object-cover object-top" />
+                      <Image src={src} alt="" fill sizes="64px" quality={90} className="object-cover object-top" />
                     </button>
                   );
                 })}

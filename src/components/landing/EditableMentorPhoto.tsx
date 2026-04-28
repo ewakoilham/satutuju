@@ -85,6 +85,7 @@ export default function EditableMentorPhoto({
         fill
         sizes={sizes}
         priority={priority}
+        quality={95}
         className={imgClassName}
         style={style}
       />
@@ -149,6 +150,7 @@ export default function EditableMentorPhoto({
                   alt=""
                   fill
                   sizes={`${enlargedPreviewSize}px`}
+                  quality={95}
                   className={imgClassName}
                   style={style}
                 />

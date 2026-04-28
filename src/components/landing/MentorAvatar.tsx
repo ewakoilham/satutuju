@@ -30,6 +30,7 @@ export default function MentorAvatar({
         fill
         sizes={sizes}
         priority={priority}
+        quality={95}
         className="object-cover"
       />
     );

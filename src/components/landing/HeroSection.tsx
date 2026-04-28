@@ -59,6 +59,7 @@ export default function HeroSection() {
         fill
         priority
         sizes="100vw"
+        quality={90}
         className="object-cover pointer-events-none select-none"
       />
       {/* Soft white wash so text stays legible over the photo */}
