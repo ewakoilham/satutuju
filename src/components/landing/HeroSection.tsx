@@ -8,6 +8,7 @@ import { landingCopy } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
 import EditableMentorPhoto from "./EditableMentorPhoto";
+import { useEditPanelOpen } from "@/lib/photo-edit-context";
 
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
@@ -19,6 +20,7 @@ export default function HeroSection() {
   // After a manual click on the avatar strip, suppress auto-advance until
   // this timestamp passes (3s after the most recent click).
   const cooldownUntilRef = useRef(0);
+  const editPanelOpen = useEditPanelOpen();
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -29,14 +31,14 @@ export default function HeroSection() {
   }, []);
 
   useEffect(() => {
-    if (paused || reduceMotion) return;
+    if (paused || reduceMotion || editPanelOpen) return;
     const id = setInterval(() => {
       if (document.visibilityState === "hidden") return;
       if (Date.now() < cooldownUntilRef.current) return;
       setActiveIndex((i) => (i + 1) % MENTORS.length);
     }, CYCLE_MS);
     return () => clearInterval(id);
-  }, [paused, reduceMotion]);
+  }, [paused, reduceMotion, editPanelOpen]);
 
   const goTo = useCallback((index: number) => {
     setActiveIndex(index);
@@ -143,7 +145,7 @@ export default function HeroSection() {
             {/* Mentor avatar strip — moved into the text column */}
             <div className="mt-5">
               <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary mb-2">
-                14 Mentor dari kampus top dunia
+                Mentor pilihan dari kampus top dunia
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center -space-x-1.5 flex-wrap gap-y-2">
@@ -169,6 +171,8 @@ export default function HeroSection() {
                             fallbackPhoto={m.photo}
                             alt={m.fullName}
                             sizes="48px"
+                            enlargedPreviewSize={420}
+                            enlargedPreviewRound
                           />
                         ) : (
                           <MentorAvatar mentor={m} sizes="48px" initialsClassName="text-[10px]" />

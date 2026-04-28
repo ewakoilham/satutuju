@@ -54,8 +54,8 @@ export const landingCopy = {
       ],
     },
     mentorShowcase: {
-      heading: "Semua mentor kami pernah ada di posisi kamu saat ini.",
-      highlight: "Klik untuk cari tahu cerita lengkap mereka",
+      heading: "Mereka paling mengerti apa yang kamu butuhkan saat ini",
+      highlight: "Klik untuk mengenal mereka lebih dekat",
     },
     mentorBio: {
       from: "Asal",

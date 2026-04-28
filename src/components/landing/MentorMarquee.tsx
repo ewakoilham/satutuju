@@ -8,10 +8,7 @@ import mentorsData from "@/data/mentors.json";
 import MentorBioModal, { type MentorBio } from "./MentorBioModal";
 import { MENTORS, type Mentor } from "@/lib/mentors";
 import EditableMentorPhoto from "./EditableMentorPhoto";
-
-const CARD_WIDTH = 280; // w-[280px]
-const GAP = 18;
-const SCROLL_AMOUNT = CARD_WIDTH + GAP;
+import { useEditPanelOpen, useMentorNickname } from "@/lib/photo-edit-context";
 
 /**
  * Cinematic dark-stage card — full-bleed photo with metadata overlaid at the
@@ -19,13 +16,12 @@ const SCROLL_AMOUNT = CARD_WIDTH + GAP;
  */
 function MentorCard({
   mentor,
-  index,
   onClick,
 }: {
   mentor: Mentor;
-  index: number;
   onClick: () => void;
 }) {
+  const nickname = useMentorNickname(mentor.id, mentor.nickname);
   return (
     <button
       type="button"
@@ -50,11 +46,6 @@ function MentorCard({
             "linear-gradient(180deg, transparent 35%, rgba(17,29,66,0.25) 60%, rgba(17,29,66,0.95) 100%)",
         }}
       />
-
-      {/* Number badge (top-left, monospace) */}
-      <span className="absolute top-4 left-4 z-10 inline-flex items-center px-2.5 py-1 rounded-full bg-primary-900/55 backdrop-blur-md border border-white/20 text-[11px] font-semibold tracking-[0.1em] text-white/85 font-[family-name:var(--font-geist-mono)]">
-        № {String(index + 1).padStart(2, "0")}
-      </span>
 
       {/* Flag chip (top-right) */}
       {mentor.flagCode && (
@@ -89,7 +80,7 @@ function MentorCard({
 
       {/* Hover-revealed CTA pill (yellow) */}
       <div className="absolute left-[18px] right-[18px] bottom-[18px] z-[3] flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#fef3d0] text-primary-900 text-[12.5px] font-semibold opacity-0 translate-y-2 transition-all duration-200 group-hover/card:opacity-100 group-hover/card:translate-y-0">
-        <span>Baca cerita {mentor.fullName.split(" ")[0]}</span>
+        <span>Kenali {nickname} lebih jauh</span>
         <Icon name="arrow-right" size={14} />
       </div>
     </button>
@@ -98,19 +89,17 @@ function MentorCard({
 
 export default function MentorMarquee() {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [selectedMentor, setSelectedMentor] = useState<MentorBio | null>(null);
   const autoScrollRef = useRef<number | null>(null);
-  // Direct DOM refs for the progress UI — bypasses React re-renders so the
-  // bar/count update at 60fps without thrashing the marquee tree.
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const progressCountRef = useRef<HTMLSpanElement>(null);
   const allMentors = [...MENTORS, ...MENTORS];
   const t = landingCopy.id.mentorShowcase;
+  const editPanelOpen = useEditPanelOpen();
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !isAutoScrolling || selectedMentor) return;
+    // Pause when the bio modal or any photo edit panel is open so the card
+    // the admin is editing stays put.
+    if (!el || selectedMentor || editPanelOpen) return;
 
     let lastTime = 0;
     const speed = 0.5;
@@ -123,16 +112,6 @@ export default function MentorMarquee() {
         if (el.scrollLeft >= halfWidth) {
           el.scrollLeft -= halfWidth;
         }
-        // Update progress UI directly (no setState) — 0..1 across the first set.
-        const max = halfWidth || 1;
-        const p = (el.scrollLeft % max) / max;
-        if (progressBarRef.current) {
-          progressBarRef.current.style.width = `${Math.max(8, p * 100)}%`;
-        }
-        if (progressCountRef.current) {
-          const idx = Math.min(MENTORS.length - 1, Math.floor(p * MENTORS.length));
-          progressCountRef.current.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(MENTORS.length).padStart(2, "0")}`;
-        }
       }
       lastTime = time;
       autoScrollRef.current = requestAnimationFrame(step);
@@ -142,17 +121,7 @@ export default function MentorMarquee() {
     return () => {
       if (autoScrollRef.current) cancelAnimationFrame(autoScrollRef.current);
     };
-  }, [isAutoScrolling, selectedMentor]);
-
-  const handleManualScroll = useCallback((direction: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setIsAutoScrolling(false);
-    el.scrollBy({
-      left: direction === "right" ? SCROLL_AMOUNT : -SCROLL_AMOUNT,
-      behavior: "smooth",
-    });
-  }, []);
+  }, [selectedMentor, editPanelOpen]);
 
   const handleCardClick = useCallback((name: string) => {
     const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === name);
@@ -187,23 +156,16 @@ export default function MentorMarquee() {
 
       {/* Header */}
       <div className="max-w-[980px] mx-auto px-6 sm:px-10 lg:px-14 mb-14 text-center relative z-10">
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-[12px] font-semibold tracking-[0.18em] uppercase mb-6"
+        <div className="inline-flex items-center px-4 py-2 rounded-full text-[12px] font-semibold tracking-[0.18em] uppercase mb-6"
           style={{ color: "#c6ddef", background: "rgba(198,221,239,0.08)", border: "1px solid rgba(198,221,239,0.18)" }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#fef3d0]" />
-          14 mentor · sudah di luar negeri
+          Mentor kami datang dari kampus impian kamu
         </div>
-        <h2 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-[44px] xl:text-[52px] font-bold leading-[1.05] tracking-[-0.02em] mb-4">
-          <span className="block">{t.heading}</span>
-          <em
-            className="block font-normal text-[#fef3d0] font-[family-name:var(--font-display-serif)] italic"
-          >
-            {t.highlight}
-          </em>
+        <h2 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-[44px] xl:text-[52px] font-bold leading-[1.05] tracking-[-0.02em]">
+          {t.heading}
         </h2>
-        <p className="text-base sm:text-[17px] leading-[1.55] text-white/75 max-w-xl mx-auto">
-          Klik kartu untuk membaca cerita lengkap setiap mentor — kampus tujuan,
-          beasiswa, dan nasihat paling berharga yang pernah mereka dapat.
+        <p className="mt-5 text-base sm:text-[17px] leading-[1.55] text-white/75 max-w-xl mx-auto">
+          {t.highlight}
         </p>
       </div>
 
@@ -220,45 +182,9 @@ export default function MentorMarquee() {
             <MentorCard
               key={i}
               mentor={mentor}
-              index={i % MENTORS.length}
               onClick={() => handleCardClick(mentor.fullName)}
             />
           ))}
-        </div>
-      </div>
-
-      {/* Bottom nav: count + progress + arrows */}
-      <div className="max-w-[980px] mx-auto px-6 sm:px-10 lg:px-14 mt-6 flex items-center gap-6 relative z-10">
-        <span
-          ref={progressCountRef}
-          className="font-[family-name:var(--font-geist-mono)] text-[12px] tracking-[0.08em] text-white/60 whitespace-nowrap"
-        >
-          01 / {String(MENTORS.length).padStart(2, "0")}
-        </span>
-        <div className="flex-1 h-[3px] rounded-full bg-white/10 relative overflow-hidden">
-          <div
-            ref={progressBarRef}
-            className="absolute top-0 left-0 h-full bg-[#fef3d0] rounded-full"
-            style={{ width: "8%" }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleManualScroll("left")}
-            aria-label="Scroll left"
-            className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/[0.18] text-white flex items-center justify-center transition-all duration-200 hover:bg-[#fef3d0]/15 hover:border-[#fef3d0] hover:text-[#fef3d0]"
-          >
-            <Icon name="chevron-left" size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleManualScroll("right")}
-            aria-label="Scroll right"
-            className="w-11 h-11 rounded-full bg-white/[0.06] border border-white/[0.18] text-white flex items-center justify-center transition-all duration-200 hover:bg-[#fef3d0]/15 hover:border-[#fef3d0] hover:text-[#fef3d0]"
-          >
-            <Icon name="chevron-right" size={16} />
-          </button>
         </div>
       </div>
 

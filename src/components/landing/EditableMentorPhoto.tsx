@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { type PhotoLocation, objectPositionPercent } from "@/lib/photo-config";
@@ -17,6 +18,20 @@ type Props = {
   priority?: boolean;
   /** Tailwind classes for the inner <img>. Default: object-cover object-top. */
   imgClassName?: string;
+  /**
+   * If set, render an enlarged "preview overlay" portal while this photo's
+   * edit panel is open. Useful for tiny instances (e.g., the avatar strip)
+   * where the in-place change is too small to inspect.
+   * Value = pixel size of the preview's longest edge.
+   */
+  enlargedPreviewSize?: number;
+  /**
+   * Aspect ratio for the enlarged preview. Default "1/1" (square). For
+   * round avatars use "1/1" + roundedFull; for portrait cards use "4/5".
+   */
+  enlargedPreviewAspect?: string;
+  /** Round the enlarged preview (for circular avatars). */
+  enlargedPreviewRound?: boolean;
 };
 
 /**
@@ -34,6 +49,9 @@ export default function EditableMentorPhoto({
   sizes,
   priority,
   imgClassName = "object-cover object-top",
+  enlargedPreviewSize,
+  enlargedPreviewAspect = "1/1",
+  enlargedPreviewRound = false,
 }: Props) {
   const cfg = usePhotoConfig(mentorId, location, fallbackPhoto);
   const ctx = usePhotoEditContext();
@@ -41,11 +59,23 @@ export default function EditableMentorPhoto({
 
   const showAffordance = ctx?.isAdmin && ctx.editing;
 
+  // object-position handles pan within natural cover-overflow (aspect slack);
+  // translate(...) handles pan within zoom-induced overflow. Combining them
+  // means the position sliders work regardless of whether slack or zoom is
+  // what's creating room to move.
+  const tx = -cfg.posX * (cfg.zoom - 1) * 0.5;
+  const ty = -cfg.posY * (cfg.zoom - 1) * 0.5;
+  const transformParts: string[] = [];
+  if (tx !== 0 || ty !== 0) transformParts.push(`translate(${tx}%, ${ty}%)`);
+  if (cfg.zoom !== 1) transformParts.push(`scale(${cfg.zoom})`);
   const style: React.CSSProperties = {
     objectPosition: `${objectPositionPercent(cfg.posX)}% ${objectPositionPercent(cfg.posY)}%`,
-    transform: cfg.zoom !== 1 ? `scale(${cfg.zoom})` : undefined,
+    transform: transformParts.length > 0 ? transformParts.join(" ") : undefined,
     transformOrigin: "center",
   };
+
+  const showEnlargedPreview =
+    panelOpen && enlargedPreviewSize !== undefined && typeof document !== "undefined";
 
   return (
     <>
@@ -90,6 +120,43 @@ export default function EditableMentorPhoto({
           onClose={() => setPanelOpen(false)}
         />
       )}
+
+      {showEnlargedPreview &&
+        createPortal(
+          <div
+            // Top-left corner under the navbar — keeps the centered edit panel
+            // unobstructed and the preview in the admin's peripheral view.
+            // `force-light` keeps the surrounding chrome on the light tokens
+            // even if the user's theme is dark.
+            className="force-light fixed top-24 left-6 z-[80] pointer-events-none"
+            aria-hidden
+          >
+            <div className="bg-white rounded-2xl shadow-2xl border border-border p-3 flex flex-col items-center gap-2 text-foreground">
+              <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-text-muted">
+                Live preview
+              </p>
+              <div
+                className={`relative bg-primary-50 overflow-hidden ${
+                  enlargedPreviewRound ? "rounded-full" : "rounded-xl"
+                }`}
+                style={{
+                  width: enlargedPreviewSize,
+                  aspectRatio: enlargedPreviewAspect,
+                }}
+              >
+                <Image
+                  src={cfg.photoSrc}
+                  alt=""
+                  fill
+                  sizes={`${enlargedPreviewSize}px`}
+                  className={imgClassName}
+                  style={style}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

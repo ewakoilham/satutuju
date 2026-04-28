@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { usePhotoEditContext } from "@/lib/photo-edit-context";
+import MentorNicknameSettings from "./MentorNicknameSettings";
 
 /**
  * Floating admin toolbar — only rendered when the user has role=admin.
@@ -12,6 +13,7 @@ export default function PhotoEditToolbar() {
   const ctx = usePhotoEditContext();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [nicknameSettingsOpen, setNicknameSettingsOpen] = useState(false);
 
   if (!ctx || !ctx.isAdmin) return null;
 
@@ -51,6 +53,15 @@ export default function PhotoEditToolbar() {
 
         <button
           type="button"
+          onClick={() => setNicknameSettingsOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition"
+        >
+          <Icon name="user" size={14} />
+          Nicknames
+        </button>
+
+        <button
+          type="button"
           onClick={handlePublish}
           disabled={busy || ctx.draftCount === 0}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-primary text-white hover:bg-primary-600 transition disabled:bg-white/10 disabled:text-white/40 disabled:cursor-not-allowed"
@@ -59,6 +70,10 @@ export default function PhotoEditToolbar() {
           {busy ? "Publishing…" : ctx.draftCount > 0 ? `Publish (${ctx.draftCount})` : "Publish"}
         </button>
       </div>
+
+      {nicknameSettingsOpen && (
+        <MentorNicknameSettings onClose={() => setNicknameSettingsOpen(false)} />
+      )}
     </div>
   );
 }

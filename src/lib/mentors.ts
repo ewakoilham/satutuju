@@ -4,6 +4,7 @@
 export type Mentor = {
   fullName: string;
   id: string; // slug; matches MENTOR_PHOTOS keys + mentors.json `id`
+  nickname: string; // friendly short name used in hover/CTAs; admin-overridable
   initials: string;
   university: string;
   major: string;
@@ -19,6 +20,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Akmal Firmansyah",
     id: "akmal-firmansyah",
+    nickname: "Akmal",
     initials: "AF",
     university: "University of Cambridge",
     major: "MPhil Earth Sciences",
@@ -32,6 +34,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Buna Rizal Rachman",
     id: "buna-rizal-rachman",
+    nickname: "Buna",
     initials: "BR",
     university: "University of Auckland",
     major: "Master of Energy",
@@ -45,6 +48,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Hanan Hakim",
     id: "hanan-hakim",
+    nickname: "Hanan",
     initials: "HH",
     university: "Imperial College London",
     major: "MSc Advanced Materials Science and Engineering",
@@ -58,6 +62,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Hasna Hafida",
     id: "hasna-hafida",
+    nickname: "Hasna",
     initials: "HH",
     university: "University of Edinburgh",
     major: "MSc Biochemistry",
@@ -71,6 +76,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Muhammad Haekal Shafi",
     id: "muhammad-haekal-shafi",
+    nickname: "Haekal",
     initials: "HS",
     university: "University of Warwick",
     major: "MSc Sustainable Automotive Electrification",
@@ -84,6 +90,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Muhammad Aqil Maulana",
     id: "muhammad-aqil-maulana",
+    nickname: "Alan",
     initials: "AM",
     university: "University of Melbourne",
     major: "Master of Information Systems",
@@ -97,6 +104,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Fika Rizkyanti",
     id: "fika-rizkyanti",
+    nickname: "Fika",
     initials: "FR",
     university: "University of Sydney",
     major: "Master of Public Health",
@@ -110,6 +118,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Muhammad Ilham Razak",
     id: "muhammad-ilham",
+    nickname: "Razak",
     initials: "MI",
     university: "Monash University",
     major: "Master of Business",
@@ -123,6 +132,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Angela Benedicta Horta",
     id: "angela-benedicta-horta",
+    nickname: "Angela",
     initials: "AH",
     university: "University of Auckland",
     major: "Master of Energy (Geothermal)",
@@ -136,6 +146,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Raihan Bagus Sakti Aji",
     id: "raihan-bagus-sakti-aji",
+    nickname: "Raihan",
     initials: "RA",
     university: "TU Delft",
     major: "MSc Transport, Infrastructure and Logistics",
@@ -149,6 +160,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Arifansyah Wicaksono",
     id: "arifansyah-wicaksono",
+    nickname: "Arif",
     initials: "AW",
     university: "Monash University",
     major: "Master of Cybersecurity",
@@ -162,6 +174,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Isna Arifah Rahmawati",
     id: "isna-arifah-rahmawati",
+    nickname: "Isna",
     initials: "IR",
     university: "University of Sydney",
     major: "Master of Biomedical Science",
@@ -175,6 +188,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Megawati Refra",
     id: "megawati-refra",
+    nickname: "Mega",
     initials: "MR",
     university: "Monash University",
     major: "Master of Applied Marketing",
@@ -188,6 +202,7 @@ export const MENTORS: Mentor[] = [
   {
     fullName: "Nyoman Krisna",
     id: "nyoman-krisna",
+    nickname: "Kris",
     initials: "NK",
     university: "Monash University",
     major: "Master of Business",
