@@ -35,10 +35,10 @@ export default function UniversityLogoMarquee() {
     <section className="bg-white border-y border-border/60 py-4 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-2 flex items-center justify-between gap-4">
         <p className="text-[10px] uppercase tracking-[0.12em] text-primary-700/70 font-semibold">
-          Tujuan studi mentee kami
+          Mentor pilihan, dari kampus terbaik di dunia
         </p>
         <p className="text-[11px] text-text-muted">
-          <span className="font-medium text-foreground">+ 3.000 universitas mitra di seluruh dunia</span>
+          <span className="font-medium text-foreground">3.000+ universitas mitra di seluruh dunia</span>
         </p>
       </div>
 
@@ -66,6 +66,14 @@ export default function UniversityLogoMarquee() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Bottom eyebrow — these same universities are also the destinations
+          our mentees aim for. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 text-center">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-primary-700/70 font-semibold">
+          Kampus tujuan mentee kita
+        </p>
       </div>
     </section>
   );

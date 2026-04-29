@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { usePhotoEditContext } from "@/lib/photo-edit-context";
 import MentorNicknameSettings from "./MentorNicknameSettings";
@@ -59,6 +60,14 @@ export default function PhotoEditToolbar() {
           <Icon name="user" size={14} />
           Nicknames
         </button>
+
+        <Link
+          href="/dashboard/admin/mentors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition"
+        >
+          <Icon name="users" size={14} />
+          Mentors
+        </Link>
 
         <button
           type="button"

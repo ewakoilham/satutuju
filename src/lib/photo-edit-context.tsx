@@ -12,6 +12,12 @@ import {
   resolveConfig,
   writeDrafts,
 } from "./photo-config";
+import { MENTORS } from "./mentors";
+import {
+  type DbMentor,
+  type MergedMentor,
+  mergeMentorLists,
+} from "./mentors-runtime";
 
 type ServerMap = Partial<Record<PhotoConfigKey, PhotoConfig>>;
 
@@ -72,6 +78,11 @@ type Ctx = {
   setContentDraft: (mentorId: string, patch: MentorContent) => void;
   /** Drop the entire content draft for one mentor. */
   clearContentDraft: (mentorId: string) => void;
+  // ── Live mentor list (static + DB) ─────────────────────────────────────
+  /** Merged list of MENTORS (static seed) + admin-added mentors from DB. */
+  mentors: MergedMentor[];
+  /** Force a refetch of the DB mentor list (after admin add/edit/delete). */
+  refreshMentors: () => Promise<void>;
 };
 
 const PhotoEditContext = createContext<Ctx | null>(null);
@@ -141,6 +152,7 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
   const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
   const [serverContent, setServerContent] = useState<Record<string, MentorContent>>({});
   const [contentDrafts, setContentDrafts] = useState<Record<string, MentorContent>>({});
+  const [dbMentors, setDbMentors] = useState<DbMentor[]>([]);
 
   // Detect admin via /api/auth/me — fail-open as non-admin.
   useEffect(() => {
@@ -189,6 +201,23 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
     setNicknameDrafts(readNickDrafts());
     setContentDrafts(readContentDrafts());
   }, []);
+
+  // Pull admin-added mentors from the API and keep refreshable for the admin
+  // panel (so newly-added mentors appear on the landing page immediately).
+  const refreshMentors = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mentors");
+      if (!res.ok) return;
+      const data = (await res.json()) as { mentors: DbMentor[] };
+      setDbMentors(data.mentors ?? []);
+    } catch {
+      /* network blip — keep prior list */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshMentors();
+  }, [refreshMentors]);
 
   // Load server overrides (nickname + bio content in the same call).
   useEffect(() => {
@@ -440,6 +469,11 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
     setOpenPanels((n) => Math.max(0, n + (open ? 1 : -1)));
   }, []);
 
+  const mentors = useMemo<MergedMentor[]>(
+    () => mergeMentorLists(MENTORS, dbMentors),
+    [dbMentors],
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       isAdmin,
@@ -459,6 +493,8 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
       getContent,
       setContentDraft,
       clearContentDraft,
+      mentors,
+      refreshMentors,
     }),
     [
       isAdmin,
@@ -477,6 +513,8 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
       getContent,
       setContentDraft,
       clearContentDraft,
+      mentors,
+      refreshMentors,
     ],
   );
 
@@ -512,6 +550,18 @@ export function useMentorContent(
   const ctx = useContext(PhotoEditContext);
   if (!ctx) return { values: fallbacks, isDraft: false };
   return ctx.getContent(mentorId, fallbacks);
+}
+
+/**
+ * Live mentor list for landing-page consumers (Hero, Marquee, BioModal).
+ * Falls back to the static MENTORS seed when the provider isn't mounted
+ * (e.g. for components rendered outside the landing page).
+ */
+export function useAllMentors(): MergedMentor[] {
+  const ctx = useContext(PhotoEditContext);
+  if (ctx) return ctx.mentors;
+  // Out-of-provider fallback: just the static seed, marked as "static".
+  return MENTORS.map((m) => ({ ...m, dbSource: "static" as const }));
 }
 
 /** Full context for editor controls (admin status, edit mode, publish, drafts). */

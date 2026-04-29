@@ -6,9 +6,14 @@ import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
 import mentorsData from "@/data/mentors.json";
 import MentorBioModal, { type MentorBio } from "./MentorBioModal";
-import { MENTORS, type Mentor } from "@/lib/mentors";
+import { type Mentor } from "@/lib/mentors";
 import EditableMentorPhoto from "./EditableMentorPhoto";
-import { useEditPanelOpen, useMentorNickname } from "@/lib/photo-edit-context";
+import {
+  useAllMentors,
+  useEditPanelOpen,
+  useMentorNickname,
+} from "@/lib/photo-edit-context";
+import type { MergedMentor } from "@/lib/mentors-runtime";
 
 /**
  * Cinematic dark-stage card — full-bleed photo with metadata overlaid at the
@@ -80,7 +85,7 @@ function MentorCard({
 
       {/* Hover-revealed CTA pill (yellow) */}
       <div className="absolute left-[18px] right-[18px] bottom-[18px] z-[3] flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#fef3d0] text-primary-900 text-[12.5px] font-semibold opacity-0 translate-y-2 transition-all duration-200 group-hover/card:opacity-100 group-hover/card:translate-y-0">
-        <span>Kenali {nickname} lebih jauh</span>
+        <span>Kenalan sama {nickname}</span>
         <Icon name="arrow-right" size={14} />
       </div>
     </button>
@@ -94,7 +99,8 @@ export default function MentorMarquee() {
   // After a manual nav-arrow click we briefly pause auto-scroll so the smooth
   // scrollBy can complete without RAF fighting it.
   const pauseUntilRef = useRef(0);
-  const allMentors = [...MENTORS, ...MENTORS];
+  const liveMentors = useAllMentors();
+  const allMentors = [...liveMentors, ...liveMentors];
   const t = landingCopy.id.mentorShowcase;
   const editPanelOpen = useEditPanelOpen();
 
@@ -126,8 +132,31 @@ export default function MentorMarquee() {
     };
   }, [selectedMentor, editPanelOpen]);
 
-  const handleCardClick = useCallback((name: string) => {
-    const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === name);
+  const handleCardClick = useCallback((mentor: MergedMentor) => {
+    // Static seed mentors source their bio from mentors.json; admin-added
+    // mentors carry the bio directly on the merged object.
+    if (mentor.dbSource === "db") {
+      setSelectedMentor({
+        id: mentor.id,
+        fullName: mentor.fullName,
+        nickname: mentor.nickname,
+        initials: mentor.initials,
+        hometown: mentor.hometown ?? "",
+        university: mentor.university,
+        country: mentor.country ?? "",
+        scholarship: mentor.scholarship,
+        major: mentor.major,
+        achievement: mentor.achievement ?? "",
+        message: mentor.message ?? "",
+        currentStudiesRaw: mentor.currentStudiesRaw ?? "",
+        s1: mentor.s1 ?? "",
+        scholarshipRaw: mentor.scholarshipRaw ?? "",
+        avatarPath: mentor.photo,
+        galleryPaths: mentor.galleryPaths,
+      });
+      return;
+    }
+    const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === mentor.fullName);
     if (bio) setSelectedMentor(bio);
   }, []);
 
@@ -171,7 +200,7 @@ export default function MentorMarquee() {
         <div className="inline-flex items-center px-4 py-2 rounded-full text-[12px] font-semibold tracking-[0.18em] uppercase mb-6"
           style={{ color: "#c6ddef", background: "rgba(198,221,239,0.08)", border: "1px solid rgba(198,221,239,0.18)" }}
         >
-          Mentor kami datang dari kampus impian kamu
+          Mentor kami berasal dari kampus impian kamu
         </div>
         <h2 className="font-[family-name:var(--font-heading)] text-3xl sm:text-4xl lg:text-[44px] xl:text-[52px] font-bold leading-[1.05] tracking-[-0.02em]">
           {t.heading}
@@ -212,7 +241,7 @@ export default function MentorMarquee() {
             <MentorCard
               key={i}
               mentor={mentor}
-              onClick={() => handleCardClick(mentor.fullName)}
+              onClick={() => handleCardClick(mentor)}
             />
           ))}
         </div>

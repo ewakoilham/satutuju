@@ -9,20 +9,19 @@ export const landingCopy = {
       join: "Gabung Sekarang",
     },
     hero: {
-      badge: "Free Mentoring 1-on-1",
+      badge: "Mentorship 1-on-1, gratis",
       headlineLine1:
-        "Kamu mau studi S2 di luar negeri, tapi bingung harus mulai dari mana?",
+        "Mau lanjut S2 ke luar negeri, tapi bingung mulai dari mana?",
       headlineLine2: "Mentor Satu Tuju siap bimbing kamu dari nol",
       subheadline:
-        "Kami akan bimbing kamu mulai dari persiapan, sampai kamu tiba di kampus impian kamu!",
+        "Dari riset beasiswa, esai, sampai latihan wawancara — kita temenin sampai kamu sampe di kampus impian.",
       scrollCue: "Scroll ke bawah untuk cari tahu lebih jauh!",
-      primaryCta: "Gabung Mentorship Sekarang",
-      secondaryCta: "Gabung Komunitas",
+      primaryCta: "Gabung mentorship sekarang",
+      secondaryCta: "Gabung komunitas",
       statMentors: "Mentor",
       statCountries: "Negara Tujuan",
-      statFree:
-        "Deposit berlaku, dan kembali 100% setelah menyelesaikan komitmen mentorship.",
-      featuredLabel: "Mentor Pilihan",
+      statFree: "Ada deposit komitmen, balik 100% pas kamu selesai mentorship.",
+      featuredLabel: "Mentor pilihan",
       fromUniversities: "Mentor dari:",
       moreMentors: "+{n} lainnya",
       seeAllMentors: "Lihat semua mentor",
@@ -34,33 +33,33 @@ export const landingCopy = {
       slides: [
         {
           number: "01",
-          title: "Semua persiapan beasiswa yang kamu butuhkan Ada disini",
+          title: "Semua yang kamu butuhin buat persiapan beasiswa, ada di sini.",
           description:
-            "Kami membimbing kamu di setiap tahap — dari persiapan dokumen, esai motivasi, simulasi wawancara, hingga kamu benar-benar lolos. Dipandu langsung oleh alumni yang sudah melalui proses yang sama.",
+            "Dari nyari beasiswa, prep dokumen, nulis esai, sampai latihan wawancara — kita temenin di tiap tahap. Langsung sama alumni yang baru aja ngalamin proses yang sama.",
         },
         {
           number: "02",
-          title: "Mulai dengan Peta Jalan yang Jelas",
+          title: "Mulai dengan peta jalan yang jelas.",
           description:
-            "Mentor kami bantu kamu memetakan target beasiswa yang paling sesuai profilmu, menyusun timeline aplikasi, dan membangun narasi diri yang kuat sejak awal.",
+            "Mentor kamu bantu nentuin beasiswa mana yang paling cocok sama profil kamu, atur timeline aplikasi, dan bangun cerita diri yang kuat dari awal.",
         },
         {
           number: "03",
-          title: "Esai yang Benar-Benar Mencerminkan Kamu.",
+          title: "Esai yang bener-bener kamu banget.",
           description:
-            "Bukan template, bukan copy-paste. Mentor kami bantu kamu menemukan cerita yang autentik — yang membuat reviewer beasiswa berhenti membaca dan mulai mempertimbangkan.",
+            "Bukan template, bukan copy-paste. Mentor kami bantu nemuin cerita yang otentik — yang bikin reviewer berhenti scroll dan mulai serius nimbang.",
         },
         {
           number: "04",
-          title: "Latihan Wawancara Sampai Kamu Siap.",
+          title: "Latihan wawancara sampai kamu siap.",
           description:
-            "Wawancara Beasiswa bukan soal hafalan jawaban — tapi soal cara kamu berpikir. Mentor kami simulasikan pertanyaan nyata dan bantu kamu tampil percaya diri di hadapan panel.",
+            "Wawancara beasiswa itu bukan soal hafalan — tapi soal cara kamu mikir. Mentor kami simulasiin pertanyaan beneran, dan bantu kamu pede di depan panel.",
         },
       ],
     },
     mentorShowcase: {
-      heading: "Mereka paling mengerti apa yang kamu butuhkan saat ini",
-      highlight: "Klik untuk mengenal mereka lebih dekat",
+      heading: "Mereka udah pernah di posisi kamu sekarang.",
+      highlight: "Klik buat kenalan lebih jauh",
     },
     mentorBio: {
       from: "Asal",
@@ -72,39 +71,39 @@ export const landingCopy = {
       close: "Tutup",
     },
     howItWorks: {
-      label: "Cara Kerja",
-      heading: "Bagaimana Cara Kerjanya?",
-      subheading: "Tiga langkah sederhana untuk memulai perjalanan beasiswamu",
+      label: "Cara kerja",
+      heading: "Tiga langkah, kamu siap berangkat.",
+      subheading: "Dari daftar sampai sesi pertama, simple.",
       stepLabel: "LANGKAH",
       steps: [
         {
-          title: "Buat Profil",
+          title: "Buat profil kamu",
           description:
-            "Daftar dan ceritakan tujuan beasiswamu. Kami perlu tahu impianmu untuk mencocokkan mentor terbaik.",
+            "Daftar, terus ceritain target beasiswa kamu. Kita perlu tau mimpi kamu biar bisa cocokin sama mentor yang pas.",
         },
         {
-          title: "Dapat Mentor",
+          title: "Dapet mentor yang pas",
           description:
-            "Kami cocokkan kamu dengan mentor yang paling sesuai berdasarkan beasiswa, universitas, dan bidang studi.",
+            "Kita cocokin kamu sama mentor berdasarkan beasiswa, kampus, dan bidang studi.",
         },
         {
-          title: "Mulai Sesi",
+          title: "Mulai sesi pertama",
           description:
-            "Booking jadwal mentoring dan mulai perjalanan persiapan beasiswamu bersama mentor berpengalaman.",
+            "Booking jadwal, terus mulai prep beasiswa bareng mentor yang udah pernah ngelewatin prosesnya.",
         },
       ],
     },
     finalCta: {
-      headline: "Siap mulai perjalanan beasiswamu?",
+      headline: "Siap mulai prep beasiswa kamu?",
       subheading:
-        "Gabung Program Mentorship sekarang atau gabung komunitas pencari beasiswa",
-      primary: "Gabung Mentorship sekarang",
-      secondary: "Gabung komunitas SatuTuju",
+        "Daftar mentorship sekarang, atau gabung komunitas SatuTuju buat liat-liat dulu.",
+      primary: "Daftar mentorship",
+      secondary: "Gabung komunitas",
     },
     footer: {
       tagline: "",
       supporting:
-        "Menghubungkan mentor yang sudah studi di luar negeri dengan mereka yang bermimpi untuk melakukannya. Your journey, guided by experience.",
+        "Bantuin pelajar Indonesia ngeraih beasiswa luar negeri, sama alumni yang udah pernah ke sana.",
       columns: {
         about: "Tentang",
         program: "Program",

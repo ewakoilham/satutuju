@@ -5,10 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { landingCopy, COMMUNITY_URL } from "@/lib/landing-copy";
-import { MENTORS } from "@/lib/mentors";
+import type { Mentor } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
 import EditableMentorPhoto from "./EditableMentorPhoto";
-import { useEditPanelOpen } from "@/lib/photo-edit-context";
+import { useEditPanelOpen, useAllMentors } from "@/lib/photo-edit-context";
 
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
@@ -21,6 +21,8 @@ export default function HeroSection() {
   // this timestamp passes (3s after the most recent click).
   const cooldownUntilRef = useRef(0);
   const editPanelOpen = useEditPanelOpen();
+  // Live merged list (static seed + admin-added mentors).
+  const mentors = useAllMentors();
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -35,10 +37,10 @@ export default function HeroSection() {
     const id = setInterval(() => {
       if (document.visibilityState === "hidden") return;
       if (Date.now() < cooldownUntilRef.current) return;
-      setActiveIndex((i) => (i + 1) % MENTORS.length);
+      setActiveIndex((i) => (i + 1) % Math.max(1, mentors.length));
     }, CYCLE_MS);
     return () => clearInterval(id);
-  }, [paused, reduceMotion, editPanelOpen]);
+  }, [paused, reduceMotion, editPanelOpen, mentors.length]);
 
   const goTo = useCallback((index: number) => {
     setActiveIndex(index);
@@ -48,7 +50,9 @@ export default function HeroSection() {
     document.getElementById("mentor-showcase")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const mentor = MENTORS[activeIndex];
+  // Clamp the active index in case the list shrinks (admin removed someone).
+  const safeIndex = mentors.length > 0 ? activeIndex % mentors.length : 0;
+  const mentor = mentors[safeIndex] ?? mentors[0];
 
   return (
     <section className="relative flex items-center bg-white overflow-hidden pt-20 pb-8 lg:pt-24 lg:pb-10">
@@ -147,12 +151,12 @@ export default function HeroSection() {
             {/* Mentor avatar strip — moved into the text column */}
             <div className="mt-5">
               <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary mb-2">
-                Mentor pilihan dari kampus top dunia
+                Mentor pilihan, dari kampus terbaik di dunia
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center -space-x-1.5 flex-wrap gap-y-2">
-                  {MENTORS.map((m, i) => {
-                    const isActive = i === activeIndex;
+                  {mentors.map((m, i) => {
+                    const isActive = i === safeIndex;
                     return (
                       <button
                         key={m.fullName}
@@ -203,7 +207,8 @@ export default function HeroSection() {
           {/* RIGHT — compact mentor card, 5 cols */}
           <div className="lg:col-span-5 hidden sm:block">
             <CompactFeaturedCard
-              activeIndex={activeIndex}
+              mentors={mentors}
+              activeIndex={safeIndex}
               onHoverChange={setPaused}
             />
           </div>
@@ -214,7 +219,8 @@ export default function HeroSection() {
 }
 
 /** Mobile-only quick mentor strip shown between the subheadline and the CTAs. */
-function CompactMentorCard({ mentor }: { mentor: (typeof MENTORS)[number] }) {
+function CompactMentorCard({ mentor }: { mentor: Mentor }) {
+  if (!mentor) return null;
   return (
     <div className="mt-6 sm:hidden flex items-center gap-3 p-3 bg-white/85 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-md)] border border-primary-100/50">
       <div className={`relative w-16 h-16 rounded-xl ${mentor.color} overflow-hidden flex-shrink-0`}>
@@ -250,14 +256,17 @@ function CompactMentorCard({ mentor }: { mentor: (typeof MENTORS)[number] }) {
  * photo. Cycles through MENTORS via parent state; pauses on hover.
  */
 function CompactFeaturedCard({
+  mentors,
   activeIndex,
   onHoverChange,
 }: {
+  mentors: Mentor[];
   activeIndex: number;
   onHoverChange: (paused: boolean) => void;
 }) {
-  const mentor = MENTORS[activeIndex];
-  const nextIndex = (activeIndex + 1) % MENTORS.length;
+  if (mentors.length === 0) return null;
+  const mentor = mentors[activeIndex] ?? mentors[0];
+  const nextIndex = (activeIndex + 1) % mentors.length;
   // Render only the active + next photo for the cross-fade.
   const visiblePhotos = [activeIndex, nextIndex];
 
@@ -269,7 +278,8 @@ function CompactFeaturedCard({
     >
       <div className="relative rounded-2xl overflow-hidden aspect-[5/6] bg-primary-50">
         {visiblePhotos.map((i) => {
-          const m = MENTORS[i];
+          const m = mentors[i];
+          if (!m) return null;
           const isActive = i === activeIndex;
           return (
             <div

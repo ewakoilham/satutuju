@@ -30,6 +30,9 @@ export interface MentorBio {
   s1: string;
   scholarshipRaw: string;
   avatarPath: string | null;
+  /** For admin-added mentors: explicit list of gallery photo URLs.
+   *  When absent, the modal falls back to the static getMentorPhotos() map. */
+  galleryPaths?: string[];
 }
 
 interface MentorBioModalProps {
@@ -51,9 +54,13 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
   const showContentAffordance = Boolean(ctx?.isAdmin && ctx.editing);
   const [contentPanelOpen, setContentPanelOpen] = useState(false);
 
-  // Build the photo gallery — gallery photos first, fall back to avatarPath.
+  // Build the photo gallery: explicit galleryPaths (admin-added mentors) →
+  // static getMentorPhotos map (seed mentors) → single avatarPath fallback.
   const photos = useMemo(() => {
     if (!mentor) return [];
+    if (mentor.galleryPaths && mentor.galleryPaths.length > 0) {
+      return mentor.galleryPaths;
+    }
     const gallery = getMentorPhotos(mentor.id);
     if (gallery.length > 0) return gallery;
     return mentor.avatarPath ? [mentor.avatarPath] : [];

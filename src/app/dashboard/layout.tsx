@@ -13,12 +13,13 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 // Profile & Settings are removed from main nav — they live in the avatar dropdown
 const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: string }>> = {
   admin: [
-    { href: "/dashboard",              label: "Overview",     icon: "chart"       },
-    { href: "/dashboard/users",        label: "Users",        icon: "users"       },
-    { href: "/dashboard/pairings",     label: "Pairings",     icon: "link"        },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
-    { href: "/dashboard/universities", label: "Universities", icon: "graduation"  },
+    { href: "/dashboard",                label: "Overview",     icon: "chart"       },
+    { href: "/dashboard/users",          label: "Users",        icon: "users"       },
+    { href: "/dashboard/pairings",       label: "Pairings",     icon: "link"        },
+    { href: "/dashboard/admin/mentors",  label: "Mentors",      icon: "user"        },
+    { href: "/dashboard/schedule",       label: "Schedule",     icon: "calendar"    },
+    { href: "/dashboard/resources",      label: "Resources",    icon: "book"        },
+    { href: "/dashboard/universities",   label: "Universities", icon: "graduation"  },
   ],
   mentor: [
     { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
