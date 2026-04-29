@@ -13,6 +13,11 @@ const LOCATION_LABELS: Record<PhotoLocation, string> = {
   "hero-avatar": "Hero avatar strip",
   "marquee-card": "Mentor showcase card",
   "bio-modal": "Bio modal",
+  "bio-modal-1": "Bio modal — photo 1",
+  "bio-modal-2": "Bio modal — photo 2",
+  "bio-modal-3": "Bio modal — photo 3",
+  "bio-modal-4": "Bio modal — photo 4",
+  "bio-modal-5": "Bio modal — photo 5",
 };
 
 type Props = {
@@ -121,7 +126,7 @@ export default function PhotoEditPanel({ mentorId, location, fallbackPhoto, onCl
       // theme is dark — the portal escapes the landing-page wrapper.
       role="dialog"
       aria-label="Photo editor"
-      className="force-light fixed left-1/2 bottom-24 z-[90] w-[min(92vw,360px)] max-h-[70vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-border text-foreground"
+      className="force-light fixed left-1/2 bottom-24 z-[110] w-[min(92vw,360px)] max-h-[70vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-border text-foreground"
       style={{
         transform: `translate(calc(-50% + ${drag.x}px), ${drag.y}px)`,
         userSelect: dragging ? "none" : undefined,

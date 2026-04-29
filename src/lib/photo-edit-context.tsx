@@ -15,6 +15,19 @@ import {
 
 type ServerMap = Partial<Record<PhotoConfigKey, PhotoConfig>>;
 
+// ── Bio content overrides ──────────────────────────────────────────────────
+//
+// Editable text fields shown inside the bio modal. Each field falls back to
+// the static value in mentors.json when no override exists. Admin-only.
+export type MentorContentField =
+  | "message"
+  | "achievement"
+  | "currentStudies"
+  | "s1"
+  | "scholarship";
+
+export type MentorContent = Partial<Record<MentorContentField, string | null>>;
+
 type Ctx = {
   /** True if the current user is an admin (JWT role === "admin"). */
   isAdmin: boolean;
@@ -49,6 +62,16 @@ type Ctx = {
   setNicknameDraft: (mentorId: string, value: string) => void;
   /** Drop a nickname draft (revert to server/default). */
   clearNicknameDraft: (mentorId: string) => void;
+  // ── Mentor bio content overrides (admin only) ─────────────────────────
+  /** Resolve a mentor's bio fields (draft → server → fallbacks from JSON). */
+  getContent: (
+    mentorId: string,
+    fallbacks: Required<MentorContent>,
+  ) => { values: Required<MentorContent>; isDraft: boolean };
+  /** Stage a partial content change for a mentor. Pass null to clear a field. */
+  setContentDraft: (mentorId: string, patch: MentorContent) => void;
+  /** Drop the entire content draft for one mentor. */
+  clearContentDraft: (mentorId: string) => void;
 };
 
 const PhotoEditContext = createContext<Ctx | null>(null);
@@ -76,6 +99,37 @@ function writeNickDrafts(d: Record<string, string>) {
   }
 }
 
+// ── Bio content draft helpers ──────────────────────────────────────────────
+
+const CONTENT_LS_KEY = "satutuju-content-drafts";
+
+function readContentDrafts(): Record<string, MentorContent> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CONTENT_LS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, MentorContent>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeContentDrafts(d: Record<string, MentorContent>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CONTENT_LS_KEY, JSON.stringify(d));
+  } catch {
+    /* ignore */
+  }
+}
+
+const CONTENT_FIELDS: MentorContentField[] = [
+  "message",
+  "achievement",
+  "currentStudies",
+  "s1",
+  "scholarship",
+];
+
 export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -85,6 +139,8 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
   const [openPanels, setOpenPanels] = useState(0);
   const [serverNicknames, setServerNicknames] = useState<Record<string, string>>({});
   const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
+  const [serverContent, setServerContent] = useState<Record<string, MentorContent>>({});
+  const [contentDrafts, setContentDrafts] = useState<Record<string, MentorContent>>({});
 
   // Detect admin via /api/auth/me — fail-open as non-admin.
   useEffect(() => {
@@ -131,20 +187,37 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setDrafts(readDrafts());
     setNicknameDrafts(readNickDrafts());
+    setContentDrafts(readContentDrafts());
   }, []);
 
-  // Load server nickname overrides.
+  // Load server overrides (nickname + bio content in the same call).
   useEffect(() => {
     let cancelled = false;
+    type OverrideRow = {
+      mentorId: string;
+      nickname?: string | null;
+    } & MentorContent;
     fetch("/api/mentor-overrides")
       .then((r) => (r.ok ? r.json() : { overrides: [] }))
-      .then((data: { overrides: Array<{ mentorId: string; nickname: string | null }> }) => {
+      .then((data: { overrides: OverrideRow[] }) => {
         if (cancelled) return;
-        const map: Record<string, string> = {};
+        const nickMap: Record<string, string> = {};
+        const contentMap: Record<string, MentorContent> = {};
         for (const row of data.overrides ?? []) {
-          if (row.nickname) map[row.mentorId] = row.nickname;
+          if (row.nickname) nickMap[row.mentorId] = row.nickname;
+          const content: MentorContent = {};
+          let hasContent = false;
+          for (const f of CONTENT_FIELDS) {
+            const v = row[f];
+            if (v !== undefined && v !== null && v !== "") {
+              content[f] = v;
+              hasContent = true;
+            }
+          }
+          if (hasContent) contentMap[row.mentorId] = content;
         }
-        setServerNicknames(map);
+        setServerNicknames(nickMap);
+        setServerContent(contentMap);
       })
       .catch(() => {});
     return () => {
@@ -189,7 +262,14 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
   const publish = useCallback(async () => {
     const photoEntries = Object.entries(drafts);
     const nickEntries = Object.entries(nicknameDrafts);
-    if (photoEntries.length === 0 && nickEntries.length === 0) return { ok: true, saved: 0 };
+    const contentEntries = Object.entries(contentDrafts);
+    if (
+      photoEntries.length === 0 &&
+      nickEntries.length === 0 &&
+      contentEntries.length === 0
+    ) {
+      return { ok: true, saved: 0 };
+    }
 
     try {
       // Photo configs
@@ -217,9 +297,24 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
         clearDrafts();
       }
 
-      // Nickname overrides
-      if (nickEntries.length > 0) {
-        const payload = nickEntries.map(([mentorId, nickname]) => ({ mentorId, nickname }));
+      // Nickname + bio content overrides — share the /api/mentor-overrides endpoint.
+      // Merge per mentor so a single upsert carries both nickname and any
+      // touched content fields.
+      const overrideMap = new Map<string, Row>();
+      type Row = {
+        mentorId: string;
+        nickname?: string | null;
+      } & MentorContent;
+      for (const [mentorId, nickname] of nickEntries) {
+        overrideMap.set(mentorId, { mentorId, nickname });
+      }
+      for (const [mentorId, content] of contentEntries) {
+        const existing = overrideMap.get(mentorId) ?? { mentorId };
+        overrideMap.set(mentorId, { ...existing, ...content });
+      }
+
+      if (overrideMap.size > 0) {
+        const payload = Array.from(overrideMap.values());
         const res = await fetch("/api/mentor-overrides", {
           method: "POST",
           credentials: "include",
@@ -230,24 +325,43 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
           const data = await res.json().catch(() => ({}));
           return { ok: false, saved: 0, error: (data as { error?: string }).error ?? `HTTP ${res.status}` };
         }
-        setServerNicknames((prev) => {
-          const next = { ...prev };
-          for (const [id, name] of nickEntries) next[id] = name;
-          return next;
-        });
-        setNicknameDrafts({});
-        writeNickDrafts({});
+        if (nickEntries.length > 0) {
+          setServerNicknames((prev) => {
+            const next = { ...prev };
+            for (const [id, name] of nickEntries) next[id] = name;
+            return next;
+          });
+          setNicknameDrafts({});
+          writeNickDrafts({});
+        }
+        if (contentEntries.length > 0) {
+          setServerContent((prev) => {
+            const next = { ...prev };
+            for (const [id, content] of contentEntries) {
+              next[id] = { ...(next[id] ?? {}), ...content };
+            }
+            return next;
+          });
+          setContentDrafts({});
+          writeContentDrafts({});
+        }
       }
 
-      return { ok: true, saved: photoEntries.length + nickEntries.length };
+      return {
+        ok: true,
+        saved: photoEntries.length + nickEntries.length + contentEntries.length,
+      };
     } catch (e) {
       return { ok: false, saved: 0, error: e instanceof Error ? e.message : "Publish failed" };
     }
-  }, [drafts, nicknameDrafts]);
+  }, [drafts, nicknameDrafts, contentDrafts]);
 
   const draftCount = useMemo(
-    () => Object.keys(drafts).length + Object.keys(nicknameDrafts).length,
-    [drafts, nicknameDrafts],
+    () =>
+      Object.keys(drafts).length +
+      Object.keys(nicknameDrafts).length +
+      Object.keys(contentDrafts).length,
+    [drafts, nicknameDrafts, contentDrafts],
   );
 
   const getNickname = useCallback(
@@ -279,6 +393,49 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const getContent = useCallback(
+    (mentorId: string, fallbacks: Required<MentorContent>) => {
+      const draft = contentDrafts[mentorId];
+      const srv = serverContent[mentorId];
+      const out = { ...fallbacks } as Required<MentorContent>;
+      // server overrides JSON; drafts override server.
+      if (srv) {
+        for (const f of CONTENT_FIELDS) {
+          const v = srv[f];
+          if (v !== undefined && v !== null && v !== "") out[f] = v;
+        }
+      }
+      if (draft) {
+        for (const f of CONTENT_FIELDS) {
+          // Draft can explicitly clear a field by setting it to "" — treat as
+          // "use the fallback" to avoid leaving the modal with empty bio text.
+          const v = draft[f];
+          if (v !== undefined) out[f] = v ?? fallbacks[f];
+        }
+      }
+      return { values: out, isDraft: Boolean(draft) };
+    },
+    [contentDrafts, serverContent],
+  );
+
+  const setContentDraft = useCallback((mentorId: string, patch: MentorContent) => {
+    setContentDrafts((prev) => {
+      const next = { ...prev, [mentorId]: { ...(prev[mentorId] ?? {}), ...patch } };
+      writeContentDrafts(next);
+      return next;
+    });
+  }, []);
+
+  const clearContentDraft = useCallback((mentorId: string) => {
+    setContentDrafts((prev) => {
+      if (!(mentorId in prev)) return prev;
+      const next = { ...prev };
+      delete next[mentorId];
+      writeContentDrafts(next);
+      return next;
+    });
+  }, []);
+
   const registerPanel = useCallback((open: boolean) => {
     setOpenPanels((n) => Math.max(0, n + (open ? 1 : -1)));
   }, []);
@@ -299,6 +456,9 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
       getNickname,
       setNicknameDraft,
       clearNicknameDraft,
+      getContent,
+      setContentDraft,
+      clearContentDraft,
     }),
     [
       isAdmin,
@@ -314,6 +474,9 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
       getNickname,
       setNicknameDraft,
       clearNicknameDraft,
+      getContent,
+      setContentDraft,
+      clearContentDraft,
     ],
   );
 
@@ -339,6 +502,16 @@ export function useMentorNickname(mentorId: string, fallback: string): string {
   const ctx = useContext(PhotoEditContext);
   if (!ctx) return fallback;
   return ctx.getNickname(mentorId, fallback).value;
+}
+
+/** Resolve a mentor's bio content fields with overrides applied. */
+export function useMentorContent(
+  mentorId: string,
+  fallbacks: Required<MentorContent>,
+): { values: Required<MentorContent>; isDraft: boolean } {
+  const ctx = useContext(PhotoEditContext);
+  if (!ctx) return { values: fallbacks, isDraft: false };
+  return ctx.getContent(mentorId, fallbacks);
 }
 
 /** Full context for editor controls (admin status, edit mode, publish, drafts). */

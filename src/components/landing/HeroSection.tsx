@@ -192,9 +192,9 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-primary-700/80 italic">
+            <p className="mt-4 inline-flex items-center gap-1.5 text-[11px] italic text-primary-700/75 leading-relaxed">
               {t.scrollCue}
-              <Icon name="chevron-down" size={14} className="animate-bounce" />
+              <Icon name="chevron-down" size={12} className="animate-bounce" />
             </p>
           </div>
 

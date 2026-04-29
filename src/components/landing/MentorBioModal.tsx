@@ -6,6 +6,13 @@ import Modal from "@/components/ui/Modal";
 import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
 import { getMentorPhotos } from "@/lib/mentors";
+import EditableMentorPhoto from "./EditableMentorPhoto";
+import { bioModalLocation } from "@/lib/photo-config";
+import {
+  useMentorContent,
+  usePhotoEditContext,
+} from "@/lib/photo-edit-context";
+import MentorContentEditPanel from "./MentorContentEditPanel";
 
 export interface MentorBio {
   id: string;
@@ -40,6 +47,9 @@ function splitAwards(raw: string): string[] {
 
 export default function MentorBioModal({ mentor, open, onClose }: MentorBioModalProps) {
   const t = landingCopy.id.mentorBio;
+  const ctx = usePhotoEditContext();
+  const showContentAffordance = Boolean(ctx?.isAdmin && ctx.editing);
+  const [contentPanelOpen, setContentPanelOpen] = useState(false);
 
   // Build the photo gallery — gallery photos first, fall back to avatarPath.
   const photos = useMemo(() => {
@@ -51,14 +61,30 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
 
   const [activePhoto, setActivePhoto] = useState(0);
 
-  // Reset active photo when the mentor changes.
+  // Reset active photo + close content panel when the mentor changes.
   useEffect(() => {
     setActivePhoto(0);
+    setContentPanelOpen(false);
   }, [mentor?.id]);
+
+  // Pull editable content fields with admin overrides applied. Hooks must run
+  // unconditionally, so call before the null-guard with safe fallbacks.
+  const fallbacks = {
+    message: mentor?.message ?? "",
+    achievement: mentor?.achievement ?? "",
+    currentStudies: mentor?.currentStudiesRaw ?? "",
+    s1: mentor?.s1 ?? "",
+    scholarship: mentor?.scholarshipRaw ?? "",
+  };
+  const content = useMentorContent(mentor?.id ?? "__none__", fallbacks);
 
   if (!mentor) return null;
 
-  const awards = splitAwards(mentor.scholarshipRaw);
+  const message = content.values.message ?? "";
+  const achievement = content.values.achievement ?? "";
+  const currentStudies = content.values.currentStudies ?? "";
+  const s1 = content.values.s1 ?? "";
+  const awards = splitAwards(content.values.scholarship ?? "");
   const subtitle = [mentor.major, mentor.university].filter(Boolean).join(" · ");
   const currentPhoto = photos[activePhoto];
 
@@ -78,14 +104,17 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
           <div className="flex flex-col bg-surface-elevated">
             <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden">
               {currentPhoto ? (
-                <Image
-                  src={currentPhoto}
-                  alt={mentor.fullName}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 360px"
-                  quality={95}
-                  className="object-cover object-top transition-opacity duration-300"
+                // Per-slot location so admins can set focal point/zoom for
+                // each gallery photo independently (e.g. when one photo has
+                // the subject low and the next has it high).
+                <EditableMentorPhoto
                   key={currentPhoto}
+                  mentorId={mentor.id}
+                  location={bioModalLocation(activePhoto)}
+                  fallbackPhoto={currentPhoto}
+                  alt={mentor.fullName}
+                  sizes="(max-width: 768px) 100vw, 360px"
+                  imgClassName="object-cover object-center transition-opacity duration-300"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-text-muted-2 font-[family-name:var(--font-heading)]">
@@ -141,7 +170,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
               </p>
             )}
 
-            {mentor.message && (
+            {message && (
               <figure className="mt-8 mb-2">
                 <span
                   aria-hidden
@@ -149,28 +178,30 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
                 >
                   &ldquo;
                 </span>
-                <blockquote className="font-[family-name:var(--font-display-serif)] italic text-xl md:text-2xl leading-snug text-foreground">
-                  {mentor.message}
+                <blockquote className="font-[family-name:var(--font-display-serif)] italic text-xl md:text-2xl leading-snug text-foreground whitespace-pre-line">
+                  {message}
                 </blockquote>
               </figure>
             )}
 
-            {mentor.achievement && (
+            {achievement && (
               <Section label={t.achievement}>
-                <p className="text-[0.95rem] text-foreground leading-relaxed">
-                  {mentor.achievement}
+                <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
+                  {achievement}
                 </p>
               </Section>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
               <Section label={t.currentStudies}>
-                <p className="text-[0.95rem] text-foreground leading-relaxed">
-                  {mentor.currentStudiesRaw}
+                <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
+                  {currentStudies}
                 </p>
               </Section>
               <Section label={t.undergrad}>
-                <p className="text-[0.95rem] text-foreground leading-relaxed">{mentor.s1}</p>
+                <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
+                  {s1}
+                </p>
               </Section>
             </div>
 
@@ -190,7 +221,33 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
             )}
           </div>
         </div>
+
+        {/* Admin-only "Edit content" button — only renders when isAdmin && editing */}
+        {showContentAffordance && (
+          <button
+            type="button"
+            onClick={() => setContentPanelOpen(true)}
+            className="absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 text-white text-[11px] font-semibold shadow-md hover:bg-black/90 transition"
+          >
+            <Icon name="edit" size={12} />
+            Edit content
+            {content.isDraft && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-brand-yellow text-primary-900 text-[9px] font-bold uppercase tracking-wide">
+                Draft
+              </span>
+            )}
+          </button>
+        )}
       </div>
+
+      {contentPanelOpen && (
+        <MentorContentEditPanel
+          mentorId={mentor.id}
+          mentorName={mentor.fullName}
+          fallbacks={fallbacks}
+          onClose={() => setContentPanelOpen(false)}
+        />
+      )}
     </Modal>
   );
 }

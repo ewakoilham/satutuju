@@ -7,7 +7,17 @@ export type PhotoLocation =
   | "hero-mobile"
   | "hero-avatar"
   | "marquee-card"
-  | "bio-modal";
+  | "bio-modal"
+  // Per-photo slots inside the bio modal gallery. Each gallery photo gets its
+  // own focal point + zoom so admins can recenter portraits where the subject
+  // sits at the bottom or top of the frame. Slot N maps to gallery index N-1
+  // (i.e. bio-modal-1 = first photo). bio-modal stays unused but kept for
+  // backward compat with anything that already wrote to it.
+  | "bio-modal-1"
+  | "bio-modal-2"
+  | "bio-modal-3"
+  | "bio-modal-4"
+  | "bio-modal-5";
 
 export const PHOTO_LOCATIONS: PhotoLocation[] = [
   "hero-featured",
@@ -15,7 +25,21 @@ export const PHOTO_LOCATIONS: PhotoLocation[] = [
   "hero-avatar",
   "marquee-card",
   "bio-modal",
+  "bio-modal-1",
+  "bio-modal-2",
+  "bio-modal-3",
+  "bio-modal-4",
+  "bio-modal-5",
 ];
+
+/** Max gallery photos that can carry per-slot positioning in the bio modal. */
+export const BIO_MODAL_MAX_SLOTS = 5;
+
+/** Map a gallery index (0-based) to the per-slot PhotoLocation. */
+export function bioModalLocation(index: number): PhotoLocation {
+  const clamped = Math.min(Math.max(index, 0), BIO_MODAL_MAX_SLOTS - 1);
+  return `bio-modal-${clamped + 1}` as PhotoLocation;
+}
 
 export type PhotoConfig = {
   photoSrc: string;

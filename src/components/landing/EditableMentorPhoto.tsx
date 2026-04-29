@@ -129,7 +129,7 @@ export default function EditableMentorPhoto({
             // unobstructed and the preview in the admin's peripheral view.
             // `force-light` keeps the surrounding chrome on the light tokens
             // even if the user's theme is dark.
-            className="force-light fixed top-24 left-6 z-[80] pointer-events-none"
+            className="force-light fixed top-24 left-6 z-[105] pointer-events-none"
             aria-hidden
           >
             <div className="bg-white rounded-2xl shadow-2xl border border-border p-3 flex flex-col items-center gap-2 text-foreground">

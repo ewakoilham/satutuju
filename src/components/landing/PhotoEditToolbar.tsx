@@ -48,7 +48,7 @@ export default function PhotoEditToolbar() {
           }`}
         >
           <Icon name="edit" size={14} />
-          {ctx.editing ? "Editing" : "Edit photos"}
+          {ctx.editing ? "Editing" : "Edit mode"}
         </button>
 
         <button
