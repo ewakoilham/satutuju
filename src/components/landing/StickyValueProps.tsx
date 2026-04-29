@@ -197,33 +197,33 @@ function InterviewVisual({ active, copy }: { active: boolean; copy: Copy["visual
 }
 
 export default function StickyValueProps() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // scrollWrapperRef is the tall (slides * 100vh) desktop wrapper; activeIndex is
+  // computed from how far we've scrolled into it so BOTH columns can swap together.
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const t = landingCopy.id.features;
   const v = landingCopy.id.visuals;
 
   useEffect(() => {
-    const sections = containerRef.current?.querySelectorAll("[data-vp-section]");
-    if (!sections) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = Number(entry.target.getAttribute("data-vp-section"));
-            setActiveIndex(index);
-          }
-        });
-      },
-      { threshold: 0.3, rootMargin: "-20% 0px -20% 0px" }
-    );
-
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
-  }, []);
+    const onScroll = () => {
+      const el = scrollWrapperRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const scrollable = rect.height - viewportH;
+      if (scrollable <= 0) return;
+      // Progress = how far we've scrolled past the wrapper's top, in [0, 1]
+      const progress = Math.min(1, Math.max(0, -rect.top / scrollable));
+      const next = Math.min(t.slides.length - 1, Math.floor(progress * t.slides.length));
+      setActiveIndex(next);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [t.slides.length]);
 
   return (
-    <section className="bg-primary-900 relative" ref={containerRef}>
+    <section className="bg-primary-900 relative">
       {/* Decorative layer (overflow-hidden to contain blobs) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Organic gradient blobs (dark variants) */}
@@ -372,48 +372,76 @@ export default function StickyValueProps() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto">
-        <div className="md:grid md:grid-cols-2">
-          {/* Left: Scrollable text sections */}
-          <div>
-            {t.slides.map((vp, i) => (
-              <div
-                key={i}
-                data-vp-section={i}
-                className="min-h-[70vh] flex items-center py-16 px-6 lg:px-12"
-              >
-                <div className="max-w-lg w-full">
-                  <span className="text-primary-300 text-sm font-mono tracking-widest">
-                    {vp.number} / 04
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mt-3 lg:mt-4 leading-tight font-[family-name:var(--font-heading)]">
-                    {vp.title}
-                  </h3>
-                  <p className="mt-4 lg:mt-6 text-primary-200/80 text-base lg:text-lg leading-relaxed">
-                    {vp.description}
-                  </p>
-
-                  {/* Mobile-only inline visual (< md). Tablet/desktop (md+) use the sticky column
-                      on the right. Always active here since each visual is inline with its own
-                      text and shouldn't fade with the sticky-column activeIndex.
-                      Order matches landingCopy.features.slides: Checklist → Roadmap → Essay → Interview */}
-                  <div className="md:hidden mt-10">
-                    {i === 0 && <ChecklistVisual active copy={v.checklist} />}
-                    {i === 1 && <RoadmapVisual active copy={v.roadmap} />}
-                    {i === 2 && <EssayVisual active copy={v.essay} />}
-                    {i === 3 && <InterviewVisual active copy={v.interview} />}
-                  </div>
-                </div>
+      {/* Mobile (< md): natural stack — each slide followed by its inline visual */}
+      <div className="md:hidden">
+        {t.slides.map((vp, i) => (
+          <div key={i} className="min-h-[70vh] flex items-center py-16 px-6">
+            <div className="max-w-lg w-full">
+              <span className="text-primary-300 text-sm font-mono tracking-widest">
+                {vp.number} / 04
+              </span>
+              <h3 className="text-2xl font-extrabold text-white mt-3 leading-tight font-[family-name:var(--font-heading)]">
+                {vp.title}
+              </h3>
+              <p className="mt-4 text-primary-200/80 text-base leading-relaxed">
+                {vp.description}
+              </p>
+              <div className="mt-10">
+                {i === 0 && <ChecklistVisual active copy={v.checklist} />}
+                {i === 1 && <RoadmapVisual active copy={v.roadmap} />}
+                {i === 2 && <EssayVisual active copy={v.essay} />}
+                {i === 3 && <InterviewVisual active copy={v.interview} />}
               </div>
-            ))}
+            </div>
           </div>
+        ))}
+      </div>
 
-          {/* Right: Sticky visual display (md+, includes tablets and small laptops) */}
-          <div className="hidden md:block relative">
-            <div className="sticky top-0 h-screen flex items-center justify-center px-8 lg:px-12">
-              {/* Visual 01 — Documents Checklist */}
+      {/* Desktop (md+): dual-sticky scrollytelling — both columns pin in place
+          and crossfade their content together as the user scrolls through this
+          tall wrapper (100vh per slide). */}
+      <div
+        ref={scrollWrapperRef}
+        className="hidden md:block relative"
+        style={{ height: `${t.slides.length * 100}vh` }}
+      >
+        <div className="sticky top-0 h-screen overflow-hidden">
+          <div className="grid grid-cols-2 h-full max-w-7xl mx-auto px-6 lg:px-12 gap-10 lg:gap-16">
+            {/* LEFT — text slideshow: all 4 slides overlap and crossfade */}
+            <div className="relative flex items-center">
+              {t.slides.map((vp, i) => {
+                const isActive = i === activeIndex;
+                return (
+                  <div
+                    key={i}
+                    className="absolute inset-0 flex items-center transition-all duration-700"
+                    style={{
+                      opacity: isActive ? 1 : 0,
+                      visibility: isActive ? "visible" : "hidden",
+                      transform: isActive ? "translateY(0)" : "translateY(20px)",
+                      pointerEvents: isActive ? "auto" : "none",
+                    }}
+                  >
+                    <div className="max-w-lg w-full">
+                      <span className="text-primary-300 text-sm font-mono tracking-widest">
+                        {vp.number} / 04
+                      </span>
+                      <h3 className="text-3xl lg:text-4xl xl:text-5xl font-extrabold text-white mt-4 leading-tight font-[family-name:var(--font-heading)]">
+                        {vp.title}
+                      </h3>
+                      <p className="mt-6 text-primary-200/80 text-base lg:text-lg leading-relaxed">
+                        {vp.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* RIGHT — graphic slideshow: all 4 visuals overlap and crossfade */}
+            <div className="relative flex items-center justify-center">
               <div
-                className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
+                className="absolute inset-0 flex items-center justify-center transition-all duration-700"
                 style={{
                   opacity: activeIndex === 0 ? 1 : 0,
                   visibility: activeIndex === 0 ? "visible" : "hidden",
@@ -423,9 +451,8 @@ export default function StickyValueProps() {
               >
                 <ChecklistVisual active={activeIndex === 0} copy={v.checklist} />
               </div>
-              {/* Visual 02 — Planning / Roadmap */}
               <div
-                className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
+                className="absolute inset-0 flex items-center justify-center transition-all duration-700"
                 style={{
                   opacity: activeIndex === 1 ? 1 : 0,
                   visibility: activeIndex === 1 ? "visible" : "hidden",
@@ -435,9 +462,8 @@ export default function StickyValueProps() {
               >
                 <RoadmapVisual active={activeIndex === 1} copy={v.roadmap} />
               </div>
-              {/* Visual 03 — Essay */}
               <div
-                className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
+                className="absolute inset-0 flex items-center justify-center transition-all duration-700"
                 style={{
                   opacity: activeIndex === 2 ? 1 : 0,
                   visibility: activeIndex === 2 ? "visible" : "hidden",
@@ -447,9 +473,8 @@ export default function StickyValueProps() {
               >
                 <EssayVisual active={activeIndex === 2} copy={v.essay} />
               </div>
-              {/* Visual 04 — Interview */}
               <div
-                className="absolute inset-0 flex items-center justify-center px-8 lg:px-12 transition-all duration-700"
+                className="absolute inset-0 flex items-center justify-center transition-all duration-700"
                 style={{
                   opacity: activeIndex === 3 ? 1 : 0,
                   visibility: activeIndex === 3 ? "visible" : "hidden",
@@ -461,7 +486,7 @@ export default function StickyValueProps() {
               </div>
 
               {/* Progress dots */}
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-3">
                 {t.slides.map((_, i) => (
                   <div
                     key={i}

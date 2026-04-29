@@ -137,11 +137,10 @@ export default function HeroSection() {
               >
                 {t.secondaryCta}
               </Link>
-              <div className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-yellow/40 border border-brand-yellow/60 self-start sm:self-center">
-                <Icon name="graduation" size={12} className="text-primary-900" />
-                <span className="text-[11px] font-bold text-primary-900 whitespace-nowrap">{t.statFree}</span>
-              </div>
             </div>
+            <p className="mt-3 text-[11px] italic text-primary-700/75 leading-relaxed">
+              *{t.statFree}
+            </p>
 
             {/* Mentor avatar strip — moved into the text column */}
             <div className="mt-5">

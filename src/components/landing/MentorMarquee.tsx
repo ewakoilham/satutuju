@@ -91,6 +91,9 @@ export default function MentorMarquee() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedMentor, setSelectedMentor] = useState<MentorBio | null>(null);
   const autoScrollRef = useRef<number | null>(null);
+  // After a manual nav-arrow click we briefly pause auto-scroll so the smooth
+  // scrollBy can complete without RAF fighting it.
+  const pauseUntilRef = useRef(0);
   const allMentors = [...MENTORS, ...MENTORS];
   const t = landingCopy.id.mentorShowcase;
   const editPanelOpen = useEditPanelOpen();
@@ -102,10 +105,10 @@ export default function MentorMarquee() {
     if (!el || selectedMentor || editPanelOpen) return;
 
     let lastTime = 0;
-    const speed = 0.5;
+    const speed = 0.7;
 
     const step = (time: number) => {
-      if (lastTime) {
+      if (lastTime && Date.now() >= pauseUntilRef.current) {
         const delta = time - lastTime;
         el.scrollLeft += speed * (delta / 16);
         const halfWidth = el.scrollWidth / 2;
@@ -126,6 +129,15 @@ export default function MentorMarquee() {
   const handleCardClick = useCallback((name: string) => {
     const bio = (mentorsData as MentorBio[]).find((m) => m.fullName === name);
     if (bio) setSelectedMentor(bio);
+  }, []);
+
+  const scrollByCards = useCallback((direction: -1 | 1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Pause auto-scroll for 800ms so the smooth scroll lands cleanly.
+    pauseUntilRef.current = Date.now() + 800;
+    // Card width 280 + gap 18 = 298 per card. Scroll by ~2 cards for a punchier nav.
+    el.scrollBy({ left: direction * 298 * 2, behavior: "smooth" });
   }, []);
 
   return (
@@ -173,6 +185,24 @@ export default function MentorMarquee() {
       <div className="relative group/marquee z-10">
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-primary-900 to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-primary-900 to-transparent z-10 pointer-events-none" />
+
+        {/* Manual nav arrows — fade in on rail hover */}
+        <button
+          type="button"
+          onClick={() => scrollByCards(-1)}
+          aria-label="Mentor sebelumnya"
+          className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 grid place-items-center w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white opacity-0 group-hover/marquee:opacity-100 focus-visible:opacity-100 transition-opacity duration-200 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+        >
+          <Icon name="arrow-right" size={16} className="rotate-180" />
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollByCards(1)}
+          aria-label="Mentor berikutnya"
+          className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 grid place-items-center w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-white opacity-0 group-hover/marquee:opacity-100 focus-visible:opacity-100 transition-opacity duration-200 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+        >
+          <Icon name="arrow-right" size={16} />
+        </button>
 
         <div
           ref={scrollRef}

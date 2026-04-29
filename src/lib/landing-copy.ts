@@ -5,7 +5,7 @@ export const landingCopy = {
       join: "Gabung Sekarang",
     },
     hero: {
-      badge: "Mentoring 1-on-1",
+      badge: "Free Mentoring 1-on-1",
       headlineLine1:
         "Kamu mau studi S2 di luar negeri, tapi bingung harus mulai dari mana?",
       headlineLine2: "Mentor Satu Tuju siap bimbing kamu dari nol",
@@ -16,7 +16,8 @@ export const landingCopy = {
       secondaryCta: "Gabung Komunitas",
       statMentors: "Mentor",
       statCountries: "Negara Tujuan",
-      statFree: "Refundable Deposit",
+      statFree:
+        "Deposit berlaku, dan kembali 100% setelah menyelesaikan komitmen mentorship.",
       featuredLabel: "Mentor Pilihan",
       fromUniversities: "Mentor dari:",
       moreMentors: "+{n} lainnya",
