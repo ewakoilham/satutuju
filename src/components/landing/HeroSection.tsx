@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import { landingCopy } from "@/lib/landing-copy";
+import { landingCopy, COMMUNITY_URL } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
 import EditableMentorPhoto from "./EditableMentorPhoto";
@@ -131,12 +131,14 @@ export default function HeroSection() {
                 {t.primaryCta}
                 <Icon name="arrow-right" size={16} />
               </Link>
-              <Link
-                href="/signup"
+              <a
+                href={COMMUNITY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/95 backdrop-blur-sm text-primary font-semibold rounded-xl border border-primary-200/50 hover:bg-white hover:shadow-[var(--shadow-md)] transition-all text-sm whitespace-nowrap"
               >
                 {t.secondaryCta}
-              </Link>
+              </a>
             </div>
             <p className="mt-3 text-[11px] italic text-primary-700/75 leading-relaxed">
               *{t.statFree}

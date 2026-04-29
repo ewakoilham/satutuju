@@ -222,6 +222,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <p className="text-xs text-text-muted-2 truncate">{user.email}</p>
                     </div>
 
+                    {/* View landing page — visible to every role */}
+                    <div className="py-1.5 border-b border-border">
+                      <Link
+                        href="/"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-text-muted hover:bg-surface-elevated transition"
+                      >
+                        <Icon name="external-link" size={15} className="text-text-muted-2" />
+                        View landing page
+                      </Link>
+                    </div>
+
                     {/* Profile + Settings links */}
                     {userMenuItems.length > 0 && (
                       <div className="py-1.5">
@@ -314,6 +326,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Profile + Settings + Logout at bottom */}
             <div className="border-t border-border p-4 space-y-1">
+              {/* View landing page — visible to every role */}
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-surface-elevated transition"
+              >
+                <Icon name="external-link" size={18} />
+                View landing page
+              </Link>
+
               {userMenuItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (

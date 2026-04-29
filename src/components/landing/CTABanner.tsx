@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import { landingCopy } from "@/lib/landing-copy";
+import { landingCopy, COMMUNITY_URL } from "@/lib/landing-copy";
 
 export default function CTABanner() {
   const t = landingCopy.id.finalCta;
@@ -76,12 +76,14 @@ export default function CTABanner() {
             {t.primary}
             <Icon name="arrow-right" size={18} />
           </Link>
-          <Link
-            href="/signup"
+          <a
+            href={COMMUNITY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-white font-semibold rounded-xl border-2 border-white/30 hover:border-white/60 hover:bg-white/10 transition-all text-base"
           >
             {t.secondary}
-          </Link>
+          </a>
         </div>
       </div>
     </section>
