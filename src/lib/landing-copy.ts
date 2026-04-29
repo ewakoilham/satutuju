@@ -7,6 +7,7 @@ export const landingCopy = {
     nav: {
       signin: "Masuk",
       join: "Gabung Sekarang",
+      about: "Tentang Kami",
     },
     hero: {
       badge: "Mentorship 1-on-1, gratis",
