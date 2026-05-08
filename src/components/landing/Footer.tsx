@@ -25,7 +25,7 @@ export default function Footer() {
     {
       title: t.columns.help,
       links: [
-        { label: t.links.faq, href: "/faq" },
+        { label: t.links.faq, href: "/#faq" },
         { label: t.links.terms, href: "/terms" },
         { label: t.links.privacy, href: "/privacy" },
       ],

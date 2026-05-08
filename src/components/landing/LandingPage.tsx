@@ -6,6 +6,7 @@ import UniversityLogoMarquee from "./UniversityLogoMarquee";
 import StickyValueProps from "./StickyValueProps";
 import MentorMarquee from "./MentorMarquee";
 import HowItWorks from "./HowItWorks";
+import FaqSection from "./FaqSection";
 import CTABanner from "./CTABanner";
 import Footer from "./Footer";
 import { PhotoEditProvider } from "@/lib/photo-edit-context";
@@ -22,6 +23,7 @@ export default function LandingPage() {
           <MentorMarquee />
           <StickyValueProps />
           <HowItWorks />
+          <FaqSection />
           <CTABanner />
         </main>
         <Footer />
