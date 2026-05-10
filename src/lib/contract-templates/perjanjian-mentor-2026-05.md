@@ -302,10 +302,162 @@ Selama berlakunya Perjanjian ini, MENTOR wajib untuk:
 
 ---
 
+
+---
+
 ## PASAL 6
+## KEBIJAKAN ANTI-PELECEHAN SEKSUAL DAN PERLINDUNGAN MARTABAT
+
+### 6.1 Pernyataan Kebijakan dan Komitmen
+
+1. SATU TUJU dengan tegas **mengutuk segala bentuk pelecehan seksual, kekerasan seksual, dan tindakan apa pun yang mengarah pada hal tersebut**, dan menerapkan kebijakan **zero tolerance** terhadap perilaku semacam itu di seluruh ekosistem SATU TUJU;
+
+2. Kebijakan ini berlaku untuk seluruh aktor dalam ekosistem SATU TUJU, termasuk MENTOR, Mentee, staf SATU TUJU, mitra, dan pihak ketiga lainnya, tanpa memandang posisi, status, atau kontribusi terhadap SATU TUJU;
+
+3. SATU TUJU berkomitmen untuk menciptakan **ruang yang aman, profesional, dan saling menghormati** bagi seluruh pihak yang terlibat dalam Platform, dan menjunjung tinggi martabat setiap individu;
+
+4. Pasal ini disusun selaras dengan **Undang-Undang Republik Indonesia Nomor 12 Tahun 2022 tentang Tindak Pidana Kekerasan Seksual (UU TPKS)** beserta peraturan pelaksanaannya, dan peraturan perundang-undangan lain yang relevan.
+
+### 6.2 Definisi Pelecehan Seksual
+
+Untuk keperluan Pasal ini, **"Pelecehan Seksual"** mencakup namun tidak terbatas pada perilaku-perilaku berikut, yang dilakukan tanpa persetujuan pihak yang menjadi sasaran:
+
+1. **Pelecehan Verbal**: Komentar, lelucon, gosip, pujian yang tidak pantas, panggilan yang merendahkan, atau ajakan dengan muatan seksual;
+
+2. **Pelecehan Non-Verbal**: Tatapan yang merendahkan, gestur, simbol, atau pengiriman gambar, foto, video, atau materi lainnya yang bermuatan seksual atau intim;
+
+3. **Pelecehan Fisik**: Sentuhan, pelukan, ciuman, atau kontak fisik lainnya tanpa persetujuan;
+
+4. **Pelecehan Digital**: Pesan teks, *email*, *direct message*, atau komunikasi melalui kanal digital lainnya (termasuk WhatsApp, Telegram, atau Platform) yang bermuatan seksual, *unsolicited intimate content*, atau ajakan bertemu yang bermotif personal/seksual di luar konteks profesional;
+
+5. **Penyalahgunaan Posisi atau Kuasa** (*power dynamic abuse*): Memanfaatkan dinamika asimetris antara MENTOR-Mentee, atasan-bawahan, atau posisi kepercayaan lainnya untuk tujuan personal atau seksual;
+
+6. **Ajakan atau perilaku ambigu** yang masuk dalam wilayah abu-abu (*grey area*) namun secara wajar dapat ditafsirkan sebagai bermuatan seksual atau melampaui batas profesional, termasuk ajakan bertemu privat di luar konteks resmi mentoring tanpa alasan yang dapat dipertanggungjawabkan; dan
+
+7. Tindakan-tindakan lain yang termasuk dalam kategori kekerasan seksual sebagaimana diatur dalam UU TPKS.
+
+Untuk menghindari keraguan, **satu kali tindakan saja sudah cukup** untuk dianggap sebagai pelanggaran Pasal ini, dan tidak diperlukan adanya pola berulang.
+
+### 6.3 Larangan dalam Konteks Aktivitas Mentoring
+
+Mengingat dinamika asimetris antara MENTOR dan Mentee, MENTOR dengan ini secara khusus dilarang untuk:
+
+1. **Menginisiasi atau mengembangkan hubungan bermuatan seksual atau romantis** dalam konteks aktivitas mentoring atau menggunakan dinamika mentoring sebagai sarana untuk hal tersebut;
+
+2. **Menggunakan kanal komunikasi resmi** (Sesi Mentoring, WhatsApp, Telegram, *email*, atau kanal lainnya yang ditetapkan SATU TUJU) untuk komunikasi atau konten yang bermuatan seksual, intim, atau personal yang tidak relevan dengan tujuan mentoring;
+
+3. **Mengajak Mentee bertemu privat** di luar konteks resmi mentoring dengan motif yang melampaui kepentingan profesional, atau dalam situasi yang dapat menimbulkan risiko bagi keamanan dan martabat Mentee; dan
+
+4. **Memanfaatkan posisi sebagai MENTOR** untuk memperoleh akses atau pengaruh personal atas Mentee yang melampaui batas hubungan profesional mentoring.
+
+Apabila terjadi ketertarikan personal yang berkembang antara MENTOR dan Mentee yang tidak dapat dihindari, MENTOR wajib **segera mengungkapkan** (*disclose*) hal tersebut kepada SATU TUJU dan mengajukan **realokasi Mentee** sebelum dinamika personal berkembang lebih jauh, untuk menjaga integritas hubungan mentoring.
+
+### 6.4 Mekanisme Pelaporan
+
+1. **Kanal Pelaporan**: Setiap dugaan Pelecehan Seksual dapat dilaporkan melalui:
+
+    a. *Email* khusus: **report@satutuju.id**, atau alamat *email* resmi lain yang ditetapkan SATU TUJU; atau
+
+    b. Kanal pelaporan lainnya yang dipublikasikan SATU TUJU dari waktu ke waktu;
+
+2. **Siapa yang Dapat Melaporkan**: Pelaporan dapat dilakukan oleh:
+
+    a. Korban langsung;
+
+    b. Saksi yang mengetahui kejadian; atau
+
+    c. Pihak ketiga yang menerima informasi yang dapat dipertanggungjawabkan;
+
+3. **Anonimitas**: Pelaporan dapat dilakukan secara **anonim** atau dengan identitas terbuka. Dalam hal pelaporan anonim, SATU TUJU tetap akan menindaklanjuti laporan sepanjang informasi yang disampaikan cukup memadai untuk dilakukan investigasi;
+
+4. **Tidak Ada Masa Kedaluwarsa**: Pelaporan atas dugaan Pelecehan Seksual dapat dilakukan kapan saja, **tanpa batas waktu kedaluwarsa**, sepanjang Pelecehan Seksual tersebut diduga terjadi dalam ekosistem SATU TUJU; dan
+
+5. **Waktu Respons**: SATU TUJU wajib memberikan tanggapan awal atas laporan dalam waktu paling lambat **2 (dua) Hari Kerja** sejak laporan diterima.
+
+### 6.5 Tindakan SATU TUJU kepada Korban
+
+Apabila terdapat laporan dugaan Pelecehan Seksual, SATU TUJU akan mengambil langkah-langkah berikut untuk melindungi korban:
+
+1. **Perlindungan Kerahasiaan**: Identitas korban tidak akan diungkapkan kepada pihak mana pun, termasuk pelaku yang dilaporkan, tanpa persetujuan tertulis dari korban, kecuali apabila wajib diungkapkan berdasarkan ketentuan hukum;
+
+2. **Anti-Retaliasi**: Korban yang melaporkan dugaan Pelecehan Seksual dengan iktikad baik **tidak akan mengalami konsekuensi negatif** dari SATU TUJU, baik berupa pemutusan kemitraan, pengurangan alokasi Mentee, pembatalan Success Fee, maupun bentuk pembalasan lainnya, terlepas dari hasil investigasi;
+
+3. **Pemisahan Segera** (*immediate separation*): Selama investigasi berlangsung, SATU TUJU akan **segera memisahkan** korban dari pelaku yang dilaporkan, melalui realokasi MENTOR, suspensi sementara akses pelaku ke Platform, atau langkah lain yang diperlukan untuk melindungi korban;
+
+4. **Fasilitasi Layanan Dukungan**: SATU TUJU akan **memfasilitasi rujukan** kepada korban menuju layanan dukungan eksternal yang relevan, termasuk konseling psikologis, layanan korban kekerasan seksual, atau bantuan hukum, melalui kerja sama dengan lembaga-lembaga yang kompeten;
+
+5. **Pendampingan Administratif**: Apabila korban memilih untuk membawa kasus ke jalur hukum, SATU TUJU akan **mendampingi dan/atau membantu** korban dalam proses tersebut, termasuk menyediakan informasi, dokumen, atau bukti yang relevan dan tidak melanggar kerahasiaan, serta berkoordinasi dengan pihak berwajib; dan
+
+6. **Komunikasi Berkelanjutan**: SATU TUJU akan menjaga komunikasi dengan korban selama dan setelah investigasi, dan menginformasikan perkembangan serta hasil investigasi.
+
+### 6.6 Tindakan SATU TUJU kepada Pelaku
+
+#### 6.6.1 Tahap Investigasi
+
+1. SATU TUJU akan melakukan **investigasi internal** atas setiap laporan dugaan Pelecehan Seksual dalam waktu paling lambat **14 (empat belas) Hari Kerja** sejak laporan diterima;
+
+2. **Selama investigasi berlangsung**:
+
+    a. Akses pelaku yang dilaporkan ke Platform, *dashboard*, dan kanal komunikasi resmi akan **disuspensi sementara**;
+
+    b. Mentee atau Mentor yang berada dalam alokasi pelaku akan dipisahkan dan, jika perlu, direalokasikan; dan
+
+    c. Pelaku tetap berhak menerima pemberitahuan tentang dugaan dan diberi **kesempatan klarifikasi tertulis** dalam waktu yang wajar (*due process*).
+
+#### 6.6.2 Konsekuensi Apabila Terbukti
+
+Apabila berdasarkan hasil investigasi, dugaan Pelecehan Seksual dinyatakan terbukti, SATU TUJU akan menerapkan konsekuensi sebagai berikut:
+
+1. **Pelaku adalah MENTOR**:
+
+    a. **Strike 3 (Pemutusan Permanen) secara langsung**, tanpa proses Strike bertingkat, sebagaimana diatur dalam Pasal 9.7;
+
+    b. MENTOR **tidak berhak** atas Success Fee untuk Mentee yang menjadi korban maupun Mentee lain yang sedang dalam alokasi MENTOR pada saat pelanggaran terbukti, dan SATU TUJU berhak menarik kembali Success Fee yang telah dibayarkan;
+
+    c. MENTOR **dilarang permanen** untuk kembali ke ekosistem SATU TUJU dalam bentuk apa pun;
+
+    d. MENTOR wajib **mengganti seluruh kerugian** yang dialami SATU TUJU dan/atau korban sebagai akibat langsung dari pelanggaran tersebut, termasuk biaya investigasi, biaya hukum, kerugian reputasi yang dapat dikuantifikasi, serta biaya pendampingan korban; dan
+
+    e. MENTOR wajib mematuhi konsekuensi hukum yang timbul berdasarkan UU TPKS dan peraturan perundang-undangan lainnya yang relevan.
+
+2. **Pelaku adalah Mentee**:
+
+    a. **Pemutusan layanan mentoring secara permanen** dengan Mentee yang bersangkutan;
+
+    b. Mentee **dilarang permanen** untuk kembali sebagai Mentee atau dalam kapasitas lain di ekosistem SATU TUJU;
+
+    c. **Deposit Mentee dinyatakan hangus 100% (seratus persen)**, dan dalam pengecualian khusus dari Pasal 8.6 dan 8.7 mengenai pembagian Deposit yang hangus, **seluruh nilai Deposit yang hangus akan diberikan sebagai kompensasi kepada korban**, baik korban tersebut adalah MENTOR, Mentee lain, staf SATU TUJU, atau pihak lain dalam ekosistem SATU TUJU; dan
+
+    d. Mentee wajib mematuhi konsekuensi hukum yang timbul berdasarkan UU TPKS dan peraturan perundang-undangan lainnya yang relevan.
+
+3. **Pelaku adalah Staf SATU TUJU**:
+
+    a. Penanganan dilakukan sesuai dengan kebijakan internal sumber daya manusia SATU TUJU dan peraturan ketenagakerjaan yang berlaku;
+
+    b. Sebagai langkah minimum, staf yang dilaporkan akan **disuspensi penuh selama investigasi berlangsung**, dan apabila terbukti, dapat berakibat pada **pemutusan hubungan kerja** sesuai UU Ketenagakerjaan dan UU TPKS; dan
+
+    c. Konsekuensi hukum berdasarkan UU TPKS dan peraturan perundang-undangan lainnya tetap berlaku.
+
+#### 6.6.3 Kewajiban Hukum
+
+1. Apabila tindakan yang dilakukan termasuk dalam kategori **tindak pidana** sebagaimana diatur dalam UU TPKS atau peraturan perundang-undangan lainnya, SATU TUJU akan **mendukung dan/atau memfasilitasi** korban untuk membawa kasus ke jalur hukum, sesuai keinginan korban;
+
+2. SATU TUJU wajib **bekerja sama secara penuh** dengan otoritas berwenang dalam proses penegakan hukum, termasuk memberikan informasi, dokumen, dan bukti yang relevan; dan
+
+3. SATU TUJU **tidak akan melindungi pelaku** dari konsekuensi hukum, terlepas dari posisi, jabatan, atau kontribusi pelaku terhadap SATU TUJU.
+
+### 6.7 Edukasi dan Pencegahan
+
+1. SATU TUJU akan menyertakan **modul tentang kebijakan anti-pelecehan seksual** dan etika profesional dalam orientasi atau *training* MENTOR, sebagai bagian wajib dari proses *onboarding*;
+
+2. SATU TUJU akan **memberitahukan kepada Mentee** mengenai keberadaan kebijakan ini, kanal pelaporan, dan hak-hak Mentee dalam ekosistem SATU TUJU pada saat *onboarding* Mentee; dan
+
+3. SATU TUJU akan meninjau dan memperbarui kebijakan ini secara berkala, dengan mempertimbangkan praktik terbaik, perkembangan hukum, dan masukan dari ekosistem.
+
+## PASAL 7
 ## KERAHASIAAN DAN PERLINDUNGAN DATA
 
-### 6.1 Definisi Informasi Rahasia
+### 7.1 Definisi Informasi Rahasia
 
 Untuk keperluan Pasal ini, **"Informasi Rahasia"** mencakup namun tidak terbatas pada:
 
@@ -321,7 +473,7 @@ Untuk keperluan Pasal ini, **"Informasi Rahasia"** mencakup namun tidak terbatas
 
 6. Setiap informasi lain yang secara wajar dapat dianggap sebagai informasi rahasia, baik yang diberi label "rahasia" secara eksplisit maupun tidak.
 
-### 6.2 Kewajiban Kerahasiaan
+### 7.2 Kewajiban Kerahasiaan
 
 MENTOR dengan ini berjanji dan menyatakan untuk:
 
@@ -335,9 +487,9 @@ MENTOR dengan ini berjanji dan menyatakan untuk:
 
 5. **Tidak membahas atau membagikan kasus Mentee secara spesifik** di forum publik, media sosial, *podcast*, wawancara, atau publikasi lainnya dengan cara yang memungkinkan identitas Mentee dapat dikenali, baik secara langsung maupun melalui kombinasi informasi, **kecuali dengan persetujuan langsung dari Mentee yang bersangkutan**. Persetujuan Mentee dapat diberikan secara lisan maupun tertulis, dan menjadi tanggung jawab MENTOR untuk memastikan persetujuan tersebut diperoleh sebelum *sharing* dilakukan.
 
-### 6.3 Pengecualian Kerahasiaan
+### 7.3 Pengecualian Kerahasiaan
 
-Kewajiban kerahasiaan dalam Pasal 6.2 tidak berlaku terhadap informasi yang:
+Kewajiban kerahasiaan dalam Pasal 7.2 tidak berlaku terhadap informasi yang:
 
 1. Sudah menjadi informasi publik bukan karena pelanggaran Perjanjian ini oleh MENTOR;
 
@@ -349,7 +501,7 @@ Kewajiban kerahasiaan dalam Pasal 6.2 tidak berlaku terhadap informasi yang:
 
 5. Diungkapkan dengan persetujuan dari pihak yang memiliki informasi tersebut.
 
-### 6.4 Pelindungan Data Pribadi
+### 7.4 Pelindungan Data Pribadi
 
 1. MENTOR mengakui bahwa data pribadi Mentee yang diperoleh selama pelaksanaan Perjanjian ini, termasuk rekaman dan transkrip Sesi Mentoring yang dihasilkan tl;dv, tunduk pada **Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi** beserta peraturan pelaksanaannya, dan peraturan perundang-undangan lain yang relevan;
 
@@ -361,7 +513,7 @@ Kewajiban kerahasiaan dalam Pasal 6.2 tidak berlaku terhadap informasi yang:
 
 5. **Ganti rugi atas pelanggaran**: Apabila terjadi *data breach*, kebocoran, atau penyalahgunaan data pribadi Mentee atau Informasi Rahasia lainnya yang disebabkan oleh kelalaian, kecerobohan, atau kesengajaan MENTOR, maka MENTOR wajib **mengganti seluruh kerugian** yang dialami SATU TUJU sebagai akibat langsung dari pelanggaran tersebut, termasuk namun tidak terbatas pada biaya investigasi, biaya pemberitahuan kepada Mentee dan otoritas, biaya hukum, sanksi administratif yang dikenakan kepada SATU TUJU, dan kerugian reputasi yang dapat dikuantifikasi.
 
-### 6.5 Pengembalian Informasi Saat Berakhirnya Perjanjian
+### 7.5 Pengembalian Informasi Saat Berakhirnya Perjanjian
 
 1. Para Pihak memahami bahwa data pribadi Mentee yang dikumpulkan melalui Platform tetap menjadi penguasaan SATU TUJU sebagai **pengendali data pribadi** (*data controller*) untuk keperluan operasional, basis data Mentee, dan kepentingan sah SATU TUJU lainnya, sesuai ketentuan UU Pelindungan Data Pribadi;
 
@@ -375,25 +527,25 @@ Kewajiban kerahasiaan dalam Pasal 6.2 tidak berlaku terhadap informasi yang:
 
 3. Akses MENTOR ke Platform, *dashboard* Mentor, dan rekaman tl;dv akan dinonaktifkan oleh SATU TUJU pada saat berakhirnya Perjanjian.
 
-### 6.6 Jangka Waktu Kewajiban Kerahasiaan
+### 7.6 Jangka Waktu Kewajiban Kerahasiaan
 
 Kewajiban kerahasiaan sebagaimana diatur dalam Pasal ini tetap berlaku **selama berlakunya Perjanjian ini dan akan terus berlaku tanpa batas waktu setelah berakhirnya Perjanjian** untuk Informasi Rahasia yang berkaitan dengan data pribadi Mentee (termasuk rekaman dan transkrip tl;dv), dan **selama 5 (lima) tahun setelah berakhirnya Perjanjian** untuk Informasi Rahasia bisnis SATU TUJU lainnya.
 
 
 ---
 
-## PASAL 7
+## PASAL 8
 ## SKEMA INSENTIF FINANSIAL (SUCCESS FEE)
 
-### 7.1 Prinsip Insentif Berbasis Hasil
+### 8.1 Prinsip Insentif Berbasis Hasil
 
 1. Kemitraan ini berbasis **Success Fee** (*success-based*), yang berarti MENTOR berhak menerima insentif finansial **hanya** apabila Mentee yang dibimbing berhasil mencapai status **Enrollment** di Universitas Mitra sebagaimana didefinisikan dalam Pasal 2 Perjanjian ini, kecuali ditentukan lain dalam Pasal ini;
 
 2. SATU TUJU **tidak memberikan upah tetap, gaji, retainer, *signing bonus*, atau bentuk kompensasi periodik lainnya** kepada MENTOR di luar Success Fee yang diatur dalam Pasal ini;
 
-3. Dalam hal Mentee tidak mencapai Enrollment di Universitas Mitra karena alasan apa pun (penolakan dari kampus, pengunduran diri Mentee, perubahan rencana, atau alasan lainnya), MENTOR tidak berhak atas Success Fee, tanpa mengurangi pengakuan SATU TUJU atas dedikasi dan upaya MENTOR, dan tanpa mengurangi hak MENTOR atas **bagian dari Deposit Mentee yang hangus** sebagaimana diatur dalam Pasal 7.6 dan 7.7.
+3. Dalam hal Mentee tidak mencapai Enrollment di Universitas Mitra karena alasan apa pun (penolakan dari kampus, pengunduran diri Mentee, perubahan rencana, atau alasan lainnya), MENTOR tidak berhak atas Success Fee, tanpa mengurangi pengakuan SATU TUJU atas dedikasi dan upaya MENTOR, dan tanpa mengurangi hak MENTOR atas **bagian dari Deposit Mentee yang hangus** sebagaimana diatur dalam Pasal 8.6 dan 8.7.
 
-### 7.2 Besaran Success Fee
+### 8.2 Besaran Success Fee
 
 1. Besaran Success Fee ditetapkan sebagai **tarif tetap (*flat rate*) per Mentee** yang berhasil mencapai Enrollment, dengan nilai yang **bervariasi berdasarkan Universitas Mitra dan program studi** tempat Mentee terdaftar;
 
@@ -405,7 +557,7 @@ Kewajiban kerahasiaan sebagaimana diatur dalam Pasal ini tetap berlaku **selama 
 
 5. **Sifat Pembayaran**: Tarif yang tercantum dalam Lampiran B merupakan **jumlah bruto (*gross*)** yang akan dibayarkan SATU TUJU kepada MENTOR. Mengingat sifat kemitraan independen sebagaimana diatur dalam Pasal 3.2, **seluruh kewajiban perpajakan atas pembayaran tersebut menjadi tanggung jawab pribadi MENTOR sepenuhnya**, dan SATU TUJU tidak melakukan pemotongan pajak. SATU TUJU akan menerbitkan rincian pembayaran (*payment slip*) atau tagihan (*invoice*) sebagai dokumen pendukung administrasi perpajakan MENTOR.
 
-### 7.3 Syarat Pembayaran
+### 8.3 Syarat Pembayaran
 
 Success Fee akan dibayarkan kepada MENTOR apabila seluruh syarat berikut terpenuhi secara kumulatif:
 
@@ -417,17 +569,17 @@ Success Fee akan dibayarkan kepada MENTOR apabila seluruh syarat berikut terpenu
 
 4. **MENTOR tidak sedang dalam status Strike level 3** atau pemutusan permanen pada saat pembayaran dilakukan.
 
-### 7.4 Mekanisme dan Waktu Pembayaran
+### 8.4 Mekanisme dan Waktu Pembayaran
 
-1. SATU TUJU akan membayarkan Success Fee kepada MENTOR paling lambat **30 (tiga puluh) Hari Kerja** setelah seluruh syarat pembayaran sebagaimana diatur dalam Pasal 7.3 terpenuhi. MENTOR memahami bahwa waktu penerimaan komisi dari Universitas Mitra atau Agensi Resmi dapat bervariasi dan umumnya membutuhkan waktu beberapa bulan setelah Enrollment;
+1. SATU TUJU akan membayarkan Success Fee kepada MENTOR paling lambat **30 (tiga puluh) Hari Kerja** setelah seluruh syarat pembayaran sebagaimana diatur dalam Pasal 8.3 terpenuhi. MENTOR memahami bahwa waktu penerimaan komisi dari Universitas Mitra atau Agensi Resmi dapat bervariasi dan umumnya membutuhkan waktu beberapa bulan setelah Enrollment;
 
 2. Pembayaran dilakukan melalui transfer ke rekening bank atas nama MENTOR yang telah didaftarkan pada SATU TUJU;
 
-3. SATU TUJU akan menerbitkan **rincian pembayaran (*payment slip*)** atau **tagihan (*invoice*)** kepada MENTOR atas setiap pembayaran Success Fee, sebagai dokumen pendukung administrasi MENTOR. SATU TUJU **tidak menerbitkan bukti potong pajak**, sesuai ketentuan Pasal 3.2 ayat (3) dan Pasal 7.2 ayat (5); dan
+3. SATU TUJU akan menerbitkan **rincian pembayaran (*payment slip*)** atau **tagihan (*invoice*)** kepada MENTOR atas setiap pembayaran Success Fee, sebagai dokumen pendukung administrasi MENTOR. SATU TUJU **tidak menerbitkan bukti potong pajak**, sesuai ketentuan Pasal 3.2 ayat (3) dan Pasal 8.2 ayat (5); dan
 
 4. MENTOR wajib **memeriksa rincian pembayaran** dan menyampaikan keberatan, apabila ada, dalam waktu 14 (empat belas) Hari Kerja sejak tanggal penerbitan rincian. Setelah lewat jangka waktu tersebut, pembayaran dianggap diterima dan disetujui MENTOR.
 
-### 7.5 Realokasi Mentor di Tengah Periode Mentoring
+### 8.5 Realokasi Mentor di Tengah Periode Mentoring
 
 1. Apabila terjadi realokasi Mentor untuk Mentee yang sama di tengah Periode Mentoring, baik atas inisiatif MENTOR, Mentee, atau SATU TUJU, maka **pembagian Success Fee** antara Mentor sebelumnya dan Mentor pengganti akan **ditentukan oleh SATU TUJU** secara *case-by-case*;
 
@@ -445,7 +597,7 @@ Success Fee akan dibayarkan kepada MENTOR apabila seluruh syarat berikut terpenu
 
 4. **Pengecualian karena pelanggaran**: Apabila realokasi terjadi karena pelanggaran Perjanjian oleh Mentor sebelumnya yang mengakibatkan Strike level 2 atau lebih, maka Mentor sebelumnya tidak berhak atas Success Fee dengan persentase apa pun.
 
-### 7.6 Pengembalian Mentee dan Pengakhiran Sebelum Enrollment
+### 8.6 Pengembalian Mentee dan Pengakhiran Sebelum Enrollment
 
 1. Apabila Mentee mengundurkan diri dari proses mentoring sebelum mencapai Enrollment karena alasan apa pun yang menyebabkan **Deposit Mentee menjadi hangus** sebagaimana diatur dalam Perjanjian Mentee yang relevan, maka MENTOR yang bersangkutan berhak menerima sebesar **80% (delapan puluh persen) dari nilai Deposit Mentee yang hangus**, sedangkan sisa 20% (dua puluh persen) menjadi hak SATU TUJU;
 
@@ -453,7 +605,9 @@ Success Fee akan dibayarkan kepada MENTOR apabila seluruh syarat berikut terpenu
 
 3. **Clawback**: Apabila Mentee mengundurkan diri setelah SATU TUJU menerima pembayaran komisi, dan Universitas Mitra atau Agensi Resmi menarik kembali komisi tersebut, maka SATU TUJU berhak **menarik kembali Success Fee yang telah dibayarkan kepada MENTOR secara proporsional** dengan jumlah komisi yang ditarik. Dalam hal ini, MENTOR tetap berhak menerima sebesar **80% (delapan puluh persen) dari nilai Deposit Mentee yang hangus** sebagai kompensasi sebagian, sedangkan sisa 20% (dua puluh persen) menjadi hak SATU TUJU.
 
-### 7.7 Mentee Enrollment di Luar Universitas Mitra
+4. **Pengecualian Khusus untuk Kasus Pelecehan Seksual**: Dalam hal Mentee mengundurkan diri atau dipisahkan dari Platform karena pelaku Pelecehan Seksual sebagaimana diatur dalam Pasal 6, **Deposit Mentee dinyatakan hangus 100% (seratus persen) dan diberikan seluruhnya sebagai kompensasi kepada korban**, baik korban tersebut adalah MENTOR, Mentee lain, staf SATU TUJU, atau pihak lain dalam ekosistem SATU TUJU. Ketentuan ini meng-override pembagian 80% : 20% sebagaimana diatur dalam ayat (1) dan (3) Pasal ini.
+
+### 8.7 Mentee Enrollment di Luar Universitas Mitra
 
 Apabila Mentee yang dibimbing MENTOR pada akhirnya melakukan Enrollment di **universitas yang BUKAN Universitas Mitra** SATU TUJU, maka:
 
@@ -465,32 +619,32 @@ Apabila Mentee yang dibimbing MENTOR pada akhirnya melakukan Enrollment di **uni
 
 4. MENTOR dilarang menagih atau menerima pembayaran apa pun secara langsung dari Mentee tersebut sebagai bentuk kompensasi atas pekerjaan yang telah dilakukan, sebagaimana diatur dalam Pasal 3.5 ayat (3).
 
-### 7.8 Pembayaran Bagian Deposit yang Hangus
+### 8.8 Pembayaran Bagian Deposit yang Hangus
 
-1. Pembayaran bagian Deposit Mentee yang hangus kepada MENTOR sebagaimana diatur dalam Pasal 7.6 dan 7.7 akan dilakukan paling lambat **30 (tiga puluh) Hari Kerja** sejak tanggal Deposit Mentee dinyatakan hangus berdasarkan Perjanjian Mentee yang relevan;
+1. Pembayaran bagian Deposit Mentee yang hangus kepada MENTOR sebagaimana diatur dalam Pasal 8.6 dan 8.7 akan dilakukan paling lambat **30 (tiga puluh) Hari Kerja** sejak tanggal Deposit Mentee dinyatakan hangus berdasarkan Perjanjian Mentee yang relevan;
 
-2. Pembayaran ini juga merupakan **jumlah bruto (*gross*)** yang dibayarkan SATU TUJU kepada MENTOR, dengan kewajiban perpajakan menjadi tanggung jawab pribadi MENTOR sepenuhnya, sesuai ketentuan Pasal 3.2 ayat (3) dan Pasal 7.2 ayat (5); dan
+2. Pembayaran ini juga merupakan **jumlah bruto (*gross*)** yang dibayarkan SATU TUJU kepada MENTOR, dengan kewajiban perpajakan menjadi tanggung jawab pribadi MENTOR sepenuhnya, sesuai ketentuan Pasal 3.2 ayat (3) dan Pasal 8.2 ayat (5); dan
 
-3. Dalam hal terdapat lebih dari satu Mentor yang membimbing Mentee yang sama (karena realokasi), pembagian 80% bagian Mentor akan ditentukan oleh SATU TUJU dengan mempertimbangkan faktor-faktor sebagaimana diatur dalam Pasal 7.5 ayat (2).
+3. Dalam hal terdapat lebih dari satu Mentor yang membimbing Mentee yang sama (karena realokasi), pembagian 80% bagian Mentor akan ditentukan oleh SATU TUJU dengan mempertimbangkan faktor-faktor sebagaimana diatur dalam Pasal 8.5 ayat (2).
 
-### 7.9 Tidak Ada Hak Lain atas Pembayaran
+### 8.9 Tidak Ada Hak Lain atas Pembayaran
 
 Selain Success Fee dan bagian Deposit Mentee yang hangus sebagaimana diatur dalam Pasal ini, MENTOR **tidak berhak atas pembayaran, kompensasi, *bonus*, *commission share*, *equity*, atau bentuk imbalan finansial lainnya** dari SATU TUJU, kecuali disepakati secara terpisah dan tertulis di luar Perjanjian ini.
 
 ---
 
-## PASAL 8
+## PASAL 9
 ## SISTEM STRIKE DAN PELANGGARAN
 
-### 8.1 Tujuan Sistem Strike
+### 9.1 Tujuan Sistem Strike
 
 SATU TUJU menerapkan **Sistem Strike** sebagai mekanisme penegakan kualitas layanan dan perlindungan kepentingan Mentee, MENTOR, dan SATU TUJU secara bersamaan. Sistem Strike dirancang untuk memberikan kesempatan perbaikan sebelum sanksi yang lebih berat diterapkan.
 
-### 8.2 Kategori Pelanggaran
+### 9.2 Kategori Pelanggaran
 
 Pelanggaran yang dapat memicu Strike dikelompokkan menjadi 3 (tiga) kategori sebagai berikut:
 
-#### 8.2.1 Pelanggaran Ringan
+#### 9.2.1 Pelanggaran Ringan
 
 Pelanggaran Ringan termasuk namun tidak terbatas pada:
 
@@ -506,7 +660,7 @@ e. **Tidak mengaktifkan tl;dv** pada Sesi Mentoring tanpa alasan yang dapat dipe
 
 f. Pelanggaran administratif atau operasional lainnya yang tidak menyebabkan kerugian substantif bagi Mentee.
 
-#### 8.2.2 Pelanggaran Sedang
+#### 9.2.2 Pelanggaran Sedang
 
 Pelanggaran Sedang termasuk namun tidak terbatas pada:
 
@@ -526,11 +680,11 @@ g. Pengulangan Pelanggaran Ringan yang sama setelah mendapatkan teguran formal; 
 
 h. Pelanggaran lainnya yang menyebabkan kerugian moderat bagi Mentee atau SATU TUJU.
 
-#### 8.2.3 Pelanggaran Berat
+#### 9.2.3 Pelanggaran Berat
 
 Pelanggaran Berat termasuk namun tidak terbatas pada:
 
-a. Pelanggaran kewajiban kerahasiaan dan/atau perlindungan data pribadi Mentee sebagaimana diatur dalam Pasal 6 yang menyebabkan *data breach* atau pengungkapan tidak sah, termasuk penyalahgunaan rekaman atau transkrip tl;dv;
+a. Pelanggaran kewajiban kerahasiaan dan/atau perlindungan data pribadi Mentee sebagaimana diatur dalam Pasal 7 yang menyebabkan *data breach* atau pengungkapan tidak sah, termasuk penyalahgunaan rekaman atau transkrip tl;dv;
 
 b. Menerima pembayaran finansial secara langsung dari Mentee, sebagaimana diatur dalam Pasal 3.5 ayat (3);
 
@@ -548,7 +702,7 @@ h. **Mencemarkan nama baik atau menjelekkan SATU TUJU secara publik**, baik mela
 
 i. Pelanggaran lainnya yang menyebabkan kerugian besar bagi Mentee, SATU TUJU, atau pihak ketiga, atau yang bertentangan dengan hukum yang berlaku.
 
-### 8.3 Konsekuensi Strike
+### 9.3 Konsekuensi Strike
 
 Konsekuensi pemberian Strike adalah sebagai berikut:
 
@@ -558,7 +712,7 @@ Konsekuensi pemberian Strike adalah sebagai berikut:
 
 3. **Strike 3**: **Pemutusan permanen kemitraan** dengan MENTOR. MENTOR akan dikeluarkan dari Platform dan tidak dapat bergabung kembali sebagai Mentor SATU TUJU di kemudian hari, kecuali ditentukan lain oleh SATU TUJU.
 
-### 8.4 Pemberian Strike Berdasarkan Kategori
+### 9.4 Pemberian Strike Berdasarkan Kategori
 
 1. **Pelanggaran Ringan** umumnya tidak langsung menghasilkan Strike. SATU TUJU akan memberikan **teguran informal** terlebih dahulu. Pelanggaran Ringan yang sama yang berulang setelah teguran informal dapat dieskalasi menjadi Strike 1;
 
@@ -566,7 +720,7 @@ Konsekuensi pemberian Strike adalah sebagai berikut:
 
 3. **Pelanggaran Berat** dapat secara langsung menghasilkan **Strike 3 (Pemutusan Permanen)** tanpa harus melalui Strike 1 atau Strike 2 terlebih dahulu, sesuai dengan tingkat keparahan dan keputusan SATU TUJU.
 
-### 8.5 Proses Pemberian Strike
+### 9.5 Proses Pemberian Strike
 
 1. **Pemberitahuan Awal**: Apabila SATU TUJU menemukan indikasi pelanggaran, SATU TUJU akan menyampaikan pemberitahuan tertulis kepada MENTOR melalui kanal resmi (email atau *dashboard* Mentor) yang berisi:
 
@@ -594,7 +748,7 @@ Konsekuensi pemberian Strike adalah sebagai berikut:
 
 5. **Hak Banding**: MENTOR berhak mengajukan banding terhadap keputusan Strike dalam waktu **7 (tujuh) Hari Kerja** setelah menerima keputusan, melalui mekanisme penyelesaian sengketa sebagaimana diatur dalam Perjanjian ini. **Pengajuan banding tidak menunda berlakunya keputusan**, dan keputusan Strike tetap berlaku efektif selama proses banding berlangsung.
 
-### 8.6 Pencatatan dan Masa Berlaku Strike
+### 9.6 Pencatatan dan Masa Berlaku Strike
 
 1. Setiap Strike yang diberikan kepada MENTOR akan **dicatat secara formal** dalam catatan internal SATU TUJU dan dapat diakses oleh MENTOR melalui *dashboard* Mentor;
 
@@ -602,7 +756,7 @@ Konsekuensi pemberian Strike adalah sebagai berikut:
 
 3. **Strike 3 (Pemutusan Permanen)** bersifat permanen dan tidak memiliki masa kedaluwarsa.
 
-### 8.7 Pemutusan Tanpa Strike
+### 9.7 Pemutusan Tanpa Strike
 
 SATU TUJU berhak melakukan pemutusan kemitraan **secara langsung tanpa proses Strike** dalam hal:
 
@@ -612,21 +766,21 @@ SATU TUJU berhak melakukan pemutusan kemitraan **secara langsung tanpa proses St
 
 3. MENTOR meninggal dunia, mengalami cacat permanen, atau dinyatakan tidak cakap secara hukum; atau
 
-4. **MENTOR menyatakan secara sukarela** bahwa MENTOR tidak dapat melanjutkan kemitraan ini, baik karena alasan pribadi, profesional, kesehatan, atau alasan lainnya, dengan menyampaikan pemberitahuan tertulis kepada SATU TUJU. Dalam hal ini, pemutusan dianggap sebagai **pemutusan bersama (*mutual termination*)** dan akan diatur lebih lanjut sesuai Pasal 9 Perjanjian ini.
+4. **MENTOR menyatakan secara sukarela** bahwa MENTOR tidak dapat melanjutkan kemitraan ini, baik karena alasan pribadi, profesional, kesehatan, atau alasan lainnya, dengan menyampaikan pemberitahuan tertulis kepada SATU TUJU. Dalam hal ini, pemutusan dianggap sebagai **pemutusan bersama (*mutual termination*)** dan akan diatur lebih lanjut sesuai Pasal 10 Perjanjian ini.
 
 
 ---
 
-## PASAL 9
+## PASAL 10
 ## CUTI, PENGUNDURAN DIRI, DAN PEMUTUSAN KEMITRAAN
 
-### 9.1 Jangka Waktu Perjanjian
+### 10.1 Jangka Waktu Perjanjian
 
-1. Perjanjian ini berlaku terhitung sejak tanggal ditandatangani oleh Para Pihak dan berlaku untuk **jangka waktu tidak terbatas** (*indefinite term*), sampai dengan diakhirinya Perjanjian ini berdasarkan ketentuan Pasal 8 atau Pasal 9 Perjanjian ini;
+1. Perjanjian ini berlaku terhitung sejak tanggal ditandatangani oleh Para Pihak dan berlaku untuk **jangka waktu tidak terbatas** (*indefinite term*), sampai dengan diakhirinya Perjanjian ini berdasarkan ketentuan Pasal 9 atau Pasal 10 Perjanjian ini;
 
 2. SATU TUJU dan MENTOR dapat melakukan peninjauan dan penyesuaian Perjanjian ini secara berkala, dengan persetujuan Para Pihak.
 
-### 9.2 Cuti dan Penangguhan Sementara
+### 10.2 Cuti dan Penangguhan Sementara
 
 1. MENTOR berhak mengajukan **cuti** atau **penangguhan sementara** (*pause*) dari Platform sebagaimana diatur dalam Pasal 4.6, dengan ketentuan tambahan sebagai berikut:
 
@@ -650,7 +804,7 @@ SATU TUJU berhak melakukan pemutusan kemitraan **secara langsung tanpa proses St
 
 5. **Kembali Aktif**: MENTOR dapat kembali aktif setelah masa cuti berakhir dengan menyampaikan pemberitahuan tertulis kepada SATU TUJU paling lambat 7 (tujuh) Hari Kerja sebelum tanggal kembali aktif, tanpa memerlukan proses *re-onboarding* ulang sepanjang Perjanjian ini masih berlaku.
 
-### 9.3 Pengunduran Diri Mentor
+### 10.3 Pengunduran Diri Mentor
 
 1. MENTOR berhak mengundurkan diri dari kemitraan ini setiap saat dengan menyampaikan **pemberitahuan tertulis** kepada SATU TUJU paling lambat **30 (tiga puluh) Hari Kalender** sebelum tanggal pengunduran diri yang diinginkan;
 
@@ -662,11 +816,11 @@ SATU TUJU berhak melakukan pemutusan kemitraan **secara langsung tanpa proses St
 
     c. Menyelesaikan seluruh administrasi yang masih tertunda, termasuk pengisian *session log* dan laporan progres; dan
 
-    d. Menjalankan kewajiban kerahasiaan dan pengembalian Informasi Rahasia sebagaimana diatur dalam Pasal 6.
+    d. Menjalankan kewajiban kerahasiaan dan pengembalian Informasi Rahasia sebagaimana diatur dalam Pasal 7.
 
 3. **Pengunduran Diri dalam Keadaan Khusus**: Dalam hal MENTOR mengundurkan diri karena alasan kesehatan, keadaan keluarga, atau keadaan darurat lainnya yang tidak memungkinkan menjalankan masa pemberitahuan 30 Hari Kalender, SATU TUJU dapat menerima pengunduran diri lebih cepat dengan tetap menjaga kepentingan Mentee yang sedang aktif.
 
-### 9.4 Pemutusan Bersama (*Mutual Termination*)
+### 10.4 Pemutusan Bersama (*Mutual Termination*)
 
 1. Para Pihak dapat sewaktu-waktu sepakat untuk mengakhiri Perjanjian ini secara bersama-sama dengan menandatangani **Berita Acara Pemutusan Bersama** yang memuat:
 
@@ -680,21 +834,21 @@ SATU TUJU berhak melakukan pemutusan kemitraan **secara langsung tanpa proses St
 
 2. Pemutusan Bersama dapat dilakukan tanpa masa pemberitahuan, dengan tanggal efektif sebagaimana disepakati Para Pihak.
 
-### 9.5 Pemutusan oleh Satu Tuju
+### 10.5 Pemutusan oleh Satu Tuju
 
 SATU TUJU berhak mengakhiri Perjanjian ini secara sepihak dalam hal:
 
-1. **Strike 3 (Pemutusan Permanen)** sebagaimana diatur dalam Pasal 8;
+1. **Strike 3 (Pemutusan Permanen)** sebagaimana diatur dalam Pasal 9;
 
-2. **Pemutusan tanpa Strike** sebagaimana diatur dalam Pasal 8.7;
+2. **Pemutusan tanpa Strike** sebagaimana diatur dalam Pasal 9.7;
 
 3. **Pelanggaran material** atas Perjanjian ini yang tidak dapat diperbaiki dalam waktu 30 (tiga puluh) Hari Kalender setelah pemberitahuan tertulis dari SATU TUJU;
 
-4. **Penghentian operasional Platform atau bisnis SATU TUJU** secara keseluruhan, dengan pemberitahuan tertulis paling lambat 30 (tiga puluh) Hari Kalender. Dalam hal ini, MENTOR tetap berhak atas Success Fee untuk Mentee yang masih dalam *pipeline* sesuai Pasal 7, sepanjang Mentee tersebut mencapai Enrollment dan SATU TUJU menerima komisi terkait; atau
+4. **Penghentian operasional Platform atau bisnis SATU TUJU** secara keseluruhan, dengan pemberitahuan tertulis paling lambat 30 (tiga puluh) Hari Kalender. Dalam hal ini, MENTOR tetap berhak atas Success Fee untuk Mentee yang masih dalam *pipeline* sesuai Pasal 8, sepanjang Mentee tersebut mencapai Enrollment dan SATU TUJU menerima komisi terkait; atau
 
 5. **Restrukturisasi material atas program mentoring** yang menyebabkan posisi MENTOR tidak lagi tersedia, dengan pemberitahuan tertulis paling lambat 30 (tiga puluh) Hari Kalender.
 
-### 9.6 Konsekuensi Pemutusan
+### 10.6 Konsekuensi Pemutusan
 
 Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai berikut:
 
@@ -704,17 +858,17 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
     b. MENTOR yang berhenti wajib mendukung proses transisi secara wajar, termasuk *briefing* Mentor pengganti dan serah terima dokumentasi; dan
 
-    c. Pembagian Success Fee untuk Mentee yang sedang aktif diatur sesuai Pasal 7.5 (Realokasi Mentor).
+    c. Pembagian Success Fee untuk Mentee yang sedang aktif diatur sesuai Pasal 8.5 (Realokasi Mentor).
 
 2. **Success Fee yang Masih dalam Pipeline**:
 
-    a. MENTOR tetap berhak atas Success Fee untuk Mentee yang **telah mencapai Enrollment** sebelum tanggal efektif pemutusan, sepanjang seluruh syarat pembayaran dalam Pasal 7.3 terpenuhi;
+    a. MENTOR tetap berhak atas Success Fee untuk Mentee yang **telah mencapai Enrollment** sebelum tanggal efektif pemutusan, sepanjang seluruh syarat pembayaran dalam Pasal 8.3 terpenuhi;
 
-    b. **Pengecualian**: Dalam hal pemutusan disebabkan oleh Strike 3 atau pemutusan tanpa Strike yang berkaitan dengan **pelanggaran integritas, keamanan data, kerahasiaan, atau tindak pidana** (termasuk namun tidak terbatas pada Pelanggaran Berat huruf a, b, c, d, e, f, dan g sebagaimana diatur dalam Pasal 8.2.3), MENTOR tidak berhak atas Success Fee untuk Mentee yang sudah maupun belum mencapai Enrollment, dan SATU TUJU berhak menarik kembali Success Fee yang telah dibayarkan secara proporsional;
+    b. **Pengecualian**: Dalam hal pemutusan disebabkan oleh Strike 3 atau pemutusan tanpa Strike yang berkaitan dengan **pelanggaran integritas, keamanan data, kerahasiaan, atau tindak pidana** (termasuk namun tidak terbatas pada Pelanggaran Berat huruf a, b, c, d, e, f, dan g sebagaimana diatur dalam Pasal 9.2.3), MENTOR tidak berhak atas Success Fee untuk Mentee yang sudah maupun belum mencapai Enrollment, dan SATU TUJU berhak menarik kembali Success Fee yang telah dibayarkan secara proporsional;
 
     c. Untuk pemutusan akibat pelanggaran lain di luar yang diatur dalam huruf (b) di atas, MENTOR tetap berhak atas Success Fee untuk Mentee yang telah mencapai Enrollment sebelum tanggal efektif pemutusan;
 
-    d. Untuk Mentee yang **belum mencapai Enrollment** pada tanggal efektif pemutusan, hak atas Success Fee mengikuti ketentuan Pasal 7.5 (Realokasi Mentor); dan
+    d. Untuk Mentee yang **belum mencapai Enrollment** pada tanggal efektif pemutusan, hak atas Success Fee mengikuti ketentuan Pasal 8.5 (Realokasi Mentor); dan
 
     e. Pembayaran Success Fee yang masih dalam *pipeline* dan masih menjadi hak MENTOR tetap dilakukan oleh SATU TUJU sesuai jadwal pembayaran yang berlaku, walaupun Perjanjian telah berakhir.
 
@@ -722,13 +876,13 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
     a. Akses MENTOR ke Platform, *dashboard* Mentor, dan rekaman tl;dv akan dinonaktifkan pada tanggal efektif pemutusan, kecuali sebatas yang diperlukan untuk menyelesaikan kewajiban transisi;
 
-    b. MENTOR wajib mengembalikan atau memusnahkan Informasi Rahasia sebagaimana diatur dalam Pasal 6.5; dan
+    b. MENTOR wajib mengembalikan atau memusnahkan Informasi Rahasia sebagaimana diatur dalam Pasal 7.5; dan
 
     c. Hak penggunaan logo, gelar "Mentor Satu Tuju", dan atribusi terkait SATU TUJU sebagaimana diatur dalam Pasal 4.4 ayat (4) berakhir secara otomatis.
 
 4. **Kewajiban yang Tetap Berlaku**:
 
-    a. Kewajiban kerahasiaan sebagaimana diatur dalam Pasal 6;
+    a. Kewajiban kerahasiaan sebagaimana diatur dalam Pasal 7;
 
     b. Larangan pengalihan Mentee sebagaimana diatur dalam Pasal 3.6 ayat (2);
 
@@ -738,10 +892,10 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
 ---
 
-## PASAL 10
+## PASAL 11
 ## HAK KEKAYAAN INTELEKTUAL
 
-### 10.1 Hak Kekayaan Intelektual Satu Tuju
+### 11.1 Hak Kekayaan Intelektual Satu Tuju
 
 1. Seluruh **Hak Kekayaan Intelektual** (HKI) yang dimiliki SATU TUJU sebelum atau selama berlakunya Perjanjian ini, termasuk namun tidak terbatas pada:
 
@@ -765,19 +919,19 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
 2. MENTOR mengakui bahwa keterlibatan MENTOR dalam Perjanjian ini **tidak memberikan kepemilikan, lisensi, atau hak HKI apa pun** atas materi-materi sebagaimana dimaksud pada ayat (1), kecuali sebatas hak penggunaan terbatas yang diberikan SATU TUJU semata-mata untuk pelaksanaan kewajiban MENTOR berdasarkan Perjanjian ini.
 
-### 10.2 Hak Kekayaan Intelektual Mentor
+### 11.2 Hak Kekayaan Intelektual Mentor
 
 1. SATU TUJU mengakui bahwa **pengalaman pribadi, *expertise*, *insight*, dan pengetahuan profesional MENTOR** yang diperoleh sebelum bergabung dengan SATU TUJU adalah dan tetap menjadi milik MENTOR;
 
 2. MENTOR berhak menggunakan pengalaman, *expertise*, dan *insight* pribadi tersebut untuk kegiatan profesional di luar Perjanjian ini, sepanjang penggunaannya tidak melanggar:
 
-    a. Kewajiban kerahasiaan sebagaimana diatur dalam Pasal 6;
+    a. Kewajiban kerahasiaan sebagaimana diatur dalam Pasal 7;
 
     b. Larangan pengalihan Mentee sebagaimana diatur dalam Pasal 3.6 ayat (2); dan
 
-    c. Penggunaan HKI SATU TUJU sebagaimana diatur dalam Pasal 10.1.
+    c. Penggunaan HKI SATU TUJU sebagaimana diatur dalam Pasal 11.1.
 
-### 10.3 Materi yang Dihasilkan Selama Mentoring
+### 11.3 Materi yang Dihasilkan Selama Mentoring
 
 1. **Materi yang dihasilkan MENTOR** dalam pelaksanaan kewajiban berdasarkan Perjanjian ini, termasuk namun tidak terbatas pada:
 
@@ -793,7 +947,7 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
 2. **Materi yang merupakan dokumen aplikasi Mentee** (*motivation letter*, CV, *personal statement*, dan dokumen pribadi lainnya) tetap menjadi **milik Mentee**, dan MENTOR maupun SATU TUJU hanya memiliki hak untuk meninjau dan membantu Mentee dalam pengembangan dokumen tersebut.
 
-### 10.4 Lisensi Penggunaan
+### 11.4 Lisensi Penggunaan
 
 1. **Lisensi dari SATU TUJU kepada MENTOR**: Selama berlakunya Perjanjian ini, SATU TUJU memberikan lisensi terbatas, non-eksklusif, tidak dapat dialihkan, dan dapat ditarik kembali kepada MENTOR untuk:
 
@@ -809,9 +963,9 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
     b. Menggunakan testimoni, kutipan, atau cerita yang disampaikan MENTOR secara sukarela kepada SATU TUJU; dan
 
-    c. Mengintegrasikan materi yang dihasilkan MENTOR sebagaimana diatur dalam Pasal 10.3 ayat (1) ke dalam *toolkit* dan kurikulum SATU TUJU.
+    c. Mengintegrasikan materi yang dihasilkan MENTOR sebagaimana diatur dalam Pasal 11.3 ayat (1) ke dalam *toolkit* dan kurikulum SATU TUJU.
 
-### 10.5 Larangan Penggunaan HKI Tanpa Izin
+### 11.5 Larangan Penggunaan HKI Tanpa Izin
 
 1. MENTOR dilarang menggunakan, mereplikasi, memodifikasi, atau mendistribusikan HKI SATU TUJU di luar lingkup Perjanjian ini tanpa persetujuan tertulis dari SATU TUJU;
 
@@ -822,10 +976,10 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
 ---
 
-## PASAL 11
+## PASAL 12
 ## KEADAAN KAHAR (*FORCE MAJEURE*)
 
-### 11.1 Definisi Keadaan Kahar
+### 12.1 Definisi Keadaan Kahar
 
 **"Keadaan Kahar"** berarti suatu peristiwa atau keadaan yang terjadi di luar kemampuan, kendali, kesalahan, atau kelalaian Para Pihak, yang tidak dapat diperkirakan dan/atau tidak dapat dihindari, yang menyebabkan salah satu atau kedua Pihak tidak dapat melaksanakan kewajibannya berdasarkan Perjanjian ini, baik secara sebagian maupun keseluruhan, termasuk namun tidak terbatas pada:
 
@@ -849,19 +1003,19 @@ Setelah berakhirnya Perjanjian karena alasan apa pun, berlaku ketentuan sebagai 
 
 10. Keadaan lainnya yang secara wajar dapat dikategorikan sebagai *force majeure* berdasarkan hukum yang berlaku di Republik Indonesia.
 
-### 11.2 Pengecualian
+### 12.2 Pengecualian
 
 Keadaan-keadaan berikut **tidak termasuk** dalam Keadaan Kahar:
 
 1. Kesulitan finansial atau kondisi *cashflow* salah satu Pihak;
 
-2. Perubahan prioritas pribadi atau profesional MENTOR (kecuali dalam keadaan darurat kesehatan sebagaimana diatur dalam Pasal 11.1 ayat 9);
+2. Perubahan prioritas pribadi atau profesional MENTOR (kecuali dalam keadaan darurat kesehatan sebagaimana diatur dalam Pasal 12.1 ayat 9);
 
 3. Keterlambatan pemenuhan kewajiban yang disebabkan oleh kelalaian atau kurangnya persiapan dari pihak yang bersangkutan; dan
 
 4. Kegagalan teknis pada perangkat atau koneksi pribadi salah satu Pihak yang dapat diatasi dengan upaya wajar.
 
-### 11.3 Pemberitahuan Keadaan Kahar
+### 12.3 Pemberitahuan Keadaan Kahar
 
 1. Pihak yang mengalami Keadaan Kahar wajib **memberitahukan secara tertulis** kepada Pihak lainnya paling lambat **7 (tujuh) Hari Kalender** sejak Keadaan Kahar terjadi atau sejak Pihak tersebut secara wajar menyadari telah terjadi Keadaan Kahar, kecuali apabila Keadaan Kahar itu sendiri menghalangi pemberitahuan tepat waktu;
 
@@ -877,7 +1031,7 @@ Keadaan-keadaan berikut **tidak termasuk** dalam Keadaan Kahar:
 
 3. Kegagalan memberikan pemberitahuan dalam waktu yang wajar dapat menyebabkan Pihak yang bersangkutan **kehilangan haknya** untuk mengandalkan klausul Keadaan Kahar atas peristiwa tersebut.
 
-### 11.4 Konsekuensi Keadaan Kahar
+### 12.4 Konsekuensi Keadaan Kahar
 
 1. **Penangguhan Kewajiban**: Selama berlangsungnya Keadaan Kahar, kewajiban Pihak yang terdampak ditangguhkan sebatas yang relevan dengan Keadaan Kahar tersebut, tanpa dianggap sebagai pelanggaran Perjanjian;
 
@@ -887,20 +1041,20 @@ Keadaan-keadaan berikut **tidak termasuk** dalam Keadaan Kahar:
 
 4. **Pengaruh Terhadap Success Fee**: Keadaan Kahar tidak menghapus hak MENTOR atas Success Fee untuk Mentee yang sudah mencapai Enrollment, namun jadwal pembayaran dapat disesuaikan apabila Keadaan Kahar mempengaruhi penerimaan komisi dari Universitas Mitra atau Agensi Resmi.
 
-### 11.5 Pemutusan Karena Keadaan Kahar Berkepanjangan
+### 12.5 Pemutusan Karena Keadaan Kahar Berkepanjangan
 
 Apabila Keadaan Kahar berlangsung secara terus-menerus selama lebih dari **3 (tiga) bulan**, salah satu Pihak berhak mengakhiri Perjanjian ini secara sepihak dengan menyampaikan pemberitahuan tertulis kepada Pihak lainnya, tanpa kewajiban ganti rugi atas pemutusan tersebut. Hak-hak yang sudah ada sebelum Keadaan Kahar, termasuk hak atas Success Fee untuk Mentee yang sudah mencapai Enrollment, tetap berlaku.
 
 ---
 
-## PASAL 12
+## PASAL 13
 ## PENYELESAIAN SENGKETA DAN HUKUM YANG BERLAKU
 
-### 12.1 Hukum yang Berlaku
+### 13.1 Hukum yang Berlaku
 
 Perjanjian ini dibuat, ditafsirkan, dan dilaksanakan berdasarkan **hukum Negara Republik Indonesia**, termasuk namun tidak terbatas pada Kitab Undang-Undang Hukum Perdata, Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi, dan peraturan perundang-undangan lainnya yang relevan.
 
-### 12.2 Iktikad Baik dan Penyelesaian Internal
+### 13.2 Iktikad Baik dan Penyelesaian Internal
 
 1. Para Pihak sepakat bahwa setiap perselisihan, perbedaan pendapat, atau sengketa yang timbul dari atau sehubungan dengan Perjanjian ini akan diselesaikan terlebih dahulu secara **musyawarah dan iktikad baik** antara Para Pihak;
 
@@ -916,9 +1070,9 @@ Perjanjian ini dibuat, ditafsirkan, dan dilaksanakan berdasarkan **hukum Negara 
 
 3. **Periode Penyelesaian Internal**: Para Pihak akan berupaya menyelesaikan sengketa secara musyawarah dalam waktu **30 (tiga puluh) Hari Kalender** sejak tanggal pemberitahuan sengketa diterima oleh Pihak lainnya.
 
-### 12.3 Mediasi
+### 13.3 Mediasi
 
-1. Apabila sengketa tidak dapat diselesaikan secara musyawarah dalam waktu sebagaimana diatur dalam Pasal 12.2 ayat (3), Para Pihak **wajib menempuh mediasi** sebelum menempuh jalur hukum formal;
+1. Apabila sengketa tidak dapat diselesaikan secara musyawarah dalam waktu sebagaimana diatur dalam Pasal 13.2 ayat (3), Para Pihak **wajib menempuh mediasi** sebelum menempuh jalur hukum formal;
 
 2. **Penunjukan Mediator**: Para Pihak akan secara bersama-sama menunjuk seorang mediator yang netral dan tidak memiliki konflik kepentingan dengan Para Pihak. Apabila Para Pihak tidak mencapai kesepakatan mengenai mediator dalam waktu 14 (empat belas) Hari Kalender, mediator akan ditunjuk oleh **Pusat Mediasi Nasional (PMN)** atau lembaga mediasi resmi lainnya yang disepakati Para Pihak;
 
@@ -928,19 +1082,19 @@ Perjanjian ini dibuat, ditafsirkan, dan dilaksanakan berdasarkan **hukum Negara 
 
 5. **Periode Mediasi**: Mediasi diharapkan selesai dalam waktu paling lambat **60 (enam puluh) Hari Kalender** sejak penunjukan mediator. Apabila mediasi tidak menghasilkan kesepakatan dalam jangka waktu tersebut, Para Pihak berhak melanjutkan ke tahap penyelesaian sengketa berikutnya.
 
-### 12.4 Penyelesaian Sengketa di Pengadilan
+### 13.4 Penyelesaian Sengketa di Pengadilan
 
-1. Apabila mediasi sebagaimana diatur dalam Pasal 12.3 tidak menghasilkan penyelesaian, Para Pihak sepakat untuk menyelesaikan sengketa melalui **Pengadilan Negeri Jakarta Pusat** sebagai forum yang berwenang dan eksklusif;
+1. Apabila mediasi sebagaimana diatur dalam Pasal 13.3 tidak menghasilkan penyelesaian, Para Pihak sepakat untuk menyelesaikan sengketa melalui **Pengadilan Negeri Jakarta Pusat** sebagai forum yang berwenang dan eksklusif;
 
 2. Para Pihak dengan ini melepaskan hak untuk mengajukan keberatan atas yurisdiksi Pengadilan Negeri Jakarta Pusat dan menyatakan bahwa Pengadilan Negeri Jakarta Pusat memiliki yurisdiksi penuh atas setiap sengketa yang timbul dari atau sehubungan dengan Perjanjian ini, termasuk dalam hal MENTOR berdomisili di luar wilayah hukum Indonesia.
 
-### 12.5 Pelaksanaan Kewajiban Selama Sengketa
+### 13.5 Pelaksanaan Kewajiban Selama Sengketa
 
 1. Selama berlangsungnya proses penyelesaian sengketa berdasarkan Pasal ini, Para Pihak wajib **tetap melaksanakan kewajiban** masing-masing berdasarkan Perjanjian ini, kecuali kewajiban yang menjadi pokok sengketa, sepanjang tidak bertentangan dengan kepentingan Mentee yang sedang aktif;
 
 2. Khusus untuk sengketa yang berkaitan dengan keberlangsungan mentoring, Para Pihak akan memprioritaskan kepentingan Mentee dengan memastikan kelangsungan mentoring tidak terganggu, termasuk dengan realokasi Mentor sementara apabila diperlukan.
 
-### 12.6 Notifikasi dan Komunikasi
+### 13.6 Notifikasi dan Komunikasi
 
 1. Setiap pemberitahuan, klaim, atau komunikasi formal berdasarkan Perjanjian ini dianggap sah apabila disampaikan melalui:
 
@@ -958,20 +1112,20 @@ Perjanjian ini dibuat, ditafsirkan, dan dilaksanakan berdasarkan **hukum Negara 
 
 ---
 
-## PASAL 13
+## PASAL 14
 ## KETENTUAN PENUTUP
 
-### 13.1 Keseluruhan Perjanjian (*Entire Agreement*)
+### 14.1 Keseluruhan Perjanjian (*Entire Agreement*)
 
 Perjanjian ini, beserta seluruh Lampiran yang merupakan bagian tidak terpisahkan, merupakan **keseluruhan perjanjian** antara Para Pihak sehubungan dengan kemitraan mentor di SATU TUJU, dan **menggantikan** seluruh diskusi, korespondensi, kesepakatan lisan maupun tertulis, serta perjanjian-perjanjian sebelumnya antara Para Pihak mengenai pokok perjanjian yang sama.
 
-### 13.2 Perubahan dan Amandemen
+### 14.2 Perubahan dan Amandemen
 
 1. Setiap perubahan, penambahan, atau amandemen atas Perjanjian ini hanya berlaku sah apabila dibuat secara **tertulis** dan ditandatangani oleh Para Pihak, baik dalam bentuk dokumen amandemen terpisah maupun adendum yang dilampirkan pada Perjanjian ini;
 
-2. **Pengecualian**: Pembaruan terhadap **Lampiran A (Kurikulum Mentoring)** dan **Lampiran B (Daftar Tarif Success Fee)** dapat dilakukan oleh SATU TUJU secara sepihak dengan pemberitahuan tertulis kepada MENTOR sebagaimana diatur dalam Pasal 7.2 ayat (4), dan pembaruan tersebut akan menggantikan Lampiran sebelumnya tanpa memerlukan tanda tangan ulang.
+2. **Pengecualian**: Pembaruan terhadap **Lampiran A (Kurikulum Mentoring)** dan **Lampiran B (Daftar Tarif Success Fee)** dapat dilakukan oleh SATU TUJU secara sepihak dengan pemberitahuan tertulis kepada MENTOR sebagaimana diatur dalam Pasal 8.2 ayat (4), dan pembaruan tersebut akan menggantikan Lampiran sebelumnya tanpa memerlukan tanda tangan ulang.
 
-### 13.3 Keberlakuan Sebagian (*Severability*)
+### 14.3 Keberlakuan Sebagian (*Severability*)
 
 Apabila terdapat satu atau lebih ketentuan dalam Perjanjian ini yang dinyatakan **tidak sah, tidak berlaku, atau tidak dapat diberlakukan** oleh pengadilan atau otoritas yang berwenang, maka:
 
@@ -981,7 +1135,7 @@ Apabila terdapat satu atau lebih ketentuan dalam Perjanjian ini yang dinyatakan 
 
 3. Para Pihak akan berupaya secara wajar untuk menggantikan ketentuan yang tidak berlaku tersebut dengan ketentuan baru yang sah dan mencerminkan maksud awal Para Pihak.
 
-### 13.4 Pelepasan Hak (*Waiver*)
+### 14.4 Pelepasan Hak (*Waiver*)
 
 1. Tidak terpenuhinya atau keterlambatan salah satu Pihak dalam menggunakan hak atau kewenangannya berdasarkan Perjanjian ini **tidak dianggap sebagai pelepasan** atas hak atau kewenangan tersebut;
 
@@ -989,28 +1143,28 @@ Apabila terdapat satu atau lebih ketentuan dalam Perjanjian ini yang dinyatakan 
 
 3. Pelepasan hak atas suatu pelanggaran tertentu tidak dianggap sebagai pelepasan hak atas pelanggaran lain yang sejenis maupun yang berbeda di kemudian hari.
 
-### 13.5 Pengalihan Perjanjian (*Assignment*)
+### 14.5 Pengalihan Perjanjian (*Assignment*)
 
 1. **Pengalihan oleh MENTOR**: MENTOR **tidak berhak mengalihkan, mensubstitusi, atau memindahkan** hak dan kewajibannya berdasarkan Perjanjian ini kepada pihak ketiga mana pun, kecuali dengan persetujuan tertulis dari SATU TUJU;
 
 2. **Pengalihan oleh SATU TUJU**: SATU TUJU berhak mengalihkan hak dan kewajibannya berdasarkan Perjanjian ini kepada **entitas afiliasi, perusahaan pengganti karena merger, akuisisi, restrukturisasi, atau pihak ketiga** yang mengambil alih bisnis SATU TUJU, dengan pemberitahuan tertulis kepada MENTOR.
 
-### 13.6 Hubungan Para Pihak
+### 14.6 Hubungan Para Pihak
 
 Tidak ada ketentuan dalam Perjanjian ini yang dapat ditafsirkan sebagai menciptakan **hubungan kerja, persekutuan (*partnership* dalam arti hukum perseroan), *joint venture*, keagenan, atau hubungan fidusia** antara Para Pihak, di luar hubungan kemitraan independen sebagaimana telah ditegaskan dalam Pasal 3.2.
 
-### 13.7 Bahasa Perjanjian
+### 14.7 Bahasa Perjanjian
 
 Perjanjian ini dibuat dalam **Bahasa Indonesia**. Apabila di kemudian hari Perjanjian ini diterjemahkan ke dalam bahasa lain untuk keperluan referensi, **versi Bahasa Indonesia** yang akan berlaku dan mengikat secara hukum dalam hal terjadi perbedaan penafsiran.
 
-### 13.8 Lampiran
+### 14.8 Lampiran
 
 Lampiran-lampiran berikut merupakan bagian tidak terpisahkan dari Perjanjian ini:
 
 1. **Lampiran A**: Kurikulum Mentoring (10 Sesi)
 2. **Lampiran B**: Daftar Tarif Success Fee per Universitas Mitra dan Program Studi
 
-### 13.9 Pernyataan dan Jaminan Para Pihak
+### 14.9 Pernyataan dan Jaminan Para Pihak
 
 Para Pihak dengan ini menyatakan dan menjamin bahwa:
 
@@ -1022,7 +1176,7 @@ Para Pihak dengan ini menyatakan dan menjamin bahwa:
 
 4. Masing-masing Pihak telah **membaca, memahami, dan menyetujui** seluruh isi Perjanjian ini sebelum menandatanganinya.
 
-### 13.10 Penandatanganan dan Salinan
+### 14.10 Penandatanganan dan Salinan
 
 1. Perjanjian ini dibuat dalam **2 (dua) rangkap asli**, masing-masing memiliki kekuatan hukum yang sama, dan dipegang oleh masing-masing Pihak;
 

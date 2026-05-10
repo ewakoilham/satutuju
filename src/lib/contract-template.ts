@@ -20,7 +20,7 @@ import path from "path";
 import { formatSigningDatePhrase } from "@/lib/datetime-id";
 
 /** Pinned at sign time so future template edits don't mutate signed records. */
-export const CONTRACT_VERSION = "2026.05.11";
+export const CONTRACT_VERSION = "2026.05.12";
 
 /**
  * Changelog of contract template versions, oldest first. Each time
@@ -54,6 +54,17 @@ export const CONTRACT_CHANGELOG: ContractChangelogEntry[] = [
       "Sebelumnya kolom PIHAK PERTAMA hanya berisi garis tanda tangan kosong.",
       "Sesuai Pasal 13.10 ayat (4), kontrak baru fully effective ketika kedua pihak telah menandatangani — penambahan tanda tangan Razak sebagai Direktur Utama membuat status hukum kontrak menjadi tertanda tangan dari kedua pihak.",
       "Tidak ada perubahan substantif lain pada isi Pasal 1 sampai Pasal 13.",
+    ],
+  },
+  {
+    version: "2026.05.12",
+    date: "2026-05-12",
+    summary:
+      "Penambahan Pasal 6 — Kebijakan Anti-Pelecehan Seksual dan Perlindungan Martabat.",
+    details: [
+      "Pasal 6 baru menetapkan kebijakan zero-tolerance terhadap pelecehan seksual, definisi pelecehan (verbal/non-verbal/fisik/digital/penyalahgunaan kuasa), larangan khusus dalam konteks mentoring (mis. larangan menginisiasi hubungan romantis dengan Mentee), mekanisme pelaporan (kanal report@satutuju.id, bisa anonim, tanpa kedaluwarsa), tindakan SATU TUJU kepada korban (perlindungan kerahasiaan, anti-retaliasi, pemisahan segera, fasilitasi rujukan), dan konsekuensi kepada pelaku (Strike 3 langsung untuk MENTOR, larangan permanen, ganti rugi).",
+      "Sebagai konsekuensi penambahan Pasal 6 baru, seluruh Pasal yang sebelumnya bernomor 6–13 dinaikkan satu angka menjadi Pasal 7–14. Cross-reference internal dalam dokumen turut disesuaikan.",
+      "Selaras dengan UU No. 12 Tahun 2022 tentang Tindak Pidana Kekerasan Seksual (UU TPKS).",
     ],
   },
   // ── Tambahkan entri baru di SINI saat menaikkan CONTRACT_VERSION ──
