@@ -135,7 +135,35 @@ export default function MentorContractPage() {
     );
   }
 
-  if (!data) return null;
+  // Fail-loud fallback: if the API returned an error or the response shape
+  // is unexpected, surface it instead of silently rendering nothing.
+  if (!data) {
+    return (
+      <div className="px-4 md:px-8 py-10 max-w-2xl mx-auto">
+        <div className="rounded-xl border border-danger/40 bg-danger-light/40 p-5">
+          <h2 className="font-semibold text-danger">
+            Tidak dapat memuat data kontrak
+          </h2>
+          <p className="mt-1 text-sm text-foreground">
+            {error ?? "Terjadi kesalahan saat menghubungi server."}
+          </p>
+          <p className="mt-2 text-xs text-text-muted">
+            Penyebab paling umum: tabel <code>MentorContract</code> belum
+            dibuat di database. Jalankan SQL di{" "}
+            <code>prisma/sql/2026-05-10_mentor_contracts.sql</code> atau{" "}
+            <code>npx prisma db push</code>, lalu muat ulang halaman ini.
+          </p>
+          <button
+            type="button"
+            className="mt-3 btn-ghost"
+            onClick={reload}
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-4xl mx-auto">

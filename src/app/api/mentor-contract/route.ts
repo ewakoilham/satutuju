@@ -37,6 +37,15 @@ type ContractRow = {
   updatedAt: string;
 };
 
+/**
+ * If the SQL migration at prisma/sql/2026-05-10_mentor_contracts.sql hasn't
+ * been applied yet, Supabase returns code "42P01" (undefined_table) or
+ * "PGRST205" (schema cache miss). We treat both as "no contract" so the
+ * page can still render (mentor sees the identity-incomplete flow) and an
+ * unmistakable warning is logged for the operator.
+ */
+const MISSING_TABLE_CODES = new Set(["42P01", "PGRST205"]);
+
 async function fetchContract(userId: string): Promise<ContractRow | null> {
   const { data, error } = await supabase
     .from("MentorContract")
@@ -44,6 +53,12 @@ async function fetchContract(userId: string): Promise<ContractRow | null> {
     .eq("userId", userId)
     .maybeSingle();
   if (error) {
+    if (MISSING_TABLE_CODES.has(error.code)) {
+      console.warn(
+        "[mentor-contract] MentorContract table missing — apply prisma/sql/2026-05-10_mentor_contracts.sql or run `npx prisma db push`. Continuing with no contract.",
+      );
+      return null;
+    }
     console.error("MentorContract fetch error:", error);
     throw new Error(error.message);
   }
@@ -57,6 +72,20 @@ async function fetchProfile(userId: string): Promise<PartialIdentity> {
     .eq("userId", userId)
     .maybeSingle();
   if (error && error.code !== "PGRST116") {
+    // Postgres "42703 undefined_column" (or PostgREST's PGRST204) means the
+    // identity columns haven't been added yet. Fall back to the legacy
+    // selection so the page still renders.
+    if (error.code === "42703" || error.code === "PGRST204") {
+      console.warn(
+        "[mentor-contract] MentorProfile identity columns missing — apply prisma/sql/2026-05-10_mentor_contracts.sql. Falling back to fullName only.",
+      );
+      const fallback = await supabase
+        .from("MentorProfile")
+        .select("fullName")
+        .eq("userId", userId)
+        .maybeSingle();
+      return (fallback.data as PartialIdentity | null) ?? {};
+    }
     console.error("MentorProfile fetch error:", error);
     throw new Error(error.message);
   }
