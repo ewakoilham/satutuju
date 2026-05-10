@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   CONTRACT_VERSION,
   IDENTITY_FIELDS,
+  buildContractToc,
   changelogSince,
   computeSignatureHash,
   getContractBody,
@@ -162,7 +163,8 @@ export async function GET() {
       contractNumber: contract?.contractNumber ?? "[BELUM DI-ASSIGN]",
       signedAt: contract?.signedAt ? new Date(contract.signedAt) : new Date(),
     });
-    const previewHtml = await marked.parse(interpolated);
+    const rawHtml = await marked.parse(interpolated);
+    const { html: previewHtml, toc: previewToc } = buildContractToc(rawHtml);
 
     // Version drift detection: an admin update bumps CONTRACT_VERSION;
     // any signed contract whose templateVersion lags becomes "needsResign".
@@ -193,6 +195,7 @@ export async function GET() {
       needsResign,
       changelogSinceSigned,
       previewHtml,
+      previewToc,
     });
   } catch (e) {
     return NextResponse.json(

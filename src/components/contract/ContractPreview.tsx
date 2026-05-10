@@ -1,45 +1,59 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 interface ContractPreviewProps {
   /** Pre-rendered HTML produced server-side via marked.parse(). */
   html: string;
   /** Fired the first time the user scrolls within ~24px of the bottom. */
   onScrolledToEnd?: () => void;
+  /** Tailwind utility override for the scroll container. */
+  className?: string;
 }
 
 /**
- * Scrollable contract reader. The parent feeds in already-sanitised HTML
- * (rendered server-side from the interpolated markdown) and we own only
- * the layout, typography, and the "scrolled to end" detection.
+ * Scrollable contract reader. Forwards a ref to the inner scroll container
+ * so a sibling component (e.g. <ContractTOC />) can drive scroll-to-anchor
+ * navigation inside it.
  */
-export default function ContractPreview({ html, onScrolledToEnd }: ContractPreviewProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const firedRef = useRef(false);
+const ContractPreview = forwardRef<HTMLDivElement, ContractPreviewProps>(
+  function ContractPreview(
+    { html, onScrolledToEnd, className },
+    ref,
+  ) {
+    const innerRef = useRef<HTMLDivElement>(null);
+    const firedRef = useRef(false);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !onScrolledToEnd) return;
-    function check() {
-      if (!el || firedRef.current) return;
-      const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-      if (remaining <= 24) {
-        firedRef.current = true;
-        onScrolledToEnd?.();
+    useImperativeHandle(ref, () => innerRef.current as HTMLDivElement, []);
+
+    useEffect(() => {
+      const el = innerRef.current;
+      if (!el || !onScrolledToEnd) return;
+      function check() {
+        if (!el || firedRef.current) return;
+        const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (remaining <= 24) {
+          firedRef.current = true;
+          onScrolledToEnd?.();
+        }
       }
-    }
-    el.addEventListener("scroll", check, { passive: true });
-    // Run once in case content is short enough to already be at end.
-    check();
-    return () => el.removeEventListener("scroll", check);
-  }, [onScrolledToEnd]);
+      el.addEventListener("scroll", check, { passive: true });
+      // Run once in case content is short enough to already be at end.
+      check();
+      return () => el.removeEventListener("scroll", check);
+    }, [onScrolledToEnd]);
 
-  return (
-    <div
-      ref={ref}
-      className="contract-prose max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-surface p-6 md:p-8"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
+    return (
+      <div
+        ref={innerRef}
+        className={
+          className ??
+          "contract-prose max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-surface p-6 md:p-8"
+        }
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  },
+);
+
+export default ContractPreview;

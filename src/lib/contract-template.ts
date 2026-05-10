@@ -170,6 +170,99 @@ export function formatDateID(iso: string | null | undefined): string {
 // resolves the signing date in Asia/Jakarta regardless of host timezone.
 export const formatSigningDateID = formatSigningDatePhrase;
 
+// ─── Table of contents ────────────────────────────────────────────────────
+
+export type ContractTocEntry = {
+  /** Slug used as the heading's `id` attribute and the anchor target. */
+  id: string;
+  /** Plain-text label shown in the TOC. */
+  text: string;
+  /** Heading level (1–4). */
+  depth: number;
+};
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/&[a-z]+;/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+/**
+ * Walk the rendered contract HTML, inject `id` attributes on every heading
+ * (h1–h4), and return a parallel list of TOC entries. Headings with
+ * duplicate slugs get a numeric suffix so anchors stay unique.
+ *
+ * The "PASAL N" pattern in the template renders as two consecutive h2s
+ * ("## PASAL 1" then "## LATAR BELAKANG"). We collapse those into a single
+ * TOC entry "Pasal 1 — Latar Belakang" so navigation stays compact, while
+ * still anchoring to the first h2 (PASAL N) for accurate scroll target.
+ */
+export function buildContractToc(html: string): {
+  html: string;
+  toc: ContractTocEntry[];
+} {
+  const used = new Set<string>();
+  const raw: ContractTocEntry[] = [];
+
+  const newHtml = html.replace(
+    /<h([1-4])>([\s\S]*?)<\/h\1>/g,
+    (_match, depth, content: string) => {
+      const text = content.replace(/<[^>]+>/g, "").trim();
+      let id = slugify(text);
+      if (!id) id = `heading-${raw.length}`;
+      let unique = id;
+      let counter = 2;
+      while (used.has(unique)) {
+        unique = `${id}-${counter++}`;
+      }
+      used.add(unique);
+      raw.push({ id: unique, text, depth: Number(depth) });
+      return `<h${depth} id="${unique}">${content}</h${depth}>`;
+    },
+  );
+
+  // Collapse "PASAL N" + following h2 into one TOC entry. The DOM keeps both
+  // h2 elements with their own ids; we only fuse them visually in the nav.
+  const toc: ContractTocEntry[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const cur = raw[i];
+    const next = raw[i + 1];
+    if (
+      cur.depth === 2 &&
+      /^pasal\s+\d+$/i.test(cur.text) &&
+      next?.depth === 2
+    ) {
+      toc.push({
+        id: cur.id, // anchor to PASAL header
+        depth: 2,
+        text: `${toTitleCase(cur.text)} — ${toTitleCase(next.text)}`,
+      });
+      i += 1; // consume the merged sibling
+      continue;
+    }
+    toc.push({ ...cur, text: toTitleCase(cur.text) });
+  }
+  return { html: newHtml, toc };
+}
+
+/**
+ * Convert "PASAL 1" / "LATAR BELAKANG" / "8.2.1 Pelanggaran Ringan" into
+ * sentence case for prettier TOC labels, while leaving real proper nouns
+ * (anything in the title that isn't all-caps) untouched.
+ */
+function toTitleCase(s: string): string {
+  if (!/[a-z]/.test(s)) {
+    // All-caps headline — re-case to "Title Case".
+    return s
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return s;
+}
+
 // ─── Interpolation ────────────────────────────────────────────────────────
 
 export type InterpolationContext = {

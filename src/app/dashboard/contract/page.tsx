@@ -6,6 +6,9 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { useUser } from "@/lib/hooks";
 import IdentityForm from "@/components/contract/IdentityForm";
 import ContractPreview from "@/components/contract/ContractPreview";
+import ContractTOC, {
+  type ContractTocEntry,
+} from "@/components/contract/ContractTOC";
 import SignatureCanvas, {
   type SignatureCanvasHandle,
 } from "@/components/contract/SignatureCanvas";
@@ -52,6 +55,7 @@ interface ContractApiResponse {
   /** Versions newer than what the mentor signed, newest-first. Empty if up-to-date. */
   changelogSinceSigned: ChangelogEntry[];
   previewHtml: string;
+  previewToc: ContractTocEntry[];
 }
 
 export default function MentorContractPage() {
@@ -73,6 +77,11 @@ export default function MentorContractPage() {
    *  matching templateVersion, so signed-view renders again). */
   const [resigning, setResigning] = useState(false);
   const sigRef = useRef<SignatureCanvasHandle>(null);
+  // Callback ref for the contract reader's scroll container. Stored as
+  // state (not a useRef) so the sibling <ContractTOC /> re-renders once
+  // the element is attached and can wire up its IntersectionObserver
+  // against the freshly-rendered heading nodes.
+  const [previewScrollEl, setPreviewScrollEl] = useState<HTMLDivElement | null>(null);
 
   const reload = useCallback(async () => {
     setReloading(true);
@@ -249,6 +258,7 @@ export default function MentorContractPage() {
         <SignedView
           contract={data.contract}
           previewHtml={data.previewHtml}
+          toc={data.previewToc}
           needsResign={data.needsResign}
           currentVersion={data.contractVersion}
           changelog={data.changelogSinceSigned}
@@ -312,12 +322,23 @@ export default function MentorContractPage() {
           {step === 2 && (
             <Section
               title="Langkah 2 — Baca Kontrak"
-              subtitle="Gulir hingga akhir untuk membuka langkah berikutnya."
+              subtitle="Gulir hingga akhir untuk membuka langkah berikutnya. Gunakan daftar isi di kiri untuk lompat antar bab."
             >
-              <ContractPreview
-                html={data.previewHtml}
-                onScrolledToEnd={() => setScrolledToEnd(true)}
-              />
+              <div className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-4 md:gap-6">
+                <aside className="hidden md:block">
+                  <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
+                    <ContractTOC
+                      entries={data.previewToc}
+                      scrollContainer={previewScrollEl}
+                    />
+                  </div>
+                </aside>
+                <ContractPreview
+                  ref={setPreviewScrollEl}
+                  html={data.previewHtml}
+                  onScrolledToEnd={() => setScrolledToEnd(true)}
+                />
+              </div>
               <label className="mt-5 flex items-start gap-3 text-sm">
                 <input
                   type="checkbox"
@@ -523,6 +544,7 @@ function ConfirmRow({
 function SignedView({
   contract,
   previewHtml,
+  toc,
   needsResign,
   currentVersion,
   changelog,
@@ -531,6 +553,7 @@ function SignedView({
 }: {
   contract: ContractRow;
   previewHtml: string;
+  toc: ContractTocEntry[];
   needsResign: boolean;
   currentVersion: string;
   changelog: ChangelogEntry[];
@@ -717,10 +740,17 @@ function SignedView({
         <h2 className="mb-4 text-lg font-semibold text-foreground">
           Salinan Perjanjian
         </h2>
-        <div
-          className="contract-prose"
-          dangerouslySetInnerHTML={{ __html: previewHtml }}
-        />
+        <div className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-4 md:gap-6">
+          <aside className="hidden md:block">
+            <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
+              <ContractTOC entries={toc} scrollContainer={null} />
+            </div>
+          </aside>
+          <div
+            className="contract-prose"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
+        </div>
       </section>
     </div>
   );

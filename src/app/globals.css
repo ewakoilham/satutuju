@@ -628,6 +628,11 @@ body {
    detail page. Scoped to .contract-prose so it doesn't leak into the rest
    of the dashboard. */
 .contract-prose { color: var(--foreground); font-size: 0.92rem; line-height: 1.55; }
+.contract-prose h1, .contract-prose h2, .contract-prose h3, .contract-prose h4 {
+  /* Keep anchored headings from sliding under the dashboard's top nav
+     when the TOC scrolls them into view via #anchor. */
+  scroll-margin-top: 5rem;
+}
 .contract-prose h1 { font-size: 1.35rem; font-weight: 700; text-align: center; margin: 1.5rem 0 0.75rem; color: var(--primary-900); }
 .contract-prose h2 { font-size: 1.05rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: var(--primary-900); }
 .contract-prose h3 { font-size: 0.95rem; font-weight: 700; margin: 1rem 0 0.4rem; }
