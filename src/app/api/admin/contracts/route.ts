@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
-import { identityCompleteness, IDENTITY_FIELDS } from "@/lib/contract-template";
+import {
+  CONTRACT_VERSION,
+  identityCompleteness,
+  IDENTITY_FIELDS,
+} from "@/lib/contract-template";
 
 /**
  * GET /api/admin/contracts
@@ -37,7 +41,12 @@ export async function GET() {
     supabase
       .from("MentorContract")
       .select(
-        "userId,contractNumber,status,signedAt,signatureHash,createdAt,voidedAt,voidReason,pdfPath",
+        // templateVersion + updatedAt let the admin UI flag mentors who
+        // signed an outdated version (i.e. owe a re-sign). updatedAt is
+        // the latest activity timestamp — bumps whenever a re-sign or
+        // void lands, so it's the most recent ground truth for "kapan
+        // terakhir di-update."
+        "userId,contractNumber,status,templateVersion,signedAt,signatureHash,createdAt,updatedAt,voidedAt,voidReason,pdfPath",
       )
       .in("userId", userIds),
     supabase
@@ -73,5 +82,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ rows });
+  return NextResponse.json({ rows, currentVersion: CONTRACT_VERSION });
 }

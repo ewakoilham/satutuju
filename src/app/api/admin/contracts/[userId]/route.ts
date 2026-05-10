@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
-import { identityCompleteness, IDENTITY_FIELDS } from "@/lib/contract-template";
+import {
+  CONTRACT_VERSION,
+  identityCompleteness,
+  IDENTITY_FIELDS,
+} from "@/lib/contract-template";
 
 interface Params {
   params: Promise<{ userId: string }>;
@@ -56,6 +60,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     identity: profileRes.data ?? {},
     identityCompleteness: identityCompleteness(profileRes.data ?? {}),
     identityRequired: IDENTITY_FIELDS.length,
+    currentVersion: CONTRACT_VERSION,
   });
 }
 

@@ -36,6 +36,7 @@ interface DetailResponse {
   identity: PartialIdentity;
   identityCompleteness: number;
   identityRequired: number;
+  currentVersion: string;
 }
 
 function deriveStatus(d: DetailResponse): ContractDisplayStatus {
@@ -132,6 +133,11 @@ export default function AdminContractDetailPage() {
             {data.user.name}
           </h1>
           <ContractStatusBadge status={status} />
+          {c?.status === "SIGNED" && c.templateVersion !== data.currentVersion && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-warning-light text-warning text-[11px] font-bold uppercase tracking-wide">
+              Versi lama
+            </span>
+          )}
         </div>
         <p className="mt-1 text-sm text-text-muted">
           {data.user.email}
@@ -140,6 +146,27 @@ export default function AdminContractDetailPage() {
           )}
         </p>
       </header>
+
+      {c?.status === "SIGNED" && c.templateVersion !== data.currentVersion && (
+        <div className="rounded-xl border border-warning/40 bg-warning-light/60 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-warning/20 text-warning shrink-0">
+              <Icon name="bell" size={14} />
+            </span>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">
+                Mentor menandatangani versi lama (v{c.templateVersion}). Versi
+                aktif sekarang adalah v{data.currentVersion}.
+              </p>
+              <p className="mt-1 text-sm text-text-muted">
+                Mentor sudah dapat melihat banner peringatan + notifikasi dan
+                dapat melakukan tanda tangan ulang melalui dashboard mereka.
+                Tanda tangan lama tetap sah secara hukum untuk versi lama.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Audit + actions */}
       <section className="rounded-2xl border border-border bg-surface-elevated p-6">
