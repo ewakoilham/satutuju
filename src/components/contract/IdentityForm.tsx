@@ -120,7 +120,7 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
             </button>
             {savedAt && !error && (
               <span className="text-xs text-success">
-                Tersimpan {savedAt.toLocaleTimeString("id-ID")}
+                Tersimpan {savedAt.toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta" })} WIB
               </span>
             )}
           </div>

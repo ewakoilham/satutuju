@@ -10,6 +10,7 @@ import ContractStatusBadge, {
   type ContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
 import type { IdentitySnapshot, PartialIdentity } from "@/lib/contract-template";
+import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 interface FullContract {
   id: string;
@@ -210,14 +211,7 @@ export default function AdminContractDetailPage() {
           />
           <Field
             label="Ditandatangani"
-            value={
-              c?.signedAt
-                ? new Date(c.signedAt).toLocaleString("id-ID", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })
-                : "—"
-            }
+            value={formatJakartaDateTime(c?.signedAt ?? null)}
           />
           <Field
             label="Hash Tanda Tangan"
@@ -235,10 +229,7 @@ export default function AdminContractDetailPage() {
             <>
               <Field
                 label="Dibatalkan pada"
-                value={new Date(c.voidedAt).toLocaleString("id-ID", {
-                  dateStyle: "long",
-                  timeStyle: "short",
-                })}
+                value={formatJakartaDateTime(c.voidedAt)}
               />
               <Field label="Alasan Pembatalan" value={c.voidReason ?? "—"} />
             </>

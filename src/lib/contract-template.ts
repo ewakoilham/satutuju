@@ -17,6 +17,7 @@
 // `fs` import below — it would fail in any browser bundle anyway.
 import { promises as fs } from "fs";
 import path from "path";
+import { formatSigningDatePhrase } from "@/lib/datetime-id";
 
 /** Pinned at sign time so future template edits don't mutate signed records. */
 export const CONTRACT_VERSION = "2026.05.11";
@@ -146,15 +147,16 @@ export function identityCompleteness(input: PartialIdentity): number {
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────
+// Date-of-birth is stored as a literal "YYYY-MM-DD" string and has no
+// timezone semantics — formatDateID just splits and reformats. Any
+// real-clock timestamp (signing date, audit times) goes through the
+// Jakarta-aware helpers in `@/lib/datetime-id` so the rendered contract
+// reads the same regardless of where it's served from.
 
 const ID_MONTH = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
-
-const ID_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** Format an ISO date ("YYYY-MM-DD") as Indonesian "12 Mei 2026". */
 export function formatDateID(iso: string | null | undefined): string {
@@ -164,15 +166,9 @@ export function formatDateID(iso: string | null | undefined): string {
   return `${d} ${ID_MONTH[m - 1]} ${y}`;
 }
 
-/** Format a Date as the long signing-date phrase used in the comparisi
- *  block: "Senin, tanggal 12 bulan Mei tahun 2026 (12-05-2026)". */
-export function formatSigningDateID(date: Date): string {
-  const day = ID_DAY[date.getDay()];
-  const dd = date.getDate();
-  const mm = date.getMonth() + 1;
-  const yyyy = date.getFullYear();
-  return `${day}, tanggal ${dd} bulan ${ID_MONTH[mm - 1]} tahun ${yyyy} (${pad2(dd)}-${pad2(mm)}-${yyyy})`;
-}
+// Old export name preserved for callers that import from this module —
+// resolves the signing date in Asia/Jakarta regardless of host timezone.
+export const formatSigningDateID = formatSigningDatePhrase;
 
 // ─── Interpolation ────────────────────────────────────────────────────────
 

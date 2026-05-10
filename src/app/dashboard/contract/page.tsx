@@ -13,6 +13,10 @@ import ContractStatusBadge, {
   type ContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
 import type { PartialIdentity } from "@/lib/contract-template";
+import {
+  formatJakartaDateTime,
+  formatJakartaLongDate,
+} from "@/lib/datetime-id";
 
 interface ContractRow {
   id: string;
@@ -218,11 +222,7 @@ export default function MentorContractPage() {
             Nomor kontrak: <span className="font-semibold">{data.contract.contractNumber}</span>
             {data.contract.signedAt && (
               <>
-                {" "}· Ditandatangani{" "}
-                {new Date(data.contract.signedAt).toLocaleString("id-ID", {
-                  dateStyle: "long",
-                  timeStyle: "short",
-                })}
+                {" "}· Ditandatangani {formatJakartaDateTime(data.contract.signedAt)}
               </>
             )}
           </p>
@@ -590,11 +590,7 @@ function SignedView({
                             v{entry.version}
                           </span>
                           <span className="text-xs text-text-muted-2">
-                            {new Date(entry.date).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })}
+                            {formatJakartaLongDate(entry.date)}
                           </span>
                         </div>
                         <p className="mt-0.5 text-foreground">{entry.summary}</p>
@@ -706,14 +702,7 @@ function SignedView({
           />
           <Field
             label="Ditandatangani pada"
-            value={
-              contract.signedAt
-                ? new Date(contract.signedAt).toLocaleString("id-ID", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })
-                : "—"
-            }
+            value={formatJakartaDateTime(contract.signedAt)}
           />
           <Field
             label="Hash Tanda Tangan"

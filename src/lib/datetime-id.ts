@@ -1,0 +1,102 @@
+/**
+ * Jakarta-time formatters used across the contract UI + audit trail.
+ * Wraps `Intl.DateTimeFormat` with `timeZone: "Asia/Jakarta"` so the
+ * displayed timestamp matches WIB regardless of where the request is
+ * served from (Vercel functions run in UTC) or who's reading it.
+ *
+ * Storage stays in UTC in the database — only the DISPLAY layer is
+ * timezone-aware.
+ */
+
+const TZ = "Asia/Jakarta";
+
+const ID_DAY_NAMES = [
+  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
+];
+const ID_MONTH_NAMES = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+const SHORT_WEEKDAY: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Date + time, e.g. "12 Mei 2026 pukul 14.30 WIB". */
+export function formatJakartaDateTime(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return (
+    date.toLocaleString("id-ID", {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone: TZ,
+    }) + " WIB"
+  );
+}
+
+/** Compact date, e.g. "12 Mei 2026". */
+export function formatJakartaDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: TZ,
+  });
+}
+
+/** Long date with full month, e.g. "12 Mei 2026". (Same as above but with full month name) */
+export function formatJakartaLongDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: TZ,
+  });
+}
+
+/**
+ * Extract Jakarta-local date parts from a Date, regardless of the host
+ * machine's timezone. Used by the contract template's signing-date
+ * interpolation (which builds a phrase like "Senin, tanggal 12 bulan
+ * Mei tahun 2026 (12-05-2026)").
+ */
+export function getJakartaParts(d: Date): {
+  weekdayIndex: number;
+  day: number;
+  month: number;
+  year: number;
+} {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    weekday: "short",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const weekdayShort = get("weekday");
+  return {
+    weekdayIndex: SHORT_WEEKDAY[weekdayShort] ?? 0,
+    day: Number(get("day")) || 1,
+    month: Number(get("month")) || 1,
+    year: Number(get("year")) || new Date().getFullYear(),
+  };
+}
+
+/**
+ * Format the long signing-date phrase used in the contract comparisi
+ * block. Always reflects Jakarta time so the rendered contract reads
+ * the same regardless of the server's timezone.
+ *
+ * Returns: "Senin, tanggal 12 bulan Mei tahun 2026 (12-05-2026)"
+ */
+export function formatSigningDatePhrase(d: Date): string {
+  const { weekdayIndex, day, month, year } = getJakartaParts(d);
+  return `${ID_DAY_NAMES[weekdayIndex]}, tanggal ${day} bulan ${ID_MONTH_NAMES[month - 1]} tahun ${year} (${pad2(day)}-${pad2(month)}-${year})`;
+}

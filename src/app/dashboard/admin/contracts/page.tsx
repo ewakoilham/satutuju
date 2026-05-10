@@ -8,6 +8,7 @@ import Icon from "@/components/ui/Icon";
 import ContractStatusBadge, {
   type ContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
+import { formatJakartaDate } from "@/lib/datetime-id";
 
 type ContractStub = {
   contractNumber: string;
@@ -208,13 +209,7 @@ export default function AdminContractsPage() {
                     {r.identityCompleteness}/{r.identityRequired}
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-text-muted">
-                    {latest
-                      ? new Date(latest).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
+                    {formatJakartaDate(latest)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-2">
