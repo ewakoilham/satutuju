@@ -696,6 +696,15 @@ function SignedView({
         <dl className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <Field label="Nomor Kontrak" value={contract.contractNumber} />
           <Field
+            label="Versi Template"
+            value={
+              contract.templateVersion === currentVersion
+                ? `${contract.templateVersion} (terbaru)`
+                : `${contract.templateVersion} (versi lama)`
+            }
+            mono
+          />
+          <Field
             label="Ditandatangani pada"
             value={
               contract.signedAt
