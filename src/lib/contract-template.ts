@@ -1,0 +1,188 @@
+/**
+ * Contract template metadata, identity-field schema, and the in-place
+ * interpolation logic for the Perjanjian Kemitraan Mentor.
+ *
+ * The contract body itself lives as Markdown at
+ * `src/lib/contract-templates/perjanjian-mentor-2026-05.md`.
+ * `getContractBody()` reads it from disk on the server (Next.js inlines the
+ * file at build time via `fs.readFileSync` in a server-only module) and
+ * returns the raw string. Browser callers should NOT import this directly —
+ * they should fetch the rendered preview from the API or receive
+ * server-rendered HTML.
+ */
+
+import "server-only";
+import { promises as fs } from "fs";
+import path from "path";
+
+/** Pinned at sign time so future template edits don't mutate signed records. */
+export const CONTRACT_VERSION = "2026.05.10";
+
+const TEMPLATE_FILE = path.join(
+  process.cwd(),
+  "src",
+  "lib",
+  "contract-templates",
+  "perjanjian-mentor-2026-05.md",
+);
+
+let cachedBody: string | null = null;
+
+export async function getContractBody(): Promise<string> {
+  if (cachedBody) return cachedBody;
+  cachedBody = await fs.readFile(TEMPLATE_FILE, "utf8");
+  return cachedBody;
+}
+
+// ─── Identity schema ──────────────────────────────────────────────────────
+
+/** The identity fields the contract template needs interpolated. */
+export const IDENTITY_FIELDS = [
+  "fullName",
+  "placeOfBirth",
+  "dateOfBirth",
+  "idType",
+  "idNumber",
+  "npwp",
+  "legalAddress",
+  "phoneNumber",
+] as const;
+
+export type IdentityField = (typeof IDENTITY_FIELDS)[number];
+
+export type IdentitySnapshot = {
+  fullName: string;
+  placeOfBirth: string;
+  dateOfBirth: string; // "YYYY-MM-DD"
+  idType: string; // "KTP" | "Paspor"
+  idNumber: string;
+  npwp: string;
+  legalAddress: string;
+  phoneNumber: string;
+};
+
+export type PartialIdentity = Partial<IdentitySnapshot>;
+
+/** True when every IDENTITY_FIELDS slot has a non-empty trimmed string. */
+export function isIdentityComplete(input: PartialIdentity): input is IdentitySnapshot {
+  return IDENTITY_FIELDS.every((k) => {
+    const v = input[k];
+    return typeof v === "string" && v.trim().length > 0;
+  });
+}
+
+/** Count of filled fields — used to show "5/7 lengkap" progress. */
+export function identityCompleteness(input: PartialIdentity): number {
+  return IDENTITY_FIELDS.reduce((n, k) => {
+    const v = input[k];
+    return n + (typeof v === "string" && v.trim().length > 0 ? 1 : 0);
+  }, 0);
+}
+
+// ─── Date helpers ─────────────────────────────────────────────────────────
+
+const ID_MONTH = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+const ID_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Format an ISO date ("YYYY-MM-DD") as Indonesian "12 Mei 2026". */
+export function formatDateID(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} ${ID_MONTH[m - 1]} ${y}`;
+}
+
+/** Format a Date as the long signing-date phrase used in the comparisi
+ *  block: "Senin, tanggal 12 bulan Mei tahun 2026 (12-05-2026)". */
+export function formatSigningDateID(date: Date): string {
+  const day = ID_DAY[date.getDay()];
+  const dd = date.getDate();
+  const mm = date.getMonth() + 1;
+  const yyyy = date.getFullYear();
+  return `${day}, tanggal ${dd} bulan ${ID_MONTH[mm - 1]} tahun ${yyyy} (${pad2(dd)}-${pad2(mm)}-${yyyy})`;
+}
+
+// ─── Interpolation ────────────────────────────────────────────────────────
+
+export type InterpolationContext = {
+  identity: IdentitySnapshot;
+  contractNumber: string;
+  signedAt: Date;
+};
+
+/**
+ * Replace template placeholders in the contract body with real mentor data.
+ *
+ * The template uses these placeholders (matching the source markdown):
+ * - `____/ST-MTR/____/20__` → contract number
+ * - `pada hari ______, tanggal ___ bulan _______ tahun ____ (__-__-20__)` → signing date
+ * - `[Nama Lengkap Mentor]` (3 occurrences in comparisi + signing block)
+ * - `lahir di [tempat], pada tanggal [tgl/bln/thn]` → place + DOB
+ * - `pemegang [Kartu Tanda Penduduk (KTP) / Paspor] Nomor ________________`
+ * - `Nomor Pokok Wajib Pajak (NPWP) ________________`
+ * - `beralamat di ________________`
+ *
+ * The `[Nama Lengkap Mentor]` placeholder also appears as a comment-style
+ * `**[Nama Lengkap Mentor]**` in the signing block — replaceAll covers both.
+ */
+export function interpolateContract(body: string, ctx: InterpolationContext): string {
+  const { identity, contractNumber, signedAt } = ctx;
+  const idLabel =
+    identity.idType === "Paspor"
+      ? "Paspor"
+      : "Kartu Tanda Penduduk (KTP)";
+
+  return body
+    // Contract number — single occurrence in the header.
+    .replace(/____\/ST-MTR\/____\/20__/g, contractNumber)
+    // Signing date phrase in the comparisi block.
+    .replace(
+      /pada hari ______, tanggal ___ bulan _______ tahun ____ \(__-__-20__\)/g,
+      `pada ${formatSigningDateID(signedAt)}`,
+    )
+    // Mentor name (appears in comparisi and twice in the signing block).
+    .replace(/\[Nama Lengkap Mentor\]/g, identity.fullName)
+    // Place + date of birth.
+    .replace(
+      /lahir di \[tempat\], pada tanggal \[tgl\/bln\/thn\]/g,
+      `lahir di ${identity.placeOfBirth}, pada tanggal ${formatDateID(identity.dateOfBirth)}`,
+    )
+    // ID type + number.
+    .replace(
+      /pemegang \[Kartu Tanda Penduduk \(KTP\) \/ Paspor\] Nomor ________________/g,
+      `pemegang ${idLabel} Nomor ${identity.idNumber}`,
+    )
+    // NPWP.
+    .replace(
+      /Nomor Pokok Wajib Pajak \(NPWP\) ________________/g,
+      `Nomor Pokok Wajib Pajak (NPWP) ${identity.npwp}`,
+    )
+    // Address.
+    .replace(/beralamat di ________________/g, `beralamat di ${identity.legalAddress}`);
+}
+
+// ─── Hashing ──────────────────────────────────────────────────────────────
+
+/**
+ * SHA-256 hex over (templateVersion + identitySnapshot + signatureDataUrl).
+ * The hash plus the audit row (IP, UA, signedAt) form the integrity record;
+ * regenerating from the same inputs reproduces the same hex.
+ */
+export async function computeSignatureHash(
+  templateVersion: string,
+  identity: IdentitySnapshot,
+  signatureDataUrl: string,
+): Promise<string> {
+  const payload = `${templateVersion}${JSON.stringify(identity)}${signatureDataUrl}`;
+  const data = new TextEncoder().encode(payload);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

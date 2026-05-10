@@ -40,6 +40,9 @@ model User {
   // Schedule
   scheduleSlots    ScheduleSlot[]    @relation("MentorSlots")
   scheduleBookings ScheduleBooking[] @relation("MenteeBookings")
+
+  // Mentor partnership contract
+  mentorContract MentorContract?
 }
 
 model MentorProfile {
@@ -62,6 +65,17 @@ model MentorProfile {
   workStyle          String?  // "structured" … "flexible"
   communicationStyle String?  // "casual" … "formal"
   primaryRoles       String?  // JSON array, max 2
+
+  // Identity (used by Perjanjian Kemitraan Mentor — see MentorContract)
+  // Stored as String? to mirror MenteeProfile conventions and keep
+  // form-binding simple (HTML date inputs return strings).
+  placeOfBirth       String?
+  dateOfBirth        String?  // "YYYY-MM-DD"
+  idType             String?  // "KTP" | "Paspor"
+  idNumber           String?
+  npwp               String?
+  legalAddress       String?  // alamat resmi sesuai KTP/paspor
+  phoneNumber        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -306,6 +320,44 @@ model Notification {
   link    String?  // URL to navigate to
 
   createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// MENTOR PARTNERSHIP CONTRACT
+// ──────────────────────────────────────────────
+// Backs the "Perjanjian Kemitraan Mentor" digital signing flow under
+// /dashboard/contract (mentor) and /dashboard/admin/contracts (admin).
+// One contract per mentor; voiding preserves the record but flags it,
+// allowing the mentor to re-sign with a new contractNumber.
+
+model MentorContract {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+
+  contractNumber  String    @unique         // e.g. "001/ST-MTR/V/2026"
+  status          String                    // "PENDING_SIGNATURE" | "SIGNED" | "VOID"
+  templateVersion String                    // pinned at sign time, e.g. "2026.05.10"
+
+  // Frozen at sign time so future MentorProfile edits don't mutate the
+  // signed record. JSON shape: { fullName, placeOfBirth, dateOfBirth,
+  // idType, idNumber, npwp, legalAddress, phoneNumber }.
+  identitySnapshot Json?
+
+  signatureDataUrl String?   @db.Text       // base64 PNG of drawn signature
+  signedAt         DateTime?
+  signatureHash    String?                  // sha256(version + snapshot + dataUrl)
+  ipAddress        String?
+  userAgent        String?   @db.Text
+
+  pdfPath          String?                  // Supabase storage path
+
+  voidedAt         DateTime?
+  voidReason       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

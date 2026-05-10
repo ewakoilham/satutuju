@@ -622,3 +622,25 @@ body {
 .animate-blob-drift {
   animation: blobDrift 12s ease-in-out infinite;
 }
+
+/* === Contract reader prose ===
+   Used by <ContractPreview /> on /dashboard/contract and the admin contract
+   detail page. Scoped to .contract-prose so it doesn't leak into the rest
+   of the dashboard. */
+.contract-prose { color: var(--foreground); font-size: 0.92rem; line-height: 1.55; }
+.contract-prose h1 { font-size: 1.35rem; font-weight: 700; text-align: center; margin: 1.5rem 0 0.75rem; color: var(--primary-900); }
+.contract-prose h2 { font-size: 1.05rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: var(--primary-900); }
+.contract-prose h3 { font-size: 0.95rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+.contract-prose h4 { font-size: 0.9rem; font-weight: 600; margin: 0.85rem 0 0.35rem; }
+.contract-prose p { margin: 0.55rem 0; text-align: justify; }
+.contract-prose strong { font-weight: 700; color: var(--primary-900); }
+.contract-prose em { font-style: italic; }
+.contract-prose ol, .contract-prose ul { margin: 0.4rem 0 0.6rem 1.2rem; padding-left: 1rem; }
+.contract-prose ol { list-style: decimal; }
+.contract-prose ul { list-style: disc; }
+.contract-prose li { margin-bottom: 0.35rem; text-align: justify; }
+.contract-prose li > p { margin: 0.25rem 0; }
+.contract-prose hr { margin: 1rem 0; border: none; border-top: 1px solid var(--border); }
+.contract-prose table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.85rem; }
+.contract-prose th, .contract-prose td { border: 1px solid var(--border); padding: 0.4rem 0.55rem; text-align: left; vertical-align: top; }
+.contract-prose th { background: var(--background); font-weight: 600; }
