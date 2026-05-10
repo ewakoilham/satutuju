@@ -11,17 +11,33 @@ import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
 
-// Profile & Settings are removed from main nav — they live in the avatar dropdown
-const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: string }>> = {
+// Profile & Settings are removed from main nav — they live in the avatar dropdown.
+// `NavGroup` collapses two or more sibling tabs under a single dropdown so the
+// admin ribbon doesn't keep growing every time we add a feature. Mentor/mentee
+// navs are flat today (4 items each, comfortable in a row).
+type NavLink = { href: string; label: string; icon: string };
+type NavGroup = { label: string; icon: string; children: NavLink[] };
+type NavItem = NavLink | NavGroup;
+
+function isGroup(item: NavItem): item is NavGroup {
+  return (item as NavGroup).children !== undefined;
+}
+
+const NAV_ITEMS: Record<string, NavItem[]> = {
   admin: [
-    { href: "/dashboard",                  label: "Overview",        icon: "chart"       },
-    { href: "/dashboard/users",            label: "Users",           icon: "users"       },
-    { href: "/dashboard/pairings",         label: "Pairings",        icon: "link"        },
-    { href: "/dashboard/admin/mentors",    label: "Mentors",         icon: "user"        },
-    { href: "/dashboard/admin/contracts",  label: "Kontrak Mentor",  icon: "document"    },
-    { href: "/dashboard/schedule",         label: "Schedule",        icon: "calendar"    },
-    { href: "/dashboard/resources",        label: "Resources",       icon: "book"        },
-    { href: "/dashboard/universities",     label: "Universities",    icon: "graduation"  },
+    { href: "/dashboard",              label: "Overview", icon: "chart" },
+    { href: "/dashboard/users",        label: "Users",    icon: "users" },
+    { href: "/dashboard/pairings",     label: "Pairings", icon: "link"  },
+    {
+      label: "Mentor", icon: "user",
+      children: [
+        { href: "/dashboard/admin/mentors",   label: "Daftar Mentor", icon: "user"     },
+        { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
+      ],
+    },
+    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
+    { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
+    { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
   ],
   mentor: [
     { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
@@ -62,9 +78,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifs,     setShowNotifs]     = useState(false);
   const [showUserMenu,   setShowUserMenu]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Active nav-group popover label, or null. Only one nav group can be open
+  // at a time, and opening any of {nav-group, notif, avatar} closes the
+  // others — see `openOnly` helper below.
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const notifRef    = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const navGroupRef = useRef<HTMLDivElement>(null);
+
+  function openOnly(panel: "notifs" | "user" | "group" | null, groupLabel?: string) {
+    setShowNotifs(panel === "notifs");
+    setShowUserMenu(panel === "user");
+    setOpenGroup(panel === "group" ? groupLabel ?? null : null);
+  }
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -74,13 +101,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node))
-        setShowNotifs(false);
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
-        setShowUserMenu(false);
+      const t = e.target as Node;
+      if (notifRef.current && !notifRef.current.contains(t)) setShowNotifs(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(t)) setShowUserMenu(false);
+      if (navGroupRef.current && !navGroupRef.current.contains(t)) setOpenGroup(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Close any open popover on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") openOnly(null);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, []);
 
   if (loading || !user) {
@@ -125,6 +161,72 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <nav className="hidden sm:flex items-center gap-1">
                 {navItems.map((item) => {
+                  if (isGroup(item)) {
+                    const childActive = item.children.some((c) => pathname === c.href);
+                    const open = openGroup === item.label;
+                    return (
+                      <div
+                        key={item.label}
+                        className="relative"
+                        // Single shared ref — outside-click handler scopes it
+                        // to "click was outside any nav group dropdown". The
+                        // assigned ref tracks the most recently rendered open
+                        // group, which is enough since only one is open at a
+                        // time.
+                        ref={open ? navGroupRef : undefined}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openOnly(open ? null : "group", item.label)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            childActive
+                              ? "bg-brand-blue-soft text-primary"
+                              : "text-text-muted hover:bg-surface-elevated hover:text-foreground"
+                          }`}
+                          aria-haspopup="menu"
+                          aria-expanded={open}
+                        >
+                          <Icon name={item.icon} size={16} className={childActive ? "text-primary" : ""} />
+                          {item.label}
+                          <Icon
+                            name="chevron-down"
+                            size={12}
+                            className={`text-text-muted-2 transition-transform ${open ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {open && (
+                          <div
+                            role="menu"
+                            className="absolute left-0 top-full mt-2 w-56 bg-surface rounded-2xl shadow-[var(--shadow-lg)] border border-border overflow-hidden z-50 animate-slide-down"
+                          >
+                            <div className="py-1.5">
+                              {item.children.map((child, idx) => {
+                                const isActive = pathname === child.href;
+                                return (
+                                  <Link
+                                    key={child.href}
+                                    href={child.href}
+                                    onClick={() => setOpenGroup(null)}
+                                    autoFocus={idx === 0}
+                                    role="menuitem"
+                                    className={`flex items-center gap-2.5 px-4 py-2 text-sm transition ${
+                                      isActive
+                                        ? "text-primary font-medium bg-brand-blue-soft/50"
+                                        : "text-text-muted hover:bg-surface-elevated"
+                                    }`}
+                                  >
+                                    <Icon name={child.icon} size={15} className={isActive ? "text-primary" : "text-text-muted-2"} />
+                                    {child.label}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
                   const isActive   = pathname === item.href;
                   const isSchedule = item.href === "/dashboard/schedule";
                   return (
@@ -154,7 +256,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {/* Notifications */}
               <div className="relative" ref={notifRef}>
                 <button
-                  onClick={() => { setShowNotifs(!showNotifs); setShowUserMenu(false); }}
+                  onClick={() => openOnly(showNotifs ? null : "notifs")}
                   className="relative p-2 text-text-muted hover:bg-brand-blue-soft hover:text-primary rounded-lg transition"
                 >
                   <Icon name="bell" size={20} />
@@ -206,7 +308,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {/* Avatar dropdown */}
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
+                  onClick={() => openOnly(showUserMenu ? null : "user")}
                   className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-surface-elevated ${showUserMenu ? "bg-surface-elevated" : ""}`}
                 >
                   <Avatar name={user.name} size="sm" src={user.avatar || undefined} />
@@ -307,6 +409,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Main nav */}
             <nav className="flex flex-col gap-1 p-4 flex-1">
               {navItems.map((item) => {
+                if (isGroup(item)) {
+                  return (
+                    <div key={item.label} className="pt-2 first:pt-0">
+                      <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted-2">
+                        {item.label}
+                      </p>
+                      {item.children.map((child) => {
+                        const isActive = pathname === child.href;
+                        return (
+                          <Link key={child.href} href={child.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 pl-6 pr-3 py-2.5 rounded-xl text-sm font-medium transition ${
+                              isActive ? "bg-brand-blue-soft text-primary" : "text-text-muted hover:bg-surface-elevated"
+                            }`}
+                          >
+                            <Icon name={child.icon} size={18} className={isActive ? "text-primary" : ""} />
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
                 const isActive   = pathname === item.href;
                 const isSchedule = item.href === "/dashboard/schedule";
                 return (
