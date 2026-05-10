@@ -9,6 +9,7 @@ import { useEffect, useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
 
 // Profile & Settings are removed from main nav — they live in the avatar dropdown
 const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: string }>> = {
@@ -364,6 +365,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       )}
+
+      {/* ── Global contract alert (mentor-only, hides on /dashboard/contract) ─ */}
+      <DashboardContractAlert role={user.role} />
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

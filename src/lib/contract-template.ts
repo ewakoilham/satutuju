@@ -19,7 +19,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 /** Pinned at sign time so future template edits don't mutate signed records. */
-export const CONTRACT_VERSION = "2026.05.10";
+export const CONTRACT_VERSION = "2026.05.11";
 
 /**
  * Changelog of contract template versions, oldest first. Each time
@@ -43,6 +43,17 @@ export const CONTRACT_CHANGELOG: ContractChangelogEntry[] = [
     version: "2026.05.10",
     date: "2026-05-10",
     summary: "Versi awal Perjanjian Kemitraan Mentor Satu Tuju.",
+  },
+  {
+    version: "2026.05.11",
+    date: "2026-05-11",
+    summary:
+      "Tanda tangan elektronik PIHAK PERTAMA (Direktur Utama) ditambahkan ke PDF kontrak.",
+    details: [
+      "Sebelumnya kolom PIHAK PERTAMA hanya berisi garis tanda tangan kosong.",
+      "Sesuai Pasal 13.10 ayat (4), kontrak baru fully effective ketika kedua pihak telah menandatangani — penambahan tanda tangan Razak sebagai Direktur Utama membuat status hukum kontrak menjadi tertanda tangan dari kedua pihak.",
+      "Tidak ada perubahan substantif lain pada isi Pasal 1 sampai Pasal 13.",
+    ],
   },
   // ── Tambahkan entri baru di SINI saat menaikkan CONTRACT_VERSION ──
   // Contoh:

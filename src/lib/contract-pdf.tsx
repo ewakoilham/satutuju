@@ -21,6 +21,8 @@
 // node scripts (see prisma/scripts/regenerate-contract-pdfs.ts). The
 // `@react-pdf/renderer` import below is itself node-only — server
 // guarantees come from that, not from a directive.
+import fs from "fs";
+import path from "path";
 import {
   Document,
   Page,
@@ -31,6 +33,27 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { IdentitySnapshot } from "@/lib/contract-template";
+
+// PIHAK PERTAMA's signature is templated onto every contract — Razak
+// has authorised his image as the standing electronic signature for
+// any contract executed under template version `CONTRACT_VERSION` and
+// later. We load it once at module init and reuse the buffer across
+// renders. If the file is missing (e.g. fresh checkout without the
+// asset), we fall back to a blank line so PDF rendering doesn't fail.
+function loadRazakSignature(): { data: Buffer; format: "png" } | null {
+  try {
+    const buf = fs.readFileSync(
+      path.join(process.cwd(), "public", "signatures", "razak.png"),
+    );
+    return { data: buf, format: "png" };
+  } catch {
+    console.warn(
+      "[contract-pdf] Razak signature missing at public/signatures/razak.png — PIHAK PERTAMA signature line will be blank.",
+    );
+    return null;
+  }
+}
+const RAZAK_SIGNATURE = loadRazakSignature();
 
 const styles = StyleSheet.create({
   page: {
@@ -170,7 +193,12 @@ function SigningBlock({
           <Text style={styles.signingHeader}>PIHAK PERTAMA</Text>
           <Text style={styles.signingHeader}>PT SATU TUJU EDUCATION</Text>
           <Text style={styles.materai}>(e-Materai Rp 10.000)</Text>
-          <View style={styles.signaturePlaceholder} />
+          {RAZAK_SIGNATURE ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <Image src={RAZAK_SIGNATURE} style={styles.signatureImg} />
+          ) : (
+            <View style={styles.signaturePlaceholder} />
+          )}
           <Text style={styles.signatureName}>Muhammad Ilham Razak</Text>
           <Text style={styles.signatureSubtitle}>Direktur Utama</Text>
         </View>

@@ -8,8 +8,6 @@ import Badge from "@/components/ui/Badge";
 import ProgressBar from "@/components/ui/ProgressBar";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
-import ContractBanner from "@/components/contract/ContractBanner";
-import type { ContractDisplayStatus } from "@/components/contract/ContractStatusBadge";
 
 interface Pairing {
   id: string;
@@ -45,47 +43,25 @@ function profileCompleteness(profile: Record<string, unknown> | null): { complet
   return { complete: filled === REQUIRED_PROFILE_FIELDS.length, filled, total: REQUIRED_PROFILE_FIELDS.length };
 }
 
-type ContractApiShape = {
-  contract: { status: "PENDING_SIGNATURE" | "SIGNED" | "VOID" } | null;
-  identityCompleteness: number;
-  identityRequired: number;
-};
-
-function deriveContractStatus(d: ContractApiShape | null): ContractDisplayStatus {
-  if (!d) return "NOT_STARTED";
-  if (d.contract?.status === "SIGNED") return "SIGNED";
-  if (d.contract?.status === "VOID") return "VOID";
-  if (d.identityCompleteness === 0) return "NOT_STARTED";
-  if (d.identityCompleteness < d.identityRequired) return "IDENTITY_INCOMPLETE";
-  return "READY_TO_SIGN";
-}
-
 export default function MentorDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileStatus, setProfileStatus] = useState<{ complete: boolean; filled: number; total: number } | null>(null);
-  const [contractStatus, setContractStatus] = useState<ContractDisplayStatus>("NOT_STARTED");
 
   useEffect(() => {
     Promise.all([
       fetch("/api/pairings").then((r) => r.json()),
       fetch("/api/mentor-profile").then((r) => r.json()),
-      // Contract endpoint is forgiving: returns 200 with contract:null for
-      // mentors who haven't started yet. Swallow errors so the dashboard
-      // still loads if the contract module is mid-deploy.
-      fetch("/api/mentor-contract")
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-    ]).then(([pairingsData, profileData, contractData]) => {
+    ]).then(([pairingsData, profileData]) => {
       setPairings(pairingsData.pairings || []);
       setProfileStatus(profileCompleteness(profileData.profile || null));
-      setContractStatus(deriveContractStatus(contractData as ContractApiShape | null));
     }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <SkeletonDashboard />;
 
-  const contractBanner = <ContractBanner status={contractStatus} />;
+  // Contract alert lives at layout level (DashboardContractAlert) so it
+  // appears on every dashboard route, not just this overview page.
 
   const incompleteBanner = profileStatus && !profileStatus.complete ? (
     <Link
@@ -118,7 +94,6 @@ export default function MentorDashboard() {
   if (pairings.length === 0) {
     return (
       <div className="space-y-6">
-        {contractBanner}
         {incompleteBanner}
         <EmptyState
           icon="graduation"
@@ -131,7 +106,6 @@ export default function MentorDashboard() {
 
   return (
     <div className="space-y-8">
-      {contractBanner}
       {incompleteBanner}
       <div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Mentees</h1>
