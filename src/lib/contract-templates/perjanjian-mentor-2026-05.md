@@ -7,7 +7,7 @@
 
 Perjanjian Kemitraan Mentor ini ("**Perjanjian**") dibuat dan ditandatangani pada hari ______, tanggal ___ bulan _______ tahun ____ (__-__-20__), oleh dan antara:
 
-**1. PT SATU TUJU EDUCATION**, suatu perseroan terbatas yang didirikan berdasarkan hukum Negara Republik Indonesia, berkedudukan di Menara Cakrawala Lantai 12, Unit 05A, Jalan M.H. Thamrin Nomor 9, Kelurahan Kebon Sirih, Kecamatan Menteng, Kota Administrasi Jakarta Pusat, Provinsi DKI Jakarta 10340, dalam hal ini diwakili secara sah oleh **Razak [Nama Lengkap]** selaku **Direktur Utama**, yang oleh karenanya bertindak untuk dan atas nama PT Satu Tuju Education, selanjutnya disebut sebagai **"SATU TUJU"**.
+**1. PT SATU TUJU EDUCATION**, suatu perseroan terbatas yang didirikan berdasarkan hukum Negara Republik Indonesia, berkedudukan di Menara Cakrawala Lantai 12, Unit 05A, Jalan M.H. Thamrin Nomor 9, Kelurahan Kebon Sirih, Kecamatan Menteng, Kota Administrasi Jakarta Pusat, Provinsi DKI Jakarta 10340, dalam hal ini diwakili secara sah oleh **Muhammad Ilham Razak** selaku **Direktur Utama**, yang oleh karenanya bertindak untuk dan atas nama PT Satu Tuju Education, selanjutnya disebut sebagai **"SATU TUJU"**.
 
 **2. [Nama Lengkap Mentor]**, lahir di [tempat], pada tanggal [tgl/bln/thn], pemegang [Kartu Tanda Penduduk (KTP) / Paspor] Nomor ________________, Nomor Pokok Wajib Pajak (NPWP) ________________, beralamat di ________________, dalam hal ini bertindak untuk dan atas nama diri sendiri sebagai **mitra independen** (bukan dalam hubungan kerja sebagai karyawan), selanjutnya disebut sebagai **"MENTOR"**.
 
@@ -1045,7 +1045,7 @@ Para Pihak dengan ini menyatakan dan menjamin bahwa:
 | (e-Materai Rp 10.000) | (e-Materai Rp 10.000) |
 | | |
 | **_____________________** | **_____________________** |
-| **Razak [Nama Lengkap]** | **[Nama Lengkap Mentor]** |
+| **Muhammad Ilham Razak** | **[Nama Lengkap Mentor]** |
 | Direktur Utama | |
 
 ---

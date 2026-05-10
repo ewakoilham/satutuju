@@ -19,6 +19,7 @@ interface ContractRow {
   userId: string;
   contractNumber: string;
   status: "PENDING_SIGNATURE" | "SIGNED" | "VOID";
+  templateVersion: string;
   signedAt: string | null;
   signatureDataUrl: string | null;
   signatureHash: string | null;
@@ -29,12 +30,23 @@ interface ContractRow {
   voidReason: string | null;
 }
 
+interface ChangelogEntry {
+  version: string;
+  date: string;
+  summary: string;
+  details?: string[];
+}
+
 interface ContractApiResponse {
   contract: ContractRow | null;
   identity: PartialIdentity;
   identityCompleteness: number;
   identityRequired: number;
   contractVersion: string;
+  /** True when the signed contract's templateVersion lags the active version. */
+  needsResign: boolean;
+  /** Versions newer than what the mentor signed, newest-first. Empty if up-to-date. */
+  changelogSinceSigned: ChangelogEntry[];
   previewHtml: string;
 }
 
@@ -51,6 +63,11 @@ export default function MentorContractPage() {
   const [signatureEmpty, setSignatureEmpty] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** True when the user has clicked "Tanda Tangan Ulang" — switches the
+   *  page from the signed-view back into the 3-step flow. Cleared after
+   *  a successful re-sign (the next `reload()` will see status=SIGNED and
+   *  matching templateVersion, so signed-view renders again). */
+  const [resigning, setResigning] = useState(false);
   const sigRef = useRef<SignatureCanvasHandle>(null);
 
   const reload = useCallback(async () => {
@@ -81,6 +98,10 @@ export default function MentorContractPage() {
   }, [data]);
 
   const isSigned = status === "SIGNED";
+  // While the mentor is in the resign flow, treat the page as not-signed
+  // so the 3-step UI renders. The signed view comes back automatically
+  // after the resubmit succeeds.
+  const showSignedView = isSigned && !resigning;
   const identityComplete =
     !!data && data.identityCompleteness === data.identityRequired;
 
@@ -110,6 +131,9 @@ export default function MentorContractPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Gagal menandatangani");
+      // Successful (re-)sign: drop out of resign mode so SignedView
+      // re-renders with the freshly returned data on the next reload.
+      setResigning(false);
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menandatangani");
@@ -177,7 +201,19 @@ export default function MentorContractPage() {
           </h1>
           <ContractStatusBadge status={status} />
         </div>
-        {isSigned && data.contract ? (
+        {resigning ? (
+          <div className="mt-3 rounded-lg border border-warning/40 bg-warning-light/60 px-4 py-3 text-sm">
+            <p className="font-semibold text-foreground">
+              Tanda Tangan Ulang — Kontrak v{data.contractVersion}
+            </p>
+            <p className="mt-1 text-text-muted">
+              Goreskan tanda tangan baru di bawah dan centang ketiga
+              pernyataan untuk menandatangani versi terbaru. Tanda tangan
+              lama Anda (untuk versi {data.contract?.templateVersion}) tetap
+              tersimpan di arsip.
+            </p>
+          </div>
+        ) : showSignedView && data.contract ? (
           <p className="mt-2 text-sm text-text-muted">
             Nomor kontrak: <span className="font-semibold">{data.contract.contractNumber}</span>
             {data.contract.signedAt && (
@@ -209,12 +245,33 @@ export default function MentorContractPage() {
       </header>
 
       {/* SIGNED VIEW */}
-      {isSigned && data.contract && (
-        <SignedView contract={data.contract} previewHtml={data.previewHtml} />
+      {showSignedView && data.contract && (
+        <SignedView
+          contract={data.contract}
+          previewHtml={data.previewHtml}
+          needsResign={data.needsResign}
+          currentVersion={data.contractVersion}
+          changelog={data.changelogSinceSigned}
+          onResign={() => {
+            setResigning(true);
+            // Skip back to step 3 — identity is already on file from the
+            // previous signing, and the contract body hasn't changed
+            // substantively from the mentor's perspective beyond the
+            // version label.
+            setStep(3);
+            setReadChecked(false);
+            setScrolledToEnd(false);
+            setConfirmAuthority(false);
+            setConfirmNoConflict(false);
+            setConfirmAccurate(false);
+            setError(null);
+          }}
+          onRegenerated={reload}
+        />
       )}
 
       {/* IN-PROGRESS FLOW */}
-      {!isSigned && (
+      {!showSignedView && (
         <>
           <Stepper
             current={step}
@@ -466,12 +523,98 @@ function ConfirmRow({
 function SignedView({
   contract,
   previewHtml,
+  needsResign,
+  currentVersion,
+  changelog,
+  onResign,
+  onRegenerated,
 }: {
   contract: ContractRow;
   previewHtml: string;
+  needsResign: boolean;
+  currentVersion: string;
+  changelog: ChangelogEntry[];
+  onResign: () => void;
+  onRegenerated: () => void;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const hasPdf = !!contract.pdfPath;
+
+  async function regenerate() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/mentor-contract/regenerate-pdf", {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Gagal regenerate PDF");
+      onRegenerated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal regenerate PDF");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {needsResign && (
+        <div className="rounded-xl border border-warning/40 bg-warning-light/60 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-warning/20 text-warning">
+              <Icon name="bell" size={14} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground">
+                Kontrak telah diperbarui ke versi {currentVersion}
+              </p>
+              <p className="mt-1 text-sm text-text-muted">
+                Tanda tangan Anda yang sebelumnya (versi {contract.templateVersion})
+                tetap sah dan tersimpan, namun Anda perlu menandatangani versi
+                terbaru. Klik tombol "Tanda Tangan Ulang" di samping untuk melanjutkan.
+              </p>
+
+              {changelog.length > 0 && (
+                <div className="mt-3 rounded-lg bg-surface border border-border/60 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-muted-2 mb-2">
+                    Yang berubah sejak Anda terakhir tanda tangan
+                  </p>
+                  <ul className="space-y-3">
+                    {changelog.map((entry) => (
+                      <li key={entry.version} className="text-sm">
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="font-semibold text-foreground">
+                            v{entry.version}
+                          </span>
+                          <span className="text-xs text-text-muted-2">
+                            {new Date(entry.date).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-foreground">{entry.summary}</p>
+                        {entry.details && entry.details.length > 0 && (
+                          <ul className="mt-1.5 ml-4 list-disc space-y-1 text-text-muted">
+                            {entry.details.map((d, i) => (
+                              <li key={i}>{d}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="rounded-2xl border border-success/40 bg-success-light/40 p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
@@ -490,15 +633,64 @@ function SignedView({
               />
             )}
           </div>
-          <a
-            href="/api/mentor-contract/pdf"
-            target="_blank"
-            rel="noopener"
-            className="btn-primary inline-flex items-center gap-2 self-start"
-          >
-            <Icon name="download" size={14} />
-            Unduh PDF
-          </a>
+          <div className="flex flex-col items-stretch sm:items-end gap-2 self-start">
+            {hasPdf ? (
+              <a
+                href="/api/mentor-contract/pdf"
+                target="_blank"
+                rel="noopener"
+                className="btn-primary inline-flex items-center justify-center gap-2"
+              >
+                <Icon name="download" size={14} />
+                Unduh PDF
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary inline-flex items-center justify-center gap-2"
+                disabled={busy}
+                onClick={regenerate}
+              >
+                <Icon name="refresh" size={14} />
+                {busy ? "Membuat PDF…" : "Generate PDF"}
+              </button>
+            )}
+
+            {/* Re-sign trigger. Always rendered next to the download button
+                so the affordance is discoverable, but only enabled when
+                the system has detected an admin update. */}
+            <button
+              type="button"
+              className={
+                needsResign
+                  ? "btn-ghost inline-flex items-center justify-center gap-2 border border-warning/50 text-warning"
+                  : "btn-ghost inline-flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+              }
+              disabled={!needsResign}
+              onClick={onResign}
+              title={
+                needsResign
+                  ? "Kontrak telah diperbarui — klik untuk tanda tangan ulang"
+                  : "Tidak ada pembaruan kontrak"
+              }
+            >
+              <Icon name="edit" size={14} />
+              Tanda Tangan Ulang
+            </button>
+
+            {!hasPdf && (
+              <span className="text-xs text-text-muted-2 max-w-[14rem] text-right">
+                PDF belum dibuat saat penandatanganan. Klik untuk membuatnya
+                sekarang.
+              </span>
+            )}
+            {!needsResign && (
+              <span className="text-xs text-text-muted-2 max-w-[14rem] text-right">
+                Tidak ada pembaruan dari admin.
+              </span>
+            )}
+            {err && <span className="text-xs text-danger max-w-[14rem] text-right">{err}</span>}
+          </div>
         </div>
 
         <dl className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">

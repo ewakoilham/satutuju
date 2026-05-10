@@ -11,12 +11,65 @@
  * server-rendered HTML.
  */
 
-import "server-only";
+// `server-only` directive removed so this module can be imported by both
+// Next.js server components / route handlers AND by one-off node scripts
+// in prisma/scripts/. Server-only nature is enforced de facto by the
+// `fs` import below — it would fail in any browser bundle anyway.
 import { promises as fs } from "fs";
 import path from "path";
 
 /** Pinned at sign time so future template edits don't mutate signed records. */
 export const CONTRACT_VERSION = "2026.05.10";
+
+/**
+ * Changelog of contract template versions, oldest first. Each time
+ * `CONTRACT_VERSION` is bumped, prepend an entry here describing what
+ * changed for the mentor's benefit. Mentors who signed at an older
+ * version see all entries strictly newer than theirs in the resign
+ * banner — so they know exactly what they're agreeing to.
+ *
+ * `summary` is a short one-line headline; `details` is an optional
+ * bulleted list with more specifics.
+ */
+export type ContractChangelogEntry = {
+  version: string; // matches CONTRACT_VERSION format, e.g. "2026.05.10"
+  date: string;    // ISO date the version went live
+  summary: string;
+  details?: string[];
+};
+
+export const CONTRACT_CHANGELOG: ContractChangelogEntry[] = [
+  {
+    version: "2026.05.10",
+    date: "2026-05-10",
+    summary: "Versi awal Perjanjian Kemitraan Mentor Satu Tuju.",
+  },
+  // ── Tambahkan entri baru di SINI saat menaikkan CONTRACT_VERSION ──
+  // Contoh:
+  // {
+  //   version: "2026.06.01",
+  //   date:    "2026-06-01",
+  //   summary: "Penyesuaian skema Success Fee per Universitas Mitra.",
+  //   details: [
+  //     "Pasal 7.2: tarif Success Fee untuk Australia naik dari X ke Y.",
+  //     "Lampiran B: tambahan 3 kampus baru di UK.",
+  //   ],
+  // },
+];
+
+/**
+ * Compute the entries strictly newer than `signedVersion` and ≤ `currentVersion`.
+ * Used by the resign banner to show "Yang berubah sejak Anda terakhir tanda
+ * tangan". Returns newest-first for top-down reading.
+ */
+export function changelogSince(
+  signedVersion: string,
+  currentVersion: string,
+): ContractChangelogEntry[] {
+  return CONTRACT_CHANGELOG.filter(
+    (e) => e.version > signedVersion && e.version <= currentVersion,
+  ).reverse();
+}
 
 const TEMPLATE_FILE = path.join(
   process.cwd(),
@@ -29,7 +82,9 @@ const TEMPLATE_FILE = path.join(
 let cachedBody: string | null = null;
 
 export async function getContractBody(): Promise<string> {
-  if (cachedBody) return cachedBody;
+  // Cache only in production — in dev we want template edits to show
+  // up on the next request without a server restart.
+  if (cachedBody && process.env.NODE_ENV === "production") return cachedBody;
   cachedBody = await fs.readFile(TEMPLATE_FILE, "utf8");
   return cachedBody;
 }

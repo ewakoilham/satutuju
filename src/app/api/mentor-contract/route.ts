@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   CONTRACT_VERSION,
   IDENTITY_FIELDS,
+  changelogSince,
   computeSignatureHash,
   getContractBody,
   interpolateContract,
@@ -63,6 +64,37 @@ async function fetchContract(userId: string): Promise<ContractRow | null> {
     throw new Error(error.message);
   }
   return (data as ContractRow | null) ?? null;
+}
+
+/**
+ * Idempotently insert a "kontrak diperbarui" notification for the mentor.
+ * We dedupe by exact title (which encodes the version), so a second poll
+ * for the same template version doesn't spam the bell.
+ */
+async function ensureResignNotification(userId: string, newVersion: string) {
+  const title = `Kontrak Mentor v${newVersion} — Tanda tangan ulang`;
+  const { data: existing } = await supabase
+    .from("Notification")
+    .select("id")
+    .eq("userId", userId)
+    .eq("title", title)
+    .maybeSingle();
+  if (existing) return;
+  const { error } = await supabase.from("Notification").insert({
+    id: crypto.randomUUID(),
+    userId,
+    title,
+    message:
+      "Perjanjian Kemitraan Mentor telah diperbarui. Tanda tangan Anda yang sebelumnya tetap sah untuk versi lama, namun mohon tanda tangan ulang untuk versi terbaru.",
+    type: "alert",
+    link: "/dashboard/contract",
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
+  if (error) {
+    // Notification failure shouldn't break the page load — log and move on.
+    console.warn("[mentor-contract] notification insert failed:", error);
+  }
 }
 
 async function fetchProfile(userId: string): Promise<PartialIdentity> {
@@ -132,12 +164,34 @@ export async function GET() {
     });
     const previewHtml = await marked.parse(interpolated);
 
+    // Version drift detection: an admin update bumps CONTRACT_VERSION;
+    // any signed contract whose templateVersion lags becomes "needsResign".
+    // We emit a one-shot notification so the mentor sees a heads-up in
+    // their bell — guarded by checking for an existing notification with
+    // the same title to stay idempotent across page refreshes.
+    const needsResign = !!(
+      contract &&
+      contract.status === "SIGNED" &&
+      contract.templateVersion !== CONTRACT_VERSION
+    );
+    if (needsResign && user.role === "mentor") {
+      await ensureResignNotification(user.userId, CONTRACT_VERSION);
+    }
+
+    // Changelog of versions strictly newer than what the mentor signed,
+    // so the banner can spell out exactly what changed.
+    const changelogSinceSigned = needsResign && contract
+      ? changelogSince(contract.templateVersion, CONTRACT_VERSION)
+      : [];
+
     return NextResponse.json({
       contract,
       identity,
       identityCompleteness: identityCompleteness(identity),
       identityRequired: IDENTITY_FIELDS.length,
       contractVersion: CONTRACT_VERSION,
+      needsResign,
+      changelogSinceSigned,
       previewHtml,
     });
   } catch (e) {
@@ -194,9 +248,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const existing = await fetchContract(user.userId);
-    if (existing && existing.status === "SIGNED") {
+    // Re-sign is allowed when the existing signature is on a stale
+    // template version. Otherwise a SIGNED row is locked.
+    const isResign =
+      !!existing &&
+      existing.status === "SIGNED" &&
+      existing.templateVersion !== CONTRACT_VERSION;
+    if (existing && existing.status === "SIGNED" && !isResign) {
       return NextResponse.json(
-        { error: "Kontrak sudah ditandatangani sebelumnya" },
+        { error: "Kontrak sudah ditandatangani — tidak ada pembaruan untuk ditandatangani ulang" },
         { status: 409 },
       );
     }
@@ -220,7 +280,12 @@ export async function POST(req: NextRequest) {
     };
 
     const signedAt = new Date();
-    const contractNumber = await nextContractNumber(signedAt);
+    // Re-sign keeps the original contract number (it's the same legal
+    // contract being executed under the new template version). New
+    // signatures only get a fresh sequence number.
+    const contractNumber = isResign && existing
+      ? existing.contractNumber
+      : await nextContractNumber(signedAt);
     const signatureHash = await computeSignatureHash(
       CONTRACT_VERSION,
       identity,
@@ -235,33 +300,62 @@ export async function POST(req: NextRequest) {
       null;
     const userAgent = req.headers.get("user-agent") ?? null;
 
-    // Render PDF.
-    const templateBody = await getContractBody();
-    const interpolated = interpolateContract(templateBody, {
-      identity,
-      contractNumber,
-      signedAt,
-    });
-    const pdfBuffer = await renderContractPdf({
-      interpolatedBody: interpolated,
-      identity,
-      signatureDataUrl,
-    });
+    // On re-sign, archive the prior PDF + audit fields so the old
+    // signature event remains recoverable for legal review. We only move
+    // the PDF in storage (cheap); the in-DB row is overwritten because
+    // we don't yet have a history table.
+    if (isResign && existing?.pdfPath) {
+      const archivePath = `contracts/${user.userId}/history/${existing.templateVersion}_${existing.contractNumber.replace(/\//g, "_")}.pdf`;
+      const moveResult = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .copy(existing.pdfPath, archivePath);
+      if (moveResult.error) {
+        console.warn(
+          `[mentor-contract] could not archive old PDF (${existing.pdfPath} → ${archivePath}):`,
+          moveResult.error.message,
+        );
+      }
+    }
 
-    // Upload PDF.
+    // Render + upload PDF. Both steps are best-effort: the contract is
+    // legally valid based on the in-DB audit record (snapshot + hash + IP
+    // + UA + signedAt), so we don't want a PDF rendering hiccup to block
+    // the mentor from signing. If either step fails we set pdfPath = null
+    // and log loudly; the operator can re-render later (a regenerate
+    // endpoint can be added without touching the signed row).
     const safeNumber = contractNumber.replace(/\//g, "_");
-    const pdfPath = `contracts/${user.userId}/${safeNumber}.pdf`;
-    const upload = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(pdfPath, pdfBuffer, {
-        contentType: "application/pdf",
-        upsert: true,
+    let pdfPath: string | null = null;
+    let pdfError: string | null = null;
+    try {
+      const templateBody = await getContractBody();
+      const interpolated = interpolateContract(templateBody, {
+        identity,
+        contractNumber,
+        signedAt,
       });
-    if (upload.error) {
-      console.error("Contract PDF upload error:", upload.error);
-      return NextResponse.json(
-        { error: "Gagal mengunggah PDF kontrak" },
-        { status: 500 },
+      const pdfBuffer = await renderContractPdf({
+        interpolatedBody: interpolated,
+        identity,
+        signatureDataUrl,
+        contractNumber,
+      });
+
+      const candidatePath = `contracts/${user.userId}/${safeNumber}.pdf`;
+      const upload = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(candidatePath, pdfBuffer, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+      if (upload.error) {
+        throw new Error(`Storage upload failed: ${upload.error.message}`);
+      }
+      pdfPath = candidatePath;
+    } catch (e) {
+      pdfError = e instanceof Error ? e.message : String(e);
+      console.error(
+        "[mentor-contract] PDF render/upload failed — saving signed contract without PDF. Operator can regenerate later.",
+        pdfError,
       );
     }
 
@@ -314,7 +408,7 @@ export async function POST(req: NextRequest) {
       saved = data as ContractRow;
     }
 
-    return NextResponse.json({ contract: saved });
+    return NextResponse.json({ contract: saved, pdfError });
   } catch (e) {
     console.error("Sign contract error:", e);
     return NextResponse.json(
