@@ -56,7 +56,10 @@ export default function ContractTOC({
               (b.target as HTMLElement).offsetTop,
           );
         if (visible.length > 0) {
-          setActiveId(visible[0].target.id);
+          // Guard same-id re-sets so the entire TOC list doesn't re-render
+          // on every IO tick while scrolling within one heading.
+          const next = visible[0].target.id;
+          setActiveId((prev) => (prev === next ? prev : next));
         }
       },
       {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { safeContractNumber } from "@/lib/contract-numbering";
 
 export const runtime = "nodejs";
 
@@ -41,12 +42,11 @@ export async function GET(req: NextRequest) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const safeNumber = row.contractNumber.replace(/\//g, "_");
   return new NextResponse(arrayBuffer, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="Perjanjian_Kemitraan_Mentor_${safeNumber}.pdf"`,
+      "Content-Disposition": `inline; filename="Perjanjian_Kemitraan_Mentor_${safeContractNumber(row.contractNumber)}.pdf"`,
       "Cache-Control": "private, max-age=0, must-revalidate",
     },
   });

@@ -17,12 +17,10 @@ export const toRomanMonth = (m: number): string => ROMAN_MONTHS[m - 1] ?? "";
  * on Jan 1 (= 19:00 UTC on Dec 31) gets a January-year-N+1 number, not
  * a December-year-N one.
  *
- * Sequence is global across all years (not reset annually) so numbers are
- * unique-by-construction and trivially auditable. Race-safety relies on the
- * `@unique` constraint on `MentorContract.contractNumber` — if two mentors
- * sign within the same millisecond the second insert errors and the caller
- * retries `nextContractNumber()`, which will now see the freshly committed
- * row and return the next sequence.
+ * Sequence is global across all years (not reset annually). The
+ * `@unique` constraint on `MentorContract.contractNumber` guarantees no
+ * duplicates land — if two mentors race the same sequence, the second
+ * insert fails the unique check and the caller surfaces the error.
  */
 export async function nextContractNumber(now: Date = new Date()): Promise<string> {
   const { count, error } = await supabase
@@ -35,4 +33,26 @@ export async function nextContractNumber(now: Date = new Date()): Promise<string
   const seq = String((count ?? 0) + 1).padStart(3, "0");
   const { month, year } = getJakartaParts(now);
   return `${seq}/ST-MTR/${toRomanMonth(month)}/${year}`;
+}
+
+// ─── Storage path helpers ─────────────────────────────────────────────────
+// Contract numbers contain `/`, which collides with Supabase storage path
+// separators. We swap to `_` for filenames and centralize the conversion +
+// the canonical paths so every caller (sign, regenerate, admin download,
+// archive on resign) stays in lockstep.
+
+export function safeContractNumber(contractNumber: string): string {
+  return contractNumber.replace(/\//g, "_");
+}
+
+export function contractPdfPath(userId: string, contractNumber: string): string {
+  return `contracts/${userId}/${safeContractNumber(contractNumber)}.pdf`;
+}
+
+export function archivedContractPdfPath(
+  userId: string,
+  templateVersion: string,
+  contractNumber: string,
+): string {
+  return `contracts/${userId}/history/${templateVersion}_${safeContractNumber(contractNumber)}.pdf`;
 }

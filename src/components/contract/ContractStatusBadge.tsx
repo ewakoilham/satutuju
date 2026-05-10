@@ -7,6 +7,24 @@ export type ContractDisplayStatus =
   | "SIGNED"
   | "VOID";
 
+/**
+ * Map (persisted contract status, identity completeness) → display status.
+ * Single source of truth — used by the mentor page, admin list, admin
+ * detail page, and DashboardContractAlert.
+ */
+export function deriveContractDisplayStatus(input: {
+  contract: { status: string } | null | undefined;
+  identityCompleteness: number;
+  identityRequired: number;
+}): ContractDisplayStatus {
+  const s = input.contract?.status;
+  if (s === "SIGNED") return "SIGNED";
+  if (s === "VOID") return "VOID";
+  if (input.identityCompleteness === 0) return "NOT_STARTED";
+  if (input.identityCompleteness < input.identityRequired) return "IDENTITY_INCOMPLETE";
+  return "READY_TO_SIGN";
+}
+
 const VARIANT: Record<ContractDisplayStatus, "neutral" | "warning" | "info" | "success" | "danger"> = {
   NOT_STARTED:         "neutral",
   IDENTITY_INCOMPLETE: "warning",

@@ -9,10 +9,12 @@ import ContractPreview from "@/components/contract/ContractPreview";
 import ContractTOC, {
   type ContractTocEntry,
 } from "@/components/contract/ContractTOC";
+import Field from "@/components/contract/Field";
 import SignatureCanvas, {
   type SignatureCanvasHandle,
 } from "@/components/contract/SignatureCanvas";
 import ContractStatusBadge, {
+  deriveContractDisplayStatus,
   type ContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
 import type { PartialIdentity } from "@/lib/contract-template";
@@ -101,20 +103,15 @@ export default function MentorContractPage() {
     if (!loading && user) reload();
   }, [loading, user, reload]);
 
-  const status: ContractDisplayStatus = useMemo(() => {
-    if (!data) return "NOT_STARTED";
-    if (data.contract?.status === "SIGNED") return "SIGNED";
-    if (data.contract?.status === "VOID") return "VOID";
-    if (data.identityCompleteness === 0) return "NOT_STARTED";
-    if (data.identityCompleteness < data.identityRequired) return "IDENTITY_INCOMPLETE";
-    return "READY_TO_SIGN";
-  }, [data]);
+  const status: ContractDisplayStatus = useMemo(
+    () => (data ? deriveContractDisplayStatus(data) : "NOT_STARTED"),
+    [data],
+  );
 
-  const isSigned = status === "SIGNED";
   // While the mentor is in the resign flow, treat the page as not-signed
   // so the 3-step UI renders. The signed view comes back automatically
   // after the resubmit succeeds.
-  const showSignedView = isSigned && !resigning;
+  const showSignedView = status === "SIGNED" && !resigning;
   const identityComplete =
     !!data && data.identityCompleteness === data.identityRequired;
 
@@ -756,27 +753,3 @@ function SignedView({
   );
 }
 
-function Field({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-text-muted-2">
-        {label}
-      </dt>
-      <dd
-        className={`mt-0.5 text-foreground break-all ${
-          mono ? "font-mono text-xs" : ""
-        }`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}

@@ -2,25 +2,35 @@
  * Contract template metadata, identity-field schema, and the in-place
  * interpolation logic for the Perjanjian Kemitraan Mentor.
  *
- * The contract body itself lives as Markdown at
- * `src/lib/contract-templates/perjanjian-mentor-2026-05.md`.
- * `getContractBody()` reads it from disk on the server (Next.js inlines the
- * file at build time via `fs.readFileSync` in a server-only module) and
- * returns the raw string. Browser callers should NOT import this directly —
- * they should fetch the rendered preview from the API or receive
- * server-rendered HTML.
+ * Client-safe: no `fs`, no `process.cwd()`. The actual disk read of the
+ * markdown source lives in `contract-template-server.ts` so this module
+ * can be imported by client components (admin/mentor pages) for types
+ * and pure helpers (isContractStale, deriveContractDisplayStatus, etc.)
+ * without dragging Node into the browser bundle.
  */
 
-// `server-only` directive removed so this module can be imported by both
-// Next.js server components / route handlers AND by one-off node scripts
-// in prisma/scripts/. Server-only nature is enforced de facto by the
-// `fs` import below — it would fail in any browser bundle anyway.
-import { promises as fs } from "fs";
-import path from "path";
 import { formatSigningDatePhrase } from "@/lib/datetime-id";
 
 /** Pinned at sign time so future template edits don't mutate signed records. */
 export const CONTRACT_VERSION = "2026.05.12";
+
+/** Lifecycle states stored on `MentorContract.status`. */
+export type ContractStatus = "PENDING_SIGNATURE" | "SIGNED" | "VOID";
+
+/**
+ * True when a SIGNED contract is on a template version older than the
+ * currently active one — the mentor needs to re-sign.
+ */
+export function isContractStale(
+  contract: { status: string; templateVersion: string } | null | undefined,
+  currentVersion: string,
+): boolean {
+  return (
+    !!contract &&
+    contract.status === "SIGNED" &&
+    contract.templateVersion !== currentVersion
+  );
+}
 
 /**
  * Changelog of contract template versions, oldest first. Each time
@@ -92,24 +102,6 @@ export function changelogSince(
   return CONTRACT_CHANGELOG.filter(
     (e) => e.version > signedVersion && e.version <= currentVersion,
   ).reverse();
-}
-
-const TEMPLATE_FILE = path.join(
-  process.cwd(),
-  "src",
-  "lib",
-  "contract-templates",
-  "perjanjian-mentor-2026-05.md",
-);
-
-let cachedBody: string | null = null;
-
-export async function getContractBody(): Promise<string> {
-  // Cache only in production — in dev we want template edits to show
-  // up on the next request without a server restart.
-  if (cachedBody && process.env.NODE_ENV === "production") return cachedBody;
-  cachedBody = await fs.readFile(TEMPLATE_FILE, "utf8");
-  return cachedBody;
 }
 
 // ─── Identity schema ──────────────────────────────────────────────────────

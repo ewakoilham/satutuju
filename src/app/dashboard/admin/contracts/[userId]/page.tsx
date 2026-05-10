@@ -7,9 +7,14 @@ import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import ContractStatusBadge, {
-  type ContractDisplayStatus,
+  deriveContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
-import type { IdentitySnapshot, PartialIdentity } from "@/lib/contract-template";
+import Field from "@/components/contract/Field";
+import {
+  isContractStale,
+  type IdentitySnapshot,
+  type PartialIdentity,
+} from "@/lib/contract-template";
 import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 interface FullContract {
@@ -40,13 +45,6 @@ interface DetailResponse {
   currentVersion: string;
 }
 
-function deriveStatus(d: DetailResponse): ContractDisplayStatus {
-  if (d.contract?.status === "SIGNED") return "SIGNED";
-  if (d.contract?.status === "VOID") return "VOID";
-  if (d.identityCompleteness === 0) return "NOT_STARTED";
-  if (d.identityCompleteness < d.identityRequired) return "IDENTITY_INCOMPLETE";
-  return "READY_TO_SIGN";
-}
 
 export default function AdminContractDetailPage() {
   const { user, loading: authLoading } = useUser();
@@ -114,7 +112,8 @@ export default function AdminContractDetailPage() {
     );
   }
 
-  const status = deriveStatus(data);
+  const status = deriveContractDisplayStatus(data);
+  const stale = isContractStale(data.contract, data.currentVersion);
   const c = data.contract;
   const identity =
     (c?.identitySnapshot as PartialIdentity | null) ?? data.identity;
@@ -134,7 +133,7 @@ export default function AdminContractDetailPage() {
             {data.user.name}
           </h1>
           <ContractStatusBadge status={status} />
-          {c?.status === "SIGNED" && c.templateVersion !== data.currentVersion && (
+          {stale && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-warning-light text-warning text-[11px] font-bold uppercase tracking-wide">
               Versi lama
             </span>
@@ -148,7 +147,7 @@ export default function AdminContractDetailPage() {
         </p>
       </header>
 
-      {c?.status === "SIGNED" && c.templateVersion !== data.currentVersion && (
+      {stale && c && (
         <div className="rounded-xl border border-warning/40 bg-warning-light/60 px-5 py-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-warning/20 text-warning shrink-0">
@@ -295,7 +294,7 @@ export default function AdminContractDetailPage() {
             Alasan pembatalan
           </label>
           <textarea
-            className="form-input w-full"
+            className="input-field w-full"
             rows={3}
             value={voidReason}
             onChange={(e) => setVoidReason(e.target.value)}
@@ -320,44 +319,8 @@ export default function AdminContractDetailPage() {
             </button>
           </div>
         </div>
-        <style jsx>{`
-          .form-input {
-            padding: 0.55rem 0.75rem;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--foreground);
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            line-height: 1.4;
-          }
-          .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgb(57 88 179 / 0.18);
-          }
-        `}</style>
       </Modal>
     </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  mono,
-  collapse,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  collapse?: boolean;
-}) {
-  return (
-    <div className={collapse ? "sm:col-span-2" : ""}>
-      <dt className="text-xs uppercase tracking-wide text-text-muted-2">{label}</dt>
-      <dd className={`mt-0.5 text-foreground break-all ${mono ? "font-mono text-xs" : ""}`}>
-        {value}
-      </dd>
-    </div>
-  );
-}

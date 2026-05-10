@@ -73,7 +73,7 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
               </label>
               {f.type === "textarea" ? (
                 <textarea
-                  className="form-input w-full"
+                  className="input-field w-full"
                   rows={3}
                   value={value}
                   placeholder={f.placeholder}
@@ -82,7 +82,7 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
                 />
               ) : f.type === "select" ? (
                 <select
-                  className="form-input w-full"
+                  className="input-field w-full"
                   value={value}
                   disabled={readOnly}
                   onChange={(e) => update(f.name, e.target.value)}
@@ -95,7 +95,7 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
               ) : (
                 <input
                   type={f.type}
-                  className="form-input w-full"
+                  className="input-field w-full"
                   value={value}
                   placeholder={f.placeholder}
                   disabled={readOnly}
@@ -132,27 +132,6 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
         </div>
       )}
 
-      <style jsx>{`
-        .form-input {
-          padding: 0.55rem 0.75rem;
-          border: 1px solid var(--border);
-          background: var(--surface);
-          color: var(--foreground);
-          border-radius: 0.5rem;
-          font-size: 0.9rem;
-          line-height: 1.4;
-          transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        .form-input:focus {
-          outline: none;
-          border-color: var(--primary);
-          box-shadow: 0 0 0 3px rgb(57 88 179 / 0.18);
-        }
-        .form-input:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-      `}</style>
     </div>
   );
 }

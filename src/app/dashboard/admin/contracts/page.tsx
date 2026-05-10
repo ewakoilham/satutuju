@@ -6,8 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import ContractStatusBadge, {
-  type ContractDisplayStatus,
+  deriveContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
+import { isContractStale } from "@/lib/contract-template";
 import { formatJakartaDate } from "@/lib/datetime-id";
 
 type ContractStub = {
@@ -32,26 +33,6 @@ type Row = {
 };
 
 type Filter = "all" | "signed" | "pending" | "void" | "stale";
-
-function deriveDisplayStatus(row: Row): ContractDisplayStatus {
-  if (row.contract?.status === "SIGNED") return "SIGNED";
-  if (row.contract?.status === "VOID") return "VOID";
-  if (row.identityCompleteness === 0) return "NOT_STARTED";
-  if (row.identityCompleteness < row.identityRequired) return "IDENTITY_INCOMPLETE";
-  return "READY_TO_SIGN";
-}
-
-/**
- * "Stale" rows are signed but on an outdated template version. The mentor
- * can re-sign at their convenience; admin sees this as a follow-up they
- * should chase if signing the latest version matters operationally.
- */
-function isStale(row: Row, currentVersion: string): boolean {
-  return (
-    row.contract?.status === "SIGNED" &&
-    row.contract.templateVersion !== currentVersion
-  );
-}
 
 export default function AdminContractsPage() {
   const { user, loading: authLoading } = useUser();
@@ -78,10 +59,10 @@ export default function AdminContractsPage() {
     if (!rows) return [];
     if (filter === "all") return rows;
     if (filter === "stale") {
-      return rows.filter((r) => isStale(r, currentVersion));
+      return rows.filter((r) => isContractStale(r.contract, currentVersion));
     }
     return rows.filter((r) => {
-      const s = deriveDisplayStatus(r);
+      const s = deriveContractDisplayStatus(r);
       if (filter === "signed") return s === "SIGNED";
       if (filter === "void") return s === "VOID";
       return s === "NOT_STARTED" || s === "IDENTITY_INCOMPLETE" || s === "READY_TO_SIGN";
@@ -95,11 +76,11 @@ export default function AdminContractsPage() {
       voided = 0,
       stale = 0;
     rows.forEach((r) => {
-      const s = deriveDisplayStatus(r);
+      const s = deriveContractDisplayStatus(r);
       if (s === "SIGNED") signed += 1;
       else if (s === "VOID") voided += 1;
       else pending += 1;
-      if (isStale(r, currentVersion)) stale += 1;
+      if (isContractStale(r.contract, currentVersion)) stale += 1;
     });
     return { all: rows.length, signed, pending, void: voided, stale };
   }, [rows, currentVersion]);
@@ -175,8 +156,8 @@ export default function AdminContractsPage() {
               </tr>
             )}
             {filtered.map((r) => {
-              const status = deriveDisplayStatus(r);
-              const stale = isStale(r, currentVersion);
+              const status = deriveContractDisplayStatus(r);
+              const stale = isContractStale(r.contract, currentVersion);
               const latest = r.contract?.updatedAt ?? r.contract?.signedAt ?? null;
               return (
                 <tr key={r.userId} className="border-t border-border">
