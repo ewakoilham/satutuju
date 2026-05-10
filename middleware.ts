@@ -40,8 +40,10 @@ async function menteeProfileFilled(userId: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Signed-in users skip the login page and the landing page — send them to /dashboard
-  if (pathname === "/login" || pathname === "/") {
+  // Signed-in users hitting /login get bounced to /dashboard (no point seeing
+  // the login form when already authenticated). The landing page (/) stays
+  // public for everyone — anonymous and signed-in alike.
+  if (pathname === "/login") {
     const token = req.cookies.get("token")?.value;
     if (!token) return NextResponse.next();
     try {
@@ -113,5 +115,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/"],
+  matcher: ["/dashboard/:path*", "/login"],
 };
