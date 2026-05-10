@@ -25,7 +25,6 @@ const NAV_ITEMS: Record<string, Array<{ href: string; label: string; icon: strin
   mentor: [
     { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/contract",     label: "Kontrak",      icon: "document"    },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
     { href: "/dashboard/universities", label: "Universities", icon: "school"      },
   ],
@@ -42,6 +41,7 @@ const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon:
   admin:  [],
   mentor: [
     { href: "/dashboard/mentor-profile", label: "Profile",  icon: "user"     },
+    { href: "/dashboard/contract",       label: "Kontrak",  icon: "document" },
     { href: "/dashboard/settings",       label: "Settings", icon: "settings" },
   ],
   mentee: [

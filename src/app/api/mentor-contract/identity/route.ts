@@ -60,6 +60,20 @@ export async function PUT(req: NextRequest) {
 
   const now = new Date().toISOString();
 
+  // Helper: convert a Supabase error into a useful message. The
+  // most common failure here is the migration not being applied — surface
+  // that diagnosis directly so the operator doesn't have to dig through
+  // server logs.
+  function describeError(err: { code?: string; message?: string; hint?: string | null }): string {
+    if (err.code === "42703" || err.code === "PGRST204") {
+      return "Kolom identitas belum ada di database. Jalankan `npx prisma db push` (atau apply prisma/sql/2026-05-10_mentor_contracts.sql), lalu reload schema di Supabase Dashboard → API → Reload schema.";
+    }
+    if (err.code === "PGRST205" || err.code === "42P01") {
+      return "Tabel MentorProfile tidak ditemukan oleh PostgREST. Coba reload schema di Supabase Dashboard → API → Reload schema.";
+    }
+    return `[${err.code ?? "?"}] ${err.message ?? "Gagal menyimpan data identitas"}`;
+  }
+
   if (existing) {
     const { data, error } = await supabase
       .from("MentorProfile")
@@ -72,7 +86,7 @@ export async function PUT(req: NextRequest) {
     if (error) {
       console.error("MentorProfile identity update error:", error);
       return NextResponse.json(
-        { error: "Gagal menyimpan data identitas" },
+        { error: describeError(error) },
         { status: 500 },
       );
     }
@@ -95,7 +109,7 @@ export async function PUT(req: NextRequest) {
   if (error) {
     console.error("MentorProfile identity insert error:", error);
     return NextResponse.json(
-      { error: "Gagal menyimpan data identitas" },
+      { error: describeError(error) },
       { status: 500 },
     );
   }

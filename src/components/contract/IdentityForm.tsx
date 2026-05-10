@@ -108,21 +108,27 @@ export default function IdentityForm({ initial, readOnly = false, onSaved }: Ide
       </div>
 
       {!readOnly && (
-        <div className="mt-5 flex items-center gap-3">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? "Menyimpan…" : "Simpan Data Identitas"}
-          </button>
-          {savedAt && !error && (
-            <span className="text-xs text-success">
-              Tersimpan {savedAt.toLocaleTimeString("id-ID")}
-            </span>
+        <div className="mt-5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Menyimpan…" : "Simpan Data Identitas"}
+            </button>
+            {savedAt && !error && (
+              <span className="text-xs text-success">
+                Tersimpan {savedAt.toLocaleTimeString("id-ID")}
+              </span>
+            )}
+          </div>
+          {error && (
+            <div className="mt-3 rounded-lg border border-danger/40 bg-danger-light/40 px-3 py-2 text-xs text-danger leading-relaxed">
+              {error}
+            </div>
           )}
-          {error && <span className="text-xs text-danger">{error}</span>}
         </div>
       )}
 
