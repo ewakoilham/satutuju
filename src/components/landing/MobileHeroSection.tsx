@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
@@ -69,25 +70,40 @@ export default function MobileHeroSection() {
 
   return (
     <section
-      className="relative overflow-hidden bg-[#fefaef] pt-24 pb-12 px-5"
+      className="relative overflow-hidden bg-white pt-24 pb-12 px-5"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
     >
-      {/* Atmosphere blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute -top-16 -right-10 w-56 h-56 rounded-full opacity-70"
-          style={{ background: "#c6ddef", filter: "blur(70px)" }}
-        />
-        <div
-          className="absolute top-[40%] -left-16 w-48 h-48 rounded-full opacity-50"
-          style={{ background: "#d5c6ef", filter: "blur(70px)" }}
-        />
-        <div
-          className="absolute top-[20%] right-[20%] w-44 h-44 rounded-full opacity-60"
-          style={{ background: "#fef3d0", filter: "blur(70px)" }}
-        />
-      </div>
+      {/* Background photo — same as desktop hero */}
+      <Image
+        src="/bg.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        quality={90}
+        className="object-cover pointer-events-none select-none"
+      />
+      {/* Soft white wash so text stays legible over the photo */}
+      <div className="absolute inset-0 bg-white/70 pointer-events-none" />
+
+      {/* Organic gradient blobs — same palette + animation as desktop */}
+      <div
+        className="absolute -top-20 -right-20 w-[600px] h-[600px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#c6ddef", filter: "blur(120px)", opacity: 0.7 }}
+      />
+      <div
+        className="absolute -bottom-32 -left-20 w-[550px] h-[550px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#d5c6ef", filter: "blur(120px)", opacity: 0.5, animationDelay: "3s", animationDirection: "reverse" }}
+      />
+      <div
+        className="absolute top-10 left-1/4 w-[400px] h-[400px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#fef3d0", filter: "blur(100px)", opacity: 0.6, animationDelay: "5s" }}
+      />
+      <div
+        className="absolute bottom-10 right-1/3 w-[350px] h-[350px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#b8d4ed", filter: "blur(100px)", opacity: 0.5, animationDelay: "7s", animationDirection: "reverse" }}
+      />
 
       <div className="relative z-10 max-w-md mx-auto">
         {/* Question hook — sits above everything as the lead-in. */}
