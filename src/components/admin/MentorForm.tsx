@@ -9,6 +9,7 @@ import {
   suggestInitials,
   suggestMentorId,
 } from "@/lib/mentors-runtime";
+import { compressImage } from "@/lib/image-compress";
 
 type Mode = "create" | "edit";
 
@@ -119,8 +120,16 @@ export default function MentorForm({ mode, initial }: Props) {
       setError("Set a name first so we can generate an id for the photo path.");
       return null;
     }
+    // Vercel caps API request bodies at 4.5 MB; modern phone photos are
+    // routinely 5–15 MB raw. Compress in the browser first.
+    let prepared: File;
+    try {
+      prepared = await compressImage(file);
+    } catch {
+      prepared = file;
+    }
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", prepared);
     const res = await fetch(`/api/mentors/${state.id}/photo`, {
       method: "POST",
       credentials: "include",

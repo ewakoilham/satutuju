@@ -106,9 +106,12 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
           <Icon name="x" size={16} />
         </button>
 
-        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {/* Photo gallery */}
-          <div className="flex flex-col bg-surface-elevated">
+        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
+          {/* Photo gallery — sticky on md+ so it stays anchored while the
+              right column scrolls. md:self-start prevents the grid from
+              stretching this column to the right column's height (which
+              would defeat sticky). */}
+          <div className="flex flex-col bg-surface-elevated md:sticky md:top-0 md:self-start md:max-h-[88vh] md:overflow-y-auto">
             <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden">
               {currentPhoto ? (
                 // Per-slot location so admins can set focal point/zoom for
