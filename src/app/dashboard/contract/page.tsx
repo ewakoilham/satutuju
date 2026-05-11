@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { useUser } from "@/lib/hooks";
@@ -9,14 +10,16 @@ import ContractPreview from "@/components/contract/ContractPreview";
 import ContractTOC, {
   type ContractTocEntry,
 } from "@/components/contract/ContractTOC";
+import ContractTakeaways from "@/components/contract/ContractTakeaways";
 import Field from "@/components/contract/Field";
-import SignatureCanvas, {
-  type SignatureCanvasHandle,
-} from "@/components/contract/SignatureCanvas";
+import SignatureInput, {
+  type SignatureInputHandle,
+} from "@/components/contract/SignatureInput";
 import ContractStatusBadge, {
   deriveContractDisplayStatus,
   type ContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
+import { useActiveAnchor } from "@/lib/use-active-anchor";
 import type { PartialIdentity } from "@/lib/contract-template";
 import {
   formatJakartaDateTime,
@@ -78,17 +81,30 @@ export default function MentorContractPage() {
    *  a successful re-sign (the next `reload()` will see status=SIGNED and
    *  matching templateVersion, so signed-view renders again). */
   const [resigning, setResigning] = useState(false);
-  const sigRef = useRef<SignatureCanvasHandle>(null);
+  const sigRef = useRef<SignatureInputHandle>(null);
   // Callback ref for the contract reader's scroll container. Stored as
   // state (not a useRef) so the sibling <ContractTOC /> re-renders once
   // the element is attached and can wire up its IntersectionObserver
   // against the freshly-rendered heading nodes.
   const [previewScrollEl, setPreviewScrollEl] = useState<HTMLDivElement | null>(null);
+  // Heading ids the preview contains, kept referentially stable so the
+  // active-anchor IntersectionObserver doesn't remount each render.
+  const headingIds = useMemo(
+    () => data?.previewToc.map((e) => e.id) ?? [],
+    [data?.previewToc],
+  );
+  const activeId = useActiveAnchor(previewScrollEl, headingIds);
 
   const reload = useCallback(async () => {
     setReloading(true);
     try {
-      const res = await fetch("/api/mentor-contract", { credentials: "include" });
+      // cache: "no-store" — after a successful (re-)sign POST, browsers
+      // may otherwise serve the prior GET response from disk cache and
+      // hide the freshly bumped `signedAt` from the UI.
+      const res = await fetch("/api/mentor-contract", {
+        credentials: "include",
+        cache: "no-store",
+      });
       const json = (await res.json()) as ContractApiResponse;
       if (!res.ok) throw new Error("Gagal memuat data");
       setData(json);
@@ -254,8 +270,6 @@ export default function MentorContractPage() {
       {showSignedView && data.contract && (
         <SignedView
           contract={data.contract}
-          previewHtml={data.previewHtml}
-          toc={data.previewToc}
           needsResign={data.needsResign}
           currentVersion={data.contractVersion}
           changelog={data.changelogSinceSigned}
@@ -319,22 +333,45 @@ export default function MentorContractPage() {
           {step === 2 && (
             <Section
               title="Langkah 2 — Baca Kontrak"
-              subtitle="Gulir hingga akhir untuk membuka langkah berikutnya. Gunakan daftar isi di kiri untuk lompat antar bab."
+              subtitle="Gulir hingga akhir untuk membuka langkah berikutnya. Gunakan daftar isi di kiri untuk lompat antar bab; poin penting per pasal di kanan otomatis mengikuti bab yang sedang dibaca."
             >
-              <div className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-4 md:gap-6">
-                <aside className="hidden md:block">
-                  <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
-                    <ContractTOC
-                      entries={data.previewToc}
-                      scrollContainer={previewScrollEl}
-                    />
-                  </div>
-                </aside>
-                <ContractPreview
-                  ref={setPreviewScrollEl}
-                  html={data.previewHtml}
-                  onScrolledToEnd={() => setScrolledToEnd(true)}
-                />
+              {/* Takeaway disclosure for narrow viewports (< lg) — sits
+                  ABOVE the preview so mentor still gets the highlight
+                  without the side rail. */}
+              {/* Container queries make the reader adapt to its rendered
+                  width regardless of viewport / Windows scaling. Outer
+                  div is the query container; nested grid + sidebars use
+                  `@[Npx]:` prefixes against IT, not the viewport.
+                    - < 680px: single column, preview only
+                    - ≥ 680px: 2-col (TOC + preview)
+                    - ≥ 1024px: 3-col (TOC + preview + takeaways) */}
+              <div className="@container lg:-mx-8 lg:px-2">
+                <div className="grid gap-3 items-start @[680px]:grid-cols-[170px_minmax(0,1fr)] @[1024px]:grid-cols-[170px_minmax(0,1fr)_240px] @[1024px]:gap-4">
+                  <aside className="hidden @[680px]:block">
+                    <div className="sticky top-4 max-h-[60vh] overflow-y-auto pr-2">
+                      <ContractTOC
+                        entries={data.previewToc}
+                        scrollContainer={previewScrollEl}
+                        activeId={activeId}
+                      />
+                    </div>
+                  </aside>
+                  <ContractPreview
+                    ref={setPreviewScrollEl}
+                    html={data.previewHtml}
+                    onScrolledToEnd={() => setScrolledToEnd(true)}
+                    className="contract-prose max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 @[680px]:p-5 @[1024px]:p-6"
+                  />
+                  <aside className="hidden @[1024px]:block">
+                    <div className="sticky top-4 max-h-[60vh] overflow-y-auto">
+                      <ContractTakeaways
+                        entries={data.previewToc}
+                        activeId={activeId}
+                        variant="sidebar"
+                      />
+                    </div>
+                  </aside>
+                </div>
               </div>
               <label className="mt-5 flex items-start gap-3 text-sm">
                 <input
@@ -380,7 +417,7 @@ export default function MentorContractPage() {
               subtitle="Tanda tangan ini, beserta jejak audit (waktu, IP, perangkat), akan disimpan sebagai bukti hukum."
             >
               <div className="mb-5">
-                <SignatureCanvas
+                <SignatureInput
                   ref={sigRef}
                   disabled={submitting}
                   onEmptyChange={setSignatureEmpty}
@@ -540,8 +577,6 @@ function ConfirmRow({
 
 function SignedView({
   contract,
-  previewHtml,
-  toc,
   needsResign,
   currentVersion,
   changelog,
@@ -549,8 +584,6 @@ function SignedView({
   onRegenerated,
 }: {
   contract: ContractRow;
-  previewHtml: string;
-  toc: ContractTocEntry[];
   needsResign: boolean;
   currentVersion: string;
   changelog: ChangelogEntry[];
@@ -733,22 +766,34 @@ function SignedView({
         </dl>
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface-elevated p-6 md:p-8">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">
-          Salinan Perjanjian
-        </h2>
-        <div className="grid md:grid-cols-[200px_minmax(0,1fr)] gap-4 md:gap-6">
-          <aside className="hidden md:block">
-            <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto pr-2">
-              <ContractTOC entries={toc} scrollContainer={null} />
-            </div>
-          </aside>
-          <div
-            className="contract-prose"
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
+      {/* CTA → dedicated full-width reader at /dashboard/contract/salinan.
+          Kept the link inline (not auto-redirect) so the audit panel
+          above stays the canonical landing view post-sign. */}
+      <Link
+        href="/dashboard/contract/salinan"
+        className="block rounded-2xl border border-border bg-surface-elevated hover:border-primary/40 hover:bg-primary-50/30 transition p-6 md:p-7"
+      >
+        <div className="flex items-start gap-4">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary flex-shrink-0">
+            <Icon name="book" size={20} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-foreground">
+              Baca Salinan Perjanjian
+            </h2>
+            <p className="text-sm text-text-muted mt-1 leading-relaxed">
+              Buka halaman pembacaan khusus — full-width dengan daftar isi,
+              isi pasal, dan poin penting per pasal di sisi kanan. Dioptimasi
+              untuk layar lebar.
+            </p>
+          </div>
+          <Icon
+            name="chevron-right"
+            size={16}
+            className="text-text-muted-2 mt-2 flex-shrink-0"
           />
         </div>
-      </section>
+      </Link>
     </div>
   );
 }

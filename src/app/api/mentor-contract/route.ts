@@ -159,15 +159,22 @@ export async function GET(req: NextRequest) {
       await ensureResignNotification(user.userId, CONTRACT_VERSION);
     }
 
+    // Per-user response — never cache at the edge or in the browser.
+    // Stale data here would hide a fresh re-sign's signedAt bump.
+    const noStore = { "Cache-Control": "private, no-store, must-revalidate" };
+
     if (summaryOnly) {
-      return NextResponse.json({
-        contract,
-        identity,
-        identityCompleteness: identityCompleteness(identity),
-        identityRequired: IDENTITY_FIELDS.length,
-        contractVersion: CONTRACT_VERSION,
-        needsResign,
-      });
+      return NextResponse.json(
+        {
+          contract,
+          identity,
+          identityCompleteness: identityCompleteness(identity),
+          identityRequired: IDENTITY_FIELDS.length,
+          contractVersion: CONTRACT_VERSION,
+          needsResign,
+        },
+        { headers: noStore },
+      );
     }
 
     // Render preview HTML. For signed contracts use the frozen snapshot +
@@ -199,17 +206,20 @@ export async function GET(req: NextRequest) {
       ? changelogSince(contract.templateVersion, CONTRACT_VERSION)
       : [];
 
-    return NextResponse.json({
-      contract,
-      identity,
-      identityCompleteness: identityCompleteness(identity),
-      identityRequired: IDENTITY_FIELDS.length,
-      contractVersion: CONTRACT_VERSION,
-      needsResign,
-      changelogSinceSigned,
-      previewHtml,
-      previewToc,
-    });
+    return NextResponse.json(
+      {
+        contract,
+        identity,
+        identityCompleteness: identityCompleteness(identity),
+        identityRequired: IDENTITY_FIELDS.length,
+        contractVersion: CONTRACT_VERSION,
+        needsResign,
+        changelogSinceSigned,
+        previewHtml,
+        previewToc,
+      },
+      { headers: noStore },
+    );
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Internal error" },

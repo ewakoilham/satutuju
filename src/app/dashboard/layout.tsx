@@ -495,8 +495,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Global contract alert (mentor-only, hides on /dashboard/contract) ─ */}
       <DashboardContractAlert role={user.role} />
 
-      {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* ── Main content ───────────────────────────────────────────────────
+          The contract route drops the max-width cap entirely so its
+          three-column reader fills whatever the viewport offers. Other
+          dashboard routes stay capped at 7xl because they're card grids
+          that get sparse on very wide screens. */}
+      <main
+        className={
+          pathname.startsWith("/dashboard/contract")
+            ? "mx-auto max-w-none px-3 sm:px-4 lg:px-4 py-8"
+            : "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8"
+        }
+      >
         {children}
       </main>
     </div>

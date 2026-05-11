@@ -40,7 +40,10 @@ export default function DashboardContractAlert({ role }: Props) {
     if (role !== "mentor") return;
     // Summary mode: skip the markdown → HTML → TOC pipeline server-side
     // since the alert only consumes status + needsResign.
-    fetch("/api/mentor-contract?summary=1", { credentials: "include" })
+    fetch("/api/mentor-contract?summary=1", {
+      credentials: "include",
+      cache: "no-store",
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: ContractStateAPI | null) => setState(d))
       .catch(() => null);

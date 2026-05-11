@@ -11,8 +11,10 @@
  * `updatedAt` is bumped.
  */
 
-import { config } from "dotenv";
-config(); // .env must load before importing modules that read env at init
+// dotenv/config is a side-effect import — runs at module load BEFORE
+// downstream imports resolve their own module init code (supabase.ts
+// reads env at the top of the file). Must stay the first import.
+import "dotenv/config";
 
 import { supabase } from "../../src/lib/supabase";
 import type { IdentitySnapshot } from "../../src/lib/contract-template";
