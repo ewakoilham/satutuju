@@ -27,11 +27,11 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
   admin: [
     { href: "/dashboard",              label: "Overview", icon: "chart" },
     { href: "/dashboard/users",        label: "Users",    icon: "users" },
-    { href: "/dashboard/pairings",     label: "Pairings", icon: "link"  },
     {
       label: "Mentor", icon: "user",
       children: [
         { href: "/dashboard/admin/mentors",   label: "Daftar Mentor", icon: "user"     },
+        { href: "/dashboard/pairings",        label: "Pairings",      icon: "link"     },
         { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
       ],
     },

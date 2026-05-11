@@ -42,6 +42,18 @@ const ALL_RESOURCES: ResourceCard[] = [
     roles: ["mentor", "admin"],
   },
   {
+    href: "/dashboard/mentee-journey",
+    icon: "map",
+    title: "Mentee Registration Journey",
+    description:
+      "Swim lane diagram of the 5 stages, 14 core steps, and 4 add-ons from a mentee's first touch with Satu Tuju to the formal handover into the mentor's hands.",
+    badge: null,
+    note: "Visible to mentors & admins only",
+    color: "text-primary",
+    bg: "bg-primary-50",
+    roles: ["mentor", "admin"],
+  },
+  {
     href: null,
     icon: "document",
     title: "Document Templates",
