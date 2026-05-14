@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import { landingCopy } from "@/lib/landing-copy";
+import { landingCopy, COMMUNITY_URL } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
 import EditableMentorPhoto from "./EditableMentorPhoto";
 import { useEditPanelOpen } from "@/lib/photo-edit-context";
@@ -239,12 +239,14 @@ export default function MobileHeroSection({ initialBgIndex }: MobileHeroSectionP
             {t.primaryCta}
             <Icon name="arrow-right" size={15} />
           </Link>
-          <Link
-            href="/signup"
+          <a
+            href={COMMUNITY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 w-full min-h-[48px] rounded-[14px] bg-white/95 text-primary font-semibold text-[14px] border border-primary-200/50"
           >
             {t.secondaryCta}
-          </Link>
+          </a>
         </div>
 
         {/* Refundable Deposit — subtle footnote, centered */}

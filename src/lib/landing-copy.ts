@@ -1,6 +1,6 @@
-/** External Telegram invite for the public community. Used by every
+/** External WhatsApp invite for the public community. Used by every
  *  "Gabung Komunitas" button on the landing page. */
-export const COMMUNITY_URL = "https://t.me/+g9_Zm0P18as0YzA1";
+export const COMMUNITY_URL = "https://chat.whatsapp.com/L7eaVeGybaU5mcdCmjpGMF";
 
 export const landingCopy = {
   id: {
