@@ -15,7 +15,7 @@ export const landingCopy = {
         "Mau lanjut S2 ke luar negeri, tapi bingung mulai dari mana?",
       headlineLine2: "Mentor Satu Tuju siap bimbing kamu dari nol",
       subheadline:
-        "Dari riset beasiswa, esai, sampai latihan wawancara, kita temenin sampai kamu sampe di kampus impian.",
+        "Dari riset kampus, pembuatan essay, sampai mock interview, mentor Satu Tuju akan temenin kamu sampai ke kampus impian kamu",
       scrollCue: "Scroll ke bawah untuk cari tahu lebih jauh!",
       primaryCta: "Gabung mentorship sekarang",
       secondaryCta: "Gabung komunitas",
@@ -78,24 +78,24 @@ export const landingCopy = {
       stepLabel: "LANGKAH",
       steps: [
         {
-          title: "Buat profil kamu",
+          title: "Daftarkan diri kamu",
           description:
-            "Daftar, terus ceritain target beasiswa kamu. Kita perlu tau mimpi kamu biar bisa cocokin sama mentor yang pas.",
+            "Klik gabung sekarang dan beri tahu kami target kampus, negara, dan rencana pembiayaan kamu",
         },
         {
-          title: "Dapet mentor yang pas",
+          title: "Proses matching",
           description:
-            "Kita cocokin kamu sama mentor berdasarkan beasiswa, kampus, dan bidang studi.",
+            "Setelah kami menerima data kamu, kami akan cocokin kamu sama mentor berdasarkan rencana pendaan, tujuan kampus, dan bidang studi",
         },
         {
           title: "Mulai sesi pertama",
           description:
-            "Booking jadwal, terus mulai prep beasiswa bareng mentor yang udah pernah ngelewatin prosesnya.",
+            "Setelah ketemu mentor yang tepat, kamu bisa langsung mulai proses mentoring 1on1 bareng mentor yang pastinya udah pernah ada di posisi kamu!",
         },
       ],
     },
     finalCta: {
-      headline: "Siap mulai prep beasiswa kamu?",
+      headline: "Siap mulai prep ke kampus impian kamu?",
       subheading:
         "Daftar mentorship sekarang, atau gabung komunitas SatuTuju buat liat-liat dulu.",
       primary: "Daftar mentorship",

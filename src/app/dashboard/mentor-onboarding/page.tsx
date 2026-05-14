@@ -152,12 +152,32 @@ export default function MentorOnboardingPage() {
   const [animating, setAnimating] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // If the mentor already has a profile, skip onboarding
+  // If the mentor's profile is already complete enough to pass the dashboard
+  // gate (middleware checks fullName + mentorStyle), skip onboarding. Otherwise
+  // preload whatever values exist so the user can resume from where they left
+  // off — and we don't loop back to dashboard only to bounce back here again.
   useEffect(() => {
     fetch("/api/mentor-profile")
       .then((r) => r.json())
       .then((data) => {
-        if (data.profile) router.replace("/dashboard");
+        const p = data.profile;
+        if (!p) return;
+        if (p.fullName && p.mentorStyle) {
+          router.replace("/dashboard");
+          return;
+        }
+        setProfile((prev) => {
+          const next = { ...prev };
+          for (const ques of QUESTIONS) {
+            const v = p[ques.field];
+            if (typeof v === "string") next[ques.field] = v;
+            if (ques.otherField) {
+              const ov = p[ques.otherField];
+              if (typeof ov === "string") next[ques.otherField] = ov;
+            }
+          }
+          return next;
+        });
       })
       .catch(() => {});
   }, [router]);
@@ -166,6 +186,27 @@ export default function MentorOnboardingPage() {
   const q = QUESTIONS[current];
   const progress = ((current + 1) / total) * 100;
   const isLast = current === total - 1;
+
+  // Whether the current question has a valid answer — gates the
+  // Continue / Complete buttons so the user can't reach the end with empty
+  // required fields (which would otherwise loop them through the dashboard
+  // middleware gate).
+  const currentAnswered = (() => {
+    const v = profile[q.field];
+    if (!v || !v.trim()) return false;
+    if (q.type === "select-other" && v === "other" && q.otherField) {
+      return Boolean(profile[q.otherField]?.trim());
+    }
+    if (q.type === "multiselect") {
+      try {
+        const arr = JSON.parse(v || "[]");
+        return Array.isArray(arr) && arr.length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  })();
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 350);
@@ -179,10 +220,17 @@ export default function MentorOnboardingPage() {
     setTimeout(() => { setCurrent(idx); setAnimating(false); }, 200);
   }, [current, total, animating]);
 
-  const handleNext = useCallback(() => { if (!isLast) goTo(current + 1); }, [isLast, goTo, current]);
+  const handleNext = useCallback(() => {
+    if (isLast || !currentAnswered) return;
+    goTo(current + 1);
+  }, [isLast, currentAnswered, goTo, current]);
   const handleBack = useCallback(() => { if (current > 0) goTo(current - 1); }, [current, goTo]);
 
   const handleComplete = async () => {
+    if (!currentAnswered) {
+      setError("Please answer this question before completing your profile.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -429,13 +477,13 @@ export default function MentorOnboardingPage() {
               ← Back
             </button>
             {isLast ? (
-              <button onClick={handleComplete} disabled={saving}
-                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 text-sm">
+              <button onClick={handleComplete} disabled={saving || !currentAnswered}
+                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
                 {saving ? "Saving..." : "Complete Profile →"}
               </button>
             ) : (
-              <button onClick={handleNext}
-                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition text-sm">
+              <button onClick={handleNext} disabled={!currentAnswered}
+                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
                 Continue →
               </button>
             )}

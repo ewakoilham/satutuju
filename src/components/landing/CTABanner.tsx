@@ -7,14 +7,59 @@ export default function CTABanner() {
   const t = landingCopy.id.finalCta;
   return (
     <section className="relative bg-primary py-20 overflow-hidden">
-      {/* Organic gradient blobs */}
+      {/* Mesh of soft highlights — lighter blues/purples/cyan tints on top
+          of the navy base create dimensional depth instead of a flat fill. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 65% 55% at 18% 8%, rgba(180, 200, 255, 0.18), transparent 65%),
+            radial-gradient(ellipse 60% 50% at 82% 92%, rgba(150, 130, 220, 0.16), transparent 65%),
+            radial-gradient(ellipse 45% 40% at 92% 18%, rgba(120, 200, 240, 0.13), transparent 70%),
+            radial-gradient(ellipse 50% 40% at 8% 88%, rgba(200, 180, 255, 0.12), transparent 70%)
+          `,
+        }}
+      />
+
+      {/* Animated blobs — motion layered over the static mesh */}
       <div
         className="absolute -top-20 -left-32 w-[400px] h-[400px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#2e4a9a", filter: "blur(100px)", opacity: 0.6 }}
+        style={{ background: "#2e4a9a", filter: "blur(100px)", opacity: 0.55 }}
       />
       <div
         className="absolute -bottom-20 -right-20 w-[450px] h-[450px] rounded-full pointer-events-none animate-blob-drift"
-        style={{ background: "#4f64b1", filter: "blur(100px)", opacity: 0.5, animationDelay: "3s", animationDirection: "reverse" }}
+        style={{ background: "#4f64b1", filter: "blur(100px)", opacity: 0.45, animationDelay: "3s", animationDirection: "reverse" }}
+      />
+      <div
+        className="absolute top-1/3 -right-32 w-[360px] h-[360px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#5c4b9e", filter: "blur(110px)", opacity: 0.3, animationDelay: "5s" }}
+      />
+      <div
+        className="absolute bottom-1/4 left-1/3 w-[300px] h-[300px] rounded-full pointer-events-none animate-blob-drift"
+        style={{ background: "#3a6a96", filter: "blur(100px)", opacity: 0.28, animationDelay: "7s", animationDirection: "reverse" }}
+      />
+
+      {/* Grain/noise — soft-light blend works on dark backgrounds without
+          becoming bright dots. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none mix-blend-soft-light opacity-[0.25]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+          backgroundSize: "200px 200px",
+        }}
+      />
+
+      {/* Edge vignette — darker at corners for focus pull on a dark background. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 95% 75% at center, transparent 50%, rgba(0, 0, 0, 0.28) 100%)",
+        }}
       />
 
       {/* Decorative illustrations */}

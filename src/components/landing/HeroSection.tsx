@@ -54,9 +54,6 @@ export default function HeroSection({ initialBgIndex }: HeroSectionProps) {
     setActiveIndex(index);
     cooldownUntilRef.current = Date.now() + 3000;
   }, []);
-  const scrollToShowcase = useCallback(() => {
-    document.getElementById("mentor-showcase")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
 
   // Clamp the active index in case the list shrinks (admin removed someone).
   const safeIndex = mentors.length > 0 ? activeIndex % mentors.length : 0;
@@ -124,7 +121,16 @@ export default function HeroSection({ initialBgIndex }: HeroSectionProps) {
             </p>
 
             <h1 className="mt-2 font-[family-name:var(--font-heading)] text-[28px] sm:text-[36px] lg:text-[44px] xl:text-[52px] font-extrabold text-primary leading-[1.05] tracking-tight max-w-2xl">
-              {t.headlineLine2}
+              Mentor{" "}
+              <Image
+                src="/logo-wordmark.png"
+                alt="Satu Tuju"
+                width={3201}
+                height={757}
+                priority
+                className="inline-block h-[1.1em] w-auto align-middle -translate-y-[0.02em]"
+              />{" "}
+              siap bimbing kamu dari nol
             </h1>
 
             <p className="mt-4 text-base text-primary-800/85 leading-relaxed max-w-lg">
@@ -194,14 +200,6 @@ export default function HeroSection({ initialBgIndex }: HeroSectionProps) {
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={scrollToShowcase}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-sm text-xs font-semibold text-primary border border-primary-200/60 hover:bg-white hover:shadow-[var(--shadow-sm)] transition-all"
-                >
-                  {t.seeAllMentors}
-                  <Icon name="arrow-right" size={12} />
-                </button>
               </div>
             </div>
 
