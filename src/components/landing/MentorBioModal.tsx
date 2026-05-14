@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import Icon from "@/components/ui/Icon";
@@ -12,7 +13,12 @@ import {
   useMentorContent,
   usePhotoEditContext,
 } from "@/lib/photo-edit-context";
-import MentorContentEditPanel from "./MentorContentEditPanel";
+
+// Admin-only — only loaded when admin clicks "Edit content" inside the
+// bio modal. Regular viewers never download this chunk.
+const MentorContentEditPanel = dynamic(() => import("./MentorContentEditPanel"), {
+  ssr: false,
+});
 
 export interface MentorBio {
   id: string;
@@ -89,7 +95,6 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
 
   const message = content.values.message ?? "";
   const achievement = content.values.achievement ?? "";
-  const currentStudies = content.values.currentStudies ?? "";
   const s1 = content.values.s1 ?? "";
   const awards = splitAwards(content.values.scholarship ?? "");
   const subtitle = [mentor.major, mentor.university].filter(Boolean).join(" · ");
@@ -97,7 +102,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
 
   return (
     <Modal open={open} onClose={onClose} size="2xl">
-      <div className="-mx-6 -my-3 max-h-[88vh] overflow-y-auto">
+      <div className="-mx-6 -my-3 max-h-[88vh] overflow-y-auto overscroll-contain">
         <button
           onClick={onClose}
           aria-label={t.close}
@@ -111,7 +116,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
               right column scrolls. md:self-start prevents the grid from
               stretching this column to the right column's height (which
               would defeat sticky). */}
-          <div className="flex flex-col bg-surface-elevated md:sticky md:top-0 md:self-start md:max-h-[88vh] md:overflow-y-auto">
+          <div className="flex flex-col bg-surface-elevated md:sticky md:top-0 md:self-start md:max-h-[88vh] md:overflow-y-auto overscroll-contain">
             <div className="relative md:aspect-auto aspect-[4/5] md:min-h-[480px] overflow-hidden">
               {currentPhoto ? (
                 // Per-slot location so admins can set focal point/zoom for
@@ -168,7 +173,7 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
               Mentor · @{mentor.nickname}
             </p>
 
-            <h2 className="font-[family-name:var(--font-display-serif)] text-4xl md:text-5xl leading-[1.05] text-foreground tracking-tight">
+            <h2 className="font-[family-name:var(--font-heading)] font-extrabold text-3xl md:text-4xl leading-[1.1] text-foreground tracking-[-0.02em]">
               {mentor.fullName}
             </h2>
 
@@ -202,18 +207,11 @@ export default function MentorBioModal({ mentor, open, onClose }: MentorBioModal
               </Section>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-              <Section label={t.currentStudies}>
-                <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
-                  {currentStudies}
-                </p>
-              </Section>
-              <Section label={t.undergrad}>
-                <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
-                  {s1}
-                </p>
-              </Section>
-            </div>
+            <Section label={t.undergrad}>
+              <p className="text-[0.95rem] text-foreground leading-relaxed whitespace-pre-line">
+                {s1}
+              </p>
+            </Section>
 
             {awards.length > 0 && (
               <Section label={t.awards}>

@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { type PhotoLocation, objectPositionPercent } from "@/lib/photo-config";
 import { usePhotoConfig, usePhotoEditContext } from "@/lib/photo-edit-context";
-import PhotoEditPanel from "./PhotoEditPanel";
+
+// Admin-only photo editor — only fetched on first edit-button click, never
+// downloaded for regular visitors.
+const PhotoEditPanel = dynamic(() => import("./PhotoEditPanel"), {
+  ssr: false,
+});
 
 type Props = {
   mentorId: string;
@@ -59,6 +65,15 @@ export default function EditableMentorPhoto({
 
   const showAffordance = ctx?.isAdmin && ctx.editing;
 
+  // Hide the photo until server-stored overrides settle, then latch shown.
+  // Prevents the fallback → override swap flicker on first paint without
+  // causing fade-out/fade-in on every admin slider drag afterwards.
+  const ctxReady = ctx ? ctx.loaded : true;
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (ctxReady) setShown(true);
+  }, [ctxReady]);
+
   // object-position handles pan within natural cover-overflow (aspect slack);
   // translate(...) handles pan within zoom-induced overflow. Combining them
   // means the position sliders work regardless of whether slack or zoom is
@@ -86,7 +101,9 @@ export default function EditableMentorPhoto({
         sizes={sizes}
         priority={priority}
         quality={95}
-        className={imgClassName}
+        className={`${imgClassName} transition-opacity duration-300 ${
+          shown ? "opacity-100" : "opacity-0"
+        }`}
         style={style}
       />
 

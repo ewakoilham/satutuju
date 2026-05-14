@@ -141,18 +141,87 @@ const CONTENT_FIELDS: MentorContentField[] = [
   "scholarship",
 ];
 
-export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
+/** Shape of the server-side-prefetched data passed in by `page.tsx`. Allows
+ *  the provider to hydrate without a client fetch, eliminating the
+ *  loading-gate delay for mentor photos. */
+export interface PhotoEditInitialData {
+  mentors: DbMentor[];
+  configs: Array<PhotoConfig & { mentorId: string; location: PhotoLocation }>;
+  overrides: Array<{
+    mentorId: string;
+    nickname?: string | null;
+  } & MentorContent>;
+}
+
+function buildPhotoServerMap(
+  configs: PhotoEditInitialData["configs"],
+): ServerMap {
+  const map: ServerMap = {};
+  for (const row of configs) {
+    map[configKey(row.mentorId, row.location)] = {
+      photoSrc: row.photoSrc,
+      zoom: row.zoom,
+      posX: row.posX,
+      posY: row.posY,
+    };
+  }
+  return map;
+}
+
+function buildNicknameAndContentMaps(
+  overrides: PhotoEditInitialData["overrides"],
+): { nickMap: Record<string, string>; contentMap: Record<string, MentorContent> } {
+  const nickMap: Record<string, string> = {};
+  const contentMap: Record<string, MentorContent> = {};
+  for (const row of overrides) {
+    if (row.nickname) nickMap[row.mentorId] = row.nickname;
+    const content: MentorContent = {};
+    let hasContent = false;
+    for (const f of CONTENT_FIELDS) {
+      const v = row[f];
+      if (v !== undefined && v !== null && v !== "") {
+        content[f] = v;
+        hasContent = true;
+      }
+    }
+    if (hasContent) contentMap[row.mentorId] = content;
+  }
+  return { nickMap, contentMap };
+}
+
+export function PhotoEditProvider({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  /** When provided (server-prefetched), the client fetch is skipped and
+   *  the provider starts already loaded — no fade-gate delay. */
+  initialData?: PhotoEditInitialData;
+}) {
+  // Compute the server-prefetched maps once, not twice across useState
+  // initializers. `initialMaps` is constant per mount (prop is stable here).
+  const initialMaps = initialData
+    ? {
+        server: buildPhotoServerMap(initialData.configs),
+        ...buildNicknameAndContentMaps(initialData.overrides),
+      }
+    : null;
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [server, setServer] = useState<ServerMap>({});
+  const [loaded, setLoaded] = useState(initialMaps !== null);
+  const [server, setServer] = useState<ServerMap>(initialMaps?.server ?? {});
   const [drafts, setDrafts] = useState<DraftMap>({});
   const [openPanels, setOpenPanels] = useState(0);
-  const [serverNicknames, setServerNicknames] = useState<Record<string, string>>({});
+  const [serverNicknames, setServerNicknames] = useState<Record<string, string>>(
+    initialMaps?.nickMap ?? {},
+  );
   const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
-  const [serverContent, setServerContent] = useState<Record<string, MentorContent>>({});
+  const [serverContent, setServerContent] = useState<Record<string, MentorContent>>(
+    initialMaps?.contentMap ?? {},
+  );
   const [contentDrafts, setContentDrafts] = useState<Record<string, MentorContent>>({});
-  const [dbMentors, setDbMentors] = useState<DbMentor[]>([]);
+  const [dbMentors, setDbMentors] = useState<DbMentor[]>(initialData?.mentors ?? []);
 
   // Detect admin via /api/auth/me — fail-open as non-admin.
   useEffect(() => {
@@ -168,42 +237,42 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Load published configs from API.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/landing-photos")
-      .then((r) => (r.ok ? r.json() : { configs: [] }))
-      .then((data: { configs: Array<PhotoConfig & { mentorId: string; location: PhotoLocation }> }) => {
-        if (cancelled) return;
-        const map: ServerMap = {};
-        for (const row of data.configs ?? []) {
-          map[configKey(row.mentorId, row.location)] = {
-            photoSrc: row.photoSrc,
-            zoom: row.zoom,
-            posX: row.posX,
-            posY: row.posY,
-          };
-        }
-        setServer(map);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Load any pending drafts from localStorage on mount.
+  // Load any pending drafts from localStorage on mount (sync, no network).
   useEffect(() => {
     setDrafts(readDrafts());
     setNicknameDrafts(readNickDrafts());
     setContentDrafts(readContentDrafts());
   }, []);
 
-  // Pull admin-added mentors from the API and keep refreshable for the admin
-  // panel (so newly-added mentors appear on the landing page immediately).
+  // Skipped entirely on the RSC path (server already prefetched into state).
+  useEffect(() => {
+    if (initialData) return;
+    let cancelled = false;
+    fetch("/api/landing-data")
+      .then((r) => (r.ok ? (r.json() as Promise<PhotoEditInitialData>) : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setServer(buildPhotoServerMap(data.configs ?? []));
+        setDbMentors(data.mentors ?? []);
+        const { nickMap, contentMap } = buildNicknameAndContentMaps(
+          data.overrides ?? [],
+        );
+        setServerNicknames(nickMap);
+        setServerContent(contentMap);
+      })
+      .catch(() => {
+        /* network blip — page still renders with static seed */
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData]);
+
+  // Exposed refresh for admin-driven mentor list updates (after add/edit/delete).
+  // Hits /api/mentors specifically since we only need the mentor list here.
   const refreshMentors = useCallback(async () => {
     try {
       const res = await fetch("/api/mentors");
@@ -213,45 +282,6 @@ export function PhotoEditProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* network blip — keep prior list */
     }
-  }, []);
-
-  useEffect(() => {
-    void refreshMentors();
-  }, [refreshMentors]);
-
-  // Load server overrides (nickname + bio content in the same call).
-  useEffect(() => {
-    let cancelled = false;
-    type OverrideRow = {
-      mentorId: string;
-      nickname?: string | null;
-    } & MentorContent;
-    fetch("/api/mentor-overrides")
-      .then((r) => (r.ok ? r.json() : { overrides: [] }))
-      .then((data: { overrides: OverrideRow[] }) => {
-        if (cancelled) return;
-        const nickMap: Record<string, string> = {};
-        const contentMap: Record<string, MentorContent> = {};
-        for (const row of data.overrides ?? []) {
-          if (row.nickname) nickMap[row.mentorId] = row.nickname;
-          const content: MentorContent = {};
-          let hasContent = false;
-          for (const f of CONTENT_FIELDS) {
-            const v = row[f];
-            if (v !== undefined && v !== null && v !== "") {
-              content[f] = v;
-              hasContent = true;
-            }
-          }
-          if (hasContent) contentMap[row.mentorId] = content;
-        }
-        setServerNicknames(nickMap);
-        setServerContent(contentMap);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const get = useCallback(

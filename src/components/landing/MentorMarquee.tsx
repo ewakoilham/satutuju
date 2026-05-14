@@ -5,7 +5,13 @@ import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { landingCopy } from "@/lib/landing-copy";
 import mentorsData from "@/data/mentors.json";
-import MentorBioModal, { type MentorBio } from "./MentorBioModal";
+import dynamic from "next/dynamic";
+import type { MentorBio } from "./MentorBioModal";
+
+// Modal only opens on mentor card click — defer its JS until needed.
+const MentorBioModal = dynamic(() => import("./MentorBioModal"), {
+  ssr: false,
+});
 import { type Mentor } from "@/lib/mentors";
 import EditableMentorPhoto from "./EditableMentorPhoto";
 import {

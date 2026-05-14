@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { MENTOR_OVERRIDE_COLUMNS as SELECT_COLUMNS } from "@/lib/db-columns";
 
 type Row = {
   mentorId: string;
@@ -11,8 +12,6 @@ type Row = {
   s1?: string | null;
   scholarship?: string | null;
 };
-
-const SELECT_COLUMNS = "mentorId, nickname, message, achievement, currentStudies, s1, scholarship";
 
 /** Public — every visitor reads the published overrides (nickname + bio content). */
 export async function GET() {

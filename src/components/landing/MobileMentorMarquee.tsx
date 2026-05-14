@@ -11,7 +11,13 @@ import Icon from "@/components/ui/Icon";
 import EditableMentorPhoto from "./EditableMentorPhoto";
 import { MENTORS, type Mentor } from "@/lib/mentors";
 import mentorsData from "@/data/mentors.json";
-import MentorBioModal, { type MentorBio } from "./MentorBioModal";
+import dynamic from "next/dynamic";
+import type { MentorBio } from "./MentorBioModal";
+
+// Modal only opens on mentor card click — defer its JS until needed.
+const MentorBioModal = dynamic(() => import("./MentorBioModal"), {
+  ssr: false,
+});
 import { useEditPanelOpen, useMentorNickname } from "@/lib/photo-edit-context";
 
 const AUTO_CYCLE_MS = 5000;
@@ -191,7 +197,7 @@ export default function MobileMentorMarquee() {
             </em>
           </h2>
           <p className="text-[13.5px] leading-[1.5] text-white/70 max-w-[340px] mx-auto">
-            Geser, pilih siapa yang bikin kamu penasaran, terus tap kartunya buat baca cerita lengkap mereka.
+            Klik profil mentor untuk cek detail lebih lengkap!
           </p>
         </div>
 

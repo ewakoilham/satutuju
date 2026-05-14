@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { PHOTO_LOCATIONS, type PhotoLocation } from "@/lib/photo-config";
+import { LANDING_PHOTO_COLUMNS } from "@/lib/db-columns";
 
 type ConfigRow = {
   mentorId: string;
@@ -16,7 +17,7 @@ type ConfigRow = {
 export async function GET() {
   const { data, error } = await supabase
     .from("LandingPhotoConfig")
-    .select("mentorId, location, photoSrc, zoom, posX, posY");
+    .select(LANDING_PHOTO_COLUMNS);
 
   if (error) {
     return NextResponse.json({ configs: [], error: error.message }, { status: 500 });

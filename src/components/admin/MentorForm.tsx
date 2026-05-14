@@ -352,7 +352,7 @@ export default function MentorForm({ mode, initial }: Props) {
               />
             </Field>
           </div>
-          <Field label="Scholarship label" help='e.g. "LPDP Scholar"'>
+          <Field label="Scholarship label" help='e.g. "LPDP Scholarship"'>
             <input
               type="text"
               value={state.scholarship}

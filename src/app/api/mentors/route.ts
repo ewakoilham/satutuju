@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import type { DbMentor } from "@/lib/mentors-runtime";
-
-const SELECT_COLUMNS =
-  '"id","fullName","nickname","initials","university","major","country","flagCode","scholarship","color","avatarPath","galleryPaths","hometown","message","achievement","currentStudiesRaw","s1","scholarshipRaw","isActive","displayOrder","source"';
+import { MENTOR_SELECT_COLUMNS as SELECT_COLUMNS } from "@/lib/db-columns";
 
 /** Public — landing page reads this on every visit (server + client). */
 export async function GET() {

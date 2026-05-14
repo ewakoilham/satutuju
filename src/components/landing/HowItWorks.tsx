@@ -200,6 +200,9 @@ export default function HowItWorks() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  // After a manual click on a step, suppress auto-advance until this
+  // timestamp passes (3s after the most recent click).
+  const cooldownUntilRef = useRef(0);
   const t = landingCopy.id.howItWorks;
   const v = landingCopy.id.visuals;
 
@@ -220,13 +223,31 @@ export default function HowItWorks() {
   useEffect(() => {
     if (!isVisible) return;
     const interval = setInterval(() => {
+      if (Date.now() < cooldownUntilRef.current) return;
       setActiveStep((prev) => (prev + 1) % t.steps.length);
     }, 3000);
     return () => clearInterval(interval);
   }, [isVisible, t.steps.length]);
 
+  const handleStepClick = (i: number) => {
+    setActiveStep(i);
+    cooldownUntilRef.current = Date.now() + 3000;
+  };
+
   return (
     <section ref={sectionRef} className="py-24 bg-white relative overflow-hidden">
+      {/* Background photo (Glasgow) */}
+      <Image
+        src="/glasgow-bg.jpg"
+        alt=""
+        fill
+        sizes="100vw"
+        quality={90}
+        className="object-cover pointer-events-none select-none"
+      />
+      {/* Soft white wash so content stays legible over the photo */}
+      <div className="absolute inset-0 bg-white/80 pointer-events-none" />
+
       {/* Organic gradient blobs */}
       <div
         className="absolute -top-20 -left-20 w-[500px] h-[500px] rounded-full pointer-events-none animate-blob-drift"
@@ -275,9 +296,11 @@ export default function HowItWorks() {
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
             {t.heading}
           </h2>
-          <p className="mt-4 text-text-muted text-lg max-w-2xl mx-auto">
-            {t.subheading}
-          </p>
+          {t.subheading && (
+            <p className="mt-4 text-text-muted text-lg max-w-2xl mx-auto">
+              {t.subheading}
+            </p>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
@@ -290,7 +313,7 @@ export default function HowItWorks() {
                   isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
                 }`}
                 style={{ transitionDelay: `${i * 200}ms` }}
-                onClick={() => setActiveStep(i)}
+                onClick={() => handleStepClick(i)}
               >
                 {/* Step row (icon + content) */}
                 <div className="flex gap-5 cursor-pointer">

@@ -15,7 +15,7 @@ export const landingCopy = {
         "Mau lanjut S2 ke luar negeri, tapi bingung mulai dari mana?",
       headlineLine2: "Mentor Satu Tuju siap bimbing kamu dari nol",
       subheadline:
-        "Dari riset beasiswa, esai, sampai latihan wawancara — kita temenin sampai kamu sampe di kampus impian.",
+        "Dari riset beasiswa, esai, sampai latihan wawancara, kita temenin sampai kamu sampe di kampus impian.",
       scrollCue: "Scroll ke bawah untuk cari tahu lebih jauh!",
       primaryCta: "Gabung mentorship sekarang",
       secondaryCta: "Gabung komunitas",
@@ -34,27 +34,27 @@ export const landingCopy = {
       slides: [
         {
           number: "01",
-          title: "Semua yang kamu butuhin buat persiapan beasiswa, ada di sini.",
+          title: "Semua yang kamu butuhin buat persiapan beasiswa ada di sini",
           description:
-            "Dari nyari beasiswa, prep dokumen, nulis esai, sampai latihan wawancara — kita temenin di tiap tahap. Langsung sama alumni yang baru aja ngalamin proses yang sama.",
+            "Mulai dari cari kampus, persiapan dokumen, penulisan essay, sampai latihan wawancara, semua akan dibimbing oleh mentor kamu! Langsung dengan alumni yang baru aja ngalamin proses yang sama",
         },
         {
           number: "02",
-          title: "Mulai dengan peta jalan yang jelas.",
+          title: "Track timeline & progress pendaftaran kamu",
           description:
-            "Mentor kamu bantu nentuin beasiswa mana yang paling cocok sama profil kamu, atur timeline aplikasi, dan bangun cerita diri yang kuat dari awal.",
+            "Mentor kamu akan bantu bangun profil yang kuat, atur timeline aplikasi, dan memastikan kamu ngga ketinggalan deadline pendaftaran berikutnya",
         },
         {
           number: "03",
-          title: "Esai yang bener-bener kamu banget.",
+          title: "Buat essay dan motivation letter yang kuat",
           description:
-            "Bukan template, bukan copy-paste. Mentor kami bantu nemuin cerita yang otentik — yang bikin reviewer berhenti scroll dan mulai serius nimbang.",
+            "Essay seringkali jadi bagian paling challenging. Tapi ga perlu khawatir, karena kamu akan bangun essay yang powerful bareng mentor kamu",
         },
         {
           number: "04",
-          title: "Latihan wawancara sampai kamu siap.",
+          title: "Mock interview bareng mentor kamu",
           description:
-            "Wawancara beasiswa itu bukan soal hafalan — tapi soal cara kamu mikir. Mentor kami simulasiin pertanyaan beneran, dan bantu kamu pede di depan panel.",
+            "Seluruh mentor di Satu Tuju sudah pernah menghadapi interview yang sesungguhnya & telah berhasil! Mentor kamu akan bantu simulasi interview, dan bantu kamu lebih pede di depan para panelis",
         },
       ],
     },
@@ -72,9 +72,9 @@ export const landingCopy = {
       close: "Tutup",
     },
     howItWorks: {
-      label: "Cara kerja",
-      heading: "Tiga langkah, kamu siap berangkat.",
-      subheading: "Dari daftar sampai sesi pertama, simple.",
+      label: "Cara bergabung",
+      heading: "Cukup 3 langkah aja",
+      subheading: "Buat dapetin mentor yang pas buat kamu",
       stepLabel: "LANGKAH",
       steps: [
         {
@@ -128,24 +128,24 @@ export const landingCopy = {
       checklist: {
         heading: "Checklist Dokumen",
         items: [
+          "University shortlist",
           "Curriculum Vitae (CV)",
           "Motivation Letter",
-          "Transkrip Akademik",
-          "Surat Rekomendasi",
-          "Research Proposal",
+          "Mockup Interview",
+          "Document Submission",
         ],
         complete: "60% selesai",
       },
       roadmap: {
-        heading: "Peta Jalan Beasiswa",
+        heading: "Timeline Tracker",
         onTrack: "On Track",
         months: ["Jan", "Feb", "Mar", "Apr", "Mei"],
         labels: [
-          "Riset Beasiswa",
-          "Siapkan Dokumen",
-          "Tulis Esai",
-          "Submit Aplikasi",
-          "Wawancara",
+          "Riset kampus",
+          "Persiapan dokumen",
+          "Penulisan essay",
+          "Submit pendaftaran",
+          "Interview",
         ],
       },
       essay: {
@@ -153,14 +153,14 @@ export const landingCopy = {
         p1: "Sejak kecil, saya memiliki ketertarikan yang mendalam terhadap...",
         p2: "Pengalaman memimpin organisasi mahasiswa mengajarkan saya tentang...",
         mentorLabel: "Mentor:",
-        mentorComment: "Bagus! Tambahkan impact yang lebih spesifik",
+        mentorComment: "Bagus! Tambahkan impact yang measurable dan lebih spesifik",
         p3: "Melalui beasiswa ini, saya berharap dapat...",
         revision: "Revisi ke-3",
         ready: "85% siap submit",
       },
       interview: {
         title: "Simulasi Wawancara",
-        mentorPanel: "Panel Mentor",
+        mentorPanel: "Mentor",
         you: "Kamu",
         currentQuestion: "Pertanyaan saat ini:",
         question:
@@ -170,7 +170,7 @@ export const landingCopy = {
       profile: {
         name: "Muhammad Ilham Razak",
         targetUniLabel: "Target Universitas",
-        targetUniValue: "Monash University — Master of Business",
+        targetUniValue: "Monash University, Master of Business",
         scholarshipLabel: "Beasiswa",
         scholarshipValue: "LPDP 2026",
         cta: "Daftar Sekarang",

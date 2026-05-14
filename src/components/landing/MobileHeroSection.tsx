@@ -8,6 +8,7 @@ import { landingCopy } from "@/lib/landing-copy";
 import { MENTORS } from "@/lib/mentors";
 import EditableMentorPhoto from "./EditableMentorPhoto";
 import { useEditPanelOpen } from "@/lib/photo-edit-context";
+import { BG_PHOTOS } from "@/lib/landing-bg-photos";
 
 /**
  * Mobile-only hero — Claude Design "V2: Hero photo + 14-cell pick sheet".
@@ -20,7 +21,12 @@ import { useEditPanelOpen } from "@/lib/photo-edit-context";
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
 
-export default function MobileHeroSection() {
+interface MobileHeroSectionProps {
+  /** Background index picked server-side (matches desktop hero). */
+  initialBgIndex: number;
+}
+
+export default function MobileHeroSection({ initialBgIndex }: MobileHeroSectionProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -74,9 +80,8 @@ export default function MobileHeroSection() {
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
     >
-      {/* Background photo — same as desktop hero */}
       <Image
-        src="/bg.jpg"
+        src={BG_PHOTOS[initialBgIndex]}
         alt=""
         fill
         priority

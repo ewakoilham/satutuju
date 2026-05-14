@@ -9,11 +9,18 @@ import type { Mentor } from "@/lib/mentors";
 import MentorAvatar from "./MentorAvatar";
 import EditableMentorPhoto from "./EditableMentorPhoto";
 import { useEditPanelOpen, useAllMentors } from "@/lib/photo-edit-context";
+import { BG_PHOTOS } from "@/lib/landing-bg-photos";
 
 const CYCLE_MS = 6000;
 const t = landingCopy.id.hero;
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  /** Background index picked server-side. SSR delivers the right image
+   *  immediately, eliminating the client-side swap flicker. */
+  initialBgIndex: number;
+}
+
+export default function HeroSection({ initialBgIndex }: HeroSectionProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -42,6 +49,7 @@ export default function HeroSection() {
     return () => clearInterval(id);
   }, [paused, reduceMotion, editPanelOpen, mentors.length]);
 
+
   const goTo = useCallback((index: number) => {
     setActiveIndex(index);
     cooldownUntilRef.current = Date.now() + 3000;
@@ -56,9 +64,8 @@ export default function HeroSection() {
 
   return (
     <section className="relative flex items-center bg-white overflow-hidden pt-20 pb-8 lg:pt-24 lg:pb-10">
-      {/* Background photo */}
       <Image
-        src="/bg.jpg"
+        src={BG_PHOTOS[initialBgIndex]}
         alt=""
         fill
         priority

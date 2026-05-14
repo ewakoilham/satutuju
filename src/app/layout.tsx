@@ -16,7 +16,11 @@ const geistMono = Geist_Mono({
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  // Heading usage in this codebase is exclusively font-semibold (600),
+  // font-bold (700), and font-extrabold (800) — verified by grep across
+  // every var(--font-heading) site. Weight 400 was unused and dropped
+  // to save ~25 KB of font payload.
+  weight: ["600", "700", "800"],
 });
 
 const instrumentSerif = Instrument_Serif({

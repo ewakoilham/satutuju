@@ -44,6 +44,25 @@ export default function Modal({
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  // Body scroll lock: prevent the page beneath the modal from scrolling.
+  // Compensates the missing scrollbar with padding so the layout doesn't
+  // shift when the modal opens on desktop.
+  useEffect(() => {
+    if (!open) return;
+    const { body, documentElement } = document;
+    const originalOverflow = body.style.overflow;
+    const originalPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+    body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    return () => {
+      body.style.overflow = originalOverflow;
+      body.style.paddingRight = originalPaddingRight;
+    };
+  }, [open]);
+
   // Focus trap
   useEffect(() => {
     if (!open || !contentRef.current) return;
