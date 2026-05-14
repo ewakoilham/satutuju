@@ -304,8 +304,9 @@ export default function HowItWorks() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
-          {/* Left: Steps */}
-          <div className="space-y-12 md:space-y-8">
+          {/* Left: Steps — constrained + centered on md+ so the column's
+              visual mass matches the right column's centered mentor card. */}
+          <div className="space-y-12 md:space-y-8 md:max-w-sm md:mx-auto md:w-full">
             {t.steps.map((step, i) => (
               <div
                 key={i}
