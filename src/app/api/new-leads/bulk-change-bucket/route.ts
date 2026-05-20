@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_BUCKETS, type LeadBucket } from "@/lib/leads/types";
+import { newStageHistoryId } from "@/lib/leads/ids";
 
 const MAX_BULK = 200;
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
 
 /**
  * Bulk move-bucket — manually move many leads to a different bucket
@@ -54,38 +50,43 @@ export async function POST(req: NextRequest) {
     .select("id, bucket, stage")
     .in("id", leadIds);
 
-  let changed = 0;
-  const skipped: string[] = [];
-  for (const lead of (leads ?? []) as Array<{ id: string; bucket: string; stage: string }>) {
-    if (lead.bucket === targetBucket) {
-      skipped.push(lead.id);
-      continue;
-    }
-    await supabase
-      .from("Lead")
-      .update({
-        bucket: targetBucket,
-        bucketReason: `Manual bulk override → ${targetBucket}: ${reason}`,
-        updatedAt: now,
-      })
-      .eq("id", lead.id);
+  type LeadRow = { id: string; bucket: string; stage: string };
+  const all = (leads ?? []) as LeadRow[];
+  const changedLeads = all.filter((l) => l.bucket !== targetBucket);
+  const skippedIds = all.filter((l) => l.bucket === targetBucket).map((l) => l.id);
 
-    await supabase.from("LeadStageHistory").insert({
-      id: historyId(),
+  if (changedLeads.length === 0) {
+    return NextResponse.json({ total: leadIds.length, changed: 0, skipped: skippedIds.length, skippedIds });
+  }
+
+  // Single UPDATE for all rows + single INSERT for all history entries
+  // — drops 2N round-trips to 2.
+  const { error: updErr } = await supabase
+    .from("Lead")
+    .update({
+      bucket: targetBucket,
+      bucketReason: `Manual bulk override → ${targetBucket}: ${reason}`,
+      updatedAt: now,
+    })
+    .in("id", changedLeads.map((l) => l.id));
+  if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+
+  await supabase.from("LeadStageHistory").insert(
+    changedLeads.map((lead) => ({
+      id: newStageHistoryId(),
       leadId: lead.id,
       fromStage: lead.stage,
       toStage: lead.stage,
       changedBy: user.userId,
       note: `Manual bulk bucket override: ${lead.bucket} → ${targetBucket}. ${reason}`,
       createdAt: now,
-    });
-    changed++;
-  }
+    })),
+  );
 
   return NextResponse.json({
     total: leadIds.length,
-    changed,
-    skipped: skipped.length,
-    skippedIds: skipped,
+    changed: changedLeads.length,
+    skipped: skippedIds.length,
+    skippedIds,
   });
 }

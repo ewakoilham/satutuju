@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import {
+  CALL_PANEL_STAGES,
   LEAD_DECISIONS,
   type Lead,
   type LeadDecision,
+  type LeadStage,
 } from "@/lib/leads/types";
 
 interface Props {
@@ -112,15 +114,7 @@ export default function CallPanel({ lead, onChanged }: Props) {
     }
   }
 
-  // Hide for leads still in earlier stages — the panel is contextually
-  // irrelevant until the call has been scheduled.
-  const visible =
-    lead.stage === "call_scheduled" ||
-    lead.stage === "call_completed" ||
-    lead.stage === "deposit_pending" ||
-    lead.stage === "deposit_paid" ||
-    lead.stage === "matched";
-  if (!visible) return null;
+  if (!CALL_PANEL_STAGES.includes(lead.stage as LeadStage)) return null;
 
   const readOnly = lead.stage === "matched"; // freeze after mentor matched
 

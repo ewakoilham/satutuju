@@ -20,6 +20,30 @@ export const LEAD_STAGES = [
 ] as const;
 export type LeadStage = (typeof LEAD_STAGES)[number];
 
+/** Stages where Call Panel is contextually relevant — admin needs to
+ *  capture readiness/notes/decision data here. Used by both the panel
+ *  itself (to hide for earlier stages) and its parent section wrapper. */
+export const CALL_PANEL_STAGES: readonly LeadStage[] = [
+  "call_scheduled",
+  "call_completed",
+  "deposit_pending",
+  "deposit_paid",
+  "matched",
+];
+
+/** Returns `target` if it would be a forward step from `currentStage`
+ *  along LEAD_STAGES order. Returns null when the move would be a no-op
+ *  or backward step. Used everywhere we want monotonic advancement
+ *  (Resend webhook open/click events, Calendar sync, etc.) so engagement
+ *  events don't accidentally downgrade a lead that's already past. */
+export function maybeAdvanceStage(currentStage: string, target: LeadStage): LeadStage | null {
+  const order = LEAD_STAGES as readonly string[];
+  const ci = order.indexOf(currentStage);
+  const ti = order.indexOf(target);
+  if (ci < 0 || ti < 0) return null;
+  return ti > ci ? target : null;
+}
+
 export const FUNDING_PLANS = ["scholarship", "self_funded", "partial"] as const;
 export type FundingPlan = (typeof FUNDING_PLANS)[number];
 

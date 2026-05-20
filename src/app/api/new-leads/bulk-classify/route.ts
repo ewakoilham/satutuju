@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { classifyLead } from "@/lib/leads/bucketing";
+import { newStageHistoryId } from "@/lib/leads/ids";
 import { MENTORS } from "@/lib/mentors";
 
 const MAX_BULK = 200;
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
 
 /**
  * Bulk re-classify — re-runs classifyLead() over selected leads using
@@ -77,7 +73,7 @@ export async function POST(req: NextRequest) {
     if (didChange) {
       changed++;
       await supabase.from("LeadStageHistory").insert({
-        id: historyId(),
+        id: newStageHistoryId(),
         leadId: lead.id,
         fromStage: lead.stage,
         toStage: lead.stage,

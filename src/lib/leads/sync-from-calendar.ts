@@ -1,8 +1,8 @@
 import "server-only";
 
-import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
-import { LEAD_STAGES } from "@/lib/leads/types";
+import { maybeAdvanceStage } from "@/lib/leads/types";
+import { newStageHistoryId } from "@/lib/leads/ids";
 import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 import { loadAuth, makeAuthedClient } from "@/lib/integrations/google-calendar";
 
@@ -31,18 +31,6 @@ export interface CalendarSyncResult {
     prevStage: string;
   }>;
   error?: string;
-}
-
-/** Stage advancement is monotonic — only forward in LEAD_STAGES order. */
-function isStageBefore(current: string, target: string): boolean {
-  const order = LEAD_STAGES as readonly string[];
-  const ci = order.indexOf(current);
-  const ti = order.indexOf(target);
-  return ci >= 0 && ti >= 0 && ci < ti;
-}
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
 }
 
 /**
@@ -141,7 +129,7 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       if (!lead) continue;
 
       // Monotonic guard — only advance forward.
-      if (!isStageBefore(lead.stage, "call_scheduled")) continue;
+      if (!maybeAdvanceStage(lead.stage, "call_scheduled")) continue;
 
       // Advance Lead.stage + set callScheduledAt.
       const { error: updErr } = await supabase
@@ -156,7 +144,7 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
 
       // Write LeadStageHistory entry.
       await supabase.from("LeadStageHistory").insert({
-        id: historyId(),
+        id: newStageHistoryId(),
         leadId: lead.id,
         fromStage: lead.stage,
         toStage: "call_scheduled",

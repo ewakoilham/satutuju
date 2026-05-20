@@ -82,6 +82,10 @@ export default function NewLeadsListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  // Bumped only after mutations (create / bulk action / sync). Drives
+  // SummaryCards refresh — avoids re-fetching /stats on every paginate.
+  const [mutationTick, setMutationTick] = useState(0);
+  const bumpMutationTick = () => setMutationTick((t) => t + 1);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -190,6 +194,7 @@ export default function NewLeadsListPage() {
         ].filter(Boolean).join(" · ");
         setSyncMsg({ kind: "ok", text: `Synced from Tally: ${parts}` });
         await fetchList();
+        bumpMutationTick();
       }
     } catch (e) {
       setSyncMsg({ kind: "err", text: e instanceof Error ? e.message : "Network error" });
@@ -256,6 +261,7 @@ export default function NewLeadsListPage() {
         ].join(" · ");
         setSyncMsg({ kind: "ok", text: `Synced from Calendar: ${parts}` });
         await fetchList();
+        bumpMutationTick();
         await fetchCalendarStatus();
       }
     } catch (e) {
@@ -430,6 +436,7 @@ export default function NewLeadsListPage() {
         setSyncMsg({ kind: "ok", text: `Re-classified ${json.changed} dari ${json.total} leads (${json.unchanged} tidak berubah)` });
         setSelected(new Set());
         await fetchList();
+        bumpMutationTick();
         setTimeout(() => setSyncMsg(null), 6000);
       }
     } catch (e) {
@@ -468,6 +475,7 @@ export default function NewLeadsListPage() {
         setMoveBucketReason("");
         setMoveBucketOpen(false);
         await fetchList();
+        bumpMutationTick();
         setTimeout(() => setSyncMsg(null), 6000);
       }
     } catch (e) {
@@ -506,6 +514,7 @@ export default function NewLeadsListPage() {
         setAssignInterviewerName("");
         setAssignInterviewerOpen(false);
         await fetchList();
+        bumpMutationTick();
         setTimeout(() => setSyncMsg(null), 6000);
       }
     } catch (e) {
@@ -541,6 +550,7 @@ export default function NewLeadsListPage() {
         setBulkResult({ sent: json.sent, failed: json.failed, skipped: json.skipped });
         setSelected(new Set());
         await fetchList();
+        bumpMutationTick();
         // Auto-dismiss banner after a few seconds.
         setTimeout(() => setBulkResult(null), 8000);
       }
@@ -628,10 +638,10 @@ export default function NewLeadsListPage() {
         </div>
       )}
 
-      {/* Summary cards — aggregates across ALL leads (not just current
-          page). Refreshes when the table refreshes by passing `offset`
-          (a proxy for "user did something that changed leads"). */}
-      <SummaryCards refreshKey={offset + (data?.total ?? 0)} />
+      {/* Summary cards — aggregates across ALL leads. Refetches only on
+          mutations (bumpMutationTick called after sync/bulk/create), not
+          on every pagination — the totals don't change when you flip pages. */}
+      <SummaryCards refreshKey={mutationTick} />
 
       {/* Mini-strip showing current page-scoped slice for orientation */}
       {data && (

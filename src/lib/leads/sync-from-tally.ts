@@ -1,8 +1,8 @@
 import "server-only";
 
-import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { classifyLead } from "@/lib/leads/bucketing";
+import { newLeadId, newStageHistoryId } from "@/lib/leads/ids";
 import { seedStepStatusesForLead } from "@/lib/leads/step-helpers";
 import { MENTORS } from "@/lib/mentors";
 import {
@@ -33,14 +33,6 @@ export interface SyncResult {
   updated: number;
   skipped: number;
   errors: string[];
-}
-
-function leadId(): string {
-  return "ld_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
 }
 
 function normalizeFunding(raw: string | null): string {
@@ -154,7 +146,7 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
     return { action: "updated", leadId: existing.id };
   }
 
-  const id = leadId();
+  const id = newLeadId();
   const { error: insErr } = await supabase
     .from("Lead")
     .insert({
@@ -168,7 +160,7 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
   if (insErr) return { action: "error", error: insErr.message };
 
   await supabase.from("LeadStageHistory").insert({
-    id: historyId(),
+    id: newStageHistoryId(),
     leadId: id,
     fromStage: null,
     toStage: "new",

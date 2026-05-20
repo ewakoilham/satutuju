@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
-import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { OUTREACH_LOG_COLUMNS } from "@/lib/db-columns";
 import { completeStepByTrigger } from "@/lib/leads/step-helpers";
-import { LEAD_STAGES, type OutreachLog } from "@/lib/leads/types";
+import { maybeAdvanceStage, type OutreachLog } from "@/lib/leads/types";
+import { newStageHistoryId } from "@/lib/leads/ids";
 
 /**
  * Resend webhook receiver. Resend pings this URL on email lifecycle
@@ -38,21 +38,6 @@ interface ResendEvent {
   data: ResendEventData;
 }
 
-/**
- * Returns `target` if it would be a forward step from `currentStage`
- * along LEAD_STAGES order. Returns null if equal or already past.
- */
-function maybeAdvance(currentStage: string, target: string): string | null {
-  const order = LEAD_STAGES as readonly string[];
-  const ci = order.indexOf(currentStage);
-  const ti = order.indexOf(target);
-  if (ci < 0 || ti < 0) return null;
-  return ti > ci ? target : null;
-}
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
 
 export async function POST(req: NextRequest) {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
@@ -126,11 +111,11 @@ export async function POST(req: NextRequest) {
         const leadPatch: Record<string, unknown> = { updatedAt: now };
         if (!lead.emailOpenedAt) leadPatch.emailOpenedAt = now;
 
-        const nextStage = maybeAdvance(lead.stage as string, "email_opened");
+        const nextStage = maybeAdvanceStage(lead.stage as string, "email_opened");
         if (nextStage) {
           leadPatch.stage = nextStage;
           await supabase.from("LeadStageHistory").insert({
-            id: historyId(),
+            id: newStageHistoryId(),
             leadId,
             fromStage: lead.stage,
             toStage: nextStage,
@@ -164,11 +149,11 @@ export async function POST(req: NextRequest) {
         const leadPatch: Record<string, unknown> = { updatedAt: now };
         if (!lead.emailClickedAt) leadPatch.emailClickedAt = now;
 
-        const nextStage = maybeAdvance(lead.stage as string, "email_clicked");
+        const nextStage = maybeAdvanceStage(lead.stage as string, "email_clicked");
         if (nextStage) {
           leadPatch.stage = nextStage;
           await supabase.from("LeadStageHistory").insert({
-            id: historyId(),
+            id: newStageHistoryId(),
             leadId,
             fromStage: lead.stage,
             toStage: nextStage,

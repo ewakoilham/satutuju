@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
+import { newStageHistoryId } from "@/lib/leads/ids";
 
 /**
  * Match a lead to a mentor. Writes Lead.mentorMatchedId + advances
@@ -64,7 +60,7 @@ export async function POST(
 
   if (!sameMentor || !wasMatched) {
     await supabase.from("LeadStageHistory").insert({
-      id: historyId(),
+      id: newStageHistoryId(),
       leadId: id,
       fromStage: lead.stage,
       toStage: "matched",

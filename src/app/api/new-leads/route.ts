@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import crypto from "crypto";
 import { LEAD_BUCKETS, FUNDING_PLANS, type Lead, type FundingPlan } from "@/lib/leads/types";
 import { classifyLead } from "@/lib/leads/bucketing";
 import { MENTORS } from "@/lib/mentors";
 import { seedStepStatusesForLead } from "@/lib/leads/step-helpers";
+import { newLeadId, newStageHistoryId } from "@/lib/leads/ids";
 
 /**
  * Admin-only list endpoint. Supports filtering + server-paginated range.
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
   // the get-go (admin can still override afterwards via inline row).
   const cls = classifyLead(target, MENTORS.map((m) => ({ country: m.country ?? null })));
 
-  const id = "ld_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
+  const id = newLeadId();
   const now = new Date().toISOString();
 
   const { data: lead, error: insErr } = await supabase
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
   // Seed pipeline step statuses + write creation history
   await seedStepStatusesForLead(id);
   await supabase.from("LeadStageHistory").insert({
-    id: "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22),
+    id: newStageHistoryId(),
     leadId: id,
     fromStage: null,
     toStage: "new",

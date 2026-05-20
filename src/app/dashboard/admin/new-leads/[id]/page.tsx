@@ -11,6 +11,7 @@ import OutreachPanel from "@/components/admin/leads/OutreachPanel";
 import CallPanel from "@/components/admin/leads/CallPanel";
 import MentorMatchPanel from "@/components/admin/leads/MentorMatchPanel";
 import {
+  CALL_PANEL_STAGES,
   type Lead,
   type LeadStageHistory,
   type OutreachLog,
@@ -201,13 +202,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
             />
           </section>
 
-          {/* Call Panel — only visible when stage is at call_scheduled or beyond.
-              Component renders null otherwise. */}
-          {(lead.stage === "call_scheduled" ||
-            lead.stage === "call_completed" ||
-            lead.stage === "deposit_pending" ||
-            lead.stage === "deposit_paid" ||
-            lead.stage === "matched") && (
+          {/* Call Panel — gated by CALL_PANEL_STAGES inside the component.
+              Section header would still render for irrelevant stages, so
+              we mirror the guard here to hide the wrapper too. */}
+          {CALL_PANEL_STAGES.includes(lead.stage) && (
             <section className="card p-5 space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Call Panel</h2>
               <CallPanel lead={lead} onChanged={fetchDetail} />

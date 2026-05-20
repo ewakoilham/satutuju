@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { LEAD_DECISIONS, type LeadDecision } from "@/lib/leads/types";
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
+import { newStageHistoryId } from "@/lib/leads/ids";
 
 /**
  * Persist call panel data + (optionally) advance stage to call_completed.
@@ -114,7 +110,7 @@ export async function PATCH(
 
   if (stageAdvanced) {
     await supabase.from("LeadStageHistory").insert({
-      id: historyId(),
+      id: newStageHistoryId(),
       leadId: id,
       fromStage: lead.stage,
       toStage: "call_completed",

@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { LEAD_BUCKETS } from "@/lib/leads/types";
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
+import { newStageHistoryId } from "@/lib/leads/ids";
 
 /**
  * Manual bucket override. Required justification text — auditors need to
@@ -69,7 +65,7 @@ export async function PATCH(
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
   await supabase.from("LeadStageHistory").insert({
-    id: historyId(),
+    id: newStageHistoryId(),
     leadId: id,
     fromStage: current.stage,
     toStage: current.stage,

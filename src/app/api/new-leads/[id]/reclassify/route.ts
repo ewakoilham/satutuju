@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { classifyLead } from "@/lib/leads/bucketing";
+import { newStageHistoryId } from "@/lib/leads/ids";
 import { MENTORS } from "@/lib/mentors";
-
-function historyId(): string {
-  return "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
-}
 
 /**
  * Re-run classifyLead() on the lead's current targetCampusAndProgram and
@@ -63,7 +59,7 @@ export async function POST(
 
   if (current.bucket !== result.bucket) {
     await supabase.from("LeadStageHistory").insert({
-      id: historyId(),
+      id: newStageHistoryId(),
       leadId: id,
       fromStage: current.stage,
       toStage: current.stage,
