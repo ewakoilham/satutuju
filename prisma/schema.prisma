@@ -534,3 +534,22 @@ model LeadAutoSendSetting {
   updatedAt    DateTime  @updatedAt
   updatedBy    String?
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// Google Calendar OAuth — single row holding the long-lived refresh
+// token for admin@satutuju.id's calendar. The cron + manual sync
+// endpoints exchange this for a short-lived access token to call the
+// Google Calendar API. One row per app (id="singleton") because we only
+// track Razak's appointment-schedule calendar at the moment.
+// ────────────────────────────────────────────────────────────────────────
+model GoogleCalendarAuth {
+  id               String    @id @default("singleton")
+  refreshToken     String                       // long-lived OAuth refresh token
+  scope            String                       // requested scopes (space-separated)
+  googleEmail      String?                      // email of the connected Google account
+  connectedAt      DateTime  @default(now())
+  connectedBy      String?                      // userId of the admin who did the OAuth dance
+  lastSyncAt       DateTime?                    // last successful events.list run
+  lastSyncToken    String?                      // Google's sync token for incremental fetch
+  updatedAt        DateTime  @updatedAt
+}

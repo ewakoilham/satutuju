@@ -85,6 +85,15 @@ export default function NewLeadsListPage() {
   const [syncMsg, setSyncMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Google Calendar integration state — null while loading, false when not
+  // connected (show "Connect" button), object when connected (show "Sync").
+  const [calendarAuth, setCalendarAuth] = useState<
+    | { connected: false }
+    | { connected: true; googleEmail: string | null; connectedAt: string; lastSyncAt: string | null }
+    | null
+  >(null);
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
+
   // Bulk selection state — tracks IDs across all pages (Set is cheap +
   // survives pagination). Cleared on filter change so admin doesn't
   // accidentally fire outreach to leads they can no longer see.
@@ -178,6 +187,73 @@ export default function NewLeadsListPage() {
       setSyncMsg({ kind: "err", text: e instanceof Error ? e.message : "Network error" });
     } finally {
       setSyncing(false);
+      setTimeout(() => setSyncMsg(null), 6000);
+    }
+  }
+
+  // ── Google Calendar integration ─────────────────────────────────────
+  // Probe connection status on mount + after OAuth callback returns
+  // with ?google=connected. Lightweight endpoint that never exposes the
+  // refresh token.
+  const fetchCalendarStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/new-leads/calendar-auth-status", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        setCalendarAuth({ connected: false });
+        return;
+      }
+      setCalendarAuth(await res.json());
+    } catch {
+      setCalendarAuth({ connected: false });
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchCalendarStatus();
+    // Surface the OAuth callback result as a toast.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get("google");
+      if (status === "connected") {
+        const email = params.get("email") || "Google account";
+        setSyncMsg({ kind: "ok", text: `Connected to ${email} ✓` });
+        // Clean the URL so refresh doesn't re-show the toast.
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (status === "error") {
+        const reason = params.get("reason") || "unknown";
+        setSyncMsg({ kind: "err", text: `Google connect failed: ${reason}` });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [fetchCalendarStatus]);
+
+  async function syncFromCalendar() {
+    setCalendarSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/new-leads/calendar-sync", {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSyncMsg({ kind: "err", text: json.error || `HTTP ${res.status}` });
+      } else {
+        const parts = [
+          `${json.eventsFetched} events fetched`,
+          `${json.leadsAdvanced} leads → call_scheduled`,
+        ].join(" · ");
+        setSyncMsg({ kind: "ok", text: `Synced from Calendar: ${parts}` });
+        await fetchList();
+        await fetchCalendarStatus();
+      }
+    } catch (e) {
+      setSyncMsg({ kind: "err", text: e instanceof Error ? e.message : "Network error" });
+    } finally {
+      setCalendarSyncing(false);
       setTimeout(() => setSyncMsg(null), 6000);
     }
   }
@@ -379,6 +455,38 @@ export default function NewLeadsListPage() {
             <Icon name="link" size={14} />
             {syncing ? "Syncing..." : "Sync from Tally"}
           </button>
+
+          {/* Calendar: shows "Connect" until OAuth done, then "Sync" */}
+          {calendarAuth === null ? (
+            <button type="button" disabled className="btn-ghost inline-flex items-center gap-1.5 text-sm opacity-50">
+              <Icon name="calendar" size={14} />
+              Calendar…
+            </button>
+          ) : calendarAuth.connected ? (
+            <button
+              type="button"
+              onClick={syncFromCalendar}
+              disabled={calendarSyncing}
+              className="btn-ghost inline-flex items-center gap-1.5 text-sm disabled:opacity-50"
+              title={
+                "Connected as " + (calendarAuth.googleEmail ?? "—") +
+                (calendarAuth.lastSyncAt ? " · last sync " + new Date(calendarAuth.lastSyncAt).toLocaleString("id-ID") : " · never synced")
+              }
+            >
+              <Icon name="calendar" size={14} />
+              {calendarSyncing ? "Syncing..." : "Sync from Calendar"}
+            </button>
+          ) : (
+            <a
+              href="/api/auth/google"
+              className="btn-ghost inline-flex items-center gap-1.5 text-sm"
+              title="Authorize Google Calendar read access (one-time)"
+            >
+              <Icon name="calendar" size={14} />
+              Connect Google Calendar
+            </a>
+          )}
+
           <Link
             href="/dashboard/admin/new-leads/pipeline"
             className="btn-ghost inline-flex items-center gap-1.5 text-sm"

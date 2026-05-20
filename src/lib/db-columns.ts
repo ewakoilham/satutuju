@@ -42,3 +42,6 @@ export const LEAD_EMAIL_TEMPLATE_COLUMNS =
 
 export const LEAD_AUTO_SEND_SETTING_COLUMNS =
   'id, enabled, "delayMinutes", "lastRunAt", "updatedAt", "updatedBy"';
+
+export const GOOGLE_CALENDAR_AUTH_COLUMNS =
+  'id, "refreshToken", scope, "googleEmail", "connectedAt", "connectedBy", "lastSyncAt", "lastSyncToken", "updatedAt"';
