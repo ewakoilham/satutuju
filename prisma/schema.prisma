@@ -361,3 +361,176 @@ model MentorContract {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// Leads pipeline — Tally → bucket → outreach → match
+// ────────────────────────────────────────────────────────────────────────
+
+enum LeadBucket {
+  A
+  B
+  C
+  D
+  incomplete   // Tally target field left blank — re-engage to fill it
+  domestic     // Target is an Indonesian university (out of scope)
+  unclassified
+}
+
+enum LeadStage {
+  new
+  outreach_sent
+  email_opened
+  email_clicked
+  call_scheduled
+  call_completed
+  deposit_pending
+  deposit_paid
+  matched
+  declined
+  waitlist
+  rejected
+}
+
+model Lead {
+  id                     String     @id @default(cuid())
+  // From Tally
+  name                   String
+  email                  String
+  whatsappNumber         String?
+  targetCampusAndProgram String
+  fundingPlan            String     // "scholarship" | "self_funded" | "partial"
+  submittedAt            DateTime   @default(now())
+  tallySubmissionId      String?    @unique
+  // System-derived
+  bucket                 LeadBucket @default(unclassified)
+  bucketReason           String?
+  parsedCountry          String?
+  parsedCampus           String?
+  parsedField            String?    // "STEM" | "Business" | "unclear"
+  isCampusPartner        Boolean?
+  hasCountryMentor       Boolean    @default(false)
+  // Funnel state
+  stage                  LeadStage  @default(new)
+  outreachSentAt         DateTime?
+  emailOpenedAt          DateTime?
+  emailClickedAt         DateTime?
+  callScheduledAt        DateTime?
+  callCompletedAt        DateTime?
+  // Decision
+  assignedInterviewer    String?    // "Razak" | "Venzo"
+  depositTier            Int?       // 1 | 2 | 3
+  readinessScore         Int?       // 0–5
+  callNotes              String?
+  redFlags               String?
+  decision               String?    // "proceed" | "waitlist" | "declined_by_student" | "rejected_by_us"
+  mentorMatchedId        String?
+  // Bookkeeping
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  history                LeadStageHistory[]
+  outreach               OutreachLog[]
+  stepStatuses           LeadStepStatus[]
+
+  @@index([bucket])
+  @@index([stage])
+  @@index([parsedCountry])
+  @@index([submittedAt])
+  @@index([email])
+}
+
+model LeadStageHistory {
+  id        String   @id @default(cuid())
+  leadId    String
+  fromStage String?
+  toStage   String
+  changedBy String   // userId or "tally-webhook" / "resend-webhook" / "cron"
+  note      String?
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+model OutreachLog {
+  id              String    @id @default(cuid())
+  leadId          String
+  channel         String    @default("email")
+  templateUsed    String    // "bucket_a_b_d" | "bucket_c" | "custom"
+  subject         String
+  body            String
+  sentAt          DateTime  @default(now())
+  status          String    @default("sent") // "sent" | "bounced" | "failed"
+  resendMessageId String?   @unique
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  bouncedAt       DateTime?
+  errorMessage    String?
+
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([resendMessageId])
+}
+
+model LeadStepDefinition {
+  id          String   @id @default(cuid())
+  order       Int      // display order; admin reorderable via drag
+  label       String   // "Kirim email pertama", "Schedule initial call", ...
+  description String?
+  // When non-null, auto-completes the moment that system event fires.
+  // null = manual-only.
+  autoTrigger String?  // "email_sent" | "email_opened" | "email_clicked" | "deposit_paid" | "matched" | null
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  statuses    LeadStepStatus[]
+
+  @@index([order])
+  @@index([isActive])
+}
+
+model LeadStepStatus {
+  id          String              @id @default(cuid())
+  leadId      String
+  stepId      String
+  status      String              @default("pending") // "pending" | "done" | "skipped"
+  completedAt DateTime?
+  completedBy String?             // userId or literal "system"
+  note        String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  lead        Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  step        LeadStepDefinition  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, stepId])
+  @@index([leadId])
+  @@index([status])
+}
+
+model LeadEmailTemplate {
+  id        String   @id @default(cuid())
+  // One of TEMPLATE_BUCKETS in src/lib/leads/types.ts:
+  //   "A_B_C"      → invitation (mentor or partner kampus available)
+  //   "D"          → polite confirmation (outside our network)
+  //   "incomplete" → re-engage (target field blank in Tally)
+  //   "domestic"   → polite decline (target in Indonesia, out of scope)
+  bucket    String   @unique
+  subject   String
+  body      String   // plain text with {{name}}, {{campusJurusan}}, {{fundingPlan}} tokens
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model LeadAutoSendSetting {
+  id           String    @id @default("singleton")
+  enabled      Boolean   @default(false)
+  delayMinutes Int       @default(60)   // min effective granularity = Vercel cron interval (5 min)
+  lastRunAt    DateTime?
+  updatedAt    DateTime  @updatedAt
+  updatedBy    String?
+}

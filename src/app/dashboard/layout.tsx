@@ -35,6 +35,14 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
         { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
       ],
     },
+    {
+      label: "Pipeline", icon: "chart",
+      children: [
+        { href: "/dashboard/admin/new-leads",           label: "New Leads",       icon: "users"    },
+        { href: "/dashboard/admin/new-leads/pipeline",  label: "Pipeline Steps",  icon: "check"    },
+        { href: "/dashboard/admin/new-leads/templates", label: "Email Templates", icon: "document" },
+      ],
+    },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
     { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
