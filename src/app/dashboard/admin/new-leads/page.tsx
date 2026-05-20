@@ -147,7 +147,7 @@ export default function NewLeadsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [bucketFilter, stageFilter, fundingFilter, debouncedSearch, offset]);
+  }, [bucketFilter, stageFilter, fundingFilter, debouncedSearch, offset, pageSize]);
 
   useEffect(() => {
     void fetchList();
