@@ -192,7 +192,7 @@ Aku udah review profil Kakak — rencana lanjut ke {{campusJurusan}} dengan jalu
 Dari sekian banyak pendaftar, kami lihat Kakak punya potensi yang besar untuk berhasil. Karena itu, aku mau ngajak Kakak untuk sesi eksklusif 15 menit bareng aku via Zoom/Google Meet — khusus buat ngebahas lebih dalam gimana Satu Tuju bisa bantu perjalanan Kakak.
 
 Silakan pilih slot-mu di sini:
-👉 https://calendar.app.google/oZQo2ARi41aeeczy6
+👉 https://calendar.app.google/V9ZH8oo358HJ6VTi9
 
 Slot sangat terbatas. Kalau ada pertanyaan sebelum itu, reply aja langsung ke email ini ya Kak.
 
