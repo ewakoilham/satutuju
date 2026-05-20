@@ -1,50 +1,38 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { google } from "googleapis";
+import { loadAuth, makeAuthedClient } from "@/lib/integrations/google-calendar";
 
+/**
+ * Diagnostic endpoint for the Google Calendar integration. Admin only.
+ *
+ * Runs a 2-step health check using the singleton refresh token stored
+ * via the OAuth dance at /api/auth/google:
+ *
+ *   1. Token exchange — confirms the refresh token still works
+ *      (i.e. the admin hasn't revoked access at
+ *      https://myaccount.google.com/permissions).
+ *   2. Event creation — confirms the scope grants write access + the
+ *      account can mint a Meet link (some Workspace tiers restrict
+ *      conferenceData.createRequest).
+ */
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-
-  if (!clientId || !clientSecret || !refreshToken) {
+  const auth = await loadAuth();
+  if (!auth) {
     return NextResponse.json({
-      error: "Missing env vars",
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      hasRefreshToken: !!refreshToken,
-    });
+      error: "Not connected. Visit /api/auth/google to authorize.",
+      connected: false,
+    }, { status: 412 });
   }
 
-  // Step 1: test that the refresh token can get an access token
-  const auth = new google.auth.OAuth2(clientId, clientSecret);
-  auth.setCredentials({ refresh_token: refreshToken });
-
-  try {
-    const { token } = await auth.getAccessToken();
-    if (!token) {
-      return NextResponse.json({ error: "getAccessToken returned null", tokenPreview: refreshToken.slice(0, 20) });
-    }
-  } catch (err: unknown) {
-    const e = err as { response?: { data?: unknown }; message?: string };
-    return NextResponse.json({
-      error: "Failed to get access token",
-      message: e.message,
-      data: e.response?.data,
-      tokenLength: refreshToken.length,
-      tokenPreview: `${refreshToken.slice(0, 20)}...${refreshToken.slice(-10)}`,
-      clientIdPreview: clientId.slice(0, 15),
-    });
-  }
+  const calendar = makeAuthedClient(auth.refreshToken);
 
   // Step 2: try creating a test event with Meet link
   try {
-    const calendar = google.calendar({ version: "v3", auth });
     const event = await calendar.events.insert({
       calendarId: "primary",
       conferenceDataVersion: 1,
@@ -63,13 +51,14 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      googleEmail: auth.googleEmail,
       eventId: event.data.id,
       meetLink: event.data.hangoutLink || "NO_MEET_LINK",
     });
   } catch (err: unknown) {
     const gErr = err as { response?: { status?: number; data?: unknown }; message?: string };
     return NextResponse.json({
-      error: "Event creation failed (but auth works!)",
+      error: "Event creation failed",
       status: gErr.response?.status,
       message: gErr.message,
       data: gErr.response?.data,

@@ -1,14 +1,15 @@
-import { google } from "googleapis";
+import { loadAuth, makeAuthedClient } from "@/lib/integrations/google-calendar";
 
 const tz = process.env.CALENDAR_TIMEZONE || "Asia/Jakarta";
 
-function getCalendar() {
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-  );
-  auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
-  return google.calendar({ version: "v3", auth });
+/** Load the shared GoogleCalendarAuth singleton (set via OAuth dance at
+ *  /api/auth/google by an admin). Returns null when nobody has connected
+ *  yet — schedule booking flow then silently skips Calendar event creation
+ *  rather than throwing. */
+async function getCalendar() {
+  const auth = await loadAuth();
+  if (!auth) return null;
+  return makeAuthedClient(auth.refreshToken);
 }
 
 export async function createCalendarEvent(params: {
@@ -19,13 +20,13 @@ export async function createCalendarEvent(params: {
   attendeeEmails: string[];
   description?: string;
 }): Promise<{ eventId: string; meetLink: string } | null> {
-  if (!process.env.GOOGLE_REFRESH_TOKEN) {
-    console.error("Google Calendar: GOOGLE_REFRESH_TOKEN not set");
+  const calendar = await getCalendar();
+  if (!calendar) {
+    console.error("Google Calendar: not connected. Visit /api/auth/google to authorize.");
     return null;
   }
 
   try {
-    const calendar = getCalendar();
     const event = await calendar.events.insert({
       calendarId: "primary",
       conferenceDataVersion: 1,
@@ -76,10 +77,10 @@ export async function createCalendarEvent(params: {
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
-  if (!process.env.GOOGLE_REFRESH_TOKEN) return;
+  const calendar = await getCalendar();
+  if (!calendar) return;
 
   try {
-    const calendar = getCalendar();
     await calendar.events.delete({
       calendarId: "primary",
       eventId,

@@ -18,9 +18,11 @@ import { GOOGLE_CALENDAR_AUTH_COLUMNS } from "@/lib/db-columns";
  *   4. Match attendee emails to Lead.email → advance stage
  */
 
-/** Read-only scope for events.list. Bumping to read-write would let us
- *  cancel/reschedule from admin UI but we don't need that. */
-export const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly openid email";
+/** Full calendar scope — needed because the schedule-booking flow in
+ *  /api/schedule/[id]/book creates events with Meet links (read-write).
+ *  The leads-tracking sync only reads, but we share one OAuth grant so
+ *  both flows use the same refresh token. */
+export const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar openid email";
 
 /** Construct an OAuth client. Env vars must be set. */
 export function makeOAuthClient(): OAuth2Client {
