@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_BUCKETS, type Lead } from "@/lib/leads/types";
+import crypto from "crypto";
+import { LEAD_BUCKETS, FUNDING_PLANS, type Lead, type FundingPlan } from "@/lib/leads/types";
+import { classifyLead } from "@/lib/leads/bucketing";
+import { MENTORS } from "@/lib/mentors";
+import { seedStepStatusesForLead } from "@/lib/leads/step-helpers";
 
 /**
  * Admin-only list endpoint. Supports filtering + server-paginated range.
@@ -152,4 +156,93 @@ export async function GET(req: NextRequest) {
     progress,
     bucketCounts,
   });
+}
+
+/**
+ * Manual lead entry — admin creates a lead via UI (the lead bypassed
+ * Tally, mis. mentor referral, organic inquiry via DM). Runs the same
+ * classifyLead() pipeline as the Tally sync so bucket + parsedCountry +
+ * parsedField are populated automatically.
+ *
+ * Body: { name, email, whatsappNumber?, targetCampusAndProgram, fundingPlan }
+ */
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
+
+  let body: {
+    name?: unknown;
+    email?: unknown;
+    whatsappNumber?: unknown;
+    targetCampusAndProgram?: unknown;
+    fundingPlan?: unknown;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const target = typeof body.targetCampusAndProgram === "string" ? body.targetCampusAndProgram.trim() : "";
+  const whatsapp = typeof body.whatsappNumber === "string" ? body.whatsappNumber.trim() || null : null;
+  const fundingPlan = typeof body.fundingPlan === "string" ? body.fundingPlan : "";
+
+  if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
+  if (!email || !email.includes("@")) return NextResponse.json({ error: "valid email required" }, { status: 400 });
+  if (!(FUNDING_PLANS as readonly string[]).includes(fundingPlan)) {
+    return NextResponse.json(
+      { error: `fundingPlan must be one of: ${FUNDING_PLANS.join("|")}` },
+      { status: 400 },
+    );
+  }
+
+  // Run classifier so the manual entry lands with the right bucket from
+  // the get-go (admin can still override afterwards via inline row).
+  const cls = classifyLead(target, MENTORS.map((m) => ({ country: m.country ?? null })));
+
+  const id = "ld_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22);
+  const now = new Date().toISOString();
+
+  const { data: lead, error: insErr } = await supabase
+    .from("Lead")
+    .insert({
+      id,
+      name,
+      email,
+      whatsappNumber: whatsapp,
+      targetCampusAndProgram: target || "(target tidak diisi)",
+      fundingPlan: fundingPlan as FundingPlan,
+      submittedAt: now,
+      tallySubmissionId: null,  // null distinguishes manual from Tally-sourced
+      bucket: cls.bucket,
+      bucketReason: cls.reason,
+      parsedCountry: cls.parsedCountry,
+      parsedCampus: cls.parsedCampus,
+      parsedField: cls.parsedField,
+      isCampusPartner: cls.isCampusPartner,
+      hasCountryMentor: cls.hasCountryMentor,
+      stage: "new",
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select(LEAD_SELECT_COLUMNS)
+    .single();
+  if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+
+  // Seed pipeline step statuses + write creation history
+  await seedStepStatusesForLead(id);
+  await supabase.from("LeadStageHistory").insert({
+    id: "lsh_" + crypto.randomUUID().replace(/-/g, "").slice(0, 22),
+    leadId: id,
+    fromStage: null,
+    toStage: "new",
+    changedBy: user.userId,
+    note: `Manual entry by ${user.name ?? user.userId}. ${cls.reason}`,
+    createdAt: now,
+  });
+
+  return NextResponse.json({ lead, classification: cls });
 }

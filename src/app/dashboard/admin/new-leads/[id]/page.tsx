@@ -8,6 +8,8 @@ import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
 import OutreachPanel from "@/components/admin/leads/OutreachPanel";
+import CallPanel from "@/components/admin/leads/CallPanel";
+import MentorMatchPanel from "@/components/admin/leads/MentorMatchPanel";
 import {
   type Lead,
   type LeadStageHistory,
@@ -198,6 +200,28 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               variant="full"
             />
           </section>
+
+          {/* Call Panel — only visible when stage is at call_scheduled or beyond.
+              Component renders null otherwise. */}
+          {(lead.stage === "call_scheduled" ||
+            lead.stage === "call_completed" ||
+            lead.stage === "deposit_pending" ||
+            lead.stage === "deposit_paid" ||
+            lead.stage === "matched") && (
+            <section className="card p-5 space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Call Panel</h2>
+              <CallPanel lead={lead} onChanged={fetchDetail} />
+            </section>
+          )}
+
+          {/* Mentor Matching — visible when stage = deposit_paid (ready
+              to pair) or already matched (so admin can re-match). */}
+          {(lead.stage === "deposit_paid" || lead.stage === "matched") && (
+            <section className="card p-5 space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Mentor Matching</h2>
+              <MentorMatchPanel lead={lead} onChanged={fetchDetail} />
+            </section>
+          )}
         </div>
 
         {/* Sidebar: Stage Timeline */}

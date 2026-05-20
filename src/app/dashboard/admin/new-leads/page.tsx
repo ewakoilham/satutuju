@@ -9,6 +9,7 @@ import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import LeadRowExpanded from "@/components/admin/leads/LeadRowExpanded";
 import BulkActionBar from "@/components/admin/leads/BulkActionBar";
+import SummaryCards from "@/components/admin/leads/SummaryCards";
 import {
   LEAD_BUCKETS,
   LEAD_STAGES,
@@ -107,6 +108,13 @@ export default function NewLeadsListPage() {
   // so admin doesn't accidentally double-send. Defaults to true the moment
   // the confirm modal opens (set in onSendOutreach handler) — see below.
   const [skipAlreadySent, setSkipAlreadySent] = useState(true);
+
+  // Other bulk-action modal state
+  const [moveBucketOpen, setMoveBucketOpen] = useState(false);
+  const [moveBucketTarget, setMoveBucketTarget] = useState<LeadBucket | "">("");
+  const [moveBucketReason, setMoveBucketReason] = useState("");
+  const [assignInterviewerOpen, setAssignInterviewerOpen] = useState(false);
+  const [assignInterviewerName, setAssignInterviewerName] = useState("");
 
   // Debounce search input
   useEffect(() => {
@@ -342,8 +350,7 @@ export default function NewLeadsListPage() {
     );
   }
 
-  // Total bucket counts across ALL matching leads (not just current page).
-  const counts = data?.bucketCounts ?? {};
+  // Bucket counts moved to SummaryCards (which fetches its own /stats).
 
   // ── Bulk-send wiring ───────────────────────────────────────────────────
   const visibleLeads = data?.leads ?? [];
@@ -403,6 +410,118 @@ export default function NewLeadsListPage() {
 
   // The actual ID list that will be POSTed when admin confirms.
   const effectiveIds = skipAlreadySent ? notSentIds : Array.from(selected);
+
+  // ── Bulk: re-classify ────────────────────────────────────────────────
+  async function runBulkReclassify() {
+    if (selected.size === 0) return;
+    if (!confirm(`Re-classify ${selected.size} leads dengan logika bucketing terbaru?`)) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/new-leads/bulk-classify", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds: Array.from(selected) }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || `HTTP ${res.status}`);
+      } else {
+        setSyncMsg({ kind: "ok", text: `Re-classified ${json.changed} dari ${json.total} leads (${json.unchanged} tidak berubah)` });
+        setSelected(new Set());
+        await fetchList();
+        setTimeout(() => setSyncMsg(null), 6000);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  // ── Bulk: change bucket ──────────────────────────────────────────────
+  async function runBulkChangeBucket() {
+    if (selected.size === 0 || !moveBucketTarget || !moveBucketReason.trim()) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/new-leads/bulk-change-bucket", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadIds: Array.from(selected),
+          bucket: moveBucketTarget,
+          reason: moveBucketReason.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || `HTTP ${res.status}`);
+      } else {
+        setSyncMsg({
+          kind: "ok",
+          text: `${json.changed} leads dipindahkan ke bucket ${moveBucketTarget}` +
+            (json.skipped > 0 ? ` (${json.skipped} sudah di bucket itu, skip)` : ""),
+        });
+        setSelected(new Set());
+        setMoveBucketTarget("");
+        setMoveBucketReason("");
+        setMoveBucketOpen(false);
+        await fetchList();
+        setTimeout(() => setSyncMsg(null), 6000);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  // ── Bulk: assign interviewer ─────────────────────────────────────────
+  async function runBulkAssignInterviewer() {
+    if (selected.size === 0) return;
+    const value = assignInterviewerName.trim();
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/new-leads/bulk-assign-interviewer", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadIds: Array.from(selected),
+          interviewer: value || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || `HTTP ${res.status}`);
+      } else {
+        setSyncMsg({
+          kind: "ok",
+          text: value
+            ? `Assigned interviewer "${value}" ke ${json.updated} leads`
+            : `Cleared interviewer dari ${json.updated} leads`,
+        });
+        setSelected(new Set());
+        setAssignInterviewerName("");
+        setAssignInterviewerOpen(false);
+        await fetchList();
+        setTimeout(() => setSyncMsg(null), 6000);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  // ── Bulk: export CSV ─────────────────────────────────────────────────
+  function runBulkExportCsv() {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected).join(",");
+    // Browser navigation triggers the download via Content-Disposition.
+    window.location.href = `/api/new-leads/export?ids=${encodeURIComponent(ids)}`;
+  }
 
   async function runBulkOutreach() {
     setBulkBusy(true);
@@ -509,17 +628,18 @@ export default function NewLeadsListPage() {
         </div>
       )}
 
-      {/* Summary strip — shows current page counts; filters apply */}
+      {/* Summary cards — aggregates across ALL leads (not just current
+          page). Refreshes when the table refreshes by passing `offset`
+          (a proxy for "user did something that changed leads"). */}
+      <SummaryCards refreshKey={offset + (data?.total ?? 0)} />
+
+      {/* Mini-strip showing current page-scoped slice for orientation */}
       {data && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-text-muted">Showing {pageStart}–{pageEnd} of {total}</span>
-          <span className="text-text-muted-2">·</span>
-          {LEAD_BUCKETS.map((b) => (
-            <span key={b} className="inline-flex items-center gap-1">
-              <LeadBucketBadge bucket={b} />
-              <span className="text-text-muted">{counts[b] ?? 0}</span>
-            </span>
-          ))}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+          <span>Showing {pageStart}–{pageEnd} of {total}</span>
+          {(bucketFilter.size > 0 || stageFilter.size > 0 || fundingFilter.size > 0 || debouncedSearch) && (
+            <span className="text-text-muted-2">· filters active (lihat hasil di tabel)</span>
+          )}
         </div>
       )}
 
@@ -959,8 +1079,112 @@ export default function NewLeadsListPage() {
           setSkipAlreadySent(alreadySentIds.length > 0);
           setBulkConfirmOpen(true);
         }}
+        onReclassify={() => void runBulkReclassify()}
+        onChangeBucket={() => setMoveBucketOpen(true)}
+        onAssignInterviewer={() => setAssignInterviewerOpen(true)}
+        onExportCsv={runBulkExportCsv}
         onClear={() => setSelected(new Set())}
       />
+
+      {/* Move bucket modal */}
+      <Modal
+        open={moveBucketOpen}
+        onClose={() => bulkBusy ? null : setMoveBucketOpen(false)}
+        title={`Pindahkan ${selected.size} leads ke bucket lain`}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setMoveBucketOpen(false)}
+              disabled={bulkBusy}
+              className="btn-ghost"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void runBulkChangeBucket()}
+              disabled={bulkBusy || !moveBucketTarget || !moveBucketReason.trim()}
+              className="btn-primary disabled:opacity-50"
+            >
+              {bulkBusy ? "Memindahkan…" : "Pindahkan"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-xs text-text-muted">
+            Override otomatis classifier. Leads yang sudah di bucket target akan di-skip.
+          </p>
+          <div>
+            <label className="text-xs uppercase tracking-wider text-text-muted-2 block mb-1">Target bucket</label>
+            <select
+              value={moveBucketTarget}
+              onChange={(e) => setMoveBucketTarget(e.target.value as LeadBucket | "")}
+              className="input-field text-sm"
+            >
+              <option value="">Pilih bucket…</option>
+              {LEAD_BUCKETS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-wider text-text-muted-2 block mb-1">Justifikasi (wajib)</label>
+            <input
+              type="text"
+              value={moveBucketReason}
+              onChange={(e) => setMoveBucketReason(e.target.value)}
+              placeholder="mis. Mentor Hungary baru di-onboard, retro-fix..."
+              className="input-field text-sm"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Assign interviewer modal */}
+      <Modal
+        open={assignInterviewerOpen}
+        onClose={() => bulkBusy ? null : setAssignInterviewerOpen(false)}
+        title={`Assign interviewer ke ${selected.size} leads`}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setAssignInterviewerOpen(false)}
+              disabled={bulkBusy}
+              className="btn-ghost"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void runBulkAssignInterviewer()}
+              disabled={bulkBusy}
+              className="btn-primary disabled:opacity-50"
+            >
+              {bulkBusy ? "Menyimpan…" : assignInterviewerName.trim() ? "Assign" : "Clear interviewer"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-xs text-text-muted">
+            Kosongkan nama untuk clear interviewer assignment dari leads terpilih.
+          </p>
+          <div>
+            <label className="text-xs uppercase tracking-wider text-text-muted-2 block mb-1">Interviewer name</label>
+            <input
+              type="text"
+              value={assignInterviewerName}
+              onChange={(e) => setAssignInterviewerName(e.target.value)}
+              placeholder="mis. Razak, Venzo, …"
+              className="input-field text-sm"
+              autoFocus
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Custom confirm modal with skip-already-sent toggle. The body
           surfaces the actual effective count so admin knows exactly

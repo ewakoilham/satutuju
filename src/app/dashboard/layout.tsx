@@ -39,8 +39,10 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
       label: "Pipeline", icon: "chart",
       children: [
         { href: "/dashboard/admin/new-leads",           label: "New Leads",       icon: "users"    },
+        { href: "/dashboard/admin/new-leads/new",       label: "Tambah Lead",     icon: "plus"     },
         { href: "/dashboard/admin/new-leads/pipeline",  label: "Pipeline Steps",  icon: "check"    },
         { href: "/dashboard/admin/new-leads/templates", label: "Email Templates", icon: "document" },
+        { href: "/dashboard/admin/new-leads/settings",  label: "Auto-Send",       icon: "calendar" },
       ],
     },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
