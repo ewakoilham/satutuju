@@ -416,6 +416,10 @@ model Lead {
   emailClickedAt         DateTime?
   callScheduledAt        DateTime?
   callCompletedAt        DateTime?
+  // Google Calendar event ID for the most recent call_scheduled booking.
+  // Lets the calendar sync detect cancellations (events flipping to
+  // status=cancelled) and revert the stage. Cleared when reverted.
+  calendarEventId        String?
   // Decision
   assignedInterviewer    String?    // "Razak" | "Venzo"
   depositTier            Int?       // 1 | 2 | 3
@@ -437,6 +441,7 @@ model Lead {
   @@index([parsedCountry])
   @@index([submittedAt])
   @@index([email])
+  @@index([calendarEventId])
 }
 
 model LeadStageHistory {

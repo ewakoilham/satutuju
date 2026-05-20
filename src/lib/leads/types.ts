@@ -103,6 +103,7 @@ export interface Lead {
   emailClickedAt: string | null;
   callScheduledAt: string | null;
   callCompletedAt: string | null;
+  calendarEventId: string | null;
   // Decision
   assignedInterviewer: string | null;
   depositTier: number | null;

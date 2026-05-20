@@ -258,6 +258,7 @@ export default function NewLeadsListPage() {
         const parts = [
           `${json.eventsFetched} events fetched`,
           `${json.leadsAdvanced} leads → call_scheduled`,
+          `${json.leadsReverted ?? 0} reverted (cancelled)`,
         ].join(" · ");
         setSyncMsg({ kind: "ok", text: `Synced from Calendar: ${parts}` });
         await fetchList();

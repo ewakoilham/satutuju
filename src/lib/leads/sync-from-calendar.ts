@@ -1,7 +1,7 @@
 import "server-only";
 
 import { supabase } from "@/lib/supabase";
-import { maybeAdvanceStage } from "@/lib/leads/types";
+import { maybeAdvanceStage, type LeadStage } from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
 import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 import { loadAuth, makeAuthedClient } from "@/lib/integrations/google-calendar";
@@ -12,8 +12,14 @@ import { loadAuth, makeAuthedClient } from "@/lib/integrations/google-calendar";
  * attendee email matches a Lead.email, advance that lead's stage to
  * `call_scheduled` and record the booked time + Meet link.
  *
+ * Also detects **cancellations** (events flipped to status=cancelled by
+ * either party) and reverts the lead's stage to the one it was in before
+ * the booking — provided the admin hasn't already manually moved them
+ * past call_scheduled (in which case the call presumably happened and we
+ * leave it alone).
+ *
  * Run via:
- *   - GET /api/cron/calendar-sync (hourly Vercel cron)
+ *   - GET /api/cron/calendar-sync (15-min Vercel cron)
  *   - POST /api/new-leads/calendar-sync (admin-triggered manual sync)
  */
 
@@ -22,6 +28,7 @@ export interface CalendarSyncResult {
   authConnected: boolean;
   eventsFetched: number;
   leadsAdvanced: number;
+  leadsReverted: number;
   matches: Array<{
     leadId: string;
     eventId: string;
@@ -29,6 +36,11 @@ export interface CalendarSyncResult {
     startTime: string;
     meetLink: string | null;
     prevStage: string;
+  }>;
+  cancellations: Array<{
+    leadId: string;
+    eventId: string;
+    revertedTo: string;
   }>;
   error?: string;
 }
@@ -40,6 +52,11 @@ export interface CalendarSyncResult {
  */
 const FIRST_RUN_LOOKBACK_DAYS = 30;
 
+/** Fallback stage to revert to when we can't determine the prior stage
+ *  from LeadStageHistory (defensive — should rarely fire since every
+ *  call_scheduled transition writes a history row with fromStage). */
+const FALLBACK_REVERT_STAGE: LeadStage = "email_clicked";
+
 export async function syncFromCalendar(): Promise<CalendarSyncResult> {
   const auth = await loadAuth();
   if (!auth) {
@@ -48,7 +65,9 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       authConnected: false,
       eventsFetched: 0,
       leadsAdvanced: 0,
+      leadsReverted: 0,
       matches: [],
+      cancellations: [],
       error: "Not connected to Google Calendar. Visit /api/auth/google to authorize.",
     };
   }
@@ -63,13 +82,11 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
   const updatedMin = auth.lastSyncAt
     ? new Date(auth.lastSyncAt).toISOString()
     : new Date(now.getTime() - lookbackMs).toISOString();
-  // Don't fetch events in the past relative to "now"; the appointment
-  // already happened. But DO include events that were updated recently
-  // (rescheduled).
   const timeMin = new Date(now.getTime() - lookbackMs).toISOString();
 
   let events: Array<{
     id?: string | null;
+    status?: string | null;
     summary?: string | null;
     start?: { dateTime?: string | null; date?: string | null } | null;
     attendees?: Array<{ email?: string | null }> | null;
@@ -81,10 +98,10 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       calendarId: "primary",
       timeMin,
       updatedMin,
-      singleEvents: true,           // expand recurring events to individual occurrences
+      singleEvents: true,        // expand recurring events to individual occurrences
       orderBy: "updated",
       maxResults: 250,
-      showDeleted: false,
+      showDeleted: true,         // include status=cancelled events so we can revert
     });
     events = res.data.items ?? [];
   } catch (e) {
@@ -93,32 +110,95 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       authConnected: true,
       eventsFetched: 0,
       leadsAdvanced: 0,
+      leadsReverted: 0,
       matches: [],
+      cancellations: [],
       error: e instanceof Error ? e.message : "calendar.events.list failed",
     };
   }
 
-  // Build a quick lookup of lead emails for matching. We only care about
-  // leads that aren't already past `call_scheduled` (monotonic guard).
+  // Build lookup of lead emails for matching new bookings.
   const { data: leads } = await supabase
     .from("Lead")
-    .select("id, email, stage");
-  type LeadLite = { id: string; email: string; stage: string };
+    .select("id, email, stage, calendarEventId");
+  type LeadLite = { id: string; email: string; stage: string; calendarEventId: string | null };
   const byEmail = new Map<string, LeadLite>();
+  const byEventId = new Map<string, LeadLite>();
   for (const l of (leads ?? []) as LeadLite[]) {
     byEmail.set(l.email.toLowerCase(), l);
+    if (l.calendarEventId) byEventId.set(l.calendarEventId, l);
   }
 
   const matches: CalendarSyncResult["matches"] = [];
+  const cancellations: CalendarSyncResult["cancellations"] = [];
   let leadsAdvanced = 0;
+  let leadsReverted = 0;
   const nowIso = now.toISOString();
 
   for (const ev of events) {
     const eventId = ev.id ?? "";
+    if (!eventId) continue;
+
+    // ─── Cancellation branch ────────────────────────────────────────
+    if (ev.status === "cancelled") {
+      const lead = byEventId.get(eventId);
+      // Skip if no lead is tied to this event ID (event we never tracked).
+      if (!lead) continue;
+      // Skip if admin has already moved the lead past call_scheduled
+      // (call happened, no need to revert).
+      if (lead.stage !== "call_scheduled") continue;
+
+      // Look up the most recent history row that landed on call_scheduled
+      // so we can revert to whatever stage came before.
+      const { data: prior } = await supabase
+        .from("LeadStageHistory")
+        .select("fromStage")
+        .eq("leadId", lead.id)
+        .eq("toStage", "call_scheduled")
+        .order("createdAt", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const revertTo: LeadStage =
+        (prior?.fromStage as LeadStage | null | undefined) ?? FALLBACK_REVERT_STAGE;
+
+      const { error: updErr } = await supabase
+        .from("Lead")
+        .update({
+          stage: revertTo,
+          callScheduledAt: null,
+          calendarEventId: null,
+          updatedAt: nowIso,
+        })
+        .eq("id", lead.id);
+      if (updErr) continue;
+
+      await supabase.from("LeadStageHistory").insert({
+        id: newStageHistoryId(),
+        leadId: lead.id,
+        fromStage: "call_scheduled",
+        toStage: revertTo,
+        changedBy: "google-calendar-sync",
+        note: `Booking cancelled (Google Calendar event ${eventId}) — reverted to ${revertTo}`,
+        createdAt: nowIso,
+      });
+
+      cancellations.push({ leadId: lead.id, eventId, revertedTo: revertTo });
+      leadsReverted++;
+
+      // Update local cache so a later confirmation event in this same
+      // run (rare — reschedule on same event ID) doesn't read stale data.
+      lead.stage = revertTo;
+      lead.calendarEventId = null;
+      byEventId.delete(eventId);
+      continue;
+    }
+
+    // ─── New / updated booking branch ───────────────────────────────
     const summary = ev.summary ?? "(no title)";
     const startTime = ev.start?.dateTime ?? ev.start?.date ?? null;
     const meetLink = ev.hangoutLink ?? null;
-    if (!startTime || !eventId) continue;
+    if (!startTime) continue;
 
     // Try every attendee. First match wins (multiple lead emails on
     // one event is unusual but cheap to handle).
@@ -131,18 +211,17 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       // Monotonic guard — only advance forward.
       if (!maybeAdvanceStage(lead.stage, "call_scheduled")) continue;
 
-      // Advance Lead.stage + set callScheduledAt.
       const { error: updErr } = await supabase
         .from("Lead")
         .update({
           stage: "call_scheduled",
           callScheduledAt: startTime,
+          calendarEventId: eventId,
           updatedAt: nowIso,
         })
         .eq("id", lead.id);
       if (updErr) continue;
 
-      // Write LeadStageHistory entry.
       await supabase.from("LeadStageHistory").insert({
         id: newStageHistoryId(),
         leadId: lead.id,
@@ -153,12 +232,6 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
         createdAt: nowIso,
       });
 
-      // Auto-complete any step listening for "call_scheduled" trigger
-      // (no current default step uses this, but admin may add one).
-      // The trigger string isn't in our STEP_AUTO_TRIGGERS enum yet so
-      // we'd need to add it; skipping for now and letting admin tick
-      // the "Schedule initial call" step manually.
-
       matches.push({
         leadId: lead.id,
         eventId,
@@ -168,12 +241,16 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
         prevStage: lead.stage,
       });
       leadsAdvanced++;
+
+      // Keep cache coherent for downstream iterations in this run.
+      lead.stage = "call_scheduled";
+      lead.calendarEventId = eventId;
+      byEventId.set(eventId, lead);
       break; // one match per event
     }
   }
 
-  // Update lastSyncAt to the start of THIS run (so the next run picks up
-  // events updated DURING this run on its next pass).
+  // Update lastSyncAt to the start of THIS run.
   await supabase
     .from("GoogleCalendarAuth")
     .update({ lastSyncAt: nowIso, updatedAt: nowIso })
@@ -192,6 +269,8 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
     authConnected: true,
     eventsFetched: events.length,
     leadsAdvanced,
+    leadsReverted,
     matches,
+    cancellations,
   };
 }
