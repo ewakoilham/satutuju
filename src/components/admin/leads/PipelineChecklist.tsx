@@ -23,10 +23,35 @@ const TRIGGER_LABEL: Record<string, string> = {
   email_clicked: "Email clicked",
   whatsapp_sent: "WhatsApp sent",
   whatsapp_read: "WhatsApp read",
-  call_scheduled: "Call scheduled",
+  call_scheduled: "Stage → call scheduled",
   deposit_pending: "Stage → deposit pending",
+  deposit_agreed: "Stage → deposit agreed",
   deposit_paid: "Stage → deposit paid",
-  matched: "Mentor matched",
+  matched: "Stage → matched",
+};
+
+/**
+ * Subset of auto-triggers that correspond 1:1 to a LeadStage value.
+ * Clicking such a step on an admin row means "advance the lead's
+ * stage" — we hit /stage which then auto-fires the step via the
+ * STAGE_TO_STEP_TRIGGER map on the server. Event-driven triggers
+ * (email/WA sends, classified) intentionally don't map to a stage,
+ * so they remain read-only.
+ */
+const STAGE_DRIVEN_TRIGGER: Record<string, string> = {
+  call_scheduled:  "call_scheduled",
+  deposit_pending: "deposit_pending",
+  deposit_agreed:  "deposit_agreed",
+  deposit_paid:    "deposit_paid",
+  matched:         "matched",
+};
+
+const STAGE_PRETTY: Record<string, string> = {
+  call_scheduled:  "Call Scheduled",
+  deposit_pending: "Menunggu Konfirmasi Deposit",
+  deposit_agreed:  "Bersedia Bayar",
+  deposit_paid:    "Deposit Lunas",
+  matched:         "Matched",
 };
 
 function formatStamp(iso: string | null): string | null {
@@ -83,6 +108,35 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
     }
   }
 
+  /**
+   * Advance the lead's stage to `nextStage`. The /stage endpoint writes
+   * Lead.stage + LeadStageHistory + auto-fires the step whose
+   * autoTrigger matches that stage (server-side STAGE_TO_STEP_TRIGGER
+   * map). Refetches via onChanged so the parent sees fresh data.
+   */
+  async function advanceStage(stepId: string, nextStage: string) {
+    setBusy(stepId);
+    try {
+      const res = await fetch(`/api/new-leads/${leadId}/stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          stage: nextStage,
+          note: `Advanced via pipeline checklist (click step "${steps.find((s) => s.id === stepId)?.label ?? stepId}")`,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || `HTTP ${res.status}`);
+        return;
+      }
+      onChanged?.();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (steps.length === 0) {
     return (
       <div className="text-sm text-text-muted py-4 text-center">
@@ -109,18 +163,28 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           : s?.completedBy === "phase9-sync" ? "Sistem (Phase 9 sync)"
           : s?.completedBy ?? null;
         const isBusy = busy === step.id;
+        const stageTarget = step.autoTrigger ? STAGE_DRIVEN_TRIGGER[step.autoTrigger] : null;
+        // Stage-driven auto steps are clickable (when pending) to advance
+        // the lead's stage. Event-driven auto steps (email/WA/classified)
+        // remain truly read-only — there's no stage to advance to.
+        const isClickableAuto = isAuto && !!stageTarget;
 
-        // Click handler. Auto steps are fully locked — no toggle in either
-        // direction. Manual steps toggle done↔pending.
         const onClickBox = () => {
           if (isBusy) return;
-          if (isAuto) return;
-          setStatus(step.id, isDone ? "pending" : "done");
+          if (isDone) return; // no un-check from checklist; reverse via stage dropdown
+          if (isAuto) {
+            if (!stageTarget) return;
+            const stageLabel = STAGE_PRETTY[stageTarget] ?? stageTarget;
+            if (confirm(`Advance stage lead ke "${stageLabel}"? Step ini akan auto-check setelah stage berubah.`)) {
+              void advanceStage(step.id, stageTarget);
+            }
+            return;
+          }
+          setStatus(step.id, "done");
         };
 
-        // Right-click → skip. Only applies to manual steps. Auto steps
-        // can't be skipped — they fire when their trigger condition is
-        // met, full stop.
+        // Right-click → skip. Manual only — auto steps controlled by
+        // system events / stage transitions.
         const onContextMenu = (e: React.MouseEvent) => {
           e.preventDefault();
           if (isBusy || isAuto) return;
@@ -138,8 +202,10 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
 
         const checkboxTitle = isAuto
           ? isDone
-            ? `Auto-completed — ${triggerLabel}`
-            : `Akan auto-complete saat: ${triggerLabel}`
+            ? `Auto-completed — ${triggerLabel}. Untuk mundur, ubah stage lead lewat dropdown stage.`
+            : isClickableAuto
+              ? `Klik untuk advance stage ke "${STAGE_PRETTY[stageTarget!] ?? stageTarget}" (step auto-check setelah stage berubah).`
+              : `Akan auto-complete saat event sistem: ${triggerLabel}`
           : isDone
             ? "Klik untuk uncheck (manual)"
             : "Klik untuk mark done (manual)";
@@ -163,18 +229,18 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
             <button
               type="button"
               onClick={onClickBox}
-              disabled={isBusy || isAuto}
+              disabled={isBusy || isDone || (isAuto && !isClickableAuto)}
               aria-label={checkboxTitle}
               title={checkboxTitle}
               className={`mt-0.5 flex-shrink-0 grid place-items-center w-5 h-5 rounded border-2 transition-colors ${
                 isDone
-                  ? isAuto
-                    ? "bg-primary border-primary text-white cursor-default"
-                    : "bg-primary border-primary text-white cursor-pointer"
+                  ? "bg-primary border-primary text-white cursor-default"
                   : isSkipped
                     ? "bg-surface-elevated border-border text-text-muted-2"
                     : isAuto
-                      ? "bg-surface-elevated border-border cursor-not-allowed"
+                      ? isClickableAuto
+                        ? "bg-white border-primary-200 hover:border-primary hover:bg-primary-50 cursor-pointer"
+                        : "bg-surface-elevated border-border cursor-not-allowed"
                       : "bg-white border-gray-300 hover:border-primary cursor-pointer"
               }`}
             >
@@ -220,13 +286,15 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
         );
       })}
       <li className="text-[11px] text-text-muted-2 italic pt-1 leading-relaxed">
-        <strong>Auto step</strong> (
-        <Icon name="lock" size={9} className="inline" /> badge) terisi otomatis
-        dari event sistem — tidak bisa di-toggle manual. Untuk memaksa progress,
-        advance <strong>stage</strong> lewat Decision Pad / stage transition.
+        <strong>Auto · Stage</strong> (badge biru) — klik checkbox untuk advance
+        stage lead ke posisi itu. Step auto-check setelah stage berubah.
+        Tidak bisa un-check dari sini; mundurkan stage lewat dropdown stage.
         <br />
-        <strong>Manual step</strong> (tanpa badge) klik untuk done/pending, klik
-        kanan untuk skip.
+        <strong>Auto · Event</strong> (email/WA/classified) — terisi otomatis
+        oleh event sistem (Resend / Fonnte / lead creation). Tidak clickable.
+        <br />
+        <strong>Manual step</strong> (tanpa badge) — klik untuk done/pending,
+        klik kanan untuk skip.
       </li>
     </ul>
   );
