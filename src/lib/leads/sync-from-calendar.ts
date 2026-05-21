@@ -196,9 +196,17 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
 
     // ─── New / updated booking branch ───────────────────────────────
     const summary = ev.summary ?? "(no title)";
-    const startTime = ev.start?.dateTime ?? ev.start?.date ?? null;
+    // Normalize Google's dateTime ("2026-05-21T12:30:00+07:00") to UTC
+    // ISO ("2026-05-21T05:30:00.000Z") before storing. Postgres TIMESTAMP
+    // strips the offset on insert; without this conversion we'd store
+    // the LOCAL part and later display it 7 hours off (since the read
+    // path treats stripped-TZ strings as UTC).
+    const rawStart = ev.start?.dateTime ?? ev.start?.date ?? null;
+    if (!rawStart) continue;
+    const startTime = ev.start?.dateTime
+      ? new Date(ev.start.dateTime).toISOString()
+      : rawStart;
     const meetLink = ev.hangoutLink ?? null;
-    if (!startTime) continue;
 
     // Try every attendee. First match wins (multiple lead emails on
     // one event is unusual but cheap to handle).

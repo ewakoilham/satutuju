@@ -223,6 +223,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       {lead.callScheduledAt && (
         <CallBanner
           scheduledAt={lead.callScheduledAt}
+          completedAt={lead.callCompletedAt}
           interviewer={lead.assignedInterviewer || interviewer}
           // We don't currently store the Meet link per-lead. When that
           // lands, pull from lead.meetLink or wherever the calendar

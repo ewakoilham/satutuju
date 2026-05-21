@@ -17,6 +17,7 @@ import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 interface Props {
   scheduledAt: string;       // ISO string
+  completedAt?: string | null;  // set when admin marked call completed
   meetLink?: string | null;  // optional Google Meet URL
   interviewer?: string | null;
   durationMin?: number;      // defaults to 30
@@ -31,7 +32,7 @@ function parseAsUtc(s: string): Date {
   return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? new Date(s) : new Date(s + "Z");
 }
 
-export default function CallBanner({ scheduledAt, meetLink, interviewer, durationMin = 30 }: Props) {
+export default function CallBanner({ scheduledAt, completedAt, meetLink, interviewer, durationMin = 30 }: Props) {
   const target = parseAsUtc(scheduledAt);
   const [minutesLeft, setMinutesLeft] = useState(() => diffMinutes(target));
 
@@ -41,17 +42,24 @@ export default function CallBanner({ scheduledAt, meetLink, interviewer, duratio
     return () => clearInterval(id);
   }, [target]);
 
-  const isStarted = minutesLeft <= 0 && minutesLeft > -durationMin;
-  const isOver = minutesLeft <= -durationMin;
-  const isClose = minutesLeft <= 30 && minutesLeft > 0;
+  // Admin explicitly marking the call completed wins over the clock —
+  // even a future-dated callScheduledAt should read "selesai" once
+  // there's a callCompletedAt on the lead.
+  const isCompleted = !!completedAt;
+  const isStarted = !isCompleted && minutesLeft <= 0 && minutesLeft > -durationMin;
+  const isOver = !isCompleted && minutesLeft <= -durationMin;
+  const isClose = !isCompleted && minutesLeft <= 30 && minutesLeft > 0;
 
-  const pillBg = isStarted ? "bg-red-600 text-white"
+  const pillBg = isCompleted ? "bg-emerald-100 text-emerald-800"
+    : isStarted ? "bg-red-600 text-white"
     : isOver ? "bg-zinc-200 text-zinc-700"
     : isClose ? "bg-amber-100 text-amber-900"
     : "bg-emerald-100 text-emerald-800";
 
-  const pillText = isStarted ? "Call sedang berlangsung"
-    : isOver ? "Call selesai (jadwal lewat)"
+  const pillText = isCompleted
+    ? `Call selesai · ${formatJakartaDateTime(parseAsUtc(completedAt))}`
+    : isStarted ? "Call sedang berlangsung"
+    : isOver ? "Call selesai (jadwal lewat — admin belum mark completed)"
     : isClose ? `Mulai ${minutesLeft} menit lagi`
     : minutesLeft > 1440
       ? `Mulai ${Math.floor(minutesLeft / 1440)} hari lagi`
