@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
-import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
-import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
 import OutreachPanel from "@/components/admin/leads/OutreachPanel";
-import CallPanel from "@/components/admin/leads/CallPanel";
 import MentorMatchPanel from "@/components/admin/leads/MentorMatchPanel";
+import CallBanner from "@/components/admin/leads/cockpit/CallBanner";
+import ContextRail from "@/components/admin/leads/cockpit/ContextRail";
+import CallWorkspace from "@/components/admin/leads/cockpit/CallWorkspace";
+import DecisionPad, { suggestDepositTier } from "@/components/admin/leads/cockpit/DecisionPad";
 import {
   CALL_PANEL_STAGES,
   type Lead,
@@ -17,8 +18,24 @@ import {
   type OutreachLog,
   type LeadStepDefinition,
   type LeadStepStatusRow,
-  fundingPlanLabelId,
+  type LeadDecision,
 } from "@/lib/leads/types";
+
+/**
+ * Call Cockpit detail page (Phase 8). Three-column layout optimized for
+ * admin who is ON the call:
+ *
+ *   ┌───────────────┬──────────────────────────────┬──────────────┐
+ *   │ Context rail  │  Tabbed workspace            │  Decision    │
+ *   │ (lead info,   │  (Pre-call brief / Live      │  pad         │
+ *   │  target,      │   notes / Original form)     │  (score +    │
+ *   │  engagement,  │                              │   tier +     │
+ *   │  mentor cand) │                              │   decision)  │
+ *   └───────────────┴──────────────────────────────┴──────────────┘
+ *
+ * Below cockpit (collapsible): Pipeline checklist, Outreach history,
+ * Mentor Matching (when stage = deposit_paid / matched).
+ */
 
 interface DetailResponse {
   lead: Lead;
@@ -27,6 +44,8 @@ interface DetailResponse {
   steps: LeadStepDefinition[];
   statuses: LeadStepStatusRow[];
 }
+
+const READINESS_LENGTH = 5;
 
 function formatStamp(iso: string | null): string {
   if (!iso) return "—";
@@ -57,6 +76,18 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Call Cockpit form state (driven by lead, reset on fetch) ────────
+  const [readiness, setReadiness] = useState<boolean[]>(Array(READINESS_LENGTH).fill(false));
+  const [interviewer, setInterviewer] = useState("");
+  const [notes, setNotes] = useState("");
+  const [redFlags, setRedFlags] = useState("");
+  const [decision, setDecision] = useState<LeadDecision | "">("");
+  const [depositTier, setDepositTier] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+
   const fetchDetail = useCallback(async () => {
     setLoading(true);
     try {
@@ -69,8 +100,19 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         setError(body.error || `HTTP ${res.status}`);
         return;
       }
-      setData((await res.json()) as DetailResponse);
+      const json = (await res.json()) as DetailResponse;
+      setData(json);
       setError(null);
+
+      // Sync form state with the latest lead.
+      const l = json.lead;
+      const score = l.readinessScore ?? 0;
+      setReadiness(Array.from({ length: READINESS_LENGTH }, (_, i) => i < score));
+      setInterviewer(l.assignedInterviewer ?? "");
+      setNotes(l.callNotes ?? "");
+      setRedFlags(l.redFlags ?? "");
+      setDecision((l.decision as LeadDecision | null) ?? "");
+      setDepositTier(l.depositTier);
     } finally {
       setLoading(false);
     }
@@ -80,9 +122,50 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     void fetchDetail();
   }, [fetchDetail]);
 
-  if (loading) {
-    return <SkeletonDashboard />;
+  function toggleReadiness(i: number) {
+    setReadiness((r) => r.map((v, idx) => (idx === i ? !v : v)));
   }
+
+  async function saveCall(markCompleted: boolean) {
+    if (!data) return;
+    if (markCompleted) setCompleting(true);
+    else setSaving(true);
+    setErrMsg(null);
+    setOkMsg(null);
+    try {
+      const score = readiness.filter(Boolean).length;
+      const effectiveTier = depositTier ?? suggestDepositTier(score);
+      const res = await fetch(`/api/new-leads/${data.lead.id}/call`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          readinessScore: score,
+          callNotes: notes.trim() || null,
+          redFlags: redFlags.trim() || null,
+          decision: decision || null,
+          depositTier: effectiveTier,
+          assignedInterviewer: interviewer.trim() || null,
+          markCompleted,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setErrMsg(json.error || `HTTP ${res.status}`);
+        return;
+      }
+      setOkMsg(markCompleted ? "Call marked as completed ✓" : "Draft tersimpan ✓");
+      await fetchDetail();
+      setTimeout(() => setOkMsg(null), 4000);
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setSaving(false);
+      setCompleting(false);
+    }
+  }
+
+  if (loading) return <SkeletonDashboard />;
   if (error || !data) {
     return (
       <div className="space-y-4">
@@ -95,136 +178,184 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const { lead, history, outreach, steps, statuses } = data;
+  const inCallStage = CALL_PANEL_STAGES.includes(lead.stage);
+  const readOnly = lead.stage === "matched"; // frozen after mentor match
+  const score = readiness.filter(Boolean).length;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <div className="space-y-4">
+      {/* Breadcrumb */}
+      <Link
+        href="/dashboard/admin/new-leads"
+        className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground"
+      >
+        <Icon name="chevron-left" size={14} />
+        Semua leads
+        <span className="opacity-40">/</span>
+        <span className="font-mono text-[11px] text-text-muted-2">{lead.id}</span>
+      </Link>
+
+      {/* Page header */}
+      <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <Link href="/dashboard/admin/new-leads" className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground mb-2">
-            <Icon name="chevron-left" size={14} /> Semua leads
-          </Link>
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
-              {lead.name}
-            </h1>
-            <LeadBucketBadge bucket={lead.bucket} />
-            <LeadStageBadge stage={lead.stage} />
-          </div>
-          <p className="text-sm text-text-muted mt-1">
+          <h1 className="text-[28px] font-extrabold leading-none text-foreground font-[family-name:var(--font-heading)] tracking-tight">
+            {lead.name}
+          </h1>
+          <div className="flex gap-2.5 mt-1.5 text-[12.5px] text-text-muted items-center flex-wrap">
             <a href={`mailto:${lead.email}`} className="hover:text-primary">{lead.email}</a>
             {lead.whatsappNumber && (
-              <span> · WA: <span className="font-mono">{lead.whatsappNumber}</span></span>
+              <>
+                <span>·</span>
+                <span className="font-mono text-[11px]">WA {lead.whatsappNumber}</span>
+              </>
             )}
-          </p>
+            <span>·</span>
+            <span>Last update {relativeTime(lead.updatedAt)}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <a
+            href={`mailto:${lead.email}`}
+            className="btn-ghost text-xs inline-flex items-center gap-1.5"
+          >
+            <Icon name="mail" size={13} /> Reply email
+          </a>
+          {lead.whatsappNumber && (
+            <a
+              href={`https://wa.me/${lead.whatsappNumber.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost text-xs inline-flex items-center gap-1.5"
+            >
+              <Icon name="chat" size={13} /> WA
+            </a>
+          )}
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_minmax(0,360px)] gap-5 items-start">
-        {/* Main column */}
-        <div className="space-y-5">
-          {/* Lead info card */}
-          <section className="card p-5 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Info Lead</h2>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt className="text-text-muted-2 text-xs">Target kampus / program</dt>
-                <dd className="text-foreground mt-0.5">{lead.targetCampusAndProgram}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted-2 text-xs">Rencana pendanaan</dt>
-                <dd className="text-foreground mt-0.5">{fundingPlanLabelId(lead.fundingPlan)}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted-2 text-xs">Submitted</dt>
-                <dd className="text-foreground mt-0.5">{formatStamp(lead.submittedAt)}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted-2 text-xs">Last updated</dt>
-                <dd className="text-foreground mt-0.5">{relativeTime(lead.updatedAt)}</dd>
-              </div>
-            </dl>
-          </section>
+      {/* Call banner — shown whenever a call is scheduled, regardless of
+          whether the call has happened yet (the pill flips to "selesai"
+          after the slot passes). */}
+      {lead.callScheduledAt && (
+        <CallBanner
+          scheduledAt={lead.callScheduledAt}
+          interviewer={lead.assignedInterviewer || interviewer}
+          // We don't currently store the Meet link per-lead. When that
+          // lands, pull from lead.meetLink or wherever the calendar
+          // sync writes it. For now no link.
+          meetLink={null}
+        />
+      )}
 
-          {/* Classification */}
-          <section className="card p-5 space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Klasifikasi</h2>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <LeadBucketBadge bucket={lead.bucket} />
-              <span className="text-text-muted">·</span>
-              <span className="text-foreground">{lead.parsedCountry ?? "Country unclear"}</span>
-              {lead.parsedCampus && (
-                <>
-                  <span className="text-text-muted">·</span>
-                  <span className="text-foreground">{lead.parsedCampus}</span>
-                </>
-              )}
-              {lead.parsedField && lead.parsedField !== "unclear" && (
-                <>
-                  <span className="text-text-muted">·</span>
-                  <span className="text-foreground">field: {lead.parsedField}</span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-text-muted">
-              <span>Mentor in country: <strong>{lead.hasCountryMentor ? "yes" : "no"}</strong></span>
-              <span>Campus is partner: <strong>{lead.isCampusPartner === null ? "?" : lead.isCampusPartner ? "yes" : "no"}</strong></span>
-            </div>
-            {lead.bucketReason && (
-              <p className="text-xs text-text-muted-2 italic">{lead.bucketReason}</p>
-            )}
-          </section>
+      {/* 3-column cockpit */}
+      <div className="flex gap-3.5 items-start flex-col xl:flex-row">
+        <ContextRail lead={lead} history={history} outreach={outreach} />
+        <CallWorkspace
+          lead={lead}
+          readiness={readiness}
+          onToggleReadiness={toggleReadiness}
+          notes={notes}
+          onNotesChange={setNotes}
+          redFlags={redFlags}
+          onRedFlagsChange={setRedFlags}
+          interviewer={interviewer}
+          onInterviewerChange={setInterviewer}
+          readOnly={readOnly}
+        />
+        <DecisionPad
+          score={score}
+          decision={decision}
+          onDecisionChange={setDecision}
+          depositTier={depositTier}
+          onDepositTierChange={setDepositTier}
+          saving={saving}
+          completing={completing}
+          onSaveDraft={() => void saveCall(false)}
+          onMarkCompleted={() => void saveCall(true)}
+          errorMsg={errMsg}
+          okMsg={okMsg}
+          readOnly={readOnly}
+        />
+      </div>
 
-          {/* Pipeline Checklist */}
-          <section className="card p-5 space-y-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Pipeline Checklist</h2>
-              <Link href="/dashboard/admin/new-leads/pipeline" className="text-xs text-primary hover:underline">
-                Manage steps →
-              </Link>
-            </div>
-            <PipelineChecklist
-              leadId={lead.id}
-              steps={steps}
-              statuses={statuses}
-              onChanged={fetchDetail}
-            />
-          </section>
-
-          {/* Outreach Email */}
-          <section className="card p-5 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Outreach Email</h2>
-            <OutreachPanel
-              lead={lead}
-              outreach={outreach}
-              onChanged={fetchDetail}
-              variant="full"
-            />
-          </section>
-
-          {/* Call Panel — gated by CALL_PANEL_STAGES inside the component.
-              Section header would still render for irrelevant stages, so
-              we mirror the guard here to hide the wrapper too. */}
-          {CALL_PANEL_STAGES.includes(lead.stage) && (
-            <section className="card p-5 space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Call Panel</h2>
-              <CallPanel lead={lead} onChanged={fetchDetail} />
-            </section>
-          )}
-
-          {/* Mentor Matching — visible when stage = deposit_paid (ready
-              to pair) or already matched (so admin can re-match). */}
-          {(lead.stage === "deposit_paid" || lead.stage === "matched") && (
-            <section className="card p-5 space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Mentor Matching</h2>
-              <MentorMatchPanel lead={lead} onChanged={fetchDetail} />
-            </section>
-          )}
+      {!inCallStage && (
+        <div className="card p-3 text-xs text-text-muted-2 italic">
+          ⓘ Stage <span className="font-mono">{lead.stage}</span> — call belum dijadwalkan. Decision pad &amp; cockpit aktif setelah lead booking via Google Calendar (auto-advance ke <code className="font-mono">call_scheduled</code>).
         </div>
+      )}
 
-        {/* Sidebar: Stage Timeline */}
-        <aside className="card p-5 space-y-3 lg:sticky lg:top-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">Stage Timeline</h2>
+      {/* Mentor Matching — visible when stage = deposit_paid OR matched.
+          Shown OUTSIDE the cockpit because it's a discrete action, not
+          part of the call. */}
+      {(lead.stage === "deposit_paid" || lead.stage === "matched") && (
+        <section className="card p-5 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2">
+            Mentor Matching
+          </h2>
+          <MentorMatchPanel lead={lead} onChanged={fetchDetail} />
+        </section>
+      )}
+
+      {/* Collapsible: Pipeline checklist */}
+      <details className="card p-0 group/pipeline">
+        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
+          <span className="inline-flex items-center gap-2">
+            <Icon name="check" size={14} className="text-primary" />
+            Pipeline Checklist
+          </span>
+          <Icon
+            name="chevron-right"
+            size={14}
+            className="text-text-muted-2 transition-transform group-open/pipeline:rotate-90"
+          />
+        </summary>
+        <div className="px-4 pb-4 pt-1 border-t border-border/60">
+          <PipelineChecklist
+            leadId={lead.id}
+            steps={steps}
+            statuses={statuses}
+            onChanged={fetchDetail}
+          />
+        </div>
+      </details>
+
+      {/* Collapsible: Outreach history */}
+      <details className="card p-0 group/outreach">
+        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
+          <span className="inline-flex items-center gap-2">
+            <Icon name="mail" size={14} className="text-primary" />
+            Outreach &amp; Engagement
+          </span>
+          <Icon
+            name="chevron-right"
+            size={14}
+            className="text-text-muted-2 transition-transform group-open/outreach:rotate-90"
+          />
+        </summary>
+        <div className="px-4 pb-4 pt-1 border-t border-border/60">
+          <OutreachPanel
+            lead={lead}
+            outreach={outreach}
+            onChanged={fetchDetail}
+            variant="full"
+          />
+        </div>
+      </details>
+
+      {/* Collapsible: Stage timeline */}
+      <details className="card p-0 group/timeline">
+        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
+          <span className="inline-flex items-center gap-2">
+            <Icon name="clock" size={14} className="text-primary" />
+            Stage timeline ({history.length})
+          </span>
+          <Icon
+            name="chevron-right"
+            size={14}
+            className="text-text-muted-2 transition-transform group-open/timeline:rotate-90"
+          />
+        </summary>
+        <div className="px-4 pb-4 pt-1 border-t border-border/60">
           {history.length === 0 ? (
             <p className="text-xs text-text-muted">No transitions yet</p>
           ) : (
@@ -253,8 +384,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               ))}
             </ol>
           )}
-        </aside>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }
