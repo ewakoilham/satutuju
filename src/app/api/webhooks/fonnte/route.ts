@@ -40,9 +40,10 @@ import { newStageHistoryId } from "@/lib/leads/ids";
  * We map Fonnte status → our action:
  *   sent      → noop (already recorded by sendLeadWhatsapp)
  *   delivered → noop (we don't track delivered separately)
- *   read      → openedAt + advance stage outreach_sent → email_opened
- *               (using email_opened as our "they saw it" stage — the
- *                stage enum is channel-agnostic at the funnel level)
+ *   read      → openedAt + advance stage outreach_sent → whatsapp_read
+ *               (whatsapp_read sits between outreach_sent and email_opened
+ *                so monotonic advance still works — if email is later
+ *                opened or clicked, the stage progresses forward.)
  *   failed    → bouncedAt + status="bounced" + history note
  */
 
@@ -126,21 +127,22 @@ export async function POST(req: NextRequest) {
           .update({ openedAt: now })
           .eq("id", outreach.id);
       }
-      // 2. Mirror to Lead.emailOpenedAt (channel-agnostic engagement
-      //    flag — we use the same column for WA "seen" since the
-      //    funnel stage `email_opened` is reused below).
+      // 2. Advance Lead.stage → whatsapp_read (monotonic, idempotent).
+      //    We do NOT mirror to Lead.emailOpenedAt — that's email-specific.
+      //    WhatsApp read engagement is captured by OutreachLog.openedAt
+      //    on the whatsapp-channel row above + the stage itself.
       const { data: lead } = await supabase
         .from("Lead")
-        .select("stage, emailOpenedAt")
+        .select("stage")
         .eq("id", leadId)
         .single();
       if (lead) {
-        const leadPatch: Record<string, unknown> = { updatedAt: now };
-        if (!lead.emailOpenedAt) leadPatch.emailOpenedAt = now;
-
-        const nextStage = maybeAdvanceStage(lead.stage as string, "email_opened");
+        const nextStage = maybeAdvanceStage(lead.stage as string, "whatsapp_read");
         if (nextStage) {
-          leadPatch.stage = nextStage;
+          await supabase
+            .from("Lead")
+            .update({ stage: nextStage, updatedAt: now })
+            .eq("id", leadId);
           await supabase.from("LeadStageHistory").insert({
             id: newStageHistoryId(),
             leadId,
@@ -150,9 +152,6 @@ export async function POST(req: NextRequest) {
             note: "WhatsApp read (Fonnte webhook)",
             createdAt: now,
           });
-        }
-        if (Object.keys(leadPatch).length > 1) {
-          await supabase.from("Lead").update(leadPatch).eq("id", leadId);
         }
       }
       // 3. Auto-complete steps listening for whatsapp_read.

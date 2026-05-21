@@ -379,8 +379,9 @@ enum LeadBucket {
 enum LeadStage {
   new
   outreach_sent
-  email_opened
-  email_clicked
+  whatsapp_read     // lead saw WA (status=read from Fonnte webhook)
+  email_opened      // lead opened email (Resend webhook tracking pixel)
+  email_clicked     // lead clicked link inside email
   call_scheduled
   call_completed
   deposit_pending

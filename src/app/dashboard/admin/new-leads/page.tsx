@@ -746,7 +746,7 @@ export default function NewLeadsListPage() {
         </div>
       </details>
 
-      {/* Stage legend — explains the 12 funnel states + their triggers.
+      {/* Stage legend — explains the 13 funnel states + their triggers.
           Bucket = classification (static-ish), Stage = progress (dynamic). */}
       <details className="card p-0 group/stagelegend">
         <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
@@ -773,7 +773,15 @@ export default function NewLeadsListPage() {
               <LeadStageBadge stage="outreach_sent" />
               <div className="min-w-0">
                 <p className="text-xs text-text-muted leading-snug">
-                  Admin sudah kirim email pertama via Resend. <span className="text-text-muted-2">Trigger: <strong>klik &ldquo;Kirim outreach&rdquo;</strong> (single/bulk). Auto-advance dari <code className="font-mono">new</code>.</span>
+                  Admin sudah kirim outreach pertama (email atau WA atau keduanya). <span className="text-text-muted-2">Trigger: <strong>klik &ldquo;Reachout&rdquo;</strong> (single/bulk). Auto-advance dari <code className="font-mono">new</code>.</span>
+                </p>
+              </div>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <LeadStageBadge stage="whatsapp_read" />
+              <div className="min-w-0">
+                <p className="text-xs text-text-muted leading-snug">
+                  Lead sudah baca WA kita (2 centang biru). <span className="text-text-muted-2">Trigger: <strong>Fonnte webhook</strong> event <code className="font-mono">status=read</code>.</span>
                 </p>
               </div>
             </li>

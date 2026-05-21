@@ -7,8 +7,9 @@ export type LeadBucket = (typeof LEAD_BUCKETS)[number];
 export const LEAD_STAGES = [
   "new",
   "outreach_sent",
-  "email_opened",
-  "email_clicked",
+  "whatsapp_read",   // WA passive engagement (Fonnte status=read)
+  "email_opened",    // Email tracking pixel fired (Resend webhook)
+  "email_clicked",   // Lead clicked a link inside the email
   "call_scheduled",
   "call_completed",
   "deposit_pending",

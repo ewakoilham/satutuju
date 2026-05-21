@@ -3,6 +3,7 @@ import type { LeadStage } from "@/lib/leads/types";
 const STAGE_LABEL: Record<LeadStage, string> = {
   new: "New",
   outreach_sent: "Outreach Sent",
+  whatsapp_read: "WhatsApp Read",
   email_opened: "Email Opened",
   email_clicked: "Email Clicked",
   call_scheduled: "Call Scheduled",
@@ -18,6 +19,7 @@ const STAGE_LABEL: Record<LeadStage, string> = {
 const STAGE_TONE: Record<LeadStage, string> = {
   new:             "bg-surface-elevated text-text-muted",
   outreach_sent:   "bg-blue-50 text-blue-700",
+  whatsapp_read:   "bg-emerald-50 text-emerald-800",   // green = WA brand association
   email_opened:    "bg-blue-100 text-blue-800",
   email_clicked:   "bg-indigo-100 text-indigo-800",
   call_scheduled:  "bg-violet-100 text-violet-800",

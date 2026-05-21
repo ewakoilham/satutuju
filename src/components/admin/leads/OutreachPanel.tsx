@@ -88,18 +88,24 @@ export default function OutreachPanel({ lead, outreach, onChanged, variant = "fu
         body: JSON.stringify({ channels }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setErr(body.error || `HTTP ${res.status}`);
-        return;
-      }
-      // Format per-channel outcome summary so admin sees what happened.
+      // Surface per-channel outcomes whether the overall call succeeded
+      // (200) or all channels skipped (400). Both contain the same
+      // `outcomes` array — the only difference is whether at least one
+      // channel actually fired.
       const outcomes: OutcomeFromApi[] = body.outcomes ?? [];
       const parts: string[] = [];
       for (const o of outcomes) {
         const ch = o.channel === "email" ? "Email" : "WA";
         if (o.status === "sent") parts.push(`${ch} ✓`);
         else if (o.status === "failed") parts.push(`${ch} gagal: ${o.error ?? "unknown"}`);
-        else parts.push(`${ch} skip (${o.reason ?? "?"})`);
+        else parts.push(`${ch} skip — ${o.reason ?? "?"}`);
+      }
+      if (!res.ok) {
+        // All channels skipped — show the detailed reasons so admin
+        // knows whether to add a WA template body, override the bucket,
+        // or fix the lead's WA number.
+        setErr(parts.length > 0 ? parts.join(" · ") : (body.error || `HTTP ${res.status}`));
+        return;
       }
       setResultMsg(parts.join(" · "));
       onChanged();

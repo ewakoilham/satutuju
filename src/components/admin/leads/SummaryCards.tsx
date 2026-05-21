@@ -78,7 +78,7 @@ export default function SummaryCards({ refreshKey }: { refreshKey: number }) {
   // Top stages by count for the second card. Ordered by LEAD_STAGES so
   // the funnel progression is visually intuitive.
   const STAGE_ORDER: LeadStage[] = [
-    "new", "outreach_sent", "email_opened", "email_clicked",
+    "new", "outreach_sent", "whatsapp_read", "email_opened", "email_clicked",
     "call_scheduled", "call_completed", "deposit_paid", "matched",
   ];
 
