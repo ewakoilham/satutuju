@@ -5,10 +5,11 @@ import { LEAD_EMAIL_TEMPLATE_COLUMNS } from "@/lib/db-columns";
 import { TEMPLATE_BUCKETS, type TemplateBucket } from "@/lib/leads/types";
 
 /**
- * Update one email template's subject + body. Increments `version`
- * and stamps `updatedBy` with the current admin's userId.
+ * Update one outreach template's subject + body + optional whatsappBody.
+ * Increments `version` and stamps `updatedBy` with the current admin.
  *
- * Body: { subject: string; body: string }
+ * Body: { subject: string; body: string; whatsappBody?: string | null }
+ *   - whatsappBody = null/empty → clears the WA variant for this bucket
  *
  * Send-time snapshot: OutreachLog already copies subject+body at send
  * time, so we DON'T version-pin per-send. The template here always
@@ -30,7 +31,7 @@ export async function PATCH(
     );
   }
 
-  let body: { subject?: unknown; body?: unknown };
+  let body: { subject?: unknown; body?: unknown; whatsappBody?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -42,6 +43,11 @@ export async function PATCH(
   }
   if (typeof body.body !== "string" || !body.body.trim()) {
     return NextResponse.json({ error: "body is required" }, { status: 400 });
+  }
+  // whatsappBody is optional. Treat empty string + null as "clear it".
+  let whatsappBody: string | null = null;
+  if (typeof body.whatsappBody === "string" && body.whatsappBody.trim()) {
+    whatsappBody = body.whatsappBody;
   }
 
   // Fetch current version to increment safely. (No racy CAS — admin
@@ -62,6 +68,7 @@ export async function PATCH(
     .update({
       subject: body.subject.trim(),
       body: body.body,  // preserve whitespace — line breaks are part of the message
+      whatsappBody,
       version: (existing.version ?? 0) + 1,
       updatedAt: now,
       updatedBy: user.userId,

@@ -2,42 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { renderLeadOutreach, sendLeadEmail } from "@/lib/email";
-import type { Lead } from "@/lib/leads/types";
+import { reachoutLead, type ChannelOutcome } from "@/lib/leads/reachout";
+import { OUTREACH_CHANNELS, type Lead, type OutreachChannel } from "@/lib/leads/types";
 
 const MAX_BULK = 100;
-// 250ms between sends → ≤ 4 req/s, well below Resend's 10 req/s limit
-// with room for parallel reads to share the connection budget.
+// 250ms between LEADS (not channels). Resend rate limit (10 req/s) is
+// the tightest; Fonnte's quota is generous. With both channels enabled
+// per lead, this keeps us at ~4 leads/s = 8 sends/s, still under Resend.
 const DELAY_MS = 250;
 
 interface BulkResultRow {
   leadId: string;
-  status: "sent" | "failed" | "skipped";
-  bucket?: string;
-  templateUsed?: string;
-  resendMessageId?: string | null;
-  reason?: string;
-  error?: string;
+  bucket: string;
+  outcomes: ChannelOutcome[];
 }
 
 /**
- * Bulk outreach dispatch. Sequential with a small delay per send to
- * stay well under Resend's rate limit. Skips leads in `unclassified`
- * (no template) so the caller doesn't have to pre-filter.
+ * Bulk reachout dispatch. Sequential per-lead (with delay) so Resend's
+ * 10 req/s rate limit isn't tripped. Within each lead, channels are
+ * sequential (see reachoutLead docs for why).
  *
- * Body: { leadIds: string[] }
- * Response: { total, sent, failed, skipped, results: BulkResultRow[] }
+ * Body: { leadIds: string[], channels?: ("email"|"whatsapp")[] }
+ *   - channels defaults to ["email"] (backward compat)
  *
- * NOTE: this loops in a single request, which can take ~3s for 10 leads
- * and ~25s for 100. Vercel's default timeout (60s) accommodates that.
- * For larger batches, switch to a background queue (Phase 4+).
+ * Response: {
+ *   total: number,                     // leads attempted
+ *   leadsSent: number,                 // ≥1 channel succeeded
+ *   leadsAllFailed: number,            // all requested channels failed
+ *   leadsAllSkipped: number,           // all requested channels skipped
+ *   channelsSent: number,              // total send successes across all leads
+ *   channelsFailed: number,
+ *   channelsSkipped: number,
+ *   results: BulkResultRow[]
+ * }
  */
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
 
-  let body: { leadIds?: unknown };
+  let body: { leadIds?: unknown; channels?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -55,76 +59,72 @@ export async function POST(req: NextRequest) {
   }
   const leadIds = body.leadIds.filter((x): x is string => typeof x === "string");
 
-  // Load all leads in one query so we can render templates per-lead
-  // without N round-trips.
+  // Channels default + validation
+  let channels: OutreachChannel[] = ["email"];
+  if (Array.isArray(body.channels)) {
+    const validated = body.channels.filter(
+      (c: unknown): c is OutreachChannel =>
+        typeof c === "string" && (OUTREACH_CHANNELS as readonly string[]).includes(c),
+    );
+    if (validated.length > 0) channels = validated;
+  }
+
   const { data: leads, error: loadErr } = await supabase
     .from("Lead")
     .select(LEAD_SELECT_COLUMNS)
     .in("id", leadIds);
   if (loadErr) return NextResponse.json({ error: loadErr.message }, { status: 500 });
 
-  // Index by id so we can preserve the caller's order in the results.
   const byId = new Map<string, Lead>();
   for (const l of (leads ?? []) as unknown as Lead[]) byId.set(l.id, l);
 
   const results: BulkResultRow[] = [];
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
+  let leadsSent = 0;
+  let leadsAllFailed = 0;
+  let leadsAllSkipped = 0;
+  let channelsSent = 0;
+  let channelsFailed = 0;
+  let channelsSkipped = 0;
 
   for (let i = 0; i < leadIds.length; i++) {
     const id = leadIds[i];
     const lead = byId.get(id);
     if (!lead) {
-      results.push({ leadId: id, status: "skipped", reason: "lead not found" });
-      skipped++;
-      continue;
-    }
-
-    const rendered = await renderLeadOutreach(lead);
-    if (!rendered) {
+      // Lead not found is a "skipped" lead — record it via a synthetic
+      // outcomes array so the response shape stays uniform.
       results.push({
         leadId: id,
-        bucket: lead.bucket,
-        status: "skipped",
-        reason: `no template for bucket ${lead.bucket}`,
+        bucket: "unknown",
+        outcomes: channels.map((ch) => ({
+          channel: ch,
+          status: "skipped" as const,
+          reason: "lead not found",
+        })),
       });
-      skipped++;
+      leadsAllSkipped++;
+      channelsSkipped += channels.length;
       continue;
     }
 
-    const r = await sendLeadEmail({
-      to: lead.email,
-      subject: rendered.subject,
-      body: rendered.body,
+    const r = await reachoutLead({ lead, channels, changedBy: user.userId });
+    results.push({
       leadId: id,
       bucket: lead.bucket,
-      templateUsed: rendered.templateUsed,
-      currentStage: lead.stage,
-      changedBy: user.userId,
+      outcomes: r.outcomes,
     });
-    if (r.ok) {
-      sent++;
-      results.push({
-        leadId: id,
-        bucket: lead.bucket,
-        templateUsed: rendered.templateUsed,
-        resendMessageId: r.resendMessageId,
-        status: "sent",
-      });
-    } else {
-      failed++;
-      results.push({
-        leadId: id,
-        bucket: lead.bucket,
-        templateUsed: rendered.templateUsed,
-        status: "failed",
-        error: r.error,
-      });
-    }
 
-    // Pace the loop so we don't trip Resend's rate limit. Skip on the
-    // last iteration to avoid pointless latency.
+    let anySent = false;
+    let anyFailed = false;
+    let allSkipped = true;
+    for (const o of r.outcomes) {
+      if (o.status === "sent") { channelsSent++; anySent = true; allSkipped = false; }
+      else if (o.status === "failed") { channelsFailed++; anyFailed = true; allSkipped = false; }
+      else channelsSkipped++;
+    }
+    if (anySent) leadsSent++;
+    else if (allSkipped) leadsAllSkipped++;
+    else if (anyFailed) leadsAllFailed++;
+
     if (i < leadIds.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
     }
@@ -132,9 +132,13 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     total: leadIds.length,
-    sent,
-    failed,
-    skipped,
+    leadsSent,
+    leadsAllFailed,
+    leadsAllSkipped,
+    channelsSent,
+    channelsFailed,
+    channelsSkipped,
+    channels,
     results,
   });
 }

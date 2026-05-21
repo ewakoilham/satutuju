@@ -54,10 +54,17 @@ export const STEP_AUTO_TRIGGERS = [
   "email_sent",
   "email_opened",
   "email_clicked",
+  "whatsapp_sent",
   "deposit_paid",
   "matched",
 ] as const;
 export type StepAutoTrigger = (typeof STEP_AUTO_TRIGGERS)[number];
+
+/** Channels admin can pick when doing reachout. "both" is two API calls
+ *  fired in parallel — independently logged so partial failures don't
+ *  block the success. */
+export const OUTREACH_CHANNELS = ["email", "whatsapp"] as const;
+export type OutreachChannel = (typeof OUTREACH_CHANNELS)[number];
 
 export const STEP_STATUSES = ["pending", "done", "skipped"] as const;
 export type StepStatus = (typeof STEP_STATUSES)[number];
@@ -171,6 +178,7 @@ export interface LeadEmailTemplate {
   bucket: TemplateBucket;
   subject: string;
   body: string;
+  whatsappBody: string | null;
   version: number;
   updatedAt: string;
   updatedBy: string | null;

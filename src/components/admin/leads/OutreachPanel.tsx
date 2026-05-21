@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
-import { templateBucketFor, type Lead, type OutreachLog } from "@/lib/leads/types";
+import { templateBucketFor, type Lead, type OutreachChannel, type OutreachLog } from "@/lib/leads/types";
 
 interface Props {
   lead: Lead;
@@ -35,40 +35,75 @@ function relativeTime(iso: string): string {
   return `${d}h yang lalu`;
 }
 
+type ChannelChoice = "email" | "whatsapp" | "both";
+
+const CHANNEL_OPTIONS: Array<{ value: ChannelChoice; label: string; icon: "mail" | "chat" }> = [
+  { value: "email",    label: "Email",        icon: "mail" },
+  { value: "whatsapp", label: "WhatsApp",     icon: "chat" },
+  { value: "both",     label: "Email + WA",   icon: "mail" },
+];
+
+function channelsFor(choice: ChannelChoice): OutreachChannel[] {
+  if (choice === "email") return ["email"];
+  if (choice === "whatsapp") return ["whatsapp"];
+  return ["email", "whatsapp"];
+}
+
+interface OutcomeFromApi {
+  channel: OutreachChannel;
+  status: "sent" | "failed" | "skipped";
+  reason?: string;
+  error?: string;
+}
+
 /**
- * Renders the outreach email panel: preview hint + send button + last
- * sent log. Send action POSTs to `/api/new-leads/[id]/outreach`. On
- * success, calls `onChanged()` to let the parent refetch.
+ * Renders the outreach panel: channel picker (Email / WA / Both) + send
+ * button + last sent log. POSTs to `/api/new-leads/[id]/outreach` with
+ * `{ channels: OutreachChannel[] }`.
  *
- * For buckets without a template (`unclassified`), the send button is
- * disabled with a hint to override bucket first.
+ * Per-channel outcomes are independent — admin sees a summary like
+ * "Email ✓, WA skipped (no number)" rather than a single pass/fail.
  */
 export default function OutreachPanel({ lead, outreach, onChanged, variant = "full" }: Props) {
+  const [channelChoice, setChannelChoice] = useState<ChannelChoice>("both");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [resultMsg, setResultMsg] = useState<string | null>(null);
 
   const templateKey = templateBucketFor(lead.bucket);
   const lastSent = outreach[0]; // detail endpoint returns newest-first
+  const hasWaNumber = !!lead.whatsappNumber;
 
   async function send() {
     if (!templateKey) return;
     setBusy(true);
     setErr(null);
-    setOkMsg(null);
+    setResultMsg(null);
     try {
+      const channels = channelsFor(channelChoice);
       const res = await fetch(`/api/new-leads/${lead.id}/outreach`, {
         method: "POST",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channels }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErr(body.error || `HTTP ${res.status}`);
         return;
       }
-      setOkMsg("Email terkirim ✓");
+      // Format per-channel outcome summary so admin sees what happened.
+      const outcomes: OutcomeFromApi[] = body.outcomes ?? [];
+      const parts: string[] = [];
+      for (const o of outcomes) {
+        const ch = o.channel === "email" ? "Email" : "WA";
+        if (o.status === "sent") parts.push(`${ch} ✓`);
+        else if (o.status === "failed") parts.push(`${ch} gagal: ${o.error ?? "unknown"}`);
+        else parts.push(`${ch} skip (${o.reason ?? "?"})`);
+      }
+      setResultMsg(parts.join(" · "));
       onChanged();
-      setTimeout(() => setOkMsg(null), 4000);
+      setTimeout(() => setResultMsg(null), 8000);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -86,29 +121,57 @@ export default function OutreachPanel({ lead, outreach, onChanged, variant = "fu
     );
   }
 
-  // Compact variant — for inline row expansion: just a single button + last-sent line.
+  // Channel picker — used by both variants.
+  const channelPicker = (
+    <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+      {CHANNEL_OPTIONS.map((opt) => {
+        const isActive = channelChoice === opt.value;
+        const disabled = (opt.value === "whatsapp" || opt.value === "both") && !hasWaNumber;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setChannelChoice(opt.value)}
+            disabled={disabled}
+            title={disabled ? "Lead tidak punya WA number — pakai Email saja" : undefined}
+            className={`px-2.5 py-1 inline-flex items-center gap-1 transition ${
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "bg-surface hover:bg-surface-elevated"
+            } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+          >
+            <Icon name={opt.icon} size={11} />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // Compact variant — for inline row expansion.
   if (variant === "compact") {
     return (
       <div className="flex items-center gap-3 flex-wrap">
+        {channelPicker}
         <button
           type="button"
           onClick={() => void send()}
           disabled={busy}
           className="btn-primary text-xs px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
         >
-          <Icon name="mail" size={12} />
-          {busy ? "Mengirim…" : lastSent ? "Kirim ulang" : "Kirim outreach"}
+          <Icon name="check" size={12} />
+          {busy ? "Mengirim…" : lastSent ? "Kirim ulang" : "Reachout"}
         </button>
         {lastSent && (
           <span className="text-[11px] text-text-muted-2">
-            Last sent: {relativeTime(lastSent.sentAt)} · template <span className="font-mono">{lastSent.templateUsed}</span>
+            Last: {relativeTime(lastSent.sentAt)} · {lastSent.channel === "whatsapp" ? "WA" : "Email"}
             {lastSent.openedAt && <span className="text-emerald-600"> · opened</span>}
             {lastSent.clickedAt && <span className="text-blue-600"> · clicked</span>}
             {lastSent.bouncedAt && <span className="text-danger"> · bounced</span>}
           </span>
         )}
         {err && <span className="text-[11px] text-danger">⚠ {err}</span>}
-        {okMsg && <span className="text-[11px] text-emerald-600">{okMsg}</span>}
+        {resultMsg && <span className="text-[11px] text-emerald-700">{resultMsg}</span>}
       </div>
     );
   }
@@ -116,21 +179,34 @@ export default function OutreachPanel({ lead, outreach, onChanged, variant = "fu
   // Full variant — for detail page.
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between gap-2 flex-wrap">
-        <p className="text-xs text-text-muted">
-          Template: <span className="font-mono font-medium">{templateKey}</span>
-          {" · "}
-          Akan dikirim dari <span className="font-mono">ilham.razak@satutuju.id</span> ke <span className="font-mono">{lead.email}</span>
-        </p>
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={busy}
-          className="btn-primary text-xs px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          <Icon name="mail" size={12} />
-          {busy ? "Mengirim…" : lastSent ? "Kirim ulang" : "Kirim outreach"}
-        </button>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div className="text-xs text-text-muted space-y-0.5">
+          <p>
+            Template: <span className="font-mono font-medium">{templateKey}</span>
+          </p>
+          <p>
+            Email → <span className="font-mono">{lead.email}</span>
+          </p>
+          <p>
+            WhatsApp → {hasWaNumber ? (
+              <span className="font-mono">{lead.whatsappNumber}</span>
+            ) : (
+              <span className="text-text-muted-2 italic">tidak tersedia — channel WA akan di-skip</span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {channelPicker}
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={busy}
+            className="btn-primary text-xs px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Icon name="check" size={12} />
+            {busy ? "Mengirim…" : lastSent ? "Reachout ulang" : "Reachout"}
+          </button>
+        </div>
       </div>
 
       {err && (
@@ -138,9 +214,9 @@ export default function OutreachPanel({ lead, outreach, onChanged, variant = "fu
           ⚠ {err}
         </div>
       )}
-      {okMsg && (
+      {resultMsg && (
         <div className="text-xs px-3 py-2 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
-          {okMsg}
+          {resultMsg}
         </div>
       )}
 
@@ -149,11 +225,18 @@ export default function OutreachPanel({ lead, outreach, onChanged, variant = "fu
         <p className="text-xs text-text-muted-2 italic">Belum pernah dikirim.</p>
       ) : (
         <ul className="space-y-1.5">
-          {outreach.slice(0, 3).map((o) => (
+          {outreach.slice(0, 5).map((o) => (
             <li key={o.id} className="text-xs flex items-start gap-2 flex-wrap">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted-2 mt-1.5 flex-shrink-0" aria-hidden />
+              <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                o.channel === "whatsapp" ? "bg-emerald-500" : "bg-blue-500"
+              }`} aria-hidden />
               <div className="min-w-0 flex-1">
-                <div className="text-foreground truncate">{o.subject}</div>
+                <div className="text-foreground truncate">
+                  <span className="text-[10px] uppercase font-semibold mr-1.5">
+                    [{o.channel === "whatsapp" ? "WA" : "EMAIL"}]
+                  </span>
+                  {o.subject}
+                </div>
                 <div className="text-text-muted-2 text-[11px]">
                   {formatStamp(o.sentAt)} · template <span className="font-mono">{o.templateUsed}</span>
                   {o.status === "failed" && (

@@ -38,7 +38,7 @@ export const LEAD_STEP_STATUS_COLUMNS =
   'id, "leadId", "stepId", status, "completedAt", "completedBy", note, "createdAt", "updatedAt"';
 
 export const LEAD_EMAIL_TEMPLATE_COLUMNS =
-  'id, bucket, subject, body, version, "updatedAt", "updatedBy"';
+  'id, bucket, subject, body, "whatsappBody", version, "updatedAt", "updatedBy"';
 
 export const LEAD_AUTO_SEND_SETTING_COLUMNS =
   'id, enabled, "delayMinutes", "lastRunAt", "updatedAt", "updatedBy"';

@@ -77,8 +77,8 @@ export default function BulkActionBar({
             disabled={busy}
             className="btn-primary text-xs px-3 inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Icon name="document" size={12} />
-            {busy ? "Mengirim…" : "Send outreach"}
+            <Icon name="mail" size={12} />
+            {busy ? "Mengirim…" : "Reachout"}
           </button>
 
           {/* "More actions" dropdown to keep the bar compact. */}

@@ -526,6 +526,9 @@ model LeadEmailTemplate {
   bucket    String   @unique
   subject   String
   body      String   // plain text with {{name}}, {{campusJurusan}}, {{fundingPlan}} tokens
+  // Optional WhatsApp variant — shorter, conversational. Same tokens.
+  // Null = WA channel skips this template (admin hasn't authored a WA version).
+  whatsappBody String?
   version   Int      @default(1)
   updatedAt DateTime @updatedAt
   updatedBy String?

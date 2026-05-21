@@ -2,25 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS, OUTREACH_LOG_COLUMNS } from "@/lib/db-columns";
-import { renderLeadOutreach, sendLeadEmail } from "@/lib/email";
-import type { Lead } from "@/lib/leads/types";
+import { reachoutLead } from "@/lib/leads/reachout";
+import { OUTREACH_CHANNELS, type Lead, type OutreachChannel } from "@/lib/leads/types";
 
 /**
- * Send one outreach email to a single lead. Admin-gated.
+ * Send outreach to a single lead across one or both channels
+ * (email, whatsapp). Admin-gated.
  *
- * Behavior:
- *   - 400 if lead.bucket is `unclassified` (no template) — admin must
- *     override bucket first.
- *   - 200 + OutreachLog row on success.
- *   - 502 + error message if Resend rejected (e.g. domain not verified).
+ * Body: { channels?: ("email"|"whatsapp")[] }
+ *   - defaults to ["email"] for backward compatibility
+ *   - ["whatsapp"] for WA-only
+ *   - ["email","whatsapp"] for both
  *
- * Side-effects (handled inside `sendLeadEmail`):
- *   - Writes OutreachLog (always, even on failure).
- *   - Auto-completes any step with `autoTrigger="email_sent"`.
- *   - Advances Lead.stage `new` → `outreach_sent` + writes history.
+ * Response:
+ *   - 200 + outcomes[] if at least one channel completed (sent/failed/skipped)
+ *   - 400 if both requested channels skipped (so the admin gets a clear
+ *     "nothing was sent" signal)
+ *
+ * Side-effects (handled inside reachoutLead → sendLeadEmail/sendLeadWhatsapp):
+ *   - OutreachLog row per channel that ran (always, even on failure).
+ *   - Auto-completes steps with autoTrigger="email_sent" or "whatsapp_sent".
+ *   - Advances Lead.stage `new` → `outreach_sent` (once, monotonic).
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
@@ -28,6 +33,22 @@ export async function POST(
   if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
 
   const { id } = await params;
+
+  // Parse body — body is optional; missing/invalid JSON defaults to email-only.
+  let channels: OutreachChannel[] = ["email"];
+  try {
+    const body = await req.json();
+    if (Array.isArray(body?.channels)) {
+      const validated = body.channels.filter(
+        (c: unknown): c is OutreachChannel =>
+          typeof c === "string" && (OUTREACH_CHANNELS as readonly string[]).includes(c),
+      );
+      if (validated.length > 0) channels = validated;
+    }
+  } catch {
+    /* empty body OK → keep default ["email"] */
+  }
+
   const { data: lead, error: lookupErr } = await supabase
     .from("Lead")
     .select(LEAD_SELECT_COLUMNS)
@@ -38,44 +59,37 @@ export async function POST(
     return NextResponse.json({ error: lookupErr.message }, { status: code });
   }
 
-  const typedLead = lead as unknown as Lead;
-  const rendered = await renderLeadOutreach(typedLead);
-  if (!rendered) {
-    return NextResponse.json(
-      { error: "Bucket belum di-classify — override bucket dulu sebelum kirim outreach." },
-      { status: 400 },
-    );
-  }
-
-  const result = await sendLeadEmail({
-    to: typedLead.email,
-    subject: rendered.subject,
-    body: rendered.body,
-    leadId: id,
-    bucket: typedLead.bucket,
-    templateUsed: rendered.templateUsed,
-    currentStage: typedLead.stage,
+  const result = await reachoutLead({
+    lead: lead as unknown as Lead,
+    channels,
     changedBy: user.userId,
   });
 
-  // Fetch the just-written OutreachLog row to return its full shape
-  // (lets the UI render the new row in the sent-history list).
-  const { data: outreach } = await supabase
-    .from("OutreachLog")
-    .select(OUTREACH_LOG_COLUMNS)
-    .eq("id", result.outreachId)
-    .single();
+  // Fetch the OutreachLog rows we just wrote (any channel that wasn't
+  // skipped) so the UI can render them in the sent-history list.
+  const outreachIds = result.outcomes
+    .filter((o) => o.status !== "skipped")
+    .map((o) => (o as { outreachId: string }).outreachId);
+  let outreach: unknown[] = [];
+  if (outreachIds.length > 0) {
+    const { data } = await supabase
+      .from("OutreachLog")
+      .select(OUTREACH_LOG_COLUMNS)
+      .in("id", outreachIds);
+    outreach = data ?? [];
+  }
 
-  if (!result.ok) {
+  const allSkipped = result.outcomes.every((o) => o.status === "skipped");
+  if (allSkipped) {
     return NextResponse.json(
-      { ok: false, error: result.error, outreach },
-      { status: 502 },
+      { ok: false, error: "Semua channel di-skip — cek bucket + WA number", ...result, outreach },
+      { status: 400 },
     );
   }
 
   return NextResponse.json({
     ok: true,
+    ...result,
     outreach,
-    stageAdvanced: result.stageAdvanced,
   });
 }

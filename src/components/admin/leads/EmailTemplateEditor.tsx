@@ -64,33 +64,41 @@ function relativeTime(iso: string): string {
 export default function EmailTemplateEditor({ template, onSaved }: Props) {
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
+  const [whatsappBody, setWhatsappBody] = useState(template.whatsappBody ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const waBodyRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const dirty = subject !== template.subject || body !== template.body;
+  const dirty =
+    subject !== template.subject ||
+    body !== template.body ||
+    whatsappBody !== (template.whatsappBody ?? "");
 
   const preview = useMemo(
     () => ({
       subject: substitute(subject, SAMPLE_DATA),
       body: substitute(body, SAMPLE_DATA),
+      whatsappBody: whatsappBody ? substitute(whatsappBody, SAMPLE_DATA) : "",
     }),
-    [subject, body],
+    [subject, body, whatsappBody],
   );
 
-  /** Insert {{token}} at the textarea's caret position. */
-  function insertToken(token: Token) {
-    const ta = bodyRef.current;
+  /** Insert {{token}} at the caret position of the textarea identified
+   *  by `target` ("email" body or "whatsapp" body). */
+  function insertToken(token: Token, target: "email" | "whatsapp") {
+    const ta = target === "email" ? bodyRef.current : waBodyRef.current;
+    const current = target === "email" ? body : whatsappBody;
+    const setter = target === "email" ? setBody : setWhatsappBody;
     if (!ta) {
-      setBody((b) => b + `{{${token}}}`);
+      setter((b) => b + `{{${token}}}`);
       return;
     }
-    const start = ta.selectionStart ?? body.length;
-    const end = ta.selectionEnd ?? body.length;
-    const next = body.slice(0, start) + `{{${token}}}` + body.slice(end);
-    setBody(next);
-    // Restore caret position after React re-renders.
+    const start = ta.selectionStart ?? current.length;
+    const end = ta.selectionEnd ?? current.length;
+    const next = current.slice(0, start) + `{{${token}}}` + current.slice(end);
+    setter(next);
     queueMicrotask(() => {
       const pos = start + `{{${token}}}`.length;
       ta.focus();
@@ -107,7 +115,7 @@ export default function EmailTemplateEditor({ template, onSaved }: Props) {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body }),
+        body: JSON.stringify({ subject, body, whatsappBody: whatsappBody || null }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -189,17 +197,20 @@ export default function EmailTemplateEditor({ template, onSaved }: Props) {
         />
       </div>
 
-      {/* Body + tokens */}
+      {/* Email body + tokens */}
       <div className="space-y-1">
         <div className="flex items-baseline justify-between gap-2">
-          <label className="text-xs uppercase tracking-wider text-text-muted-2">Body (plain text)</label>
+          <label className="text-xs uppercase tracking-wider text-text-muted-2">
+            <Icon name="mail" size={11} className="inline mr-1 -mt-0.5" />
+            Email body (plain text)
+          </label>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] text-text-muted-2 uppercase tracking-wider">Insert:</span>
             {TOKENS.map((t) => (
               <button
                 key={t}
                 type="button"
-                onClick={() => insertToken(t)}
+                onClick={() => insertToken(t, "email")}
                 className="text-[11px] font-mono px-2 py-0.5 rounded border border-border bg-surface hover:border-primary-200 hover:text-primary transition"
               >
                 {`{{${t}}}`}
@@ -217,18 +228,56 @@ export default function EmailTemplateEditor({ template, onSaved }: Props) {
         />
       </div>
 
+      {/* WhatsApp body + tokens — shorter, conversational variant */}
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-xs uppercase tracking-wider text-text-muted-2">
+            WhatsApp body <span className="normal-case text-text-muted-2/70">(opsional — kosongkan untuk skip WA channel)</span>
+          </label>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-text-muted-2 uppercase tracking-wider">Insert:</span>
+            {TOKENS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => insertToken(t, "whatsapp")}
+                className="text-[11px] font-mono px-2 py-0.5 rounded border border-border bg-surface hover:border-primary-200 hover:text-primary transition"
+              >
+                {`{{${t}}}`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <textarea
+          ref={waBodyRef}
+          value={whatsappBody}
+          onChange={(e) => setWhatsappBody(e.target.value)}
+          rows={6}
+          spellCheck={false}
+          placeholder="Versi singkat untuk WhatsApp. Format yang didukung: *bold*, _italic_, `code`. Lebih pendek + casual dari email."
+          className="input-field text-xs font-mono leading-relaxed"
+        />
+      </div>
+
       {/* Live preview */}
-      <div className="space-y-1 pt-2 border-t border-border/60">
+      <div className="space-y-2 pt-2 border-t border-border/60">
         <div className="flex items-baseline justify-between">
           <label className="text-xs uppercase tracking-wider text-text-muted-2">Preview</label>
           <span className="text-[10px] text-text-muted-2 italic">
             sample: name=&ldquo;Andi&rdquo;, campusJurusan=&ldquo;Master of Business at Monash University&rdquo;
           </span>
         </div>
-        <div className="rounded-lg border border-border/60 bg-surface-elevated/30 p-3 space-y-2">
+        <div className="rounded-lg border border-border/60 bg-surface-elevated/30 p-3 space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-text-muted-2">Email</div>
           <div className="text-xs font-semibold text-foreground">{preview.subject}</div>
           <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">{preview.body}</pre>
         </div>
+        {preview.whatsappBody && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-1">
+            <div className="text-[10px] uppercase tracking-wider text-emerald-700">WhatsApp</div>
+            <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">{preview.whatsappBody}</pre>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -106,8 +106,12 @@ export default function NewLeadsListPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [bulkResult, setBulkResult] = useState<
-    { sent: number; failed: number; skipped: number } | null
+    { channelsSent: number; channelsFailed: number; channelsSkipped: number; leadsSent: number } | null
   >(null);
+  // Channel picker for bulk reachout. "both" by default. Whenever ≥1
+  // selected lead lacks whatsappNumber, the UI surfaces a warning + the
+  // API server-side skips that lead's WA channel automatically.
+  const [bulkChannel, setBulkChannel] = useState<"email" | "whatsapp" | "both">("both");
   // When ON, the bulk send filters out leads with outreachSentAt !== null
   // so admin doesn't accidentally double-send. Defaults to true the moment
   // the confirm modal opens (set in onSendOutreach handler) — see below.
@@ -537,23 +541,30 @@ export default function NewLeadsListPage() {
     setBulkBusy(true);
     setBulkResult(null);
     try {
+      const channels =
+        bulkChannel === "both" ? ["email", "whatsapp"] :
+        bulkChannel === "whatsapp" ? ["whatsapp"] : ["email"];
       const res = await fetch("/api/new-leads/bulk-outreach", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadIds: effectiveIds }),
+        body: JSON.stringify({ leadIds: effectiveIds, channels }),
       });
       const json = await res.json();
       if (!res.ok) {
-        setBulkResult({ sent: 0, failed: 0, skipped: 0 });
+        setBulkResult({ channelsSent: 0, channelsFailed: 0, channelsSkipped: 0, leadsSent: 0 });
         alert(json.error || `HTTP ${res.status}`);
       } else {
-        setBulkResult({ sent: json.sent, failed: json.failed, skipped: json.skipped });
+        setBulkResult({
+          channelsSent: json.channelsSent ?? 0,
+          channelsFailed: json.channelsFailed ?? 0,
+          channelsSkipped: json.channelsSkipped ?? 0,
+          leadsSent: json.leadsSent ?? 0,
+        });
         setSelected(new Set());
         await fetchList();
         bumpMutationTick();
-        // Auto-dismiss banner after a few seconds.
-        setTimeout(() => setBulkResult(null), 8000);
+        setTimeout(() => setBulkResult(null), 10000);
       }
     } catch (e) {
       alert(e instanceof Error ? e.message : "Network error");
@@ -1059,13 +1070,14 @@ export default function NewLeadsListPage() {
       {bulkResult && (
         <div className="card p-3 text-sm flex items-center justify-between gap-3 flex-wrap border-emerald-200 bg-emerald-50/40">
           <span className="text-emerald-900">
-            ✓ Bulk outreach selesai —
-            <strong> {bulkResult.sent} sent</strong>
-            {bulkResult.failed > 0 && (
-              <span className="text-danger"> · <strong>{bulkResult.failed} failed</strong></span>
+            ✓ Bulk reachout selesai —
+            <strong> {bulkResult.leadsSent} leads</strong> berhasil dikontak ·
+            <strong> {bulkResult.channelsSent} channel sent</strong>
+            {bulkResult.channelsFailed > 0 && (
+              <span className="text-danger"> · <strong>{bulkResult.channelsFailed} failed</strong></span>
             )}
-            {bulkResult.skipped > 0 && (
-              <span className="text-text-muted"> · <strong>{bulkResult.skipped} skipped</strong></span>
+            {bulkResult.channelsSkipped > 0 && (
+              <span className="text-text-muted"> · <strong>{bulkResult.channelsSkipped} skipped</strong></span>
             )}
           </span>
           <button
@@ -1203,7 +1215,7 @@ export default function NewLeadsListPage() {
       <Modal
         open={bulkConfirmOpen}
         onClose={() => bulkBusy ? null : setBulkConfirmOpen(false)}
-        title={`Kirim outreach ke ${effectiveIds.length} leads?`}
+        title={`Reachout ke ${effectiveIds.length} leads?`}
         actions={
           <>
             <button
@@ -1276,8 +1288,42 @@ export default function NewLeadsListPage() {
             </div>
           )}
 
+          {/* Channel picker */}
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-text-muted-2">Channel</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { value: "email",    label: "Email",      hint: "Resend" },
+                { value: "whatsapp", label: "WhatsApp",   hint: "Fonnte" },
+                { value: "both",     label: "Email + WA", hint: "Sequential" },
+              ] as const).map((opt) => {
+                const isActive = bulkChannel === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setBulkChannel(opt.value)}
+                    className={`text-xs px-3 py-2 rounded-md border transition text-left ${
+                      isActive
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-surface hover:border-primary-200"
+                    }`}
+                  >
+                    <div className="font-medium">{opt.label}</div>
+                    <div className="text-[10px] text-text-muted-2">{opt.hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {(bulkChannel === "whatsapp" || bulkChannel === "both") && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-1">
+                ⚠ Lead tanpa nomor WA atau template WA kosong akan otomatis di-skip untuk channel WA. Channel email tetap dikirim.
+              </p>
+            )}
+          </div>
+
           <p className="text-[11px] text-text-muted-2 italic">
-            Email dikirim sequential ~250ms per lead via Resend. Template dipilih otomatis sesuai bucket masing-masing.
+            Sequential ~250ms per lead. Template (email + WA) dipilih otomatis sesuai bucket masing-masing.
           </p>
         </div>
       </Modal>
