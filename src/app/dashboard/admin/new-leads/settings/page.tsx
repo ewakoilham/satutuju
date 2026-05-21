@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 interface Settings {
   id: string;
@@ -157,9 +158,7 @@ export default function AutoSendSettingsPage() {
                   </strong>
                 </div>
                 <div>
-                  Last cron run: {settings.lastRunAt
-                    ? new Date(settings.lastRunAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
-                    : "belum pernah"}
+                  Last cron run: {settings.lastRunAt ? formatJakartaDateTime(settings.lastRunAt) : "belum pernah"}
                 </div>
               </div>
             )}

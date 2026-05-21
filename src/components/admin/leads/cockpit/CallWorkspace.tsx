@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { fundingPlanLabelId, type Lead, type LeadBucket } from "@/lib/leads/types";
+import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 /**
  * Center workspace of the Call Cockpit — three tabs:
@@ -486,9 +487,7 @@ function FormTab({ lead }: { lead: Lead }) {
     { q: "Bucket (auto-classification)", a: `${lead.bucket} — ${bucketDescLong(lead.bucket)}` },
   ];
 
-  const submittedStamp = new Date(lead.submittedAt).toLocaleString("id-ID", {
-    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
+  const submittedStamp = formatJakartaDateTime(lead.submittedAt);
 
   return (
     <div className="p-6">

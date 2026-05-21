@@ -60,8 +60,11 @@ export default function LeadInboxRow({
               : "bg-surface border-l-transparent"
       }`}
       style={{
+        // Fixed widths for badge/icon columns prevent the table from
+        // jittering as you scroll (BUCKET / STAGE / ENGAGE / PROGRESS
+        // all have variable-length content). Last col = hover actions.
         gridTemplateColumns:
-          "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) auto auto auto auto 90px",
+          "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) 56px 116px 56px 96px 96px",
       }}
     >
       <input

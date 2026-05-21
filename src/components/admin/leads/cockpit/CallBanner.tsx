@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
+import { formatJakartaDateTime } from "@/lib/datetime-id";
 
 /**
  * Top banner that surfaces the upcoming call: countdown pill + Google
@@ -25,8 +26,13 @@ function diffMinutes(target: Date): number {
   return Math.round((target.getTime() - Date.now()) / 60_000);
 }
 
+/** Parse Supabase-style timestamps (no `Z`) as UTC, not local. */
+function parseAsUtc(s: string): Date {
+  return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? new Date(s) : new Date(s + "Z");
+}
+
 export default function CallBanner({ scheduledAt, meetLink, interviewer, durationMin = 30 }: Props) {
-  const target = new Date(scheduledAt);
+  const target = parseAsUtc(scheduledAt);
   const [minutesLeft, setMinutesLeft] = useState(() => diffMinutes(target));
 
   // Refresh every 30s so the pill stays current.
@@ -51,10 +57,7 @@ export default function CallBanner({ scheduledAt, meetLink, interviewer, duratio
       ? `Mulai ${Math.floor(minutesLeft / 1440)} hari lagi`
       : `Mulai ${Math.floor(minutesLeft / 60)}j ${minutesLeft % 60}m lagi`;
 
-  const stamp = target.toLocaleString("id-ID", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const stamp = formatJakartaDateTime(target);
 
   function copyMeetLink() {
     if (meetLink) navigator.clipboard.writeText(meetLink).catch(() => {});

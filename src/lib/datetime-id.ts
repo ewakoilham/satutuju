@@ -111,3 +111,54 @@ export function formatSigningDatePhrase(d: Date): string {
   const { weekdayIndex, day, month, year } = getJakartaParts(d);
   return `${ID_DAY_NAMES[weekdayIndex]}, tanggal ${day} bulan ${ID_MONTH_NAMES[month - 1]} tahun ${year} (${pad2(day)}-${pad2(month)}-${year})`;
 }
+
+/**
+ * Compact stamp for inline timestamps in the leads UI. Always WIB.
+ * e.g. "21 Mei 14.32" — no year, no "WIB" suffix (column context
+ * already implies it).
+ */
+export function formatJakartaStamp(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  return parseAsUtc(d).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TZ,
+  });
+}
+
+/**
+ * "X minutes ago" style — always anchored to now. Used in feed-style
+ * timelines + last-action badges. Timezone-independent (returns a
+ * duration string), but parseAsUtc fixes the underlying parse so the
+ * duration math is correct.
+ */
+export function formatJakartaRelative(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const diff = Date.now() - parseAsUtc(d).getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "baru saja";
+  if (min < 60) return `${min}m yang lalu`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}j yang lalu`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}h yang lalu`;
+  const mo = Math.floor(day / 30);
+  return `${mo}b yang lalu`;
+}
+
+/** Short relative without "yang lalu" suffix — for dense tables. */
+export function formatJakartaRelativeShort(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const diff = Date.now() - parseAsUtc(d).getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "baru";
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}j`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}h`;
+  const mo = Math.floor(day / 30);
+  return `${mo}b`;
+}

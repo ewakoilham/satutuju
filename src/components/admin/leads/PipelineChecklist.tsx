@@ -7,6 +7,7 @@ import type {
   LeadStepStatusRow,
   StepStatus,
 } from "@/lib/leads/types";
+import { formatJakartaStamp } from "@/lib/datetime-id";
 
 interface Props {
   leadId: string;
@@ -30,13 +31,7 @@ const TRIGGER_LABEL: Record<string, string> = {
 
 function formatStamp(iso: string | null): string | null {
   if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleString("id-ID", {
-      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+  return formatJakartaStamp(iso);
 }
 
 /**

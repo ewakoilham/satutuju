@@ -11,6 +11,7 @@ import {
   type LeadStageHistory,
   type OutreachLog,
 } from "@/lib/leads/types";
+import { formatJakartaRelativeShort } from "@/lib/datetime-id";
 
 /**
  * Left rail of the Call Cockpit — always-glanceable context that the
@@ -38,16 +39,7 @@ interface Props {
   outreach: OutreachLog[];
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "baru saja";
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}j`;
-  const d = Math.floor(hr / 24);
-  return `${d}h`;
-}
+const relativeTime = formatJakartaRelativeShort;
 
 export default function ContextRail({ lead, history, outreach }: Props) {
   const [mentors, setMentors] = useState<MentorLite[]>([]);

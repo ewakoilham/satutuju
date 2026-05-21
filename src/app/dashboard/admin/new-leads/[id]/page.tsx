@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, use } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { formatJakartaStamp, formatJakartaRelative } from "@/lib/datetime-id";
 import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
 import OutreachPanel from "@/components/admin/leads/OutreachPanel";
 import MentorMatchPanel from "@/components/admin/leads/MentorMatchPanel";
@@ -47,28 +48,11 @@ interface DetailResponse {
 
 const READINESS_LENGTH = 5;
 
-function formatStamp(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("id-ID", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "baru saja";
-  if (min < 60) return `${min}m yang lalu`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}j yang lalu`;
-  const d = Math.floor(hr / 24);
-  return `${d}h yang lalu`;
-}
+// Timestamp helpers — pulled from src/lib/datetime-id.ts so we always
+// display WIB (Asia/Jakarta), regardless of where the request is served
+// from. parseAsUtc inside the helper handles the Supabase-without-Z quirk.
+const formatStamp = formatJakartaStamp;
+const relativeTime = formatJakartaRelative;
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

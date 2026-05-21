@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { templateBucketFor, type Lead, type OutreachChannel, type OutreachLog } from "@/lib/leads/types";
+import { formatJakartaStamp, formatJakartaRelative } from "@/lib/datetime-id";
 
 interface Props {
   lead: Lead;
@@ -13,27 +14,8 @@ interface Props {
   variant?: "full" | "compact";
 }
 
-function formatStamp(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("id-ID", {
-      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "baru saja";
-  if (min < 60) return `${min}m yang lalu`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}j yang lalu`;
-  const d = Math.floor(hr / 24);
-  return `${d}h yang lalu`;
-}
+const formatStamp = formatJakartaStamp;
+const relativeTime = formatJakartaRelative;
 
 type ChannelChoice = "email" | "whatsapp" | "both";
 

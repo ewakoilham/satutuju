@@ -11,6 +11,7 @@ import {
   type LeadStage,
 } from "@/lib/leads/types";
 import KpiStrip from "@/components/admin/leads/inbox/KpiStrip";
+import { formatJakartaDateTime } from "@/lib/datetime-id";
 import SmartSegments, {
   SEGMENTS,
   type SegmentId,
@@ -581,7 +582,7 @@ export default function NewLeadsListPage() {
           <p className="text-sm text-text-muted mt-0.5">
             Tally → bucket → outreach → call → match.
             {calendarAuth?.connected && calendarAuth.lastSyncAt && (
-              <> Last calendar sync {new Date(calendarAuth.lastSyncAt).toLocaleString("id-ID")}.</>
+              <> Last calendar sync {formatJakartaDateTime(calendarAuth.lastSyncAt)}.</>
             )}
           </p>
         </div>
@@ -736,12 +737,12 @@ export default function NewLeadsListPage() {
             )}
           </div>
 
-          {/* Column headers — match LeadInboxRow grid exactly */}
+          {/* Column headers — grid mirrors LeadInboxRow exactly. */}
           <div
             className="grid items-center gap-3 px-4 py-2 text-[10.5px] uppercase tracking-[0.06em] font-semibold text-text-muted-2 border-b border-border/60 bg-surface-elevated/30"
             style={{
               gridTemplateColumns:
-                "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) auto auto auto auto 90px",
+                "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) 56px 116px 56px 96px 96px",
             }}
           >
             <span />
@@ -751,7 +752,7 @@ export default function NewLeadsListPage() {
             <span>Bucket</span>
             <span>Stage</span>
             <span>Engage</span>
-            <span className="text-right">Progress</span>
+            <span className="text-right pr-1">Progress</span>
             <span />
           </div>
 
