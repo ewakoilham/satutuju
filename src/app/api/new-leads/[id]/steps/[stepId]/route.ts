@@ -21,7 +21,7 @@ export async function PATCH(
   if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
 
   const { id: leadId, stepId } = await params;
-  let body: { status?: unknown; note?: unknown };
+  let body: { status?: unknown; note?: unknown; force?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -32,6 +32,27 @@ export async function PATCH(
     return NextResponse.json({ error: "status must be one of " + STEP_STATUSES.join("|") }, { status: 400 });
   }
   const status = body.status as (typeof STEP_STATUSES)[number];
+
+  // Server-side guard: auto-trigger steps are driven by system events
+  // (email send, stage transitions, etc.) — manual PATCH here would
+  // desync step status from the underlying stage and confuse the funnel.
+  // Reject unless the caller passes { force: true } explicitly.
+  const force = body.force === true;
+  if (!force) {
+    const { data: stepDef } = await supabase
+      .from("LeadStepDefinition")
+      .select("autoTrigger, label")
+      .eq("id", stepId)
+      .single();
+    if (stepDef?.autoTrigger) {
+      return NextResponse.json(
+        {
+          error: `Step "${stepDef.label}" adalah auto-trigger (${stepDef.autoTrigger}) — tidak bisa di-toggle manual. Advance stage lewat /stage endpoint atau Decision Pad untuk auto-fire step ini. Pass { force: true } untuk override (debug-only).`,
+        },
+        { status: 409 },
+      );
+    }
+  }
 
   const now = new Date().toISOString();
   const update: Record<string, unknown> = {

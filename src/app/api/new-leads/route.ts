@@ -5,7 +5,7 @@ import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { LEAD_BUCKETS, FUNDING_PLANS, type Lead, type FundingPlan } from "@/lib/leads/types";
 import { classifyLead } from "@/lib/leads/bucketing";
 import { MENTORS } from "@/lib/mentors";
-import { seedStepStatusesForLead } from "@/lib/leads/step-helpers";
+import { completeStepByTrigger, seedStepStatusesForLead } from "@/lib/leads/step-helpers";
 import { newLeadId, newStageHistoryId } from "@/lib/leads/ids";
 
 /**
@@ -243,6 +243,8 @@ export async function POST(req: NextRequest) {
     note: `Manual entry by ${user.name ?? user.userId}. ${cls.reason}`,
     createdAt: now,
   });
+  // Auto-complete the "Klasifikasi otomatis" pipeline step.
+  await completeStepByTrigger(id, "classified").catch(() => {});
 
   return NextResponse.json({ lead, classification: cls });
 }

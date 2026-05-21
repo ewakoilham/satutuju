@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
 import { newStageHistoryId } from "@/lib/leads/ids";
+import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 
 /**
  * Match a lead to a mentor. Writes Lead.mentorMatchedId + advances
@@ -71,6 +72,11 @@ export async function POST(
       createdAt: now,
     });
   }
+
+  // Auto-complete any pipeline step listening for the `matched` trigger
+  // (default seed: "Match dengan mentor"). Safe to call repeatedly —
+  // completeStepByTrigger only flips pending rows.
+  await completeStepByTrigger(id, "matched").catch(() => {});
 
   return NextResponse.json({ lead: updated, mentorId });
 }

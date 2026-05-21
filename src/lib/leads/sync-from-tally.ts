@@ -3,7 +3,7 @@ import "server-only";
 import { supabase } from "@/lib/supabase";
 import { classifyLead } from "@/lib/leads/bucketing";
 import { newLeadId, newStageHistoryId } from "@/lib/leads/ids";
-import { seedStepStatusesForLead } from "@/lib/leads/step-helpers";
+import { completeStepByTrigger, seedStepStatusesForLead } from "@/lib/leads/step-helpers";
 import { MENTORS } from "@/lib/mentors";
 import {
   fetchAllEnrichedSubmissions,
@@ -173,6 +173,12 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
   if (!seedResult.ok) {
     console.error(`[tally-sync] step seed failed for ${id}: ${seedResult.error}`);
   }
+
+  // Auto-complete the "Klasifikasi otomatis" pipeline step — every lead
+  // is fully classified at insert (bucket + parsedCountry + parsedField).
+  await completeStepByTrigger(id, "classified").catch((e) => {
+    console.error(`[tally-sync] classified-trigger failed for ${id}:`, e);
+  });
 
   return { action: "created", leadId: id };
 }

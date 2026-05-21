@@ -64,13 +64,15 @@ function computeSegmentCounts(
   const sum = (keys: string[], src: Record<string, number>) =>
     keys.reduce((a, k) => a + (src[k] ?? 0), 0);
   return {
-    all:     total,
-    new:     stageCounts.new ?? 0,
-    wait:    stageCounts.outreach_sent ?? 0,
-    engaged: sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
-    hot:     sum(["call_scheduled", "call_completed", "deposit_pending"], stageCounts),
-    review:  sum(["incomplete", "unclassified"], bucketCounts),
-    won:     sum(["deposit_paid", "matched"], stageCounts),
+    all:             total,
+    new:             stageCounts.new ?? 0,
+    wait:            stageCounts.outreach_sent ?? 0,
+    engaged:         sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
+    hot:             sum(["call_scheduled", "call_completed"], stageCounts),
+    deposit_pending: stageCounts.deposit_pending ?? 0,
+    deposit_paid:    stageCounts.deposit_paid ?? 0,
+    review:          bucketCounts.unclassified ?? 0,
+    won:             stageCounts.matched ?? 0,
   };
 }
 
@@ -283,18 +285,30 @@ export default function NewLeadsListPage() {
   }
 
   // ── Segment + bucket filter wiring ────────────────────────────────
+  //
+  // Segments and bucket toggles are COMPOSABLE — admin can click a
+  // segment (e.g. "Menunggu respons") AND then toggle bucket A to see
+  // only bucket-A leads in that segment. Stage filter is fully owned by
+  // the active segment; bucket filter is independent unless the segment
+  // itself defines a bucket constraint (currently only "Butuh review").
   function selectSegment(id: SegmentId) {
     const seg = SEGMENT_BY_ID.get(id);
     if (!seg) return;
     setActiveSegment(id);
-    setBucketFilter(new Set(seg.buckets));
+    // Always replace stage filter — segments are primarily stage-based.
     setStageFilter(new Set(seg.stages));
+    // Only touch bucket filter when the segment itself constrains
+    // buckets (so clicking "Menunggu respons" doesn't blow away an
+    // existing bucket-A pick).
+    if (seg.buckets.length > 0) {
+      setBucketFilter(new Set(seg.buckets));
+    }
     setOpenLead(null);
   }
 
   function toggleBucketFilter(b: LeadBucket) {
-    setActiveSegment("all"); // user is overriding the segment
-    setStageFilter(new Set());
+    // Bucket toggle composes with whatever segment is active — don't
+    // reset stage filter or active segment.
     setBucketFilter((s) => {
       const next = new Set(s);
       if (next.has(b)) next.delete(b);

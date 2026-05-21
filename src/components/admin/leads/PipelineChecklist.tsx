@@ -16,11 +16,16 @@ interface Props {
 }
 
 const TRIGGER_LABEL: Record<string, string> = {
-  email_sent: "Auto: email sent",
-  email_opened: "Auto: email opened",
-  email_clicked: "Auto: email clicked",
-  deposit_paid: "Auto: deposit paid",
-  matched: "Auto: matched",
+  classified: "Lead classified",
+  email_sent: "Email sent",
+  email_opened: "Email opened",
+  email_clicked: "Email clicked",
+  whatsapp_sent: "WhatsApp sent",
+  whatsapp_read: "WhatsApp read",
+  call_scheduled: "Call scheduled",
+  deposit_pending: "Stage → deposit pending",
+  deposit_paid: "Stage → deposit paid",
+  matched: "Mentor matched",
 };
 
 function formatStamp(iso: string | null): string | null {
@@ -35,10 +40,18 @@ function formatStamp(iso: string | null): string | null {
 }
 
 /**
- * Per-lead pipeline checklist. Click checkbox to toggle pending↔done.
- * Auto-trigger steps are locked (can only be completed by system events
- * — emailing, deposit_paid webhook, etc.). Right-click on a manual row
- * to mark skipped.
+ * Per-lead pipeline checklist.
+ *
+ *   • Manual steps  → click box toggles done ↔ pending; right-click to skip.
+ *   • Auto steps    → READ-ONLY. Driven entirely by system events
+ *                     (email sent, deposit_pending stage transition, etc.).
+ *                     Admin cannot manually check/uncheck them; doing so
+ *                     causes data drift (a step says "done" while the
+ *                     underlying stage hasn't moved).
+ *
+ * If admin needs to force a state, the right path is to advance the lead
+ * STAGE (via /stage endpoint or Decision Pad on the detail page) — the
+ * step auto-fires from there.
  */
 export default function PipelineChecklist({ leadId, steps, statuses, onChanged }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,25 +109,26 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
         const isDone = status === "done";
         const isSkipped = status === "skipped";
         const stamp = formatStamp(s?.completedAt ?? null);
-        const completedBy = s?.completedBy === "system" ? "Sistem" : s?.completedBy ?? null;
+        const completedBy = s?.completedBy === "system" ? "Sistem"
+          : s?.completedBy === "system-backfill" ? "Sistem (backfill)"
+          : s?.completedBy === "phase9-sync" ? "Sistem (Phase 9 sync)"
+          : s?.completedBy ?? null;
         const isBusy = busy === step.id;
 
-        // Toggle behavior:
-        // - Auto steps: click does nothing; system controls them. Allow
-        //   admin to manually override via right-click ("force done").
-        // - Manual steps: click toggles done ↔ pending.
+        // Click handler. Auto steps are fully locked — no toggle in either
+        // direction. Manual steps toggle done↔pending.
         const onClickBox = () => {
           if (isBusy) return;
-          if (isAuto && !isDone) {
-            // No-op on auto pending — system will flip it.
-            return;
-          }
+          if (isAuto) return;
           setStatus(step.id, isDone ? "pending" : "done");
         };
 
+        // Right-click → skip. Only applies to manual steps. Auto steps
+        // can't be skipped — they fire when their trigger condition is
+        // met, full stop.
         const onContextMenu = (e: React.MouseEvent) => {
           e.preventDefault();
-          if (isBusy) return;
+          if (isBusy || isAuto) return;
           if (isSkipped) {
             setStatus(step.id, "pending");
             return;
@@ -123,33 +137,51 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           setStatus(step.id, "skipped", reason || undefined);
         };
 
+        const triggerLabel = step.autoTrigger
+          ? TRIGGER_LABEL[step.autoTrigger] ?? step.autoTrigger
+          : null;
+
+        const checkboxTitle = isAuto
+          ? isDone
+            ? `Auto-completed — ${triggerLabel}`
+            : `Akan auto-complete saat: ${triggerLabel}`
+          : isDone
+            ? "Klik untuk uncheck (manual)"
+            : "Klik untuk mark done (manual)";
+
         return (
           <li
             key={step.id}
             onContextMenu={onContextMenu}
             className={`flex items-start gap-3 p-3 rounded-xl border ${
               isDone
-                ? "bg-emerald-50/60 border-emerald-200"
+                ? isAuto
+                  ? "bg-primary-50/40 border-primary-200/70"
+                  : "bg-emerald-50/60 border-emerald-200"
                 : isSkipped
-                ? "bg-surface-elevated border-border opacity-70"
-                : "bg-surface border-border"
+                  ? "bg-surface-elevated border-border opacity-70"
+                  : isAuto
+                    ? "bg-surface-elevated/40 border-border"
+                    : "bg-surface border-border"
             }`}
           >
             <button
               type="button"
               onClick={onClickBox}
-              disabled={isBusy || (isAuto && !isDone)}
-              aria-label={isDone ? "Mark pending" : "Mark done"}
+              disabled={isBusy || isAuto}
+              aria-label={checkboxTitle}
+              title={checkboxTitle}
               className={`mt-0.5 flex-shrink-0 grid place-items-center w-5 h-5 rounded border-2 transition-colors ${
                 isDone
-                  ? "bg-primary border-primary text-white"
+                  ? isAuto
+                    ? "bg-primary border-primary text-white cursor-default"
+                    : "bg-primary border-primary text-white cursor-pointer"
                   : isSkipped
-                  ? "bg-surface-elevated border-border text-text-muted-2"
-                  : isAuto
-                  ? "bg-surface-elevated border-border cursor-not-allowed"
-                  : "bg-white border-gray-300 hover:border-primary cursor-pointer"
+                    ? "bg-surface-elevated border-border text-text-muted-2"
+                    : isAuto
+                      ? "bg-surface-elevated border-border cursor-not-allowed"
+                      : "bg-white border-gray-300 hover:border-primary cursor-pointer"
               }`}
-              title={isAuto && !isDone ? "Akan auto-complete saat event sistem terjadi" : undefined}
             >
               {isDone && <Icon name="check" size={12} />}
               {isSkipped && <span className="text-[10px]">⨯</span>}
@@ -158,12 +190,24 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-xs font-mono text-text-muted-2">{step.order}</span>
-                <span className={`text-sm font-medium ${isDone ? "text-foreground" : isSkipped ? "text-text-muted line-through" : "text-foreground"}`}>
+                <span
+                  className={`text-sm font-medium ${
+                    isDone
+                      ? "text-foreground"
+                      : isSkipped
+                        ? "text-text-muted line-through"
+                        : "text-foreground"
+                  }`}
+                >
                   {step.label}
                 </span>
-                {step.autoTrigger && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary">
-                    🔒 {TRIGGER_LABEL[step.autoTrigger] ?? step.autoTrigger}
+                {isAuto && (
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary"
+                    title={`Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`}
+                  >
+                    <Icon name="lock" size={9} />
+                    Auto · {triggerLabel}
                   </span>
                 )}
               </div>
@@ -180,8 +224,14 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           </li>
         );
       })}
-      <li className="text-[11px] text-text-muted-2 italic pt-1">
-        Tip: klik kanan baris untuk skip step. Auto-step ditandai 🔒 — diisi otomatis oleh sistem.
+      <li className="text-[11px] text-text-muted-2 italic pt-1 leading-relaxed">
+        <strong>Auto step</strong> (
+        <Icon name="lock" size={9} className="inline" /> badge) terisi otomatis
+        dari event sistem — tidak bisa di-toggle manual. Untuk memaksa progress,
+        advance <strong>stage</strong> lewat Decision Pad / stage transition.
+        <br />
+        <strong>Manual step</strong> (tanpa badge) klik untuk done/pending, klik
+        kanan untuk skip.
       </li>
     </ul>
   );

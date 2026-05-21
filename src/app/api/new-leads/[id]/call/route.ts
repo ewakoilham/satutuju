@@ -2,8 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_DECISIONS, type LeadDecision } from "@/lib/leads/types";
+import { LEAD_DECISIONS, type LeadDecision, type LeadStage, type StepAutoTrigger } from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
+import { completeStepByTrigger } from "@/lib/leads/step-helpers";
+
+/**
+ * When admin marks the call completed, the lead's next stage is driven
+ * by the decision they recorded:
+ *
+ *   proceed             → deposit_pending  (invoice to send, awaiting payment)
+ *   waitlist            → waitlist         (hold for now, reminder in 2 weeks)
+ *   declined_by_student → declined         (lead withdrew)
+ *   rejected_by_us      → rejected         (we declined; archive)
+ *   (no decision)       → call_completed   (legacy behavior — keep stage at call_completed)
+ *
+ * Auto-firing the right downstream pipeline step trigger too, so the
+ * checklist stays in sync without manual ticks.
+ */
+function nextStageForDecision(decision: LeadDecision | null | undefined): LeadStage {
+  switch (decision) {
+    case "proceed":             return "deposit_pending";
+    case "waitlist":            return "waitlist";
+    case "declined_by_student": return "declined";
+    case "rejected_by_us":      return "rejected";
+    default:                    return "call_completed";
+  }
+}
+const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
+  deposit_pending: "deposit_pending",
+};
 
 /**
  * Persist call panel data + (optionally) advance stage to call_completed.
@@ -85,13 +112,19 @@ export async function PATCH(
     }
   }
 
-  // Optional: advance stage to call_completed
+  // Optional: advance stage based on decision when admin marks call completed.
   let stageAdvanced = false;
+  let nextStage: LeadStage | null = null;
   if (body.markCompleted === true) {
     if (lead.stage === "call_scheduled" || lead.stage === "call_completed") {
-      update.stage = "call_completed";
+      // Use the resolved decision (from this PATCH or the existing one
+      // on the lead) to pick the next stage.
+      const resolvedDecision = (update.decision as LeadDecision | null | undefined)
+        ?? (lead.decision as LeadDecision | null | undefined);
+      nextStage = nextStageForDecision(resolvedDecision);
+      update.stage = nextStage;
       update.callCompletedAt = new Date().toISOString();
-      stageAdvanced = lead.stage !== "call_completed";
+      stageAdvanced = lead.stage !== nextStage;
     } else {
       return NextResponse.json(
         { error: `Cannot mark completed: current stage is "${lead.stage}", expected "call_scheduled"` },
@@ -108,17 +141,25 @@ export async function PATCH(
     .single();
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
-  if (stageAdvanced) {
+  if (stageAdvanced && nextStage) {
     await supabase.from("LeadStageHistory").insert({
       id: newStageHistoryId(),
       leadId: id,
       fromStage: lead.stage,
-      toStage: "call_completed",
+      toStage: nextStage,
       changedBy: user.userId,
       note: `Call completed${update.decision ? ` · decision: ${update.decision}` : ""}${update.readinessScore !== undefined ? ` · readiness: ${update.readinessScore}/5` : ""}`,
       createdAt: new Date().toISOString(),
     });
+
+    // Fire downstream pipeline step trigger for the new stage (e.g.
+    // moving to deposit_pending checks the "Menunggu Konfirmasi Deposit"
+    // step). No-op for stages without a listening step.
+    const stepTrigger = STAGE_TO_STEP_TRIGGER[nextStage];
+    if (stepTrigger) {
+      await completeStepByTrigger(id, stepTrigger).catch(() => {});
+    }
   }
 
-  return NextResponse.json({ lead: updated, stageAdvanced });
+  return NextResponse.json({ lead: updated, stageAdvanced, nextStage });
 }

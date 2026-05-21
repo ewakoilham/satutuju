@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_STAGES } from "@/lib/leads/types";
+import { LEAD_STAGES, type StepAutoTrigger } from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
+import { completeStepByTrigger } from "@/lib/leads/step-helpers";
+
+/**
+ * Map of stage → pipeline-step autoTrigger that should fire when the
+ * lead enters that stage. Kept small & explicit so adding a stage to
+ * the funnel doesn't accidentally wire up an unintended step.
+ */
+const STAGE_TO_STEP_TRIGGER: Partial<Record<string, StepAutoTrigger>> = {
+  call_scheduled:  "call_scheduled",
+  deposit_pending: "deposit_pending",
+  deposit_paid:    "deposit_paid",
+  matched:         "matched",
+};
 
 /**
  * Change a lead's stage. Writes a LeadStageHistory row capturing the
@@ -69,6 +82,15 @@ export async function PATCH(
     note,
     createdAt: now,
   });
+
+  // Auto-complete any pipeline step whose autoTrigger matches this
+  // stage transition (e.g. moving to deposit_paid ticks the
+  // "Bersedia Membayar Deposit" step). Helper is no-op if no step
+  // listens for the trigger.
+  const trigger = STAGE_TO_STEP_TRIGGER[newStage];
+  if (trigger) {
+    await completeStepByTrigger(id, trigger).catch(() => {});
+  }
 
   return NextResponse.json({ lead, changed: true });
 }

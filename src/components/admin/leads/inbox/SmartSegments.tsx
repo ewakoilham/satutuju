@@ -20,6 +20,8 @@ export type SegmentId =
   | "wait"
   | "engaged"
   | "hot"
+  | "deposit_pending"
+  | "deposit_paid"
   | "review"
   | "won";
 
@@ -34,13 +36,15 @@ interface SegmentDef {
 }
 
 export const SEGMENTS: SegmentDef[] = [
-  { id: "all",     label: "Semua",             icon: "inbox",    iconColor: "text-text-muted-2", buckets: [], stages: [] },
-  { id: "new",     label: "Belum dikontak",    icon: "sparkles", iconColor: "text-primary",      buckets: [], stages: ["new"] },
-  { id: "wait",    label: "Menunggu respons",  icon: "clock",    iconColor: "text-text-muted-2", buckets: [], stages: ["outreach_sent"] },
-  { id: "engaged", label: "Engaged",           icon: "fire",     iconColor: "text-orange-600",   buckets: [], stages: ["whatsapp_read", "email_opened", "email_clicked"] },
-  { id: "hot",     label: "Hot — siap call",   icon: "flag",     iconColor: "text-violet-600",   buckets: [], stages: ["call_scheduled", "call_completed", "deposit_pending"] },
-  { id: "review",  label: "Butuh review",      icon: "flag",     iconColor: "text-slate-500",    buckets: ["incomplete", "unclassified"], stages: [] },
-  { id: "won",     label: "Won",               icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid", "matched"] },
+  { id: "all",             label: "Semua",                       icon: "inbox",    iconColor: "text-text-muted-2", buckets: [], stages: [] },
+  { id: "new",             label: "Belum dikontak",              icon: "sparkles", iconColor: "text-primary",      buckets: [], stages: ["new"] },
+  { id: "wait",            label: "Menunggu respons",            icon: "clock",    iconColor: "text-text-muted-2", buckets: [], stages: ["outreach_sent"] },
+  { id: "engaged",         label: "Engaged",                     icon: "fire",     iconColor: "text-orange-600",   buckets: [], stages: ["whatsapp_read", "email_opened", "email_clicked"] },
+  { id: "hot",             label: "Hot — siap call",             icon: "flag",     iconColor: "text-violet-600",   buckets: [], stages: ["call_scheduled", "call_completed"] },
+  { id: "deposit_pending", label: "Menunggu konfirmasi deposit", icon: "clock",    iconColor: "text-amber-600",    buckets: [], stages: ["deposit_pending"] },
+  { id: "deposit_paid",    label: "Bersedia membayar deposit",   icon: "tag",      iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid"] },
+  { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
+  { id: "won",             label: "Lolos seleksi",               icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["matched"] },
 ];
 
 const BUCKET_DESC: Record<LeadBucket, string> = {

@@ -256,12 +256,12 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
     .update({ lastSyncAt: nowIso, updatedAt: nowIso })
     .eq("id", "singleton");
 
-  // No step trigger uses "call_scheduled" by default but keeping the
-  // hook here if admin adds one later via the Pipeline manager.
+  // Auto-complete the "Schedule initial call" pipeline step for every
+  // lead whose stage just advanced to call_scheduled. Safe to call for
+  // matches whose stage was already past call_scheduled — the helper
+  // only flips pending rows.
   for (const m of matches) {
-    await completeStepByTrigger(m.leadId, "matched").catch(() => {
-      /* noop — no step listens for matched at this stage */
-    });
+    await completeStepByTrigger(m.leadId, "call_scheduled").catch(() => {});
   }
 
   return {

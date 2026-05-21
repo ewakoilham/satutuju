@@ -17,11 +17,14 @@ interface StepsResponse {
 
 const TRIGGER_LABEL: Record<StepAutoTrigger | "manual", string> = {
   manual: "Manual",
+  classified: "Auto: lead classified",
   email_sent: "Auto: email sent",
   email_opened: "Auto: email opened",
   email_clicked: "Auto: email clicked",
   whatsapp_sent: "Auto: WhatsApp sent",
   whatsapp_read: "Auto: WhatsApp read",
+  call_scheduled: "Auto: call scheduled",
+  deposit_pending: "Auto: deposit pending",
   deposit_paid: "Auto: deposit paid",
   matched: "Auto: matched",
 };
