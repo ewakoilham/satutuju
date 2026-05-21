@@ -31,15 +31,19 @@ const TRIGGER_LABEL: Record<string, string> = {
 };
 
 /**
- * Subset of auto-triggers that correspond 1:1 to a LeadStage value.
- * Clicking such a step on an admin row means "advance the lead's
- * stage" — we hit /stage which then auto-fires the step via the
- * STAGE_TO_STEP_TRIGGER map on the server. Event-driven triggers
- * (email/WA sends, classified) intentionally don't map to a stage,
- * so they remain read-only.
+ * Subset of auto-triggers that correspond 1:1 to a LeadStage AND
+ * should be admin-clickable from the checklist. Clicking such a step
+ * hits /stage with the target stage, server auto-fires the step.
+ *
+ * Steps explicitly EXCLUDED from this list (still stage-mapped on the
+ * server, just not clickable from the checklist):
+ *   - call_scheduled — owned by Google Calendar booking flow. Admin
+ *     should not be able to fake-advance "call scheduled" without a
+ *     real calendar event. Stays read-only ("Auto · Stage → call
+ *     scheduled" badge). The sync-from-calendar cron + manual stage
+ *     dropdown still trigger the step normally.
  */
 const STAGE_DRIVEN_TRIGGER: Record<string, string> = {
-  call_scheduled:  "call_scheduled",
   deposit_pending: "deposit_pending",
   deposit_agreed:  "deposit_agreed",
   deposit_paid:    "deposit_paid",
