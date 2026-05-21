@@ -264,11 +264,21 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
                 </span>
                 {isAuto && (
                   <span
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary"
-                    title={`Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      isClickableAuto
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-primary-50 text-primary"
+                    }`}
+                    title={
+                      isClickableAuto
+                        ? `Manual: klik untuk advance stage ke "${STAGE_PRETTY[stageTarget!] ?? stageTarget}". Step akan auto-check setelah stage berubah.`
+                        : `Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`
+                    }
                   >
-                    <Icon name="lock" size={9} />
-                    Auto · {triggerLabel}
+                    <Icon name={isClickableAuto ? "arrow-right" : "lock"} size={9} />
+                    {isClickableAuto
+                      ? `Klik → ${STAGE_PRETTY[stageTarget!] ?? stageTarget}`
+                      : `Auto · ${triggerLabel}`}
                   </span>
                 )}
               </div>
