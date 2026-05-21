@@ -21,6 +21,7 @@ export type SegmentId =
   | "engaged"
   | "hot"
   | "deposit_pending"
+  | "deposit_agreed"
   | "deposit_paid"
   | "review"
   | "won";
@@ -42,7 +43,8 @@ export const SEGMENTS: SegmentDef[] = [
   { id: "engaged",         label: "Engaged",                     icon: "fire",     iconColor: "text-orange-600",   buckets: [], stages: ["whatsapp_read", "email_opened", "email_clicked"] },
   { id: "hot",             label: "Hot — siap call",             icon: "flag",     iconColor: "text-violet-600",   buckets: [], stages: ["call_scheduled", "call_completed"] },
   { id: "deposit_pending", label: "Menunggu konfirmasi deposit", icon: "clock",    iconColor: "text-amber-600",    buckets: [], stages: ["deposit_pending"] },
-  { id: "deposit_paid",    label: "Bersedia membayar deposit",   icon: "tag",      iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid"] },
+  { id: "deposit_agreed",  label: "Bersedia membayar deposit",   icon: "tag",      iconColor: "text-lime-600",     buckets: [], stages: ["deposit_agreed"] },
+  { id: "deposit_paid",    label: "Deposit lunas",                icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid"] },
   { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
   { id: "won",             label: "Lolos seleksi",               icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["matched"] },
 ];

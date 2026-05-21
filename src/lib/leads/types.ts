@@ -12,8 +12,9 @@ export const LEAD_STAGES = [
   "email_clicked",   // Lead clicked a link inside the email
   "call_scheduled",
   "call_completed",
-  "deposit_pending",
-  "deposit_paid",
+  "deposit_pending",  // invoice sent, awaiting mentee confirmation (24h SLA)
+  "deposit_agreed",   // mentee confirmed willingness to pay, transfer not yet received
+  "deposit_paid",     // deposit lunas — transfer confirmed
   "matched",
   "declined",
   "waitlist",
@@ -52,16 +53,17 @@ export const PARSED_FIELDS = ["STEM", "Business", "unclear"] as const;
 export type ParsedField = (typeof PARSED_FIELDS)[number];
 
 export const STEP_AUTO_TRIGGERS = [
-  "classified",       // fired when lead is created + auto-classified (Tally sync or manual entry)
+  "classified",        // fired when lead is created + auto-classified (Tally sync or manual entry)
   "email_sent",
   "email_opened",
   "email_clicked",
   "whatsapp_sent",
   "whatsapp_read",
-  "call_scheduled",   // fired when Google Calendar sync detects a booking
-  "deposit_pending",  // fired when stage advances to deposit_pending
-  "deposit_paid",     // fired when stage advances to deposit_paid
-  "matched",          // fired when admin matches a mentor
+  "call_scheduled",    // fired when Google Calendar sync detects a booking
+  "deposit_pending",   // fired when stage advances to deposit_pending
+  "deposit_agreed",    // fired when stage advances to deposit_agreed
+  "deposit_paid",      // fired when stage advances to deposit_paid
+  "matched",           // fired when admin matches a mentor
 ] as const;
 export type StepAutoTrigger = (typeof STEP_AUTO_TRIGGERS)[number];
 

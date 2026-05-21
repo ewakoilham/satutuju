@@ -25,7 +25,8 @@ const TRIGGER_LABEL: Record<StepAutoTrigger | "manual", string> = {
   whatsapp_read: "Auto: WhatsApp read",
   call_scheduled: "Auto: call scheduled",
   deposit_pending: "Auto: deposit pending",
-  deposit_paid: "Auto: deposit paid",
+  deposit_agreed: "Auto: bersedia bayar",
+  deposit_paid: "Auto: deposit lunas",
   matched: "Auto: matched",
 };
 

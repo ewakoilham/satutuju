@@ -14,6 +14,7 @@ import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 const STAGE_TO_STEP_TRIGGER: Partial<Record<string, StepAutoTrigger>> = {
   call_scheduled:  "call_scheduled",
   deposit_pending: "deposit_pending",
+  deposit_agreed:  "deposit_agreed",
   deposit_paid:    "deposit_paid",
   matched:         "matched",
 };

@@ -385,7 +385,8 @@ enum LeadStage {
   call_scheduled
   call_completed
   deposit_pending
-  deposit_paid
+  deposit_agreed     // mentee confirmed willingness to pay deposit, transfer not yet in
+  deposit_paid       // deposit lunas — transfer confirmed
   matched
   declined
   waitlist

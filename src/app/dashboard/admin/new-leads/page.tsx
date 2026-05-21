@@ -71,6 +71,7 @@ function computeSegmentCounts(
     engaged:         sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
     hot:             sum(["call_scheduled", "call_completed"], stageCounts),
     deposit_pending: stageCounts.deposit_pending ?? 0,
+    deposit_agreed:  stageCounts.deposit_agreed ?? 0,
     deposit_paid:    stageCounts.deposit_paid ?? 0,
     review:          bucketCounts.unclassified ?? 0,
     won:             stageCounts.matched ?? 0,
