@@ -20,6 +20,7 @@ export const LEAD_SELECT_COLUMNS =
   '"submittedAt", "tallySubmissionId", bucket, "bucketReason", ' +
   '"parsedCountry", "parsedCampus", "parsedField", "isCampusPartner", "hasCountryMentor", ' +
   'stage, "outreachSentAt", "emailOpenedAt", "emailClickedAt", ' +
+  '"whatsappSentAt", "whatsappReadAt", ' +
   '"callScheduledAt", "callCompletedAt", "calendarEventId", "assignedInterviewer", "depositTier", ' +
   '"readinessScore", "callNotes", "redFlags", decision, "mentorMatchedId", ' +
   '"createdAt", "updatedAt"';

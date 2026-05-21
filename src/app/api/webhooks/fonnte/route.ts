@@ -127,22 +127,20 @@ export async function POST(req: NextRequest) {
           .update({ openedAt: now })
           .eq("id", outreach.id);
       }
-      // 2. Advance Lead.stage → whatsapp_read (monotonic, idempotent).
-      //    We do NOT mirror to Lead.emailOpenedAt — that's email-specific.
-      //    WhatsApp read engagement is captured by OutreachLog.openedAt
-      //    on the whatsapp-channel row above + the stage itself.
+      // 2. Mirror to Lead.whatsappReadAt + advance stage → whatsapp_read
+      //    (monotonic, idempotent).
       const { data: lead } = await supabase
         .from("Lead")
-        .select("stage")
+        .select("stage, whatsappReadAt")
         .eq("id", leadId)
         .single();
       if (lead) {
+        const leadPatch: Record<string, unknown> = { updatedAt: now };
+        if (!lead.whatsappReadAt) leadPatch.whatsappReadAt = now;
+
         const nextStage = maybeAdvanceStage(lead.stage as string, "whatsapp_read");
         if (nextStage) {
-          await supabase
-            .from("Lead")
-            .update({ stage: nextStage, updatedAt: now })
-            .eq("id", leadId);
+          leadPatch.stage = nextStage;
           await supabase.from("LeadStageHistory").insert({
             id: newStageHistoryId(),
             leadId,
@@ -152,6 +150,9 @@ export async function POST(req: NextRequest) {
             note: "WhatsApp read (Fonnte webhook)",
             createdAt: now,
           });
+        }
+        if (Object.keys(leadPatch).length > 1) {
+          await supabase.from("Lead").update(leadPatch).eq("id", leadId);
         }
       }
       // 3. Auto-complete steps listening for whatsapp_read.

@@ -128,6 +128,7 @@ export async function sendLeadWhatsapp(
   let stageAdvanced = false;
   const leadPatch: Record<string, unknown> = {
     outreachSentAt: now,
+    whatsappSentAt: now,
     updatedAt: now,
   };
   if (currentStage === "new") {

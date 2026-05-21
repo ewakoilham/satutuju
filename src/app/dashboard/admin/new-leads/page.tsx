@@ -970,8 +970,11 @@ export default function NewLeadsListPage() {
             <tbody>
               {data.leads.map((lead) => {
                 const prog = data.progress[lead.id] ?? { done: 0, total: 0 };
-                const opened = lead.emailOpenedAt !== null;
-                const clicked = lead.emailClickedAt !== null;
+                const emailSent = lead.outreachSentAt !== null;
+                const emailOpened = lead.emailOpenedAt !== null;
+                const emailClicked = lead.emailClickedAt !== null;
+                const waSent = lead.whatsappSentAt !== null;
+                const waRead = lead.whatsappReadAt !== null;
                 const isExpanded = expandedId === lead.id;
                 return (
                   <Fragment key={lead.id}>
@@ -1029,20 +1032,41 @@ export default function NewLeadsListPage() {
                       </div>
                     </td>
                     <td className="px-3 py-3 hidden lg:table-cell">
-                      <div className="flex items-center gap-1 text-text-muted-2">
-                        {opened ? (
-                          <span title={`Opened ${lead.emailOpenedAt}`} className="text-emerald-600">
-                            <Icon name="check" size={12} />
-                          </span>
-                        ) : null}
-                        {clicked ? (
-                          <span title={`Clicked ${lead.emailClickedAt}`} className="text-blue-600">
-                            <Icon name="link" size={12} />
-                          </span>
-                        ) : null}
-                        {!opened && !clicked && lead.outreachSentAt && (
-                          <span className="text-[10px] text-text-muted-2">sent, no open</span>
-                        )}
+                      <div className="flex items-center gap-2.5 text-text-muted-2 text-[11px]">
+                        {/* Email channel — blue/indigo */}
+                        <span
+                          className={`inline-flex items-center gap-0.5 ${
+                            emailClicked ? "text-indigo-700"
+                            : emailOpened ? "text-blue-700"
+                            : emailSent ? "text-text-muted-2"
+                            : "text-text-muted-2/40"
+                          }`}
+                          title={
+                            emailClicked ? `Email clicked ${lead.emailClickedAt}`
+                            : emailOpened ? `Email opened ${lead.emailOpenedAt}`
+                            : emailSent ? `Email sent ${lead.outreachSentAt} — not opened`
+                            : "Email not sent yet"
+                          }
+                        >
+                          <Icon name="mail" size={12} />
+                          {emailClicked ? "click" : emailOpened ? "open" : emailSent ? "sent" : "—"}
+                        </span>
+                        {/* WA channel — emerald */}
+                        <span
+                          className={`inline-flex items-center gap-0.5 ${
+                            waRead ? "text-emerald-700"
+                            : waSent ? "text-text-muted-2"
+                            : "text-text-muted-2/40"
+                          }`}
+                          title={
+                            waRead ? `WA read ${lead.whatsappReadAt}`
+                            : waSent ? `WA sent ${lead.whatsappSentAt} — not read yet`
+                            : "WA not sent yet"
+                          }
+                        >
+                          <Icon name="chat" size={12} />
+                          {waRead ? "read" : waSent ? "sent" : "—"}
+                        </span>
                       </div>
                     </td>
                     <td className="px-3 py-3 hidden xl:table-cell text-xs text-text-muted-2">

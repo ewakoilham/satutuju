@@ -415,6 +415,11 @@ model Lead {
   outreachSentAt         DateTime?
   emailOpenedAt          DateTime?
   emailClickedAt         DateTime?
+  // WA engagement timestamps — denormalized from OutreachLog so the
+  // list endpoint can show per-channel state without aggregation.
+  // Mirrors the email* fields above.
+  whatsappSentAt         DateTime?
+  whatsappReadAt         DateTime?
   callScheduledAt        DateTime?
   callCompletedAt        DateTime?
   // Google Calendar event ID for the most recent call_scheduled booking.

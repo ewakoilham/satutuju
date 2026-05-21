@@ -110,6 +110,8 @@ export interface Lead {
   outreachSentAt: string | null;
   emailOpenedAt: string | null;
   emailClickedAt: string | null;
+  whatsappSentAt: string | null;
+  whatsappReadAt: string | null;
   callScheduledAt: string | null;
   callCompletedAt: string | null;
   calendarEventId: string | null;
