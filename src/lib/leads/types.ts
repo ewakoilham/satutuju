@@ -55,6 +55,7 @@ export const STEP_AUTO_TRIGGERS = [
   "email_opened",
   "email_clicked",
   "whatsapp_sent",
+  "whatsapp_read",
   "deposit_paid",
   "matched",
 ] as const;

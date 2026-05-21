@@ -21,6 +21,7 @@ const TRIGGER_LABEL: Record<StepAutoTrigger | "manual", string> = {
   email_opened: "Auto: email opened",
   email_clicked: "Auto: email clicked",
   whatsapp_sent: "Auto: WhatsApp sent",
+  whatsapp_read: "Auto: WhatsApp read",
   deposit_paid: "Auto: deposit paid",
   matched: "Auto: matched",
 };
