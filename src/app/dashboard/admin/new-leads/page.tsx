@@ -1,25 +1,38 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
-import { SkeletonTable } from "@/components/ui/Skeleton";
 import Modal from "@/components/ui/Modal";
-import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
-import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
-import LeadRowExpanded from "@/components/admin/leads/LeadRowExpanded";
-import BulkActionBar from "@/components/admin/leads/BulkActionBar";
-import SummaryCards from "@/components/admin/leads/SummaryCards";
 import {
   LEAD_BUCKETS,
-  LEAD_STAGES,
-  FUNDING_PLANS,
   type Lead,
   type LeadBucket,
   type LeadStage,
-  type FundingPlan,
-  fundingPlanLabelId,
 } from "@/lib/leads/types";
+import KpiStrip from "@/components/admin/leads/inbox/KpiStrip";
+import SmartSegments, {
+  SEGMENTS,
+  type SegmentId,
+} from "@/components/admin/leads/inbox/SmartSegments";
+import LeadInboxRow from "@/components/admin/leads/inbox/LeadInboxRow";
+import LeadDetailPanel from "@/components/admin/leads/inbox/LeadDetailPanel";
+
+/**
+ * Smart Inbox — email-client style triage layout for the admin leads
+ * pipeline. Three columns:
+ *
+ *   ┌────────────┬────────────────────────────┬──────────────┐
+ *   │ Segments + │  Lead list (dense rows)    │  Detail      │
+ *   │ Bucket     │  KPI strip + search        │  panel       │
+ *   │ filter     │  Bulk action header        │  (slide-over)│
+ *   └────────────┴────────────────────────────┴──────────────┘
+ *
+ * Smart segments collapse the legacy "13 stage filter chips" wall into
+ * 7 curated views. Bucket filter chips become a per-bucket count list
+ * in the sidebar. Detail panel shows AI brief + pipeline checklist +
+ * activity timeline without leaving the page.
+ */
 
 interface ListResponse {
   leads: Lead[];
@@ -28,70 +41,67 @@ interface ListResponse {
   bucketCounts: Record<string, number>;
 }
 
-/** Selectable page-size options. API caps at 200 (see /api/new-leads
- *  route.ts), so don't add larger values without raising that ceiling. */
+interface StatsLite {
+  bucketCounts: Record<string, number>;
+  stageCounts: Record<string, number>;
+}
+
+/** Selectable page-size options. API caps at 200. */
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
 const DEFAULT_PAGE_SIZE = 50;
 
-function FilterChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
-        active
-          ? "bg-primary text-white"
-          : "bg-surface border border-border text-text-muted hover:border-primary-200"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
+const SEGMENT_BY_ID = new Map(SEGMENTS.map((s) => [s.id, s]));
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "baru saja";
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  const d = Math.floor(hr / 24);
-  if (d < 30) return `${d}d`;
-  const mo = Math.floor(d / 30);
-  return `${mo}b`;
+/** Compute the count for each segment from the global stats endpoint
+ *  (which already returns stageCounts + bucketCounts). Stays accurate
+ *  across paginated views. */
+function computeSegmentCounts(
+  stats: StatsLite | null,
+  total: number,
+): Record<SegmentId, number> {
+  const stageCounts = stats?.stageCounts ?? {};
+  const bucketCounts = stats?.bucketCounts ?? {};
+  const sum = (keys: string[], src: Record<string, number>) =>
+    keys.reduce((a, k) => a + (src[k] ?? 0), 0);
+  return {
+    all:     total,
+    new:     stageCounts.new ?? 0,
+    wait:    stageCounts.outreach_sent ?? 0,
+    engaged: sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
+    hot:     sum(["call_scheduled", "call_completed", "deposit_pending"], stageCounts),
+    review:  sum(["incomplete", "unclassified"], bucketCounts),
+    won:     sum(["deposit_paid", "matched"], stageCounts),
+  };
 }
 
 export default function NewLeadsListPage() {
+  // ── List data ─────────────────────────────────────────────────────
   const [data, setData] = useState<ListResponse | null>(null);
+  const [stats, setStats] = useState<StatsLite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Filter state ──────────────────────────────────────────────────
+  const [activeSegment, setActiveSegment] = useState<SegmentId>("all");
   const [bucketFilter, setBucketFilter] = useState<Set<LeadBucket>>(new Set());
-  const [stageFilter, setStageFilter]   = useState<Set<LeadStage>>(new Set());
-  const [fundingFilter, setFundingFilter] = useState<Set<FundingPlan>>(new Set());
+  const [stageFilter, setStageFilter] = useState<Set<LeadStage>>(new Set());
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // ── Pagination ────────────────────────────────────────────────────
   const [offset, setOffset] = useState(0);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  // Bumped only after mutations (create / bulk action / sync). Drives
-  // SummaryCards refresh — avoids re-fetching /stats on every paginate.
-  const [mutationTick, setMutationTick] = useState(0);
-  const bumpMutationTick = () => setMutationTick((t) => t + 1);
+
+  // ── Detail slide-over ─────────────────────────────────────────────
+  const [openLead, setOpenLead] = useState<Lead | null>(null);
+
+  // ── Sync state ────────────────────────────────────────────────────
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [mutationTick, setMutationTick] = useState(0);
+  const bumpMutationTick = () => setMutationTick((t) => t + 1);
 
-  // Google Calendar integration state — null while loading, false when not
-  // connected (show "Connect" button), object when connected (show "Sync").
+  // Google Calendar OAuth status
   const [calendarAuth, setCalendarAuth] = useState<
     | { connected: false }
     | { connected: true; googleEmail: string | null; connectedAt: string; lastSyncAt: string | null }
@@ -99,49 +109,39 @@ export default function NewLeadsListPage() {
   >(null);
   const [calendarSyncing, setCalendarSyncing] = useState(false);
 
-  // Bulk selection state — tracks IDs across all pages (Set is cheap +
-  // survives pagination). Cleared on filter change so admin doesn't
-  // accidentally fire outreach to leads they can no longer see.
+  // ── Bulk selection ────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkChannel, setBulkChannel] = useState<"email" | "whatsapp" | "both">("both");
   const [bulkResult, setBulkResult] = useState<
     { channelsSent: number; channelsFailed: number; channelsSkipped: number; leadsSent: number } | null
   >(null);
-  // Channel picker for bulk reachout. "both" by default. Whenever ≥1
-  // selected lead lacks whatsappNumber, the UI surfaces a warning + the
-  // API server-side skips that lead's WA channel automatically.
-  const [bulkChannel, setBulkChannel] = useState<"email" | "whatsapp" | "both">("both");
-  // When ON, the bulk send filters out leads with outreachSentAt !== null
-  // so admin doesn't accidentally double-send. Defaults to true the moment
-  // the confirm modal opens (set in onSendOutreach handler) — see below.
   const [skipAlreadySent, setSkipAlreadySent] = useState(true);
 
-  // Other bulk-action modal state
+  // Other bulk-action modals
   const [moveBucketOpen, setMoveBucketOpen] = useState(false);
   const [moveBucketTarget, setMoveBucketTarget] = useState<LeadBucket | "">("");
   const [moveBucketReason, setMoveBucketReason] = useState("");
   const [assignInterviewerOpen, setAssignInterviewerOpen] = useState(false);
   const [assignInterviewerName, setAssignInterviewerName] = useState("");
 
-  // Debounce search input
+  // ── Effects ────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset to first page when filters change OR page size changes —
-  // staying on offset=N with a different page size lands the admin on
-  // a weird position in the list.
+  // Reset pagination when filters change.
   useEffect(() => {
     setOffset(0);
-  }, [bucketFilter, stageFilter, fundingFilter, debouncedSearch, pageSize]);
+  }, [bucketFilter, stageFilter, debouncedSearch, pageSize, activeSegment]);
 
-  // Clear bulk selection when filters change — selected leads may no
-  // longer be visible, and acting on hidden rows is confusing UX.
+  // Clear bulk selection on filter change (otherwise admin can act on
+  // rows they can no longer see — confusing).
   useEffect(() => {
     setSelected(new Set());
-  }, [bucketFilter, stageFilter, fundingFilter, debouncedSearch]);
+  }, [bucketFilter, stageFilter, debouncedSearch, activeSegment]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -149,7 +149,6 @@ export default function NewLeadsListPage() {
     const params = new URLSearchParams();
     bucketFilter.forEach((b) => params.append("bucket", b));
     stageFilter.forEach((s) => params.append("stage", s));
-    fundingFilter.forEach((f) => params.append("funding", f));
     if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("limit", String(pageSize));
     params.set("offset", String(offset));
@@ -172,20 +171,68 @@ export default function NewLeadsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [bucketFilter, stageFilter, fundingFilter, debouncedSearch, offset, pageSize]);
+  }, [bucketFilter, stageFilter, debouncedSearch, offset, pageSize]);
 
   useEffect(() => {
     void fetchList();
   }, [fetchList]);
 
+  // Lightweight stats fetch for KPI + sidebar counts. Refreshes only on
+  // mutation (not on every pagination).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/new-leads/stats", { credentials: "include", cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled || !j) return;
+        setStats({ bucketCounts: j.bucketCounts ?? {}, stageCounts: j.stageCounts ?? {} });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [mutationTick]);
+
+  // Google Calendar status probe + OAuth callback toast.
+  const fetchCalendarStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/new-leads/calendar-auth-status", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        setCalendarAuth({ connected: false });
+        return;
+      }
+      setCalendarAuth(await res.json());
+    } catch {
+      setCalendarAuth({ connected: false });
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchCalendarStatus();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get("google");
+      if (status === "connected") {
+        const email = params.get("email") || "Google account";
+        setSyncMsg({ kind: "ok", text: `Connected to ${email} ✓` });
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (status === "error") {
+        const reason = params.get("reason") || "unknown";
+        setSyncMsg({ kind: "err", text: `Google connect failed: ${reason}` });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [fetchCalendarStatus]);
+
+  // ── Sync actions ──────────────────────────────────────────────────
   async function syncFromTally() {
     setSyncing(true);
     setSyncMsg(null);
     try {
-      const res = await fetch("/api/new-leads/sync", {
-        method: "POST",
-        credentials: "include",
-      });
+      const res = await fetch("/api/new-leads/sync", { method: "POST", credentials: "include" });
       const json = await res.json();
       if (!res.ok) {
         setSyncMsg({ kind: "err", text: json.error || `HTTP ${res.status}` });
@@ -208,53 +255,11 @@ export default function NewLeadsListPage() {
     }
   }
 
-  // ── Google Calendar integration ─────────────────────────────────────
-  // Probe connection status on mount + after OAuth callback returns
-  // with ?google=connected. Lightweight endpoint that never exposes the
-  // refresh token.
-  const fetchCalendarStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/new-leads/calendar-auth-status", {
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        setCalendarAuth({ connected: false });
-        return;
-      }
-      setCalendarAuth(await res.json());
-    } catch {
-      setCalendarAuth({ connected: false });
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchCalendarStatus();
-    // Surface the OAuth callback result as a toast.
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const status = params.get("google");
-      if (status === "connected") {
-        const email = params.get("email") || "Google account";
-        setSyncMsg({ kind: "ok", text: `Connected to ${email} ✓` });
-        // Clean the URL so refresh doesn't re-show the toast.
-        window.history.replaceState({}, "", window.location.pathname);
-      } else if (status === "error") {
-        const reason = params.get("reason") || "unknown";
-        setSyncMsg({ kind: "err", text: `Google connect failed: ${reason}` });
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    }
-  }, [fetchCalendarStatus]);
-
   async function syncFromCalendar() {
     setCalendarSyncing(true);
     setSyncMsg(null);
     try {
-      const res = await fetch("/api/new-leads/calendar-sync", {
-        method: "POST",
-        credentials: "include",
-      });
+      const res = await fetch("/api/new-leads/calendar-sync", { method: "POST", credentials: "include" });
       const json = await res.json();
       if (!res.ok) {
         setSyncMsg({ kind: "err", text: json.error || `HTTP ${res.status}` });
@@ -277,7 +282,19 @@ export default function NewLeadsListPage() {
     }
   }
 
-  function toggleBucket(b: LeadBucket) {
+  // ── Segment + bucket filter wiring ────────────────────────────────
+  function selectSegment(id: SegmentId) {
+    const seg = SEGMENT_BY_ID.get(id);
+    if (!seg) return;
+    setActiveSegment(id);
+    setBucketFilter(new Set(seg.buckets));
+    setStageFilter(new Set(seg.stages));
+    setOpenLead(null);
+  }
+
+  function toggleBucketFilter(b: LeadBucket) {
+    setActiveSegment("all"); // user is overriding the segment
+    setStageFilter(new Set());
     setBucketFilter((s) => {
       const next = new Set(s);
       if (next.has(b)) next.delete(b);
@@ -285,89 +302,11 @@ export default function NewLeadsListPage() {
       return next;
     });
   }
-  function toggleStage(s: LeadStage) {
-    setStageFilter((cur) => {
-      const next = new Set(cur);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
-  }
-  function toggleFunding(f: FundingPlan) {
-    setFundingFilter((cur) => {
-      const next = new Set(cur);
-      if (next.has(f)) next.delete(f);
-      else next.add(f);
-      return next;
-    });
-  }
 
-  const total = data?.total ?? 0;
-  const pageStart = total === 0 ? 0 : offset + 1;
-  const pageEnd = Math.min(offset + pageSize, total);
-  const hasPrev = offset > 0;
-  const hasNext = offset + pageSize < total;
-
-  function renderPagination(position: "top" | "bottom") {
-    // Always render at least the page-size selector — even when total
-    // fits on one page admin may want to switch to "200 per page" to
-    // batch-select more leads at once.
-    if (!data) return null;
-    const borderClass = position === "top" ? "border-b" : "border-t";
-    const showNav = data.total > pageSize;
-    return (
-      <div className={`flex items-center justify-between p-3 gap-3 flex-wrap ${borderClass} border-border/60 bg-surface-elevated/30`}>
-        <div className="flex items-center gap-3 flex-wrap text-xs text-text-muted-2">
-          {showNav && (
-            <span>
-              Halaman {Math.floor(offset / pageSize) + 1} dari {Math.ceil(total / pageSize)}
-              <span className="hidden sm:inline"> · {pageStart}–{pageEnd} dari {total}</span>
-            </span>
-          )}
-          <label className="inline-flex items-center gap-1.5">
-            <span>Per halaman:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
-              className="text-xs bg-surface border border-border rounded px-1.5 py-0.5 text-foreground hover:border-primary-200 focus:outline-none focus:border-primary"
-            >
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {showNav && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!hasPrev}
-              onClick={() => setOffset(Math.max(0, offset - pageSize))}
-              className="btn-ghost text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
-            >
-              <Icon name="chevron-left" size={12} /> Prev
-            </button>
-            <button
-              type="button"
-              disabled={!hasNext}
-              onClick={() => setOffset(offset + pageSize)}
-              className="btn-ghost text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
-            >
-              Next <Icon name="chevron-right" size={12} />
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Bucket counts moved to SummaryCards (which fetches its own /stats).
-
-  // ── Bulk-send wiring ───────────────────────────────────────────────────
+  // ── Bulk selection helpers ────────────────────────────────────────
   const visibleLeads = data?.leads ?? [];
   const visibleIds = visibleLeads.map((l) => l.id);
-  const allVisibleSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
   const someVisibleSelected = visibleIds.some((id) => selected.has(id));
 
   function toggleOne(id: string) {
@@ -390,23 +329,16 @@ export default function NewLeadsListPage() {
     });
   }
 
-  // Bucket distribution of selected leads — informs the confirm-modal
-  // preview ("3 A · 2 D · 1 incomplete") so admin sees what will fire.
   const bucketBreakdown = useMemo(() => {
     const out: Record<string, number> = {};
     for (const l of visibleLeads) {
       if (selected.has(l.id)) out[l.bucket] = (out[l.bucket] ?? 0) + 1;
     }
     return out;
-    // Recompute when selection or visible page changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, data?.leads]);
-  const willSkipUnclassified =
-    (bucketBreakdown["unclassified"] ?? 0);
+  const willSkipUnclassified = bucketBreakdown["unclassified"] ?? 0;
 
-  // Partition selection by prior-outreach status. `alreadySent` are leads
-  // with outreachSentAt set — when the skip toggle is on they get excluded
-  // from the bulk POST. `notSent` are leads with outreachSentAt === null.
   const { alreadySentIds, notSentIds } = useMemo(() => {
     const sent: string[] = [];
     const fresh: string[] = [];
@@ -418,11 +350,9 @@ export default function NewLeadsListPage() {
     return { alreadySentIds: sent, notSentIds: fresh };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, data?.leads]);
-
-  // The actual ID list that will be POSTed when admin confirms.
   const effectiveIds = skipAlreadySent ? notSentIds : Array.from(selected);
 
-  // ── Bulk: re-classify ────────────────────────────────────────────────
+  // ── Bulk actions ──────────────────────────────────────────────────
   async function runBulkReclassify() {
     if (selected.size === 0) return;
     if (!confirm(`Re-classify ${selected.size} leads dengan logika bucketing terbaru?`)) return;
@@ -451,7 +381,6 @@ export default function NewLeadsListPage() {
     }
   }
 
-  // ── Bulk: change bucket ──────────────────────────────────────────────
   async function runBulkChangeBucket() {
     if (selected.size === 0 || !moveBucketTarget || !moveBucketReason.trim()) return;
     setBulkBusy(true);
@@ -490,7 +419,6 @@ export default function NewLeadsListPage() {
     }
   }
 
-  // ── Bulk: assign interviewer ─────────────────────────────────────────
   async function runBulkAssignInterviewer() {
     if (selected.size === 0) return;
     const value = assignInterviewerName.trim();
@@ -500,10 +428,7 @@ export default function NewLeadsListPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leadIds: Array.from(selected),
-          interviewer: value || null,
-        }),
+        body: JSON.stringify({ leadIds: Array.from(selected), interviewer: value || null }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -529,11 +454,9 @@ export default function NewLeadsListPage() {
     }
   }
 
-  // ── Bulk: export CSV ─────────────────────────────────────────────────
   function runBulkExportCsv() {
     if (selected.size === 0) return;
     const ids = Array.from(selected).join(",");
-    // Browser navigation triggers the download via Content-Disposition.
     window.location.href = `/api/new-leads/export?ids=${encodeURIComponent(ids)}`;
   }
 
@@ -574,16 +497,78 @@ export default function NewLeadsListPage() {
     }
   }
 
+  // ── Single-lead inline reachout (from row hover or detail panel) ──
+  async function doSingleReachout(leadId: string, channel: "email" | "whatsapp" | "both") {
+    setBulkBusy(true); // reuse bulkBusy as global pending flag
+    try {
+      const channels =
+        channel === "both" ? ["email", "whatsapp"] :
+        channel === "whatsapp" ? ["whatsapp"] : ["email"];
+      const res = await fetch(`/api/new-leads/${leadId}/outreach`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channels }),
+      });
+      const json = await res.json();
+      type Outcome = { channel: string; status: "sent" | "failed" | "skipped"; error?: string; reason?: string };
+      const outcomes: Outcome[] = (json.outcomes ?? []);
+      const parts = outcomes.map((o) => {
+        const ch = o.channel === "whatsapp" ? "WA" : "Email";
+        if (o.status === "sent") return `${ch} ✓`;
+        if (o.status === "failed") return `${ch} gagal: ${o.error ?? "?"}`;
+        return `${ch} skip (${o.reason ?? "?"})`;
+      });
+      setSyncMsg({
+        kind: res.ok ? "ok" : "err",
+        text: parts.length > 0 ? parts.join(" · ") : (json.error || `HTTP ${res.status}`),
+      });
+      await fetchList();
+      bumpMutationTick();
+      setTimeout(() => setSyncMsg(null), 8000);
+    } catch (e) {
+      setSyncMsg({ kind: "err", text: e instanceof Error ? e.message : "Network error" });
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  function scheduleCallStub() {
+    setSyncMsg({
+      kind: "ok",
+      text: "Untuk schedule call, buka detail lead → Call Panel (Phase 5b).",
+    });
+    setTimeout(() => setSyncMsg(null), 4000);
+  }
+
+  // ── Pagination helpers ────────────────────────────────────────────
+  const total = data?.total ?? 0;
+  const pageStart = total === 0 ? 0 : offset + 1;
+  const pageEnd = Math.min(offset + pageSize, total);
+  const hasPrev = offset > 0;
+  const hasNext = offset + pageSize < total;
+
+  // Counts used by sidebar/segments. Falls back to data.bucketCounts
+  // when /stats hasn't returned yet.
+  const segmentCounts = computeSegmentCounts(stats, stats ? Object.values(stats.bucketCounts).reduce((a, b) => a + b, 0) : total);
+  const bucketCounts = stats?.bucketCounts ?? data?.bucketCounts ?? {};
+
+  const activeSeg = SEGMENT_BY_ID.get(activeSegment);
+  const segmentLabel = activeSeg?.label ?? "Semua";
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Page header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
-            New Leads
+            Leads
           </h1>
-          <p className="text-sm text-text-muted mt-1">
-            Tally submissions → bucketed → tracked through the pipeline checklist.
+          <p className="text-sm text-text-muted mt-0.5">
+            Tally → bucket → outreach → call → match.
+            {calendarAuth?.connected && calendarAuth.lastSyncAt && (
+              <> Last calendar sync {new Date(calendarAuth.lastSyncAt).toLocaleString("id-ID")}.</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -593,15 +578,12 @@ export default function NewLeadsListPage() {
             disabled={syncing}
             className="btn-primary inline-flex items-center gap-1.5 text-sm disabled:opacity-50"
           >
-            <Icon name="link" size={14} />
-            {syncing ? "Syncing..." : "Sync from Tally"}
+            <Icon name="refresh" size={14} />
+            {syncing ? "Syncing..." : "Sync Tally"}
           </button>
-
-          {/* Calendar: shows "Connect" until OAuth done, then "Sync" */}
           {calendarAuth === null ? (
             <button type="button" disabled className="btn-ghost inline-flex items-center gap-1.5 text-sm opacity-50">
-              <Icon name="calendar" size={14} />
-              Calendar…
+              <Icon name="calendar" size={14} /> Calendar…
             </button>
           ) : calendarAuth.connected ? (
             <button
@@ -609,31 +591,21 @@ export default function NewLeadsListPage() {
               onClick={syncFromCalendar}
               disabled={calendarSyncing}
               className="btn-ghost inline-flex items-center gap-1.5 text-sm disabled:opacity-50"
-              title={
-                "Connected as " + (calendarAuth.googleEmail ?? "—") +
-                (calendarAuth.lastSyncAt ? " · last sync " + new Date(calendarAuth.lastSyncAt).toLocaleString("id-ID") : " · never synced")
-              }
+              title={`Connected as ${calendarAuth.googleEmail ?? "—"}`}
             >
               <Icon name="calendar" size={14} />
-              {calendarSyncing ? "Syncing..." : "Sync from Calendar"}
+              {calendarSyncing ? "Syncing..." : "Sync Calendar"}
             </button>
           ) : (
-            <a
-              href="/api/auth/google"
-              className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-              title="Authorize Google Calendar read access (one-time)"
-            >
-              <Icon name="calendar" size={14} />
-              Connect Google Calendar
+            <a href="/api/auth/google" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
+              <Icon name="calendar" size={14} /> Connect Calendar
             </a>
           )}
-
-          <Link
-            href="/dashboard/admin/new-leads/pipeline"
-            className="btn-ghost inline-flex items-center gap-1.5 text-sm"
-          >
-            <Icon name="check" size={14} />
-            Manage steps
+          <Link href="/dashboard/admin/new-leads/new" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
+            <Icon name="plus" size={14} /> Tambah manual
+          </Link>
+          <Link href="/dashboard/admin/new-leads/pipeline" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
+            <Icon name="check" size={14} /> Manage steps
           </Link>
         </div>
       </div>
@@ -650,460 +622,10 @@ export default function NewLeadsListPage() {
         </div>
       )}
 
-      {/* Summary cards — aggregates across ALL leads. Refetches only on
-          mutations (bumpMutationTick called after sync/bulk/create), not
-          on every pagination — the totals don't change when you flip pages. */}
-      <SummaryCards refreshKey={mutationTick} />
-
-      {/* Mini-strip showing current page-scoped slice for orientation */}
-      {data && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-          <span>Showing {pageStart}–{pageEnd} of {total}</span>
-          {(bucketFilter.size > 0 || stageFilter.size > 0 || fundingFilter.size > 0 || debouncedSearch) && (
-            <span className="text-text-muted-2">· filters active (lihat hasil di tabel)</span>
-          )}
-        </div>
-      )}
-
-      {/* Bucket legend — collapsed by default. Click summary to expand. */}
-      <details className="card p-0 group/legend">
-        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="lightbulb" size={14} className="text-primary" />
-            Apa arti setiap bucket?
-          </span>
-          <Icon name="chevron-right" size={14} className="text-text-muted-2 transition-transform group-open/legend:rotate-90" />
-        </summary>
-        <div className="px-4 pb-4 pt-1 border-t border-border/60">
-          <ul className="grid gap-3 sm:grid-cols-2 text-sm">
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="A" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Mentor + partner kampus</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Negara mentee punya mentor kami + kampus tujuan ada di jaringan partner. Prioritas outreach tertinggi → outreach langsung → matching.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="B" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Hanya mentor (kampus belum partner)</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Mentor available di negara tujuan, tapi kampus spesifik mentee belum ada di jaringan partner. Bisa diproses dengan adjust ekspektasi atau saran kampus alternatif.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="C" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Hanya partner kampus (belum ada mentor)</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Kampus tujuan partner kami, tapi belum ada mentor dari negara tersebut. Bisa pakai mentor lintas-region atau tunda matching.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="D" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Tidak ada keduanya</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Belum ada mentor di negara tujuan + kampus tidak dalam jaringan partner. Outreach pakai template &ldquo;confirmation&rdquo; — kasih opsi alternatif region/kampus yang dicover.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="incomplete" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Form belum lengkap</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Kolom kampus &amp; negara tujuan tidak diisi di Tally. Outreach pakai template re-engagement — minta mentee melengkapi info supaya bisa diklasifikasi.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadBucketBadge bucket="domestic" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Target studi domestik (Indonesia)</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Mentee mengisi kampus di dalam negeri. Satu Tuju fokus study abroad — outreach pakai template polite decline + ajak daftar ulang kalau ada plan ke luar.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5 sm:col-span-2">
-              <LeadBucketBadge bucket="unclassified" />
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Belum ter-klasifikasi</div>
-                <p className="text-xs text-text-muted leading-snug mt-0.5">
-                  Negara tujuan tidak ter-parse dari form (terlalu vague, salah ketik, atau bukan negara yang sistem kenali). Perlu admin review manual + override bucket lewat detail page.
-                </p>
-              </div>
-            </li>
-          </ul>
-          <p className="text-[11px] text-text-muted-2 italic mt-3">
-            Logic: kombinasi <strong>has-country-mentor</strong> × <strong>is-campus-partner</strong>. Mentor list = seed di <code className="font-mono">src/lib/mentors.ts</code>; partner kampus = curated alias di <code className="font-mono">src/lib/leads/bucketing.ts</code>.
-          </p>
-        </div>
-      </details>
-
-      {/* Stage legend — explains the 13 funnel states + their triggers.
-          Bucket = classification (static-ish), Stage = progress (dynamic). */}
-      <details className="card p-0 group/stagelegend">
-        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="lightbulb" size={14} className="text-primary" />
-            Apa arti setiap stage? (funnel progress)
-          </span>
-          <Icon name="chevron-right" size={14} className="text-text-muted-2 transition-transform group-open/stagelegend:rotate-90" />
-        </summary>
-        <div className="px-4 pb-4 pt-1 border-t border-border/60">
-          <p className="text-xs text-text-muted mb-3">
-            <strong>Stage</strong> = posisi lead di funnel. Berbeda dari <strong>bucket</strong> (klasifikasi statis): satu lead punya 1 bucket + 1 stage di waktu yang sama. Stage hanya advance forward (monotonic) lewat webhook event &amp; admin action.
-          </p>
-          <ul className="grid gap-2.5 sm:grid-cols-2 text-sm">
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="new" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Lead baru dari Tally. Belum disentuh. <span className="text-text-muted-2">Trigger: <strong>sync dari Tally</strong> (auto).</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="outreach_sent" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Admin sudah kirim outreach pertama (email atau WA atau keduanya). <span className="text-text-muted-2">Trigger: <strong>klik &ldquo;Reachout&rdquo;</strong> (single/bulk). Auto-advance dari <code className="font-mono">new</code>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="whatsapp_read" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Lead sudah baca WA kita (2 centang biru). <span className="text-text-muted-2">Trigger: <strong>Fonnte webhook</strong> event <code className="font-mono">status=read</code>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="email_opened" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Recipient buka email (pixel tracking). <span className="text-text-muted-2">Trigger: <strong>Resend webhook</strong> event <code className="font-mono">email.opened</code>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="email_clicked" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Recipient klik link di body email. <span className="text-text-muted-2">Trigger: <strong>Resend webhook</strong> event <code className="font-mono">email.clicked</code>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="call_scheduled" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Initial call sudah dijadwalkan. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong> via Call Panel (Phase 5).</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="call_completed" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Call selesai, readiness score sudah dinilai. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="deposit_pending" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Invoice/deposit sudah dikirim, menunggu pembayaran. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="deposit_paid" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Deposit terbayar — lead siap di-pair. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong> (Phase 5: payment webhook).</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="matched" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Sudah di-match dengan mentor. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong> via Mentor Matching Panel (Phase 5).</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="declined" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Mentee mundur sendiri. <span className="text-text-muted-2">Trigger: <strong>admin manual</strong>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="waitlist" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Ditahan sementara (timing/kapasitas). <span className="text-text-muted-2">Trigger: <strong>admin manual</strong>.</span>
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <LeadStageBadge stage="rejected" />
-              <div className="min-w-0">
-                <p className="text-xs text-text-muted leading-snug">
-                  Kita reject (mis. red flags). <span className="text-text-muted-2">Trigger: <strong>admin manual</strong>.</span>
-                </p>
-              </div>
-            </li>
-          </ul>
-          <p className="text-[11px] text-text-muted-2 italic mt-3">
-            <strong>Monotonic advance:</strong> webhook event tidak akan menurunkan stage. Mis: lead di stage <code className="font-mono">call_scheduled</code> lalu Resend kirim event <code className="font-mono">email.opened</code> (mungkin recipient buka email lama) — stage tidak akan downgrade. Engagement timestamp tetap dicatat di OutreachLog.
-            <br />
-            <strong>Free-choice override:</strong> dropdown &ldquo;Pindah ke stage&rdquo; di inline row mengizinkan admin geser ke stage manapun (forward atau backward) untuk koreksi manual.
-          </p>
-        </div>
-      </details>
-
-      {/* Filters */}
-      <div className="card p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-text-muted-2 mr-1">Bucket</span>
-          {LEAD_BUCKETS.map((b) => (
-            <FilterChip key={b} active={bucketFilter.has(b)} onClick={() => toggleBucket(b)}>
-              {b === "unclassified" ? "?" : b}
-            </FilterChip>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-text-muted-2 mr-1">Stage</span>
-          {LEAD_STAGES.map((s) => (
-            <FilterChip key={s} active={stageFilter.has(s)} onClick={() => toggleStage(s)}>
-              {s}
-            </FilterChip>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-text-muted-2 mr-1">Funding</span>
-          {FUNDING_PLANS.map((f) => (
-            <FilterChip key={f} active={fundingFilter.has(f)} onClick={() => toggleFunding(f)}>
-              {fundingPlanLabelId(f)}
-            </FilterChip>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="text"
-            placeholder="Cari nama, email, atau target kampus..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field flex-1 max-w-md"
-          />
-          {(bucketFilter.size > 0 || stageFilter.size > 0 || fundingFilter.size > 0 || search) && (
-            <button
-              type="button"
-              onClick={() => {
-                setBucketFilter(new Set());
-                setStageFilter(new Set());
-                setFundingFilter(new Set());
-                setSearch("");
-              }}
-              className="btn-ghost text-xs"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="card overflow-hidden p-0">
-        {renderPagination("top")}
-        {loading ? (
-          <div className="p-4">
-            <SkeletonTable rows={6} />
-          </div>
-        ) : error ? (
-          <div className="p-6 text-sm text-danger">Error: {error}</div>
-        ) : !data || data.leads.length === 0 ? (
-          <div className="p-12 text-center text-sm text-text-muted">
-            {total === 0 && bucketFilter.size === 0 && stageFilter.size === 0 && fundingFilter.size === 0 && !search
-              ? "Belum ada lead. Klik \"Sync from Tally\" di atas untuk mengimpor submission dari form."
-              : "Tidak ada lead yang cocok dengan filter."}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-surface-elevated/60">
-              <tr className="text-left text-[11px] uppercase tracking-wider text-text-muted-2">
-                <th className="pl-4 pr-2 py-2.5 font-medium w-8">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all visible"
-                    checked={allVisibleSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected;
-                    }}
-                    onChange={toggleAllVisible}
-                    className="accent-primary cursor-pointer"
-                  />
-                </th>
-                <th className="px-4 py-2.5 font-medium">Lead</th>
-                <th className="px-3 py-2.5 font-medium hidden md:table-cell">Target</th>
-                <th className="px-3 py-2.5 font-medium hidden lg:table-cell">Funding</th>
-                <th className="px-3 py-2.5 font-medium">Bucket</th>
-                <th className="px-3 py-2.5 font-medium">Stage</th>
-                <th className="px-3 py-2.5 font-medium hidden md:table-cell">Progress</th>
-                <th className="px-3 py-2.5 font-medium hidden lg:table-cell">Engagement</th>
-                <th className="px-3 py-2.5 font-medium hidden xl:table-cell">Updated</th>
-                <th className="px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.leads.map((lead) => {
-                const prog = data.progress[lead.id] ?? { done: 0, total: 0 };
-                const emailSent = lead.outreachSentAt !== null;
-                const emailOpened = lead.emailOpenedAt !== null;
-                const emailClicked = lead.emailClickedAt !== null;
-                const waSent = lead.whatsappSentAt !== null;
-                const waRead = lead.whatsappReadAt !== null;
-                const isExpanded = expandedId === lead.id;
-                return (
-                  <Fragment key={lead.id}>
-                  <tr
-                    onClick={() => setExpandedId(isExpanded ? null : lead.id)}
-                    className={`border-t-2 transition-colors cursor-pointer ${
-                      isExpanded
-                        ? "bg-primary-50/70 border-t-primary border-b-0"
-                        : "border-t-border/60 hover:bg-surface-elevated/40"
-                    }`}
-                  >
-                    <td className="pl-4 pr-2 py-3 w-8" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${lead.name}`}
-                        checked={selected.has(lead.id)}
-                        onChange={() => toggleOne(lead.id)}
-                        className="accent-primary cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground truncate max-w-[220px]">{lead.name}</div>
-                      <a
-                        href={`mailto:${lead.email}`}
-                        className="text-xs text-text-muted hover:text-primary truncate block max-w-[220px]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {lead.email}
-                      </a>
-                    </td>
-                    <td className="px-3 py-3 hidden md:table-cell">
-                      <div className="text-xs text-foreground truncate max-w-[260px]">{lead.targetCampusAndProgram}</div>
-                      {lead.parsedCountry && (
-                        <div className="text-[10px] text-text-muted-2 mt-0.5">{lead.parsedCountry}</div>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 hidden lg:table-cell text-xs text-text-muted">
-                      {fundingPlanLabelId(lead.fundingPlan)}
-                    </td>
-                    <td className="px-3 py-3">
-                      <LeadBucketBadge bucket={lead.bucket} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <LeadStageBadge stage={lead.stage} />
-                    </td>
-                    <td className="px-3 py-3 hidden md:table-cell">
-                      <div className="text-xs text-text-muted">
-                        {prog.done}/{prog.total}
-                      </div>
-                      <div className="w-16 h-1 bg-surface-elevated rounded-full mt-1 overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all"
-                          style={{ width: prog.total > 0 ? `${(prog.done / prog.total) * 100}%` : "0%" }}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 hidden lg:table-cell">
-                      <div className="flex items-center gap-2.5 text-text-muted-2 text-[11px]">
-                        {/* Email channel — blue/indigo */}
-                        <span
-                          className={`inline-flex items-center gap-0.5 ${
-                            emailClicked ? "text-indigo-700"
-                            : emailOpened ? "text-blue-700"
-                            : emailSent ? "text-text-muted-2"
-                            : "text-text-muted-2/40"
-                          }`}
-                          title={
-                            emailClicked ? `Email clicked ${lead.emailClickedAt}`
-                            : emailOpened ? `Email opened ${lead.emailOpenedAt}`
-                            : emailSent ? `Email sent ${lead.outreachSentAt} — not opened`
-                            : "Email not sent yet"
-                          }
-                        >
-                          <Icon name="mail" size={12} />
-                          {emailClicked ? "click" : emailOpened ? "open" : emailSent ? "sent" : "—"}
-                        </span>
-                        {/* WA channel — emerald */}
-                        <span
-                          className={`inline-flex items-center gap-0.5 ${
-                            waRead ? "text-emerald-700"
-                            : waSent ? "text-text-muted-2"
-                            : "text-text-muted-2/40"
-                          }`}
-                          title={
-                            waRead ? `WA read ${lead.whatsappReadAt}`
-                            : waSent ? `WA sent ${lead.whatsappSentAt} — not read yet`
-                            : "WA not sent yet"
-                          }
-                        >
-                          <Icon name="chat" size={12} />
-                          {waRead ? "read" : waSent ? "sent" : "—"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 hidden xl:table-cell text-xs text-text-muted-2">
-                      {relativeTime(lead.updatedAt)}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <Icon
-                        name={isExpanded ? "chevron-down" : "chevron-right"}
-                        size={14}
-                        className="text-text-muted-2 inline-block"
-                      />
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr className="border-t-0 border-b-2 border-b-primary">
-                      <td colSpan={10} className="p-0">
-                        <LeadRowExpanded lead={lead} onChanged={fetchList} />
-                      </td>
-                    </tr>
-                  )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-
-        {renderPagination("bottom")}
-      </div>
-
-      {/* Inline result banner after a bulk run. Auto-dismisses after
-          a few seconds, but admin can also dismiss explicitly. */}
       {bulkResult && (
         <div className="card p-3 text-sm flex items-center justify-between gap-3 flex-wrap border-emerald-200 bg-emerald-50/40">
           <span className="text-emerald-900">
-            ✓ Bulk reachout selesai —
-            <strong> {bulkResult.leadsSent} leads</strong> berhasil dikontak ·
+            ✓ Bulk reachout selesai — <strong>{bulkResult.leadsSent} leads</strong> dikontak ·
             <strong> {bulkResult.channelsSent} channel sent</strong>
             {bulkResult.channelsFailed > 0 && (
               <span className="text-danger"> · <strong>{bulkResult.channelsFailed} failed</strong></span>
@@ -1112,48 +634,205 @@ export default function NewLeadsListPage() {
               <span className="text-text-muted"> · <strong>{bulkResult.channelsSkipped} skipped</strong></span>
             )}
           </span>
-          <button
-            type="button"
-            onClick={() => setBulkResult(null)}
-            className="btn-ghost text-xs"
-          >
+          <button type="button" onClick={() => setBulkResult(null)} className="btn-ghost text-xs">
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Sticky bottom bar (only visible when selection > 0) */}
-      <BulkActionBar
-        selectedCount={selected.size}
-        bucketBreakdown={bucketBreakdown}
-        busy={bulkBusy}
-        onSendOutreach={() => {
-          // Default the skip-flag to ON whenever any selected lead has
-          // been outreached before — protects against accidental double-
-          // sends. Admin can untick to force re-send.
-          setSkipAlreadySent(alreadySentIds.length > 0);
-          setBulkConfirmOpen(true);
-        }}
-        onReclassify={() => void runBulkReclassify()}
-        onChangeBucket={() => setMoveBucketOpen(true)}
-        onAssignInterviewer={() => setAssignInterviewerOpen(true)}
-        onExportCsv={runBulkExportCsv}
-        onClear={() => setSelected(new Set())}
-      />
+      {/* KPI strip */}
+      <KpiStrip refreshKey={mutationTick} />
+
+      {/* Main inbox layout: sidebar / list / detail */}
+      <div className="flex gap-4 items-start">
+        <SmartSegments
+          active={activeSegment}
+          segmentCounts={segmentCounts}
+          bucketCounts={bucketCounts}
+          activeBuckets={bucketFilter}
+          onSegmentClick={selectSegment}
+          onBucketClick={toggleBucketFilter}
+        />
+
+        {/* Middle: list */}
+        <main className="flex-1 min-w-0 bg-surface border border-border rounded-xl overflow-hidden flex flex-col">
+          {/* List header — segments name + search + bulk toolbar */}
+          <div className="px-4 py-2.5 border-b border-border/60 flex items-center gap-3 min-h-[52px] flex-wrap">
+            <input
+              type="checkbox"
+              aria-label="Select all visible"
+              checked={allVisibleSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected;
+              }}
+              onChange={toggleAllVisible}
+              className="accent-primary cursor-pointer"
+            />
+            {selected.size > 0 ? (
+              <>
+                <span className="text-sm font-semibold text-foreground">{selected.size} dipilih</span>
+                <div className="flex gap-1.5 ml-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkipAlreadySent(alreadySentIds.length > 0);
+                      setBulkConfirmOpen(true);
+                    }}
+                    disabled={bulkBusy}
+                    className="btn-primary text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Icon name="send" size={12} /> Reachout
+                  </button>
+                  <button type="button" onClick={() => setMoveBucketOpen(true)} disabled={bulkBusy} className="btn-ghost text-xs inline-flex items-center gap-1.5">
+                    <Icon name="tag" size={12} /> Ubah bucket
+                  </button>
+                  <button type="button" onClick={() => setAssignInterviewerOpen(true)} disabled={bulkBusy} className="btn-ghost text-xs inline-flex items-center gap-1.5">
+                    <Icon name="user" size={12} /> Assign
+                  </button>
+                  <button type="button" onClick={() => void runBulkReclassify()} disabled={bulkBusy} className="btn-ghost text-xs inline-flex items-center gap-1.5">
+                    <Icon name="refresh" size={12} /> Re-classify
+                  </button>
+                  <button type="button" onClick={runBulkExportCsv} disabled={bulkBusy} className="btn-ghost text-xs inline-flex items-center gap-1.5">
+                    <Icon name="download" size={12} /> CSV
+                  </button>
+                  <button type="button" onClick={() => setSelected(new Set())} className="btn-ghost text-xs">
+                    Batal
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-semibold text-foreground">{segmentLabel}</span>
+                <span className="text-xs text-text-muted">· {total} lead</span>
+                <div className="ml-auto relative w-full sm:w-[320px]">
+                  <Icon
+                    name="search"
+                    size={14}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted-2 pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Cari nama, email, kampus…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface-elevated/40 border border-border rounded-lg outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Column headers — match LeadInboxRow grid exactly */}
+          <div
+            className="grid items-center gap-3 px-4 py-2 text-[10.5px] uppercase tracking-[0.06em] font-semibold text-text-muted-2 border-b border-border/60 bg-surface-elevated/30"
+            style={{
+              gridTemplateColumns:
+                "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) auto auto auto auto 90px",
+            }}
+          >
+            <span />
+            <span />
+            <span>Lead</span>
+            <span>Target studi</span>
+            <span>Bucket</span>
+            <span>Stage</span>
+            <span>Engage</span>
+            <span className="text-right">Progress</span>
+            <span />
+          </div>
+
+          {/* Rows */}
+          <div className="flex-1 max-h-[calc(100vh-22rem)] overflow-y-auto">
+            {loading ? (
+              <div className="p-8 text-center text-sm text-text-muted">Loading…</div>
+            ) : error ? (
+              <div className="p-6 text-sm text-danger">Error: {error}</div>
+            ) : !data || data.leads.length === 0 ? (
+              <div className="p-12 text-center text-sm text-text-muted">
+                <Icon name="inbox" size={28} className="opacity-40 mx-auto mb-2" />
+                {total === 0 && bucketFilter.size === 0 && stageFilter.size === 0 && !debouncedSearch
+                  ? "Belum ada lead. Klik 'Sync Tally' di atas untuk mengimpor."
+                  : "Tidak ada lead yang cocok dengan filter."}
+              </div>
+            ) : (
+              data.leads.map((lead) => (
+                <div key={lead.id} className="border-b border-border/60/60 last:border-b-0">
+                  <LeadInboxRow
+                    lead={lead}
+                    selected={selected.has(lead.id)}
+                    isActive={openLead?.id === lead.id}
+                    progress={data.progress[lead.id] ?? { done: 0, total: 0 }}
+                    onSelect={() => toggleOne(lead.id)}
+                    onOpen={() => setOpenLead(lead)}
+                    onReachout={(ch) => void doSingleReachout(lead.id, ch)}
+                    onScheduleCall={scheduleCallStub}
+                    busy={bulkBusy}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer pagination */}
+          <div className="px-4 py-2.5 border-t border-border/60 flex items-center gap-3 flex-wrap text-xs text-text-muted-2">
+            {total > pageSize && (
+              <span>
+                Halaman {Math.floor(offset / pageSize) + 1} dari {Math.ceil(total / pageSize)}
+                <span className="hidden sm:inline"> · {pageStart}–{pageEnd} dari {total}</span>
+              </span>
+            )}
+            <label className="inline-flex items-center gap-1.5">
+              <span>Per halaman:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+                className="text-xs bg-surface border border-border rounded px-1.5 py-0.5 text-foreground hover:border-primary-200 focus:outline-none focus:border-primary"
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <div className="ml-auto flex gap-1.5">
+              <button
+                type="button"
+                disabled={!hasPrev}
+                onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                className="btn-ghost text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+              >
+                <Icon name="chevron-left" size={12} /> Prev
+              </button>
+              <button
+                type="button"
+                disabled={!hasNext}
+                onClick={() => setOffset(offset + pageSize)}
+                className="btn-ghost text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
+              >
+                Next <Icon name="chevron-right" size={12} />
+              </button>
+            </div>
+          </div>
+        </main>
+
+        {/* Right: detail slide-over */}
+        {openLead && (
+          <LeadDetailPanel
+            lead={openLead}
+            busy={bulkBusy}
+            onClose={() => setOpenLead(null)}
+            onReachout={doSingleReachout}
+          />
+        )}
+      </div>
 
       {/* Move bucket modal */}
       <Modal
         open={moveBucketOpen}
-        onClose={() => bulkBusy ? null : setMoveBucketOpen(false)}
+        onClose={() => (bulkBusy ? null : setMoveBucketOpen(false))}
         title={`Pindahkan ${selected.size} leads ke bucket lain`}
         actions={
           <>
-            <button
-              type="button"
-              onClick={() => setMoveBucketOpen(false)}
-              disabled={bulkBusy}
-              className="btn-ghost"
-            >
+            <button type="button" onClick={() => setMoveBucketOpen(false)} disabled={bulkBusy} className="btn-ghost">
               Batal
             </button>
             <button
@@ -1200,16 +879,11 @@ export default function NewLeadsListPage() {
       {/* Assign interviewer modal */}
       <Modal
         open={assignInterviewerOpen}
-        onClose={() => bulkBusy ? null : setAssignInterviewerOpen(false)}
+        onClose={() => (bulkBusy ? null : setAssignInterviewerOpen(false))}
         title={`Assign interviewer ke ${selected.size} leads`}
         actions={
           <>
-            <button
-              type="button"
-              onClick={() => setAssignInterviewerOpen(false)}
-              disabled={bulkBusy}
-              className="btn-ghost"
-            >
+            <button type="button" onClick={() => setAssignInterviewerOpen(false)} disabled={bulkBusy} className="btn-ghost">
               Batal
             </button>
             <button
@@ -1224,9 +898,7 @@ export default function NewLeadsListPage() {
         }
       >
         <div className="space-y-3 text-sm">
-          <p className="text-xs text-text-muted">
-            Kosongkan nama untuk clear interviewer assignment dari leads terpilih.
-          </p>
+          <p className="text-xs text-text-muted">Kosongkan nama untuk clear interviewer assignment dari leads terpilih.</p>
           <div>
             <label className="text-xs uppercase tracking-wider text-text-muted-2 block mb-1">Interviewer name</label>
             <input
@@ -1241,21 +913,14 @@ export default function NewLeadsListPage() {
         </div>
       </Modal>
 
-      {/* Custom confirm modal with skip-already-sent toggle. The body
-          surfaces the actual effective count so admin knows exactly
-          what's about to fire. */}
+      {/* Bulk confirm modal */}
       <Modal
         open={bulkConfirmOpen}
-        onClose={() => bulkBusy ? null : setBulkConfirmOpen(false)}
+        onClose={() => (bulkBusy ? null : setBulkConfirmOpen(false))}
         title={`Reachout ke ${effectiveIds.length} leads?`}
         actions={
           <>
-            <button
-              type="button"
-              onClick={() => setBulkConfirmOpen(false)}
-              disabled={bulkBusy}
-              className="btn-ghost"
-            >
+            <button type="button" onClick={() => setBulkConfirmOpen(false)} disabled={bulkBusy} className="btn-ghost">
               Batal
             </button>
             <button
@@ -1270,14 +935,11 @@ export default function NewLeadsListPage() {
         }
       >
         <div className="space-y-3 text-sm">
-          {/* Selection summary */}
           <div className="text-xs text-text-muted space-y-1">
             <div>
               <strong>{selected.size}</strong> lead terpilih:{" "}
               <span className="text-text-muted-2">
-                {Object.entries(bucketBreakdown)
-                  .map(([b, n]) => `${n} ${b}`)
-                  .join(" · ")}
+                {Object.entries(bucketBreakdown).map(([b, n]) => `${n} ${b}`).join(" · ")}
               </span>
             </div>
             <div className="flex gap-3 flex-wrap">
@@ -1294,7 +956,6 @@ export default function NewLeadsListPage() {
             </div>
           </div>
 
-          {/* Toggle — only show when admin actually has a choice */}
           {alreadySentIds.length > 0 && (
             <label className="flex items-start gap-2.5 p-3 rounded-lg bg-surface-elevated/40 border border-border/60 cursor-pointer">
               <input
@@ -1320,7 +981,6 @@ export default function NewLeadsListPage() {
             </div>
           )}
 
-          {/* Channel picker */}
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wider text-text-muted-2">Channel</label>
             <div className="grid grid-cols-3 gap-1.5">

@@ -60,6 +60,20 @@ const ICONS: Record<string, string> = {
   // Communication
   mail: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
   chat: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+
+  // Smart Inbox set (Phase 7 — segments, slide-over, quick actions)
+  click: "M9 9l3 13 2-5 5-2Z M3 9V3h6",
+  sparkles: "M12 4v4M12 16v4M4 12h4M16 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M6.3 17.7l2.8-2.8M14.9 9.1l2.8-2.8",
+  fire: "M12 22c4 0 7-3 7-7 0-3-2-5-3-6 0 2-1 3-2 3 0-4-2-7-5-9 0 3-1 5-3 7s-3 4-3 6c0 4 3 6 9 6Z",
+  flag: "M4 21V4h13l-2 4 2 4H4",
+  inbox: "M3 13h5l1 3h6l1-3h5 M3 13 5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z",
+  send: "M21 3 11 14M21 3l-7 18-3-7-7-3Z",
+  archive: "M3 4h18v4H3z M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 13h4",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  tag: "M3 12V4h8l10 10-8 8Z M8 8h.01",
+  pin: "M12 22v-7M8 9a4 4 0 0 1 8 0c0 3-2 4-2 6H10c0-2-2-3-2-6Z",
+  clock: "M12 7v5l3 2 M12 3a9 9 0 110 18 9 9 0 010-18z",
+  dot: "M12 12m-3 0a3 3 0 106 0 3 3 0 10-6 0",
 };
 
 export default function Icon({ name, className = "", size = 20 }: IconProps) {
