@@ -96,7 +96,7 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout }: Pro
   const activity = history.slice(0, 8);
 
   return (
-    <aside className="w-[420px] flex-shrink-0 self-start sticky top-4 max-h-[calc(100vh-2rem)] overflow-hidden bg-surface border border-border rounded-xl flex flex-col">
+    <aside className="w-[360px] flex-shrink-0 self-start sticky top-4 max-h-[calc(100vh-2rem)] overflow-hidden bg-surface border border-border rounded-xl flex flex-col">
       {/* Header */}
       <div className="px-5 py-4 border-b border-border flex items-start gap-3">
         <LeadAvatar name={lead.name} size={44} />

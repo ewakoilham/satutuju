@@ -77,7 +77,7 @@ export default function SmartSegments({
   activeBuckets,
 }: Props) {
   return (
-    <aside className="w-[220px] flex-shrink-0 bg-surface border border-border rounded-xl p-1.5 self-start">
+    <aside className="w-[200px] flex-shrink-0 bg-surface border border-border rounded-xl p-1.5 self-start">
       {/* Smart segments */}
       {SEGMENTS.map((s) => {
         const isActive = active === s.id;

@@ -50,7 +50,7 @@ export default function LeadInboxRow({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={onOpen}
-      className={`grid items-center gap-3 px-4 py-2.5 cursor-pointer text-[13px] text-foreground border-l-[3px] transition-colors ${
+      className={`grid items-center gap-2 px-3 py-2.5 cursor-pointer text-[13px] text-foreground border-l-[3px] transition-colors ${
         isActive
           ? "bg-primary-50 border-l-primary"
           : selected
@@ -61,10 +61,11 @@ export default function LeadInboxRow({
       }`}
       style={{
         // Fixed widths for badge/icon columns prevent the table from
-        // jittering as you scroll (BUCKET / STAGE / ENGAGE / PROGRESS
-        // all have variable-length content). Last col = hover actions.
+        // jittering as you scroll. Sized tight so LEAD / TARGET STUDI
+        // get enough room when the detail panel is open. Last col is
+        // hover-only actions; collapses to 0 width on resting state.
         gridTemplateColumns:
-          "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) 56px 116px 56px 96px 96px",
+          "20px 28px minmax(80px, 1.4fr) minmax(80px, 1.5fr) 44px 100px 50px 78px 78px",
       }}
     >
       <input
@@ -75,7 +76,7 @@ export default function LeadInboxRow({
         onChange={onSelect}
         className="accent-primary cursor-pointer"
       />
-      <LeadAvatar name={lead.name} size={32} />
+      <LeadAvatar name={lead.name} size={28} />
       <div className="min-w-0">
         <div className="font-semibold text-foreground truncate">{lead.name}</div>
         <div className="text-[11px] text-text-muted-2 truncate">{lead.email}</div>

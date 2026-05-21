@@ -659,7 +659,7 @@ export default function NewLeadsListPage() {
       <KpiStrip refreshKey={mutationTick} />
 
       {/* Main inbox layout: sidebar / list / detail */}
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-3 items-start">
         <SmartSegments
           active={activeSegment}
           segmentCounts={segmentCounts}
@@ -737,22 +737,25 @@ export default function NewLeadsListPage() {
             )}
           </div>
 
-          {/* Column headers — grid mirrors LeadInboxRow exactly. */}
+          {/* Column headers — grid mirrors LeadInboxRow exactly. The
+              `whitespace-nowrap` keeps short labels from wrapping into
+              the next column's territory when the table narrows (3-col
+              layout with detail panel open). */}
           <div
-            className="grid items-center gap-3 px-4 py-2 text-[10.5px] uppercase tracking-[0.06em] font-semibold text-text-muted-2 border-b border-border/60 bg-surface-elevated/30"
+            className="grid items-center gap-2 px-3 py-2 text-[10.5px] uppercase tracking-[0.06em] font-semibold text-text-muted-2 border-b border-border/60 bg-surface-elevated/30 whitespace-nowrap"
             style={{
               gridTemplateColumns:
-                "24px 32px minmax(0, 1.4fr) minmax(0, 1.5fr) 56px 116px 56px 96px 96px",
+                "20px 28px minmax(80px, 1.4fr) minmax(80px, 1.5fr) 44px 100px 50px 78px 78px",
             }}
           >
             <span />
             <span />
-            <span>Lead</span>
-            <span>Target studi</span>
+            <span className="truncate">Lead</span>
+            <span className="truncate">Target</span>
             <span>Bucket</span>
             <span>Stage</span>
             <span>Engage</span>
-            <span className="text-right pr-1">Progress</span>
+            <span className="text-right">Progress</span>
             <span />
           </div>
 
