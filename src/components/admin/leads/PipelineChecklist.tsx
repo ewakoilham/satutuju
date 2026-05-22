@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
-import type {
-  LeadStepDefinition,
-  LeadStepStatusRow,
-  StepStatus,
+import {
+  CATEGORY_META,
+  STAGE_LABEL,
+  STAGE_TO_STEP_TRIGGER,
+  TRIGGER_CATEGORY,
+  TRIGGER_LABEL,
+  type LeadStage,
+  type LeadStepDefinition,
+  type LeadStepStatusRow,
+  type StepAutoTrigger,
+  type StepStatus,
 } from "@/lib/leads/types";
 import { formatJakartaStamp } from "@/lib/datetime-id";
 
@@ -16,46 +23,24 @@ interface Props {
   onChanged?: () => void;
 }
 
-const TRIGGER_LABEL: Record<string, string> = {
-  classified: "Lead classified",
-  email_sent: "Email sent",
-  email_opened: "Email opened",
-  email_clicked: "Email clicked",
-  whatsapp_sent: "WhatsApp sent",
-  whatsapp_read: "WhatsApp read",
-  call_scheduled: "Stage → call scheduled",
-  deposit_pending: "Stage → deposit pending",
-  deposit_agreed: "Stage → deposit agreed",
-  deposit_paid: "Stage → deposit paid",
-  matched: "Stage → matched",
-};
-
 /**
- * Subset of auto-triggers that correspond 1:1 to a LeadStage AND
- * should be admin-clickable from the checklist. Clicking such a step
- * hits /stage with the target stage, server auto-fires the step.
- *
- * Steps explicitly EXCLUDED from this list (still stage-mapped on the
- * server, just not clickable from the checklist):
- *   - call_scheduled — owned by Google Calendar booking flow. Admin
- *     should not be able to fake-advance "call scheduled" without a
- *     real calendar event. Stays read-only ("Auto · Stage → call
- *     scheduled" badge). The sync-from-calendar cron + manual stage
- *     dropdown still trigger the step normally.
+ * Map from a trigger back to the stage that owns it. Inverse of
+ * STAGE_TO_STEP_TRIGGER. Built once on module load so per-step click
+ * handlers can resolve "what stage should I advance to?" without
+ * walking the map every render.
  */
-const STAGE_DRIVEN_TRIGGER: Record<string, string> = {
-  deposit_pending: "deposit_pending",
-  deposit_agreed:  "deposit_agreed",
-  deposit_paid:    "deposit_paid",
-  matched:         "matched",
-};
+const STAGE_FOR_TRIGGER: Partial<Record<StepAutoTrigger, LeadStage>> = (() => {
+  const out: Partial<Record<StepAutoTrigger, LeadStage>> = {};
+  for (const [stage, trigger] of Object.entries(STAGE_TO_STEP_TRIGGER)) {
+    if (trigger) out[trigger] = stage as LeadStage;
+  }
+  return out;
+})();
 
-const STAGE_PRETTY: Record<string, string> = {
-  call_scheduled:  "Call Scheduled",
-  deposit_pending: "Menunggu Konfirmasi Deposit",
-  deposit_agreed:  "Bersedia Bayar",
-  deposit_paid:    "Deposit Lunas",
-  matched:         "Matched",
+const BADGE_TONE_CLASS: Record<"violet" | "blue" | "emerald", string> = {
+  violet:  "bg-violet-50 text-violet-700",
+  blue:    "bg-blue-50 text-blue-700",
+  emerald: "bg-emerald-50 text-emerald-700",
 };
 
 function formatStamp(iso: string | null): string | null {
@@ -167,19 +152,25 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           : s?.completedBy === "phase9-sync" ? "Sistem (Phase 9 sync)"
           : s?.completedBy ?? null;
         const isBusy = busy === step.id;
-        const stageTarget = step.autoTrigger ? STAGE_DRIVEN_TRIGGER[step.autoTrigger] : null;
-        // Stage-driven auto steps are clickable (when pending) to advance
-        // the lead's stage. Event-driven auto steps (email/WA/classified)
-        // remain truly read-only — there's no stage to advance to.
-        const isClickableAuto = isAuto && !!stageTarget;
+        const trigger = step.autoTrigger as StepAutoTrigger | null;
+        const category = trigger ? TRIGGER_CATEGORY[trigger] : null;
+        const stageTarget = trigger ? STAGE_FOR_TRIGGER[trigger] : null;
+        // Stage-click triggers are clickable from the checklist. Event-
+        // driven AND stage-system (calendar) triggers stay read-only.
+        const isClickableAuto = category === "stage-click" && !!stageTarget;
+        const triggerLabel = trigger ? TRIGGER_LABEL[trigger] : null;
+        const stageTargetLabel = stageTarget ? STAGE_LABEL[stageTarget] : null;
 
         const onClickBox = () => {
           if (isBusy) return;
           if (isDone) return; // no un-check from checklist; reverse via stage dropdown
           if (isAuto) {
-            if (!stageTarget) return;
-            const stageLabel = STAGE_PRETTY[stageTarget] ?? stageTarget;
-            if (confirm(`Advance stage lead ke "${stageLabel}"? Step ini akan auto-check setelah stage berubah.`)) {
+            if (!isClickableAuto || !stageTarget) return;
+            if (
+              confirm(
+                `Advance stage lead ke "${stageTargetLabel}"? Step ini akan auto-check setelah stage berubah.`,
+              )
+            ) {
               void advanceStage(step.id, stageTarget);
             }
             return;
@@ -200,15 +191,11 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           setStatus(step.id, "skipped", reason || undefined);
         };
 
-        const triggerLabel = step.autoTrigger
-          ? TRIGGER_LABEL[step.autoTrigger] ?? step.autoTrigger
-          : null;
-
         const checkboxTitle = isAuto
           ? isDone
             ? `Auto-completed — ${triggerLabel}. Untuk mundur, ubah stage lead lewat dropdown stage.`
             : isClickableAuto
-              ? `Klik untuk advance stage ke "${STAGE_PRETTY[stageTarget!] ?? stageTarget}" (step auto-check setelah stage berubah).`
+              ? `Klik untuk advance stage ke "${stageTargetLabel}" (step auto-check setelah stage berubah).`
               : `Akan auto-complete saat event sistem: ${triggerLabel}`
           : isDone
             ? "Klik untuk uncheck (manual)"
@@ -266,23 +253,21 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
                 >
                   {step.label}
                 </span>
-                {isAuto && (
+                {isAuto && trigger && category && (
                   <span
-                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                      isClickableAuto
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-primary-50 text-primary"
-                    }`}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${BADGE_TONE_CLASS[CATEGORY_META[category].tone]}`}
                     title={
                       isClickableAuto
-                        ? `Manual: klik untuk advance stage ke "${STAGE_PRETTY[stageTarget!] ?? stageTarget}". Step akan auto-check setelah stage berubah.`
-                        : `Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`
+                        ? `Klik untuk advance stage ke "${stageTargetLabel}". Step akan auto-check setelah stage berubah.`
+                        : category === "stage-system"
+                          ? `${CATEGORY_META[category].desc} Trigger: ${triggerLabel}.`
+                          : `Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`
                     }
                   >
-                    <Icon name={isClickableAuto ? "arrow-right" : "lock"} size={9} />
+                    <Icon name={CATEGORY_META[category].iconName} size={9} />
                     {isClickableAuto
-                      ? `Klik → ${STAGE_PRETTY[stageTarget!] ?? stageTarget}`
-                      : `Auto · ${triggerLabel}`}
+                      ? `Klik → ${stageTargetLabel}`
+                      : `${CATEGORY_META[category].label} · ${triggerLabel}`}
                   </span>
                 )}
               </div>
@@ -300,12 +285,15 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
         );
       })}
       <li className="text-[11px] text-text-muted-2 italic pt-1 leading-relaxed">
-        <strong>Auto · Stage</strong> (badge biru) — klik checkbox untuk advance
-        stage lead ke posisi itu. Step auto-check setelah stage berubah.
-        Tidak bisa un-check dari sini; mundurkan stage lewat dropdown stage.
+        <strong>Klik</strong> (badge biru) — klik checkbox untuk advance stage
+        lead ke posisi itu. Step auto-check setelah stage berubah. Untuk
+        mundurkan stage, ubah lewat dropdown stage.
         <br />
-        <strong>Auto · Event</strong> (email/WA/classified) — terisi otomatis
-        oleh event sistem (Resend / Fonnte / lead creation). Tidak clickable.
+        <strong>Event</strong> (badge ungu) — diisi otomatis oleh Resend /
+        Fonnte / lead creation. Tidak clickable.
+        <br />
+        <strong>Calendar</strong> (badge hijau) — diisi otomatis oleh Google
+        Calendar sync saat lead booking. Tidak clickable manual.
         <br />
         <strong>Manual step</strong> (tanpa badge) — klik untuk done/pending,
         klik kanan untuk skip.

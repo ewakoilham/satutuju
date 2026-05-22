@@ -24,7 +24,8 @@ export type SegmentId =
   | "deposit_agreed"
   | "deposit_paid"
   | "review"
-  | "won";
+  | "won"
+  | "closed";
 
 interface SegmentDef {
   id: SegmentId;
@@ -47,6 +48,7 @@ export const SEGMENTS: SegmentDef[] = [
   { id: "deposit_paid",    label: "Deposit lunas",                icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid"] },
   { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
   { id: "won",             label: "Lolos seleksi",               icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["matched"] },
+  { id: "closed",          label: "Tidak lanjut",                icon: "x",        iconColor: "text-slate-500",    buckets: [], stages: ["waitlist", "declined", "rejected"] },
 ];
 
 const BUCKET_DESC: Record<LeadBucket, string> = {

@@ -1,26 +1,15 @@
-import type { LeadStage } from "@/lib/leads/types";
+import { STAGE_LABEL, type LeadStage } from "@/lib/leads/types";
 
-const STAGE_LABEL: Record<LeadStage, string> = {
-  new: "New",
-  outreach_sent: "Outreach Sent",
-  whatsapp_read: "WhatsApp Read",
-  email_opened: "Email Opened",
-  email_clicked: "Email Clicked",
-  call_scheduled: "Call Scheduled",
-  call_completed: "Call Completed",
-  deposit_pending: "Deposit Pending",
-  deposit_agreed: "Bersedia Bayar",
-  deposit_paid: "Deposit Lunas",
-  matched: "Matched",
-  declined: "Declined",
-  waitlist: "Waitlist",
-  rejected: "Rejected",
-};
-
+/**
+ * Color tone per stage. Labels come from STAGE_LABEL in types.ts so
+ * every surface in the app reads the same wording. Tones are scoped
+ * to stay close to the funnel-progression intuition (slate → blue →
+ * indigo → violet → amber → emerald → terminal).
+ */
 const STAGE_TONE: Record<LeadStage, string> = {
   new:             "bg-surface-elevated text-text-muted",
   outreach_sent:   "bg-blue-50 text-blue-700",
-  whatsapp_read:   "bg-emerald-50 text-emerald-800",   // green = WA brand association
+  whatsapp_read:   "bg-emerald-50 text-emerald-800",
   email_opened:    "bg-blue-100 text-blue-800",
   email_clicked:   "bg-indigo-100 text-indigo-800",
   call_scheduled:  "bg-violet-100 text-violet-800",
@@ -35,9 +24,13 @@ const STAGE_TONE: Record<LeadStage, string> = {
 };
 
 export default function LeadStageBadge({ stage }: { stage: LeadStage }) {
+  const label = STAGE_LABEL[stage] ?? stage;
+  const tone = STAGE_TONE[stage] ?? STAGE_TONE.new;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${STAGE_TONE[stage]}`}>
-      {STAGE_LABEL[stage]}
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${tone}`}
+    >
+      {label}
     </span>
   );
 }

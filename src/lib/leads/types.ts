@@ -67,6 +67,119 @@ export const STEP_AUTO_TRIGGERS = [
 ] as const;
 export type StepAutoTrigger = (typeof STEP_AUTO_TRIGGERS)[number];
 
+/**
+ * Each auto-trigger has one of 3 runtime behaviors. The PipelineChecklist
+ * UI uses this to decide whether the step's checkbox is clickable, and
+ * the Pipeline Manager uses it to color-code badges + group its dropdown.
+ *
+ *   event        — fired by an external system event (Resend / Fonnte /
+ *                  lead-creation hook). Read-only in checklist; admin
+ *                  can't fake-toggle.
+ *   stage-click  — corresponds to a stage transition admin can drive.
+ *                  Checklist makes the checkbox clickable: click →
+ *                  /stage advance → server-side STAGE_TO_STEP_TRIGGER
+ *                  fires the step.
+ *   stage-system — corresponds to a stage advance owned by an external
+ *                  system (currently only Google Calendar sync). Admin
+ *                  can't manual-advance from the checklist (would fake
+ *                  "call scheduled" without a real booking).
+ */
+export type StepAutoTriggerCategory = "event" | "stage-click" | "stage-system";
+
+export const TRIGGER_CATEGORY: Record<StepAutoTrigger, StepAutoTriggerCategory> = {
+  classified:      "event",
+  email_sent:      "event",
+  email_opened:    "event",
+  email_clicked:   "event",
+  whatsapp_sent:   "event",
+  whatsapp_read:   "event",
+  call_scheduled:  "stage-system",
+  deposit_pending: "stage-click",
+  deposit_agreed:  "stage-click",
+  deposit_paid:    "stage-click",
+  matched:         "stage-click",
+};
+
+/** Human-friendly label per trigger, used by Pipeline Manager + the
+ *  PipelineChecklist badge + the per-lead Cockpit. Indonesian to match
+ *  the rest of the admin surface. */
+export const TRIGGER_LABEL: Record<StepAutoTrigger, string> = {
+  classified:      "Lead diklasifikasi",
+  email_sent:      "Email terkirim",
+  email_opened:    "Email dibuka",
+  email_clicked:   "Email diklik",
+  whatsapp_sent:   "WhatsApp terkirim",
+  whatsapp_read:   "WhatsApp dibaca",
+  call_scheduled:  "Call terjadwal",
+  deposit_pending: "Stage → deposit pending",
+  deposit_agreed:  "Stage → bersedia bayar",
+  deposit_paid:    "Stage → deposit lunas",
+  matched:         "Stage → matched",
+};
+
+/** Display metadata for each trigger category. Used by Pipeline Manager
+ *  (badge color + section header) and PipelineChecklist (badge tone). */
+export const CATEGORY_META: Record<
+  StepAutoTriggerCategory,
+  { label: string; desc: string; tone: "violet" | "blue" | "emerald"; iconName: string }
+> = {
+  event: {
+    label: "Event",
+    desc: "Fired by Resend / Fonnte / lead creation. Read-only.",
+    tone: "violet",
+    iconName: "lock",
+  },
+  "stage-click": {
+    label: "Klik",
+    desc: "Admin klik checkbox di checklist → advance stage → step auto-fires.",
+    tone: "blue",
+    iconName: "arrow-right",
+  },
+  "stage-system": {
+    label: "Calendar",
+    desc: "Google Calendar booking auto-fires. Admin tidak bisa manual-advance.",
+    tone: "emerald",
+    iconName: "calendar",
+  },
+};
+
+/**
+ * Stage → step trigger map. Single source of truth shared by both the
+ * `/api/new-leads/[id]/stage` route (manual admin advance) and the
+ * `/api/new-leads/[id]/call` route (decision-driven advance on call
+ * completion). Stages not in this map have no listening step trigger
+ * by design (e.g. terminal stages: declined, waitlist, rejected).
+ */
+export const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
+  call_scheduled:  "call_scheduled",
+  deposit_pending: "deposit_pending",
+  deposit_agreed:  "deposit_agreed",
+  deposit_paid:    "deposit_paid",
+  matched:         "matched",
+};
+
+/**
+ * Indonesian display label per stage. Replaces the local English/
+ * Indonesian-mixed map that used to live in LeadStageBadge so every
+ * surface reads from one source.
+ */
+export const STAGE_LABEL: Record<LeadStage, string> = {
+  new:             "Baru",
+  outreach_sent:   "Outreach Terkirim",
+  whatsapp_read:   "WhatsApp Dibaca",
+  email_opened:    "Email Dibuka",
+  email_clicked:   "Email Diklik",
+  call_scheduled:  "Call Terjadwal",
+  call_completed:  "Call Selesai",
+  deposit_pending: "Menunggu Konfirmasi Deposit",
+  deposit_agreed:  "Bersedia Bayar Deposit",
+  deposit_paid:    "Deposit Lunas",
+  matched:         "Sudah Match",
+  declined:        "Mundur",
+  waitlist:        "Waitlist",
+  rejected:        "Ditolak",
+};
+
 /** Channels admin can pick when doing reachout. "both" is two API calls
  *  fired in parallel — independently logged so partial failures don't
  *  block the success. */

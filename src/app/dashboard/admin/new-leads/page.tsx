@@ -75,6 +75,7 @@ function computeSegmentCounts(
     deposit_paid:    stageCounts.deposit_paid ?? 0,
     review:          bucketCounts.unclassified ?? 0,
     won:             stageCounts.matched ?? 0,
+    closed:          sum(["waitlist", "declined", "rejected"], stageCounts),
   };
 }
 

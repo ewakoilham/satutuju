@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_DECISIONS, type LeadDecision, type LeadStage, type StepAutoTrigger } from "@/lib/leads/types";
+import {
+  LEAD_DECISIONS,
+  STAGE_TO_STEP_TRIGGER,
+  type LeadDecision,
+  type LeadStage,
+} from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
 import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 
@@ -30,10 +35,8 @@ function nextStageForDecision(decision: LeadDecision | null | undefined): LeadSt
     default:                    return "call_completed";
   }
 }
-const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
-  deposit_pending: "deposit_pending",
-  deposit_agreed:  "deposit_agreed",
-};
+// STAGE_TO_STEP_TRIGGER is the single source of truth — imported from
+// types.ts so both /stage and /call routes fire the same step triggers.
 
 /**
  * Persist call panel data + (optionally) advance stage to call_completed.

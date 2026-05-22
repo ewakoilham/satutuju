@@ -10,6 +10,30 @@ function sanitizeAutoTrigger(v: unknown): string | null {
   return (STEP_AUTO_TRIGGERS as readonly string[]).includes(v) ? v : null;
 }
 
+/**
+ * Count non-pending LeadStepStatus rows for a step. Used as defense-in-
+ * depth gate against:
+ *   • DELETE that would lose audit history
+ *   • PATCH that changes autoTrigger on a step with live history
+ *     (would create rows whose "completed by trigger X" no longer
+ *      matches the step's current trigger — silent data drift).
+ */
+async function countStatusHistory(stepId: string): Promise<{ done: number; skipped: number; total: number }> {
+  const { count: doneCount } = await supabase
+    .from("LeadStepStatus")
+    .select("*", { count: "exact", head: true })
+    .eq("stepId", stepId)
+    .eq("status", "done");
+  const { count: skippedCount } = await supabase
+    .from("LeadStepStatus")
+    .select("*", { count: "exact", head: true })
+    .eq("stepId", stepId)
+    .eq("status", "skipped");
+  const done = doneCount ?? 0;
+  const skipped = skippedCount ?? 0;
+  return { done, skipped, total: done + skipped };
+}
+
 /** PATCH — update label / description / autoTrigger / isActive. */
 export async function PATCH(
   req: NextRequest,
@@ -31,7 +55,34 @@ export async function PATCH(
   if (typeof body.label === "string") update.label = body.label.trim().slice(0, 200);
   if (typeof body.description === "string") update.description = body.description.trim().slice(0, 500);
   if (body.description === null) update.description = null;
-  if ("autoTrigger" in body) update.autoTrigger = sanitizeAutoTrigger(body.autoTrigger);
+
+  // Gate autoTrigger mutation: if the step already has done/skipped
+  // history, switching trigger would mean those rows say "completed by
+  // trigger X" while the step now lists trigger Y. Force admin to
+  // create a fresh step instead.
+  if ("autoTrigger" in body) {
+    const nextTrigger = sanitizeAutoTrigger(body.autoTrigger);
+    const { data: cur } = await supabase
+      .from("LeadStepDefinition")
+      .select("autoTrigger")
+      .eq("id", id)
+      .single();
+    const curTrigger = (cur?.autoTrigger ?? null) as string | null;
+    if (curTrigger !== nextTrigger) {
+      const history = await countStatusHistory(id);
+      if (history.total > 0) {
+        return NextResponse.json(
+          {
+            error: `Tidak bisa ubah trigger: step ini punya ${history.total} riwayat status (${history.done} done · ${history.skipped} skipped). Buat step baru saja.`,
+            doneCount: history.done,
+            skippedCount: history.skipped,
+          },
+          { status: 409 },
+        );
+      }
+    }
+    update.autoTrigger = nextTrigger;
+  }
   if (typeof body.isActive === "boolean") update.isActive = body.isActive;
 
   if (Object.keys(update).length === 0) {
@@ -50,10 +101,18 @@ export async function PATCH(
   return NextResponse.json({ step: data });
 }
 
-/** DELETE — hard delete. Cascades to LeadStepStatus via FK. Prefer
- *  deactivating instead unless the step was created in error. */
+/**
+ * DELETE — hard delete with safeguard.
+ *
+ * If LeadStepStatus rows exist with status != pending (i.e. real audit
+ * history), refuse with 409 unless caller passes ?force=true. The UI
+ * presents "Nonaktifkan saja" as the primary CTA so admin keeps history;
+ * `force=true` is the typed-confirmation escape hatch.
+ *
+ * Cascades to LeadStepStatus via FK once approved.
+ */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
@@ -61,6 +120,37 @@ export async function DELETE(
   if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
 
   const { id } = await params;
+  const force = req.nextUrl.searchParams.get("force") === "true";
+  const probe = req.nextUrl.searchParams.get("probe") === "true";
+
+  // Probe mode: return counts without deleting. UI uses this to drive
+  // the delete-step modal (history? show preserve/destroy options. no
+  // history? show plain confirm.).
+  if (probe) {
+    const history = await countStatusHistory(id);
+    return NextResponse.json({
+      doneCount: history.done,
+      skippedCount: history.skipped,
+      totalAffectedLeads: history.total,
+    });
+  }
+
+  if (!force) {
+    const history = await countStatusHistory(id);
+    if (history.total > 0) {
+      return NextResponse.json(
+        {
+          error: `Step ini punya ${history.total} riwayat status di leads (${history.done} done · ${history.skipped} skipped). Nonaktifkan saja untuk preserve history, atau retry dengan ?force=true untuk hapus permanen.`,
+          doneCount: history.done,
+          skippedCount: history.skipped,
+          totalAffectedLeads: history.total,
+          deactivateInstead: true,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const { error } = await supabase
     .from("LeadStepDefinition")
     .delete()
