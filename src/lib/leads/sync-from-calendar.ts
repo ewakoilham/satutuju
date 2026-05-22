@@ -148,13 +148,21 @@ export async function syncFromCalendar(): Promise<CalendarSyncResult> {
       // (call happened, no need to revert).
       if (lead.stage !== "call_scheduled") continue;
 
-      // Look up the most recent history row that landed on call_scheduled
-      // so we can revert to whatever stage came before.
+      // Look up the original booking transition (the one written by
+      // google-calendar-sync) so we revert to whatever stage came
+      // BEFORE the lead was first booked. Naively picking "the most
+      // recent toStage=call_scheduled row" caused a bug: when admin
+      // had manually rolled the lead back to call_scheduled from a
+      // later stage (e.g. phase9-rollback row had toStage=call_scheduled
+      // with fromStage=matched), the cancel-revert flipped the lead
+      // BACK to matched on cancel. Filtering by changedBy isolates the
+      // true booking row.
       const { data: prior } = await supabase
         .from("LeadStageHistory")
         .select("fromStage")
         .eq("leadId", lead.id)
         .eq("toStage", "call_scheduled")
+        .eq("changedBy", "google-calendar-sync")
         .order("createdAt", { ascending: false })
         .limit(1)
         .maybeSingle();
