@@ -77,10 +77,11 @@ export const STEP_STATUSES = ["pending", "done", "skipped"] as const;
 export type StepStatus = (typeof STEP_STATUSES)[number];
 
 export const LEAD_DECISIONS = [
-  "proceed",
-  "waitlist",
-  "declined_by_student",
-  "rejected_by_us",
+  "proceed",            // tunggu konfirmasi deposit 1x24 jam (→ deposit_pending)
+  "agree_to_pay",       // mentee langsung commit bayar deposit (→ deposit_agreed)
+  "waitlist",           // tahan 1 minggu (→ waitlist)
+  "declined_by_student",// mentee mundur
+  "rejected_by_us",     // kita tolak
 ] as const;
 export type LeadDecision = (typeof LEAD_DECISIONS)[number];
 

@@ -57,10 +57,31 @@ const TIER_ELIGIBILITY_COLOR: Record<"success" | "warn" | "muted", string> = {
 };
 
 const DECISION_META: Record<LeadDecision, { label: string; desc: string; tone: "success" | "warn" | "muted" | "danger" }> = {
-  proceed: { label: "Proceed — book deposit", desc: "Kirim invoice & contract. Stage → deposit_pending.", tone: "success" },
-  waitlist: { label: "Waitlist — tahan dulu", desc: "Tidak fit timing / kapasitas. Auto reminder 2 minggu.", tone: "warn" },
-  declined_by_student: { label: "Declined — mentee mundur", desc: "Catat alasan. Lead tetap di DB untuk re-engage.", tone: "muted" },
-  rejected_by_us: { label: "Rejected — kita tolak", desc: "Red flags terlalu serius. Polite decline + archive.", tone: "danger" },
+  proceed: {
+    label: "Proceed — Tunggu konfirmasi deposit 1x24 jam",
+    desc: "Kirim invoice & contract. Stage → deposit_pending (mentee punya 1×24 jam untuk respon).",
+    tone: "success",
+  },
+  agree_to_pay: {
+    label: "Agree to pay deposit",
+    desc: "Mentee sudah commit langsung saat call — skip masa tunggu. Stage → deposit_agreed.",
+    tone: "success",
+  },
+  waitlist: {
+    label: "Waitlist — tahan dulu",
+    desc: "Tidak fit timing / kapasitas. Reminder follow-up 1 minggu.",
+    tone: "warn",
+  },
+  declined_by_student: {
+    label: "Declined — mentee mundur",
+    desc: "Catat alasan. Lead tetap di DB untuk re-engage.",
+    tone: "muted",
+  },
+  rejected_by_us: {
+    label: "Rejected — kita tolak",
+    desc: "Red flags terlalu serius. Polite decline + archive.",
+    tone: "danger",
+  },
 };
 
 const TONE_COLORS: Record<"success" | "warn" | "muted" | "danger", { dot: string; border: string; bg: string }> = {

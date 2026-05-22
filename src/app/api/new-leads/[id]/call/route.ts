@@ -10,18 +10,20 @@ import { completeStepByTrigger } from "@/lib/leads/step-helpers";
  * When admin marks the call completed, the lead's next stage is driven
  * by the decision they recorded:
  *
- *   proceed             → deposit_pending  (invoice to send, awaiting payment)
- *   waitlist            → waitlist         (hold for now, reminder in 2 weeks)
+ *   proceed             → deposit_pending  (invoice sent, 1×24h wait)
+ *   agree_to_pay        → deposit_agreed   (mentee commit langsung — skip wait)
+ *   waitlist            → waitlist         (hold, follow-up 1 week)
  *   declined_by_student → declined         (lead withdrew)
  *   rejected_by_us      → rejected         (we declined; archive)
- *   (no decision)       → call_completed   (legacy behavior — keep stage at call_completed)
+ *   (no decision)       → call_completed   (legacy fallback)
  *
- * Auto-firing the right downstream pipeline step trigger too, so the
- * checklist stays in sync without manual ticks.
+ * Auto-fires the matching pipeline step via STAGE_TO_STEP_TRIGGER so
+ * the checklist stays in sync without manual ticks.
  */
 function nextStageForDecision(decision: LeadDecision | null | undefined): LeadStage {
   switch (decision) {
     case "proceed":             return "deposit_pending";
+    case "agree_to_pay":        return "deposit_agreed";
     case "waitlist":            return "waitlist";
     case "declined_by_student": return "declined";
     case "rejected_by_us":      return "rejected";
@@ -30,6 +32,7 @@ function nextStageForDecision(decision: LeadDecision | null | undefined): LeadSt
 }
 const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
   deposit_pending: "deposit_pending",
+  deposit_agreed:  "deposit_agreed",
 };
 
 /**
