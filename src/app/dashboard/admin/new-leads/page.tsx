@@ -840,6 +840,12 @@ export default function NewLeadsListPage() {
             busy={bulkBusy}
             onClose={() => setOpenLead(null)}
             onReachout={doSingleReachout}
+            onDeleted={() => {
+              setSyncMsg({ kind: "ok", text: `Lead "${openLead.name}" dihapus.` });
+              setTimeout(() => setSyncMsg(null), 4000);
+              void fetchList();
+              bumpMutationTick();
+            }}
           />
         )}
       </div>

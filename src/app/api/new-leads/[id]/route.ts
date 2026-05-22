@@ -94,3 +94,61 @@ export async function PATCH(
 
   return NextResponse.json({ lead: data });
 }
+
+/**
+ * DELETE — permanently remove a lead + all its dependent rows
+ * (LeadStageHistory / OutreachLog / LeadStepStatus cascade via Prisma
+ * `onDelete: Cascade` on the relation).
+ *
+ * Destructive. Caller must pass `?confirm=<lead.name>` matching the
+ * lead's stored name (URL-encoded) — defense-in-depth on top of the
+ * UI's type-name-to-confirm modal. Off-by-one mistakes (wrong tab,
+ * wrong row) get caught here.
+ *
+ * Audit trail is intentionally NOT preserved — once deleted, the row
+ * is gone. Rollback path = re-sync from Tally (if the lead was Tally-
+ * sourced; tallySubmissionId unique constraint still holds).
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Admin role required" }, { status: 403 });
+
+  const { id } = await params;
+  const url = new URL(req.url);
+  const expectedName = url.searchParams.get("confirm");
+  if (!expectedName) {
+    return NextResponse.json(
+      { error: "Missing ?confirm=<lead name> query param. UI must include the lead's name to confirm intent." },
+      { status: 400 },
+    );
+  }
+
+  // Fetch the lead first to verify the confirmation matches AND to
+  // surface a clear 404 vs 500.
+  const { data: lead, error: lookupErr } = await supabase
+    .from("Lead").select("id, name, email, tallySubmissionId").eq("id", id).single();
+  if (lookupErr) {
+    const code = lookupErr.code === "PGRST116" ? 404 : 500;
+    return NextResponse.json({ error: lookupErr.message }, { status: code });
+  }
+  if (lead.name.trim() !== expectedName.trim()) {
+    return NextResponse.json(
+      { error: `Confirmation name mismatch. Expected "${lead.name}", got "${expectedName}".` },
+      { status: 400 },
+    );
+  }
+
+  const { error: delErr } = await supabase.from("Lead").delete().eq("id", id);
+  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+
+  return NextResponse.json({
+    ok: true,
+    deletedId: id,
+    deletedName: lead.name,
+    tallyBackedUp: lead.tallySubmissionId !== null,
+  });
+}

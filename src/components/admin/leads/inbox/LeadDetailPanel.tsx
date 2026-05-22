@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import Modal from "@/components/ui/Modal";
 import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import LeadAvatar from "./LeadAvatar";
@@ -30,6 +31,8 @@ interface Props {
   busy: boolean;
   onClose: () => void;
   onReachout: (leadId: string, channel: "email" | "whatsapp" | "both") => void;
+  /** Called after a successful DELETE so parent can refresh list + close panel. */
+  onDeleted?: () => void;
 }
 
 const formatStamp = formatJakartaStamp;
@@ -54,16 +57,66 @@ function aiBriefFor(lead: Lead): string {
   }
 }
 
-export default function LeadDetailPanel({ lead, busy, onClose, onReachout }: Props) {
+export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDeleted }: Props) {
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [channel, setChannel] = useState<"email" | "whatsapp" | "both">("both");
+  const [reachoutConfirmOpen, setReachoutConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
   const hasWa = !!lead.whatsappNumber;
   // If lead has no WA, default to email-only so the Reachout button
   // doesn't prompt a skip on first click.
   useEffect(() => {
     if (!hasWa && (channel === "whatsapp" || channel === "both")) setChannel("email");
   }, [hasWa, channel, lead.id]);
+
+  // Reset modal state whenever the panel switches to a different lead.
+  useEffect(() => {
+    setReachoutConfirmOpen(false);
+    setDeleteConfirmOpen(false);
+    setDeleteConfirmText("");
+    setDeleteErr(null);
+  }, [lead.id]);
+
+  function channelLabel(c: typeof channel): string {
+    if (c === "email") return "Email saja";
+    if (c === "whatsapp") return "WhatsApp saja";
+    return "Email + WhatsApp (paralel)";
+  }
+
+  function confirmReachout() {
+    setReachoutConfirmOpen(false);
+    onReachout(lead.id, channel);
+  }
+
+  async function deleteLead() {
+    setDeleting(true);
+    setDeleteErr(null);
+    try {
+      const res = await fetch(
+        `/api/new-leads/${lead.id}?confirm=${encodeURIComponent(lead.name)}`,
+        { method: "DELETE", credentials: "include" },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteErr(body.error || `HTTP ${res.status}`);
+        return;
+      }
+      // Success — close panel + tell parent to refresh.
+      setDeleteConfirmOpen(false);
+      onDeleted?.();
+      onClose();
+    } catch (e) {
+      setDeleteErr(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const deleteNameMatches = deleteConfirmText.trim() === lead.name.trim();
 
   // Fetch full lead detail (history + pipeline checklist) so the panel
   // can show real timeline + step states. Lightweight (~5 KB).
@@ -153,7 +206,7 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout }: Pro
         </div>
         <button
           type="button"
-          onClick={() => onReachout(lead.id, channel)}
+          onClick={() => setReachoutConfirmOpen(true)}
           disabled={busy}
           className="btn-primary text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
         >
@@ -167,6 +220,16 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout }: Pro
           Detail lengkap
           <Icon name="arrow-right" size={12} />
         </Link>
+        <button
+          type="button"
+          onClick={() => setDeleteConfirmOpen(true)}
+          disabled={busy || deleting}
+          title="Hapus lead secara permanen"
+          className="text-xs inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-rose-600 hover:bg-rose-50 transition disabled:opacity-50"
+        >
+          <Icon name="trash" size={12} />
+          Hapus
+        </button>
       </div>
 
       {/* Scrollable body */}
@@ -305,6 +368,147 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout }: Pro
           </div>
         </Section>
       </div>
+
+      {/* Reachout confirm modal — keeps the firing path 1-click but
+          forces admin to eyeball the recipient + channel before the
+          API call goes out. Less ceremony than the bulk modal since
+          this is one lead at a time. */}
+      <Modal
+        open={reachoutConfirmOpen}
+        onClose={() => (busy ? null : setReachoutConfirmOpen(false))}
+        title={`Kirim outreach ke ${lead.name}?`}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setReachoutConfirmOpen(false)}
+              disabled={busy}
+              className="btn-ghost"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={confirmReachout}
+              disabled={busy}
+              className="btn-primary disabled:opacity-50"
+            >
+              {busy ? "Mengirim…" : "Kirim sekarang"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-2.5 text-sm">
+          <div className="text-xs text-text-muted">
+            Outreach akan dikirim ke lead di bawah. Template otomatis dipilih
+            berdasarkan bucket lead.
+          </div>
+          <div className="rounded-lg border border-border/60 p-3 space-y-1.5 text-[13px]">
+            <div className="flex justify-between gap-3">
+              <span className="text-text-muted-2 text-[11px] uppercase tracking-wider">To</span>
+              <span className="text-foreground font-medium text-right">{lead.name}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-text-muted-2 text-[11px] uppercase tracking-wider">Email</span>
+              <span className="text-foreground font-mono text-[12px] truncate">{lead.email}</span>
+            </div>
+            {lead.whatsappNumber && (
+              <div className="flex justify-between gap-3">
+                <span className="text-text-muted-2 text-[11px] uppercase tracking-wider">WhatsApp</span>
+                <span className="text-foreground font-mono text-[12px]">{lead.whatsappNumber}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-3">
+              <span className="text-text-muted-2 text-[11px] uppercase tracking-wider">Bucket</span>
+              <LeadBucketBadge bucket={lead.bucket} />
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-text-muted-2 text-[11px] uppercase tracking-wider">Channel</span>
+              <span className="text-foreground font-medium">{channelLabel(channel)}</span>
+            </div>
+          </div>
+          {(channel === "whatsapp" || channel === "both") && !lead.whatsappNumber && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              ⚠ Lead tidak punya nomor WA — channel WA akan di-skip server-side. Email tetap dikirim.
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* Delete confirm modal — type-name-to-confirm. Multi-step
+          friction so a misclick can't wipe a real lead. */}
+      <Modal
+        open={deleteConfirmOpen}
+        onClose={() => (deleting ? null : setDeleteConfirmOpen(false))}
+        title={`Hapus lead ${lead.name}?`}
+        variant="danger"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={deleting}
+              className="btn-ghost"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void deleteLead()}
+              disabled={deleting || !deleteNameMatches}
+              className="btn-danger disabled:opacity-50"
+            >
+              {deleting ? "Menghapus…" : "Hapus permanen"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-text-foreground">
+            Aksi ini <strong className="text-rose-700">permanen dan tidak bisa di-undo</strong>.
+            Yang akan dihapus dari database:
+          </p>
+          <ul className="text-xs text-text-muted space-y-1 list-disc pl-5">
+            <li>Lead row (id <span className="font-mono">{lead.id}</span>)</li>
+            <li>Semua stage history (timeline transisi)</li>
+            <li>Semua outreach log (email + WA terkirim)</li>
+            <li>Semua step status (pipeline checklist)</li>
+          </ul>
+          {lead.tallySubmissionId && (
+            <p className="text-[11px] text-text-muted bg-surface-elevated/40 border border-border/60 rounded px-2.5 py-1.5">
+              ℹ Lead ini bersumber dari Tally (<code className="font-mono">tallySubmissionId</code> ada).
+              &ldquo;Sync from Tally&rdquo; akan re-import lead ini kalau Tally submission-nya masih ada — tapi
+              history + outreach log tidak akan kembali.
+            </p>
+          )}
+          <div className="pt-2 border-t border-border/60">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Ketik nama lead persis untuk konfirmasi:{" "}
+              <code className="font-mono text-rose-700 select-none">{lead.name}</code>
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              disabled={deleting}
+              autoComplete="off"
+              autoFocus
+              placeholder={lead.name}
+              className="input-field text-sm font-mono"
+            />
+            {deleteConfirmText.length > 0 && !deleteNameMatches && (
+              <p className="text-[11px] text-rose-600 mt-1">
+                Belum match. Ketik persis: <code className="font-mono">{lead.name}</code>
+              </p>
+            )}
+          </div>
+          {deleteErr && (
+            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2.5 py-2">
+              ⚠ {deleteErr}
+            </div>
+          )}
+        </div>
+      </Modal>
     </aside>
   );
 }
