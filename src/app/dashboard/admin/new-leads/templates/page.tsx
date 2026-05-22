@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmailTemplateEditor from "@/components/admin/leads/EmailTemplateEditor";
+import PipelineSubnav from "@/components/admin/leads/PipelineSubnav";
 import { TEMPLATE_BUCKETS, type LeadEmailTemplate } from "@/lib/leads/types";
 
 interface ListResponse {
@@ -69,14 +69,9 @@ export default function EmailTemplatesPage() {
 
   return (
     <div className="space-y-5">
+      <PipelineSubnav />
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <Link
-            href="/dashboard/admin/new-leads"
-            className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground mb-2"
-          >
-            <Icon name="chevron-left" size={14} /> Semua leads
-          </Link>
           <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
             Email Templates
           </h1>

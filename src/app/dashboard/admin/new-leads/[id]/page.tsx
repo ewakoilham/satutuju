@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, use } from "react";
+import { useCallback, useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { formatJakartaStamp, formatJakartaRelative } from "@/lib/datetime-id";
-import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
 import OutreachPanel from "@/components/admin/leads/OutreachPanel";
 import MentorMatchPanel from "@/components/admin/leads/MentorMatchPanel";
 import CallBanner from "@/components/admin/leads/cockpit/CallBanner";
@@ -14,13 +13,17 @@ import CallWorkspace from "@/components/admin/leads/cockpit/CallWorkspace";
 import DecisionPad, { suggestDepositTier } from "@/components/admin/leads/cockpit/DecisionPad";
 import {
   CALL_PANEL_STAGES,
+  LEAD_STAGES,
+  STAGE_LABEL,
   type Lead,
+  type LeadStage,
   type LeadStageHistory,
   type OutreachLog,
   type LeadStepDefinition,
   type LeadStepStatusRow,
-  type LeadDecision,
 } from "@/lib/leads/types";
+import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
+import type { SaveState } from "@/components/admin/leads/cockpit/DecisionPad";
 
 /**
  * Call Cockpit detail page (Phase 8). Three-column layout optimized for
@@ -65,12 +68,13 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [interviewer, setInterviewer] = useState("");
   const [notes, setNotes] = useState("");
   const [redFlags, setRedFlags] = useState("");
-  const [decision, setDecision] = useState<LeadDecision | "">("");
   const [depositTier, setDepositTier] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [completing, setCompleting] = useState(false);
-  const [errMsg, setErrMsg] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [stageNote, setStageNote] = useState("");
+  // Auto-save indicator. saving = in-flight; saved = transient ✓; error = failed.
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  // Tracks whether form state has been edited since last fetch — guards
+  // against auto-saving immediately on initial sync.
+  const dirtyRef = useRef(false);
 
   const fetchDetail = useCallback(async () => {
     setLoading(true);
@@ -88,15 +92,17 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       setData(json);
       setError(null);
 
-      // Sync form state with the latest lead.
+      // Sync form state with the latest lead. Reset dirty flag so the
+      // next save effect doesn't auto-fire on initial hydration.
       const l = json.lead;
       const score = l.readinessScore ?? 0;
       setReadiness(Array.from({ length: READINESS_LENGTH }, (_, i) => i < score));
       setInterviewer(l.assignedInterviewer ?? "");
       setNotes(l.callNotes ?? "");
       setRedFlags(l.redFlags ?? "");
-      setDecision((l.decision as LeadDecision | null) ?? "");
       setDepositTier(l.depositTier);
+      setStageNote(l.stageNote ?? "");
+      dirtyRef.current = false;
     } finally {
       setLoading(false);
     }
@@ -107,45 +113,81 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   }, [fetchDetail]);
 
   function toggleReadiness(i: number) {
+    dirtyRef.current = true;
     setReadiness((r) => r.map((v, idx) => (idx === i ? !v : v)));
   }
 
-  async function saveCall(markCompleted: boolean) {
+  // Auto-save effect — debounces ~600ms after the last edit and PATCHes
+  // the lead. Replaces the old "Simpan & Mark Completed" button flow.
+  // Stage advancement is OUT of scope here — handled by /stage via the
+  // stage dropdown, pipeline checklist clicks, or terminal buttons.
+  useEffect(() => {
     if (!data) return;
-    if (markCompleted) setCompleting(true);
-    else setSaving(true);
-    setErrMsg(null);
-    setOkMsg(null);
+    if (!dirtyRef.current) return;
+    const ctrl = new AbortController();
+    setSaveState("saving");
+    const timer = setTimeout(async () => {
+      try {
+        const score = readiness.filter(Boolean).length;
+        const effectiveTier = depositTier ?? suggestDepositTier(score);
+        const res = await fetch(`/api/new-leads/${data.lead.id}/call`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            readinessScore: score,
+            callNotes: notes.trim() || null,
+            redFlags: redFlags.trim() || null,
+            depositTier: effectiveTier,
+            assignedInterviewer: interviewer.trim() || null,
+            stageNote: stageNote.trim() || null,
+          }),
+        });
+        if (!res.ok) {
+          setSaveState("error");
+          return;
+        }
+        setSaveState("saved");
+        dirtyRef.current = false;
+        setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1800);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+        setSaveState("error");
+      }
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readiness, notes, redFlags, depositTier, interviewer, stageNote]);
+
+  /** Manually advance/revert stage via the header dropdown. Free-form —
+   *  admin can pick any of 14 stages. Confirms before applying. */
+  const [stageBusy, setStageBusy] = useState(false);
+  async function changeStage(next: LeadStage) {
+    if (!data) return;
+    if (next === data.lead.stage) return;
+    if (!confirm(
+      `Pindahkan stage lead dari "${STAGE_LABEL[data.lead.stage]}" ke "${STAGE_LABEL[next]}"?`,
+    )) return;
+    setStageBusy(true);
     try {
-      const score = readiness.filter(Boolean).length;
-      const effectiveTier = depositTier ?? suggestDepositTier(score);
-      const res = await fetch(`/api/new-leads/${data.lead.id}/call`, {
+      const res = await fetch(`/api/new-leads/${data.lead.id}/stage`, {
         method: "PATCH",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          readinessScore: score,
-          callNotes: notes.trim() || null,
-          redFlags: redFlags.trim() || null,
-          decision: decision || null,
-          depositTier: effectiveTier,
-          assignedInterviewer: interviewer.trim() || null,
-          markCompleted,
-        }),
+        credentials: "include",
+        body: JSON.stringify({ stage: next, note: "Manual advance via stage dropdown" }),
       });
-      const json = await res.json();
       if (!res.ok) {
-        setErrMsg(json.error || `HTTP ${res.status}`);
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || `HTTP ${res.status}`);
         return;
       }
-      setOkMsg(markCompleted ? "Call marked as completed ✓" : "Draft tersimpan ✓");
       await fetchDetail();
-      setTimeout(() => setOkMsg(null), 4000);
-    } catch (e) {
-      setErrMsg(e instanceof Error ? e.message : "Network error");
     } finally {
-      setSaving(false);
-      setCompleting(false);
+      setStageBusy(false);
     }
   }
 
@@ -196,6 +238,24 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
             <span>·</span>
             <span>Last update {relativeTime(lead.updatedAt)}</span>
           </div>
+          {/* Stage dropdown — free admin control, can move forward or
+              backward through any of the 14 stages. Confirmation modal
+              inside changeStage(). */}
+          <div className="flex gap-2 mt-2.5 items-center">
+            <LeadStageBadge stage={lead.stage} />
+            <select
+              value={lead.stage}
+              onChange={(e) => void changeStage(e.target.value as LeadStage)}
+              disabled={stageBusy || readOnly}
+              className="text-[11.5px] bg-surface border border-border rounded-lg px-2 py-1 text-foreground hover:border-primary-200 focus:outline-none focus:border-primary disabled:opacity-50"
+              title="Pindahkan stage lead — bebas maju/mundur"
+            >
+              {LEAD_STAGES.map((s) => (
+                <option key={s} value={s}>{STAGE_LABEL[s]}</option>
+              ))}
+            </select>
+            {stageBusy && <span className="text-[10px] text-text-muted-2 italic">Memperbarui…</span>}
+          </div>
         </div>
         <div className="flex gap-2">
           <a
@@ -224,6 +284,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         <CallBanner
           scheduledAt={lead.callScheduledAt}
           completedAt={lead.callCompletedAt}
+          currentStage={lead.stage}
           interviewer={lead.assignedInterviewer || interviewer}
           // We don't currently store the Meet link per-lead. When that
           // lands, pull from lead.meetLink or wherever the calendar
@@ -240,26 +301,26 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           readiness={readiness}
           onToggleReadiness={toggleReadiness}
           notes={notes}
-          onNotesChange={setNotes}
+          onNotesChange={(v) => { dirtyRef.current = true; setNotes(v); }}
           redFlags={redFlags}
-          onRedFlagsChange={setRedFlags}
+          onRedFlagsChange={(v) => { dirtyRef.current = true; setRedFlags(v); }}
           interviewer={interviewer}
-          onInterviewerChange={setInterviewer}
+          onInterviewerChange={(v) => { dirtyRef.current = true; setInterviewer(v); }}
           readOnly={readOnly}
         />
         <DecisionPad
           score={score}
-          decision={decision}
-          onDecisionChange={setDecision}
           depositTier={depositTier}
-          onDepositTierChange={setDepositTier}
-          saving={saving}
-          completing={completing}
-          onSaveDraft={() => void saveCall(false)}
-          onMarkCompleted={() => void saveCall(true)}
-          errorMsg={errMsg}
-          okMsg={okMsg}
+          onDepositTierChange={(t) => { dirtyRef.current = true; setDepositTier(t); }}
           readOnly={readOnly}
+          currentStage={lead.stage}
+          leadId={lead.id}
+          steps={steps}
+          statuses={statuses}
+          onChanged={fetchDetail}
+          stageNote={stageNote}
+          onStageNoteChange={(v) => { dirtyRef.current = true; setStageNote(v); }}
+          saveState={saveState}
         />
       </div>
 
@@ -281,28 +342,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         </section>
       )}
 
-      {/* Collapsible: Pipeline checklist */}
-      <details className="card p-0 group/pipeline">
-        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-foreground select-none">
-          <span className="inline-flex items-center gap-2">
-            <Icon name="check" size={14} className="text-primary" />
-            Pipeline Checklist
-          </span>
-          <Icon
-            name="chevron-right"
-            size={14}
-            className="text-text-muted-2 transition-transform group-open/pipeline:rotate-90"
-          />
-        </summary>
-        <div className="px-4 pb-4 pt-1 border-t border-border/60">
-          <PipelineChecklist
-            leadId={lead.id}
-            steps={steps}
-            statuses={statuses}
-            onChanged={fetchDetail}
-          />
-        </div>
-      </details>
+      {/* Pipeline Checklist now lives inside the DecisionPad (right
+          column of the cockpit) so admin sees progress + branching in
+          one place. The standalone collapsible card was removed
+          post-Phase 11 to avoid duplication. */}
 
       {/* Collapsible: Outreach history */}
       <details className="card p-0 group/outreach">

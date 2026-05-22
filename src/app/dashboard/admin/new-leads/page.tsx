@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import {
@@ -18,6 +17,7 @@ import SmartSegments, {
 } from "@/components/admin/leads/inbox/SmartSegments";
 import LeadInboxRow from "@/components/admin/leads/inbox/LeadInboxRow";
 import LeadDetailPanel from "@/components/admin/leads/inbox/LeadDetailPanel";
+import PipelineSubnav from "@/components/admin/leads/PipelineSubnav";
 
 /**
  * Smart Inbox — email-client style triage layout for the admin leads
@@ -45,6 +45,10 @@ interface ListResponse {
 interface StatsLite {
   bucketCounts: Record<string, number>;
   stageCounts: Record<string, number>;
+  /** Bucket × stage crosstab from /stats. Lets us recompute segment
+   *  counts when a bucket filter is active so the sidebar number
+   *  matches the visible list. */
+  bucketStageCounts: Record<string, Record<string, number>>;
 }
 
 /** Selectable page-size options. API caps at 200. */
@@ -53,29 +57,59 @@ const DEFAULT_PAGE_SIZE = 50;
 
 const SEGMENT_BY_ID = new Map(SEGMENTS.map((s) => [s.id, s]));
 
-/** Compute the count for each segment from the global stats endpoint
- *  (which already returns stageCounts + bucketCounts). Stays accurate
- *  across paginated views. */
+/**
+ * Compute per-segment counts from /stats. When `activeBuckets` is non-
+ * empty, the counts compose with that bucket filter so the sidebar
+ * matches the list pane (otherwise admin sees "Hot · 28" while the list
+ * shows 1 because a bucket filter narrowed it). When no bucket filter
+ * is active, falls through to the global stageCounts (cheaper, same
+ * answer).
+ */
 function computeSegmentCounts(
   stats: StatsLite | null,
   total: number,
+  activeBuckets: Set<LeadBucket>,
 ): Record<SegmentId, number> {
-  const stageCounts = stats?.stageCounts ?? {};
   const bucketCounts = stats?.bucketCounts ?? {};
+  // When a bucket filter is active, use the crosstab restricted to those
+  // buckets. Otherwise use the global stageCounts.
+  let stageCounts: Record<string, number>;
+  let scopedTotal: number;
+  if (activeBuckets.size > 0 && stats?.bucketStageCounts) {
+    stageCounts = {};
+    scopedTotal = 0;
+    for (const b of activeBuckets) {
+      const byStage = stats.bucketStageCounts[b] ?? {};
+      for (const [stage, n] of Object.entries(byStage)) {
+        stageCounts[stage] = (stageCounts[stage] ?? 0) + n;
+        scopedTotal += n;
+      }
+    }
+  } else {
+    stageCounts = stats?.stageCounts ?? {};
+    scopedTotal = total;
+  }
   const sum = (keys: string[], src: Record<string, number>) =>
     keys.reduce((a, k) => a + (src[k] ?? 0), 0);
   return {
-    all:             total,
+    all:             scopedTotal,
     new:             stageCounts.new ?? 0,
     wait:            stageCounts.outreach_sent ?? 0,
     engaged:         sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
-    hot:             sum(["call_scheduled", "call_completed"], stageCounts),
+    hot:             stageCounts.call_scheduled ?? 0,
+    call_done:       stageCounts.call_completed ?? 0,
+    waitlist:        stageCounts.waitlist ?? 0,
     deposit_pending: stageCounts.deposit_pending ?? 0,
     deposit_agreed:  stageCounts.deposit_agreed ?? 0,
     deposit_paid:    stageCounts.deposit_paid ?? 0,
-    review:          bucketCounts.unclassified ?? 0,
+    // Review = unclassified bucket. When a bucket filter is active and
+    // doesn't include unclassified, this is 0.
+    review:          activeBuckets.size === 0 || activeBuckets.has("unclassified")
+                       ? (bucketCounts.unclassified ?? 0)
+                       : 0,
     won:             stageCounts.matched ?? 0,
-    closed:          sum(["waitlist", "declined", "rejected"], stageCounts),
+    // Phase 11: waitlist is no longer terminal — only declined+rejected.
+    closed:          sum(["declined", "rejected"], stageCounts),
   };
 }
 
@@ -190,7 +224,11 @@ export default function NewLeadsListPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (cancelled || !j) return;
-        setStats({ bucketCounts: j.bucketCounts ?? {}, stageCounts: j.stageCounts ?? {} });
+        setStats({
+          bucketCounts: j.bucketCounts ?? {},
+          stageCounts: j.stageCounts ?? {},
+          bucketStageCounts: j.bucketStageCounts ?? {},
+        });
       })
       .catch(() => {});
     return () => {
@@ -567,7 +605,11 @@ export default function NewLeadsListPage() {
 
   // Counts used by sidebar/segments. Falls back to data.bucketCounts
   // when /stats hasn't returned yet.
-  const segmentCounts = computeSegmentCounts(stats, stats ? Object.values(stats.bucketCounts).reduce((a, b) => a + b, 0) : total);
+  const segmentCounts = computeSegmentCounts(
+    stats,
+    stats ? Object.values(stats.bucketCounts).reduce((a, b) => a + b, 0) : total,
+    bucketFilter,
+  );
   const bucketCounts = stats?.bucketCounts ?? data?.bucketCounts ?? {};
 
   const activeSeg = SEGMENT_BY_ID.get(activeSegment);
@@ -575,6 +617,8 @@ export default function NewLeadsListPage() {
 
   return (
     <div className="space-y-4">
+      <PipelineSubnav />
+
       {/* Page header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -618,12 +662,6 @@ export default function NewLeadsListPage() {
               <Icon name="calendar" size={14} /> Connect Calendar
             </a>
           )}
-          <Link href="/dashboard/admin/new-leads/new" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
-            <Icon name="plus" size={14} /> Tambah manual
-          </Link>
-          <Link href="/dashboard/admin/new-leads/pipeline" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
-            <Icon name="check" size={14} /> Manage steps
-          </Link>
         </div>
       </div>
 

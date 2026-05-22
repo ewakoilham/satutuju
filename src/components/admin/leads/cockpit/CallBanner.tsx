@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { formatJakartaDateTime } from "@/lib/datetime-id";
+import { LEAD_STAGES, type LeadStage } from "@/lib/leads/types";
 
 /**
  * Top banner that surfaces the upcoming call: countdown pill + Google
@@ -18,9 +19,23 @@ import { formatJakartaDateTime } from "@/lib/datetime-id";
 interface Props {
   scheduledAt: string;       // ISO string
   completedAt?: string | null;  // set when admin marked call completed
+  /** Phase 11: lead's current stage. We derive "selesai" from this
+   *  (any stage at-or-past call_completed) instead of relying on
+   *  callCompletedAt — that legacy field is no longer updated by the
+   *  UI since the "Mark Completed" button was removed. */
+  currentStage: LeadStage;
   meetLink?: string | null;  // optional Google Meet URL
   interviewer?: string | null;
   durationMin?: number;      // defaults to 30
+}
+
+const CALL_COMPLETED_IDX = LEAD_STAGES.indexOf("call_completed");
+
+/** Lead's current stage is at-or-past call_completed (i.e. the call
+ *  workflow has been resolved, regardless of callCompletedAt). */
+function isStageCompleted(stage: LeadStage): boolean {
+  const idx = LEAD_STAGES.indexOf(stage);
+  return idx >= CALL_COMPLETED_IDX;
 }
 
 function diffMinutes(target: Date): number {
@@ -32,7 +47,7 @@ function parseAsUtc(s: string): Date {
   return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? new Date(s) : new Date(s + "Z");
 }
 
-export default function CallBanner({ scheduledAt, completedAt, meetLink, interviewer, durationMin = 30 }: Props) {
+export default function CallBanner({ scheduledAt, completedAt, currentStage, meetLink, interviewer, durationMin = 30 }: Props) {
   const target = parseAsUtc(scheduledAt);
   const [minutesLeft, setMinutesLeft] = useState(() => diffMinutes(target));
 
@@ -42,10 +57,10 @@ export default function CallBanner({ scheduledAt, completedAt, meetLink, intervi
     return () => clearInterval(id);
   }, [target]);
 
-  // Admin explicitly marking the call completed wins over the clock —
-  // even a future-dated callScheduledAt should read "selesai" once
-  // there's a callCompletedAt on the lead.
-  const isCompleted = !!completedAt;
+  // Phase 11: derive "selesai" primarily from stage. callCompletedAt is
+  // a legacy timestamp we still show when present, but it's no longer
+  // required — stage is the source of truth.
+  const isCompleted = isStageCompleted(currentStage);
   const isStarted = !isCompleted && minutesLeft <= 0 && minutesLeft > -durationMin;
   const isOver = !isCompleted && minutesLeft <= -durationMin;
   const isClose = !isCompleted && minutesLeft <= 30 && minutesLeft > 0;
@@ -57,9 +72,11 @@ export default function CallBanner({ scheduledAt, completedAt, meetLink, intervi
     : "bg-emerald-100 text-emerald-800";
 
   const pillText = isCompleted
-    ? `Call selesai · ${formatJakartaDateTime(parseAsUtc(completedAt))}`
+    ? completedAt
+      ? `Call selesai · ${formatJakartaDateTime(parseAsUtc(completedAt))}`
+      : "Call selesai"
     : isStarted ? "Call sedang berlangsung"
-    : isOver ? "Call selesai (jadwal lewat — admin belum mark completed)"
+    : isOver ? "Jadwal lewat — perbarui stage"
     : isClose ? `Mulai ${minutesLeft} menit lagi`
     : minutesLeft > 1440
       ? `Mulai ${Math.floor(minutesLeft / 1440)} hari lagi`

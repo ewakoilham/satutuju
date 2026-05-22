@@ -44,11 +44,17 @@ export async function GET(_req: NextRequest) {
 
   const bucketCounts: Record<string, number> = {};
   const stageCounts: Record<string, number> = {};
+  // Bucket × stage crosstab — lets the client recompute sidebar segment
+  // counts when a bucket filter is active (so the sidebar number always
+  // matches the visible list). Keyed: bucketStageCounts[bucket][stage].
+  const bucketStageCounts: Record<string, Record<string, number>> = {};
   let sent = 0, opened = 0, clicked = 0, callScheduled = 0, callCompleted = 0, matched = 0;
 
   for (const r of rows) {
     bucketCounts[r.bucket] = (bucketCounts[r.bucket] ?? 0) + 1;
     stageCounts[r.stage] = (stageCounts[r.stage] ?? 0) + 1;
+    const byStage = bucketStageCounts[r.bucket] ?? (bucketStageCounts[r.bucket] = {});
+    byStage[r.stage] = (byStage[r.stage] ?? 0) + 1;
     if (r.outreachSentAt) sent++;
     if (r.emailOpenedAt) opened++;
     if (r.emailClickedAt) clicked++;
@@ -61,6 +67,7 @@ export async function GET(_req: NextRequest) {
     total,
     bucketCounts,
     stageCounts,
+    bucketStageCounts,
     funnel: {
       total,
       sent,

@@ -15,12 +15,29 @@ import DashboardContractAlert from "@/components/contract/DashboardContractAlert
 // `NavGroup` collapses two or more sibling tabs under a single dropdown so the
 // admin ribbon doesn't keep growing every time we add a feature. Mentor/mentee
 // navs are flat today (4 items each, comfortable in a row).
-type NavLink = { href: string; label: string; icon: string };
+type NavLink = {
+  href: string;
+  label: string;
+  icon: string;
+  /** When set, the tab highlights for any pathname under this prefix (in
+   *  addition to exact href match). Use for tabs that own a whole section
+   *  with child routes — e.g. Pipeline. */
+  activePrefix?: string;
+};
 type NavGroup = { label: string; icon: string; children: NavLink[] };
 type NavItem = NavLink | NavGroup;
 
 function isGroup(item: NavItem): item is NavGroup {
   return (item as NavGroup).children !== undefined;
+}
+
+/** Decide whether a top-level NavLink should be highlighted for the
+ *  current pathname. Honors optional `activePrefix` so section-owning
+ *  tabs (e.g. Pipeline) light up across their child routes. */
+function isLinkActive(item: NavLink, pathname: string): boolean {
+  if (pathname === item.href) return true;
+  if (item.activePrefix && pathname.startsWith(item.activePrefix + "/")) return true;
+  return false;
 }
 
 const NAV_ITEMS: Record<string, NavItem[]> = {
@@ -35,16 +52,10 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
         { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
       ],
     },
-    {
-      label: "Pipeline", icon: "chart",
-      children: [
-        { href: "/dashboard/admin/new-leads",           label: "New Leads",       icon: "users"    },
-        { href: "/dashboard/admin/new-leads/new",       label: "Tambah Lead",     icon: "plus"     },
-        { href: "/dashboard/admin/new-leads/pipeline",  label: "Pipeline Steps",  icon: "check"    },
-        { href: "/dashboard/admin/new-leads/templates", label: "Email Templates", icon: "document" },
-        { href: "/dashboard/admin/new-leads/settings",  label: "Auto-Send",       icon: "calendar" },
-      ],
-    },
+    // Pipeline → single tab. Sub-navigation (Tambah Lead / Pipeline
+    // Steps / Email Templates / Auto-Send) lives inside the pipeline
+    // pages via <PipelineSubnav />.
+    { href: "/dashboard/admin/new-leads", label: "Pipeline", icon: "chart", activePrefix: "/dashboard/admin/new-leads" },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
     { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
@@ -237,7 +248,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     );
                   }
 
-                  const isActive   = pathname === item.href;
+                  const isActive   = isLinkActive(item, pathname);
                   const isSchedule = item.href === "/dashboard/schedule";
                   return (
                     <Link key={item.href} href={item.href}
@@ -443,7 +454,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   );
                 }
 
-                const isActive   = pathname === item.href;
+                const isActive   = isLinkActive(item, pathname);
                 const isSchedule = item.href === "/dashboard/schedule";
                 return (
                   <Link key={item.href} href={item.href}

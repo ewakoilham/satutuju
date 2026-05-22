@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { formatJakartaDateTime } from "@/lib/datetime-id";
+import PipelineSubnav from "@/components/admin/leads/PipelineSubnav";
 
 interface Settings {
   id: string;
@@ -90,13 +90,8 @@ export default function AutoSendSettingsPage() {
 
   return (
     <div className="space-y-5">
+      <PipelineSubnav />
       <div>
-        <Link
-          href="/dashboard/admin/new-leads"
-          className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground mb-2"
-        >
-          <Icon name="chevron-left" size={14} /> Semua leads
-        </Link>
         <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
           Auto-Send Scheduler
         </h1>

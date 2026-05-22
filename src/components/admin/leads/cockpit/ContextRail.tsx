@@ -152,11 +152,6 @@ export default function ContextRail({ lead, history, outreach }: Props) {
         <CheckLine on={lead.isCampusPartner === true}>
           {lead.parsedCampus || "Kampus tujuan"} = partner
         </CheckLine>
-        {lead.bucketReason && (
-          <div className="text-[11px] text-text-muted-2 italic mt-2 leading-snug">
-            {lead.bucketReason}
-          </div>
-        )}
       </Section>
 
       <Section title="Engagement">

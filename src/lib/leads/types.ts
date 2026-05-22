@@ -12,12 +12,14 @@ export const LEAD_STAGES = [
   "email_clicked",   // Lead clicked a link inside the email
   "call_scheduled",
   "call_completed",
-  "deposit_pending",  // invoice sent, awaiting mentee confirmation (24h SLA)
+  "waitlist",         // Phase 11: linear stage, between call_completed and
+                      // deposit_pending. Lead is parked but still active —
+                      // admin can resume to deposit_pending or terminate.
+  "deposit_pending",  // invoice sent, awaiting mentee confirmation
   "deposit_agreed",   // mentee confirmed willingness to pay, transfer not yet received
   "deposit_paid",     // deposit lunas — transfer confirmed
   "matched",
   "declined",
-  "waitlist",
   "rejected",
 ] as const;
 export type LeadStage = (typeof LEAD_STAGES)[number];
@@ -97,7 +99,12 @@ export const TRIGGER_CATEGORY: Record<StepAutoTrigger, StepAutoTriggerCategory> 
   deposit_pending: "stage-click",
   deposit_agreed:  "stage-click",
   deposit_paid:    "stage-click",
-  matched:         "stage-click",
+  // `matched` is fired externally — when admin creates a Pairing in
+  // /dashboard/pairings the pairing route looks up the lead by email
+  // and auto-advances + fires this trigger. NOT clickable from the
+  // pipeline checklist (would otherwise let admin tick "matched"
+  // without an actual Pairing row).
+  matched:         "event",
 };
 
 /** Human-friendly label per trigger, used by Pipeline Manager + the
@@ -115,6 +122,23 @@ export const TRIGGER_LABEL: Record<StepAutoTrigger, string> = {
   deposit_agreed:  "Stage → bersedia bayar",
   deposit_paid:    "Stage → deposit lunas",
   matched:         "Stage → matched",
+};
+
+/** Short inline hint shown next to a step label in PipelineChecklist.
+ *  Replaces the verbose badge + description block — admin gets a one-
+ *  glance read of WHEN the step fires without a wall of text. */
+export const TRIGGER_HINT: Record<StepAutoTrigger, string> = {
+  classified:      "otomatis saat lead masuk",
+  email_sent:      "otomatis saat email terkirim",
+  email_opened:    "otomatis saat email dibuka",
+  email_clicked:   "otomatis saat link email diklik",
+  whatsapp_sent:   "otomatis saat WhatsApp terkirim",
+  whatsapp_read:   "otomatis saat WhatsApp dibaca",
+  call_scheduled:  "otomatis saat Google Calendar booking",
+  deposit_pending: "klik untuk advance",
+  deposit_agreed:  "klik untuk advance",
+  deposit_paid:    "klik untuk advance",
+  matched:         "otomatis saat dipair via tab Pairings",
 };
 
 /** Display metadata for each trigger category. Used by Pipeline Manager
@@ -149,6 +173,16 @@ export const CATEGORY_META: Record<
  * `/api/new-leads/[id]/call` route (decision-driven advance on call
  * completion). Stages not in this map have no listening step trigger
  * by design (e.g. terminal stages: declined, waitlist, rejected).
+ */
+/**
+ * Stage → step-auto-trigger mapping. When a lead's stage transitions to
+ * one of these stages, `completeStepByTrigger` ticks the step whose
+ * autoTrigger matches.
+ *
+ * Phase 11 restored `deposit_pending` to this map — the step "Menunggu
+ * Konfirmasi Deposit" is now stage-click (clicking advances stage +
+ * auto-ticks). This guarantees zero drift between step.status and
+ * Lead.stage: one source of truth, always in sync.
  */
 export const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
   call_scheduled:  "call_scheduled",
@@ -241,6 +275,12 @@ export interface Lead {
   callNotes: string | null;
   redFlags: string | null;
   decision: LeadDecision | null;
+  /** Per-stage freeform note. Lives on the Lead row for the CURRENT
+   *  stage. On stage transition the value is captured into the
+   *  outgoing LeadStageHistory row's `note` field and this column is
+   *  cleared — so historical notes are preserved per-stage in the
+   *  history table while the active note is here. Phase 11. */
+  stageNote: string | null;
   mentorMatchedId: string | null;
   // Bookkeeping
   createdAt: string;

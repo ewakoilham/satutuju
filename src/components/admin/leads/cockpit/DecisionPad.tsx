@@ -1,33 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
-import { LEAD_DECISIONS, type LeadDecision } from "@/lib/leads/types";
+import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
+import {
+  STAGE_LABEL,
+  type LeadStage,
+  type LeadStepDefinition,
+  type LeadStepStatusRow,
+} from "@/lib/leads/types";
 
 /**
- * Right column of the Call Cockpit — the decision pad. Always-visible
- * scorecard + deposit tier + final decision picker + save buttons.
+ * Right column of the Call Cockpit. Phase 11 redesign:
  *
- * Score → tier mapping (heuristic; admin can override).
- * Checklist max is 6 items:
- *   score >= 5 → Tier 1 (premium / siap)
- *   score >= 3 → Tier 2 (standard)
- *   else       → Tier 3 (coaching-heavy)
- *
- * Save flow:
- *   - "Simpan draft" → PATCH /call with markCompleted=false (does not
- *     advance stage; keeps the call_scheduled stage so admin can resume).
- *   - "Mark Completed" → PATCH /call with markCompleted=true (advances
- *     stage to call_completed + writes history).
+ *   • No Save / Mark Completed buttons — score/tier/notes auto-save in
+ *     parent on blur (debounced PATCH /call).
+ *   • Pipeline checklist embedded — clicking a stage-click step advances
+ *     stage + auto-ticks the step (single source of truth).
+ *   • Terminal decisions = 2 buttons (Declined + Rejected). Waitlist
+ *     graduated to a linear stage; use stage dropdown to enter waitlist.
+ *   • Per-stage notes textarea visible for parking / pending stages
+ *     (waitlist, deposit_pending, deposit_agreed, deposit_paid).
+ *   • Terminal section hidden entirely once the lead is past the
+ *     terminal-decision window (matched / declined / rejected) —
+ *     reversal goes via stage dropdown.
  */
 
-/**
- * Deposit tier — semua lead bayar deposit Rp 1jt yang sama, tier hanya
- * menentukan eligibility diskon program. Mapping default heuristic
- * (admin masih bisa override per lead via tier picker):
- *   score >= 5 → Tier 1 (applicable for discount)
- *   score >= 3 → Tier 2 (may be applicable)
- *   else       → Tier 3 (not applicable)
- */
 const DEPOSIT_TIERS: Record<number, { label: string; eligibility: string; desc: string; eligibilityTone: "success" | "warn" | "muted" }> = {
   1: {
     label: "Tier 1 — Premium / siap",
@@ -57,78 +55,135 @@ const TIER_ELIGIBILITY_COLOR: Record<"success" | "warn" | "muted", string> = {
   muted:   "text-slate-600 bg-slate-100",
 };
 
-const DECISION_META: Record<LeadDecision, { label: string; desc: string; tone: "success" | "warn" | "muted" | "danger" }> = {
-  proceed: {
-    label: "Proceed — Tunggu konfirmasi deposit 1x24 jam",
-    desc: "Kirim invoice & contract. Stage → deposit_pending (mentee punya 1×24 jam untuk respon).",
-    tone: "success",
-  },
-  agree_to_pay: {
-    label: "Agree to pay deposit",
-    desc: "Mentee sudah commit langsung saat call — skip masa tunggu. Stage → deposit_agreed.",
-    tone: "success",
-  },
-  waitlist: {
-    label: "Waitlist — tahan dulu",
-    desc: "Tidak fit timing / kapasitas. Reminder follow-up 1 minggu.",
-    tone: "warn",
-  },
-  declined_by_student: {
+/**
+ * Stages where a per-stage note textarea is shown. Lead is parked or
+ * mid-deposit-flow — admin often needs to leave a contextual note
+ * (e.g. "menunggu transfer setelah gajian").
+ */
+const STAGES_WITH_NOTE: ReadonlySet<LeadStage> = new Set<LeadStage>([
+  "waitlist", "deposit_pending", "deposit_agreed", "deposit_paid",
+]);
+
+/**
+ * Stages where the terminal-decisions section is meaningful. Past
+ * these stages (matched / declined / rejected) the lead is already on
+ * a terminal branch — hide the buttons; reversal is via stage dropdown.
+ */
+const STAGES_WITH_TERMINAL: ReadonlySet<LeadStage> = new Set<LeadStage>([
+  "call_scheduled", "call_completed", "waitlist",
+  "deposit_pending", "deposit_agreed", "deposit_paid",
+]);
+
+const TERMINAL_ACTIONS: Array<{
+  targetStage: LeadStage;
+  label: string;
+  desc: string;
+  iconName: string;
+  toneClass: string;
+  activeClass: string;
+}> = [
+  {
+    targetStage: "declined",
     label: "Declined — mentee mundur",
     desc: "Catat alasan. Lead tetap di DB untuk re-engage.",
-    tone: "muted",
+    iconName: "x",
+    toneClass: "border-slate-200 hover:border-slate-400 hover:bg-slate-50/60",
+    activeClass: "border-slate-400 bg-slate-50 text-slate-900",
   },
-  rejected_by_us: {
+  {
+    targetStage: "rejected",
     label: "Rejected — kita tolak",
     desc: "Red flags terlalu serius. Polite decline + archive.",
-    tone: "danger",
+    iconName: "flag",
+    toneClass: "border-rose-200 hover:border-rose-400 hover:bg-rose-50/60",
+    activeClass: "border-rose-500 bg-rose-50 text-rose-900",
   },
-};
-
-const TONE_COLORS: Record<"success" | "warn" | "muted" | "danger", { dot: string; border: string; bg: string }> = {
-  success: { dot: "#10b981", border: "border-emerald-500", bg: "bg-emerald-50" },
-  warn: { dot: "#d97706", border: "border-amber-500", bg: "bg-amber-50" },
-  muted: { dot: "#94a3b8", border: "border-slate-400", bg: "bg-slate-50" },
-  danger: { dot: "#dc2626", border: "border-rose-500", bg: "bg-rose-50" },
-};
+];
 
 export function suggestDepositTier(score: number): number {
   // Thresholds calibrated against the 6-item readiness checklist.
-  // Update both this and the comment block above if items change.
   if (score >= 5) return 1;
   if (score >= 3) return 2;
   return 3;
 }
 
+export type SaveState = "idle" | "saving" | "saved" | "error";
+
 interface Props {
-  score: number;       // 0-5
-  decision: LeadDecision | "";
-  onDecisionChange: (d: LeadDecision | "") => void;
+  score: number;       // 0-6
   depositTier: number | null;
   onDepositTierChange: (t: number | null) => void;
-  saving: boolean;
-  completing: boolean;
-  onSaveDraft: () => void;
-  onMarkCompleted: () => void;
-  errorMsg: string | null;
-  okMsg: string | null;
   readOnly: boolean;
+  currentStage: LeadStage;
+  /** Pipeline data — embedded checklist replaces the legacy decision
+   *  radio picker. Admin advances the lead by ticking checklist items
+   *  (linear path) or clicking one of the terminal actions. */
+  leadId: string;
+  steps: LeadStepDefinition[];
+  statuses: LeadStepStatusRow[];
+  onChanged: () => void;
+  /** Current stage's note (Lead.stageNote). Only persisted while lead
+   *  sits in this stage; rolled over to LeadStageHistory on transition. */
+  stageNote: string;
+  onStageNoteChange: (v: string) => void;
+  /** Auto-save indicator. Parent debounces /call PATCH and reports
+   *  status back. */
+  saveState: SaveState;
 }
 
 export default function DecisionPad({
   score,
-  decision,
-  onDecisionChange,
   depositTier,
   onDepositTierChange,
-  saving,
-  completing,
-  onSaveDraft,
-  onMarkCompleted,
-  errorMsg,
-  okMsg,
   readOnly,
+  currentStage,
+  leadId,
+  steps,
+  statuses,
+  onChanged,
+  stageNote,
+  onStageNoteChange,
+  saveState,
 }: Props) {
+  const [terminalBusy, setTerminalBusy] = useState<LeadStage | null>(null);
+  const [terminalErr, setTerminalErr] = useState<string | null>(null);
+  // Local textarea state so typing is responsive; sync from prop changes.
+  const [noteDraft, setNoteDraft] = useState(stageNote);
+  useEffect(() => { setNoteDraft(stageNote); }, [stageNote]);
+
+  async function advanceToTerminal(stage: LeadStage, label: string) {
+    if (terminalBusy) return;
+    const isActive = currentStage === stage;
+    const targetStage: LeadStage = isActive ? "call_completed" : stage;
+    const promptMsg = isActive
+      ? `Mundurkan lead dari "${STAGE_LABEL[stage]}"? Stage akan kembali ke "${STAGE_LABEL.call_completed}".`
+      : `Set stage lead ke "${STAGE_LABEL[stage]}"? Pilihan ini sifatnya terminal — gunakan dropdown stage kalau mau membalikkan nanti.`;
+    if (!confirm(promptMsg)) return;
+    setTerminalBusy(stage);
+    setTerminalErr(null);
+    try {
+      const res = await fetch(`/api/new-leads/${leadId}/stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          stage: targetStage,
+          note: isActive
+            ? `Mundur dari ${label} → ${STAGE_LABEL.call_completed}`
+            : `Keputusan terminal: ${label}`,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setTerminalErr(body.error || `HTTP ${res.status}`);
+        return;
+      }
+      onChanged();
+    } finally {
+      setTerminalBusy(null);
+    }
+  }
+
   const suggested = suggestDepositTier(score);
   const effective = depositTier ?? suggested;
   const scoreCopy = score === 6
@@ -140,6 +195,9 @@ export default function DecisionPad({
         : score === 0
           ? "Belum ada data"
           : "Lemah — fokus build dasar";
+
+  const showTerminal = STAGES_WITH_TERMINAL.has(currentStage);
+  const showStageNote = STAGES_WITH_NOTE.has(currentStage);
 
   return (
     <aside className="w-[320px] flex-shrink-0 self-start bg-surface border border-border rounded-xl flex flex-col">
@@ -164,9 +222,7 @@ export default function DecisionPad({
         </div>
       </div>
 
-      {/* Deposit tier — semua lead bayar nominal sama; tier menentukan
-          eligibility diskon program. Pesan deposit ditampilkan sekali
-          di atas card group supaya tidak repetitif. */}
+      {/* Deposit tier */}
       <div className="px-4 py-3.5 border-b border-border/60">
         <div className="flex items-baseline justify-between mb-2">
           <div className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.06em]">
@@ -209,85 +265,131 @@ export default function DecisionPad({
         })}
       </div>
 
-      {/* Decision */}
+      {/* Pipeline checklist — primary advancement surface. */}
       <div className="px-4 py-3.5 border-b border-border/60">
         <div className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.06em] mb-2.5">
-          Keputusan
+          Pipeline checklist
         </div>
-        <div className="space-y-1.5">
-          {LEAD_DECISIONS.map((d) => {
-            const meta = DECISION_META[d];
-            const tone = TONE_COLORS[meta.tone];
-            const active = decision === d;
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => onDecisionChange(active ? "" : d)}
-                disabled={readOnly}
-                className={`w-full text-left p-2.5 rounded-lg border flex gap-2.5 items-start transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                  active ? `${tone.border} ${tone.bg}` : "border-border bg-surface hover:bg-surface-elevated/40"
-                }`}
-              >
-                <span
-                  className={`w-3.5 h-3.5 rounded-full border-[1.5px] mt-0.5 flex-shrink-0 inline-flex items-center justify-center`}
-                  style={{
-                    borderColor: active ? tone.dot : "var(--color-border, #d4d4d8)",
-                    background: active ? tone.dot : "transparent",
-                  }}
-                >
-                  {active && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </span>
-                <div>
-                  <div className="text-[12.5px] font-semibold text-foreground">{meta.label}</div>
-                  <div className="text-[11px] text-text-muted mt-0.5 leading-snug">{meta.desc}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <PipelineChecklist
+          leadId={leadId}
+          steps={steps}
+          statuses={statuses}
+          onChanged={onChanged}
+          currentStage={currentStage}
+        />
       </div>
 
-      {errorMsg && (
-        <div className="mx-4 mt-2.5 mb-1 px-3 py-2 rounded-lg text-[11.5px] bg-danger-light border border-danger/30 text-danger">
-          ⚠ {errorMsg}
-        </div>
-      )}
-      {okMsg && (
-        <div className="mx-4 mt-2.5 mb-1 px-3 py-2 rounded-lg text-[11.5px] bg-emerald-50 border border-emerald-200 text-emerald-800">
-          {okMsg}
+      {/* Per-stage notes — for parking/pending stages only. */}
+      {showStageNote && (
+        <div className="px-4 py-3.5 border-b border-border/60">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <div className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.06em]">
+              Catatan stage · {STAGE_LABEL[currentStage]}
+            </div>
+            <SaveIndicator state={saveState} />
+          </div>
+          <textarea
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onBlur={() => {
+              if (noteDraft !== stageNote) onStageNoteChange(noteDraft);
+            }}
+            disabled={readOnly}
+            placeholder="mis. Mentee minta perpanjangan deadline transfer · follow-up tgl 1"
+            rows={3}
+            className="w-full text-[12px] px-2.5 py-2 rounded-lg border border-border bg-surface focus:border-primary focus:outline-none resize-none disabled:opacity-50"
+            maxLength={2000}
+          />
+          <p className="text-[10.5px] text-text-muted-2 italic mt-1 leading-snug">
+            Catatan ini disimpan untuk stage <strong>{STAGE_LABEL[currentStage]}</strong>. Saat stage berubah, catatan otomatis di-archive ke history.
+          </p>
         </div>
       )}
 
-      {/* Save */}
-      {!readOnly && (
-        <div className="px-4 py-3.5 border-t border-border bg-surface-elevated/30 mt-auto">
-          <button
-            type="button"
-            onClick={onMarkCompleted}
-            disabled={saving || completing}
-            className="w-full py-2.5 rounded-lg bg-primary text-white font-bold text-[13.5px] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            <Icon name="check" size={14} />
-            {completing ? "Menyimpan…" : "Simpan & Mark Completed"}
-          </button>
-          <button
-            type="button"
-            onClick={onSaveDraft}
-            disabled={saving || completing}
-            className="w-full py-2 mt-2 text-text-muted text-[12px] font-medium hover:text-foreground disabled:opacity-50"
-          >
-            {saving ? "Menyimpan…" : "Simpan draft saja"}
-          </button>
+      {/* Keputusan terminal — Declined / Rejected only (waitlist is linear). */}
+      {showTerminal && (
+        <div className="px-4 py-3.5 border-b border-border/60">
+          <div className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.06em] mb-2.5">
+            Keputusan terminal
+          </div>
+          <div className="space-y-1.5">
+            {TERMINAL_ACTIONS.map((t) => {
+              const active = currentStage === t.targetStage;
+              const busy = terminalBusy === t.targetStage;
+              return (
+                <button
+                  key={t.targetStage}
+                  type="button"
+                  onClick={() => void advanceToTerminal(t.targetStage, t.label)}
+                  disabled={readOnly || terminalBusy !== null}
+                  title={active ? `Klik lagi untuk mundurkan ke "${STAGE_LABEL.call_completed}"` : undefined}
+                  className={`w-full text-left p-2.5 rounded-lg border flex gap-2.5 items-start transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    active ? t.activeClass : `${t.toneClass} bg-surface`
+                  }`}
+                >
+                  <span
+                    className={`w-4 h-4 rounded grid place-items-center mt-0.5 flex-shrink-0 border ${
+                      active ? "bg-current text-white border-transparent" : "border-border bg-surface"
+                    }`}
+                  >
+                    {active ? (
+                      <Icon name="check" size={10} />
+                    ) : (
+                      <Icon name={t.iconName} size={10} className="text-text-muted-2" />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] font-semibold flex items-center gap-2">
+                      {t.label}
+                      {busy && <span className="text-[10px] font-normal text-text-muted-2">…</span>}
+                      {active && !busy && (
+                        <span className="text-[10px] font-normal italic text-text-muted-2">
+                          klik untuk mundurkan
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-text-muted mt-0.5 leading-snug">{t.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
+            {terminalErr && (
+              <div className="text-[11px] text-danger px-2.5 py-1.5 rounded bg-danger-light border border-danger/30">
+                {terminalErr}
+              </div>
+            )}
+          </div>
         </div>
       )}
-      {readOnly && (
+
+      {/* Footer: save indicator + locked badge when readOnly */}
+      {readOnly ? (
         <div className="px-4 py-3 border-t border-border bg-surface-elevated/30 mt-auto text-[11.5px] text-text-muted-2 italic text-center">
           Locked — lead sudah di-match dengan mentor.
+        </div>
+      ) : (
+        <div className="px-4 py-3 border-t border-border/60 bg-surface-elevated/30 mt-auto flex items-center justify-between gap-2">
+          <span className="text-[11px] text-text-muted-2">
+            Stage saat ini: <span className="font-semibold text-foreground">{STAGE_LABEL[currentStage]}</span>
+          </span>
+          <SaveIndicator state={saveState} />
         </div>
       )}
     </aside>
   );
+}
+
+function SaveIndicator({ state }: { state: SaveState }) {
+  if (state === "idle") return null;
+  if (state === "saving") {
+    return <span className="text-[10.5px] text-text-muted-2 italic">Menyimpan…</span>;
+  }
+  if (state === "saved") {
+    return <span className="text-[10.5px] text-emerald-700 inline-flex items-center gap-1">
+      <Icon name="check" size={9} /> Tersimpan
+    </span>;
+  }
+  return <span className="text-[10.5px] text-danger">Gagal simpan</span>;
 }
 
 function ScoreRing({ score, max }: { score: number; max: number }) {

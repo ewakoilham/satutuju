@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import PipelineSubnav from "@/components/admin/leads/PipelineSubnav";
 import {
   CATEGORY_META,
   STEP_AUTO_TRIGGERS,
@@ -164,6 +164,7 @@ export default function PipelineManagerPage() {
 
   return (
     <div className="space-y-5">
+      <PipelineSubnav />
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
@@ -175,9 +176,6 @@ export default function PipelineManagerPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/admin/new-leads" className="btn-ghost text-sm inline-flex items-center gap-1.5">
-            <Icon name="chevron-left" size={14} /> Back to leads
-          </Link>
           <button
             type="button"
             onClick={() => setShowCreate(true)}

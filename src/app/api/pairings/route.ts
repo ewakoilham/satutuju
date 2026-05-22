@@ -2,9 +2,63 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { CURRICULUM } from "@/lib/curriculum";
+import { newStageHistoryId } from "@/lib/leads/ids";
+import { completeStepByTrigger } from "@/lib/leads/step-helpers";
 
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+/**
+ * After a Pairing is created, see if the mentee corresponds to a Lead
+ * in the leads pipeline (matched by email — Lead pre-exists the User
+ * for most onboardings). If so, push the lead to stage=matched and
+ * fire the "matched" pipeline-step trigger. Best-effort: failures are
+ * logged but do not roll back the Pairing.
+ */
+async function syncPairingToLead(menteeId: string, mentorId: string, actorId: string) {
+  const { data: menteeUser } = await supabase
+    .from("User")
+    .select("email")
+    .eq("id", menteeId)
+    .single();
+  const email = menteeUser?.email?.toLowerCase();
+  if (!email) return;
+
+  const { data: lead } = await supabase
+    .from("Lead")
+    .select("id, stage, mentorMatchedId")
+    .ilike("email", email)
+    .maybeSingle();
+  if (!lead) return;
+
+  const now = new Date().toISOString();
+  const wasMatched = lead.stage === "matched";
+  const sameMentor = lead.mentorMatchedId === mentorId;
+  if (wasMatched && sameMentor) return; // idempotent — nothing to do
+
+  const { error: updErr } = await supabase
+    .from("Lead")
+    .update({ mentorMatchedId: mentorId, stage: "matched", updatedAt: now })
+    .eq("id", lead.id);
+  if (updErr) {
+    console.error("[pairing→lead sync] lead update failed", updErr);
+    return;
+  }
+
+  await supabase.from("LeadStageHistory").insert({
+    id: newStageHistoryId(),
+    leadId: lead.id,
+    fromStage: lead.stage,
+    toStage: "matched",
+    changedBy: actorId,
+    note: wasMatched
+      ? `Re-matched via Pairings: ${lead.mentorMatchedId} → ${mentorId}`
+      : `Matched via Pairings dashboard (mentor ${mentorId})`,
+    createdAt: now,
+  });
+
+  await completeStepByTrigger(lead.id, "matched").catch(() => {});
 }
 
 export async function GET() {
@@ -153,6 +207,13 @@ export async function POST(req: NextRequest) {
   if (sessionsError) {
     console.error("Sessions create error:", sessionsError);
   }
+
+  // Best-effort: link the pairing back to the leads pipeline so the
+  // "Match dengan mentor" checklist step auto-completes. Wrapped so
+  // a failure here doesn't fail the pairing creation itself.
+  syncPairingToLead(menteeId, mentorId, user.userId).catch((err) => {
+    console.error("[pairing→lead sync] unexpected error", err);
+  });
 
   return NextResponse.json({ pairing }, { status: 201 });
 }

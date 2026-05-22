@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import {
-  CATEGORY_META,
+  LEAD_STAGES,
   STAGE_LABEL,
   STAGE_TO_STEP_TRIGGER,
   TRIGGER_CATEGORY,
-  TRIGGER_LABEL,
+  TRIGGER_HINT,
   type LeadStage,
   type LeadStepDefinition,
   type LeadStepStatusRow,
@@ -21,7 +21,38 @@ interface Props {
   steps: LeadStepDefinition[];
   statuses: LeadStepStatusRow[];
   onChanged?: () => void;
+  /** When provided, the checklist filters out auto (event +
+   *  stage-system) steps that represent stages the lead has already
+   *  passed — so admin only sees the steps that are still actionable.
+   *  Manual + stage-click steps always remain visible. */
+  currentStage?: LeadStage;
 }
+
+/**
+ * For each auto trigger, the LEAD_STAGE the step represents. Used to
+ * prune the checklist as the lead advances: once the lead's stage is
+ * at-or-past this stage, the auto step is no longer actionable and
+ * gets filtered out.
+ *
+ * `classified` maps to "new" because every lead in the system has
+ * already passed classification by the time it's visible at all.
+ */
+const STAGE_FOR_AUTO_TRIGGER: Partial<Record<StepAutoTrigger, LeadStage>> = {
+  classified:      "new",
+  email_sent:      "outreach_sent",
+  email_opened:    "email_opened",
+  email_clicked:   "email_clicked",
+  whatsapp_sent:   "outreach_sent",
+  whatsapp_read:   "whatsapp_read",
+  call_scheduled:  "call_scheduled",
+  matched:         "matched",
+};
+
+const STAGE_INDEX: Record<LeadStage, number> = (() => {
+  const out = {} as Record<LeadStage, number>;
+  LEAD_STAGES.forEach((s, i) => { out[s] = i; });
+  return out;
+})();
 
 /**
  * Map from a trigger back to the stage that owns it. Inverse of
@@ -36,12 +67,6 @@ const STAGE_FOR_TRIGGER: Partial<Record<StepAutoTrigger, LeadStage>> = (() => {
   }
   return out;
 })();
-
-const BADGE_TONE_CLASS: Record<"violet" | "blue" | "emerald", string> = {
-  violet:  "bg-violet-50 text-violet-700",
-  blue:    "bg-blue-50 text-blue-700",
-  emerald: "bg-emerald-50 text-emerald-700",
-};
 
 function formatStamp(iso: string | null): string | null {
   if (!iso) return null;
@@ -62,12 +87,33 @@ function formatStamp(iso: string | null): string | null {
  * STAGE (via /stage endpoint or Decision Pad on the detail page) — the
  * step auto-fires from there.
  */
-export default function PipelineChecklist({ leadId, steps, statuses, onChanged }: Props) {
+export default function PipelineChecklist({ leadId, steps, statuses, onChanged, currentStage }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [localStatuses, setLocalStatuses] = useState<LeadStepStatusRow[]>(statuses);
 
   const statusById = new Map<string, LeadStepStatusRow>();
   for (const s of localStatuses) statusById.set(s.stepId, s);
+
+  // Filter visible steps: hide auto (event + stage-system) steps that
+  // represent stages the lead has already moved past. Manual and
+  // stage-click steps always stay visible — they're admin's primary
+  // action surface and may still need to be clicked retroactively.
+  // When currentStage is undefined (e.g. consumer didn't pass it),
+  // show everything (legacy behavior).
+  const visibleSteps = useMemo(() => {
+    if (!currentStage) return steps;
+    const curIdx = STAGE_INDEX[currentStage] ?? -1;
+    return steps.filter((step) => {
+      const trigger = step.autoTrigger as StepAutoTrigger | null;
+      if (!trigger) return true;                          // manual — keep
+      const category = TRIGGER_CATEGORY[trigger];
+      if (category === "stage-click") return true;        // admin's primary action surface
+      const repStage = STAGE_FOR_AUTO_TRIGGER[trigger];
+      if (!repStage) return true;                         // no mapping → keep
+      const repIdx = STAGE_INDEX[repStage];
+      return curIdx < repIdx;                             // hide if lead is at-or-past
+    });
+  }, [steps, currentStage]);
 
   async function setStatus(stepId: string, status: StepStatus, note?: string) {
     setBusy(stepId);
@@ -138,9 +184,20 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
     );
   }
 
+  // All steps filtered out by stage progression — say so explicitly
+  // rather than show an empty card, so admin knows it isn't broken.
+  if (visibleSteps.length === 0) {
+    return (
+      <div className="text-xs text-text-muted-2 py-3 text-center italic">
+        Semua step otomatis sudah lewat untuk stage ini — tunggu admin actions berikutnya
+        (atau gunakan keputusan terminal di bawah).
+      </div>
+    );
+  }
+
   return (
     <ul className="space-y-2">
-      {steps.map((step) => {
+      {visibleSteps.map((step) => {
         const s = statusById.get(step.id);
         const status = (s?.status ?? "pending") as StepStatus;
         const isAuto = Boolean(step.autoTrigger);
@@ -158,7 +215,7 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
         // Stage-click triggers are clickable from the checklist. Event-
         // driven AND stage-system (calendar) triggers stay read-only.
         const isClickableAuto = category === "stage-click" && !!stageTarget;
-        const triggerLabel = trigger ? TRIGGER_LABEL[trigger] : null;
+        const triggerHint = trigger ? TRIGGER_HINT[trigger] : null;
         const stageTargetLabel = stageTarget ? STAGE_LABEL[stageTarget] : null;
 
         const onClickBox = () => {
@@ -193,10 +250,10 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
 
         const checkboxTitle = isAuto
           ? isDone
-            ? `Auto-completed — ${triggerLabel}. Untuk mundur, ubah stage lead lewat dropdown stage.`
+            ? `Auto-completed (${triggerHint}). Untuk mundur, ubah stage lead lewat dropdown stage.`
             : isClickableAuto
               ? `Klik untuk advance stage ke "${stageTargetLabel}" (step auto-check setelah stage berubah).`
-              : `Akan auto-complete saat event sistem: ${triggerLabel}`
+              : `Akan auto-complete: ${triggerHint}`
           : isDone
             ? "Klik untuk uncheck (manual)"
             : "Klik untuk mark done (manual)";
@@ -244,36 +301,24 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
                 <span className="text-xs font-mono text-text-muted-2">{step.order}</span>
                 <span
                   className={`text-sm font-medium ${
-                    isDone
-                      ? "text-foreground"
-                      : isSkipped
-                        ? "text-text-muted line-through"
-                        : "text-foreground"
+                    isSkipped ? "text-text-muted line-through" : "text-foreground"
                   }`}
                 >
                   {step.label}
                 </span>
-                {isAuto && trigger && category && (
+                {triggerHint && (
                   <span
-                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${BADGE_TONE_CLASS[CATEGORY_META[category].tone]}`}
+                    className="text-[11px] text-text-muted-2 italic"
                     title={
                       isClickableAuto
-                        ? `Klik untuk advance stage ke "${stageTargetLabel}". Step akan auto-check setelah stage berubah.`
-                        : category === "stage-system"
-                          ? `${CATEGORY_META[category].desc} Trigger: ${triggerLabel}.`
-                          : `Auto-fires when system event: ${triggerLabel}. Cannot be toggled manually.`
+                        ? `Klik untuk advance stage ke "${stageTargetLabel}".`
+                        : undefined
                     }
                   >
-                    <Icon name={CATEGORY_META[category].iconName} size={9} />
-                    {isClickableAuto
-                      ? `Klik → ${stageTargetLabel}`
-                      : `${CATEGORY_META[category].label} · ${triggerLabel}`}
+                    ({triggerHint})
                   </span>
                 )}
               </div>
-              {step.description && (
-                <p className="text-xs text-text-muted mt-1">{step.description}</p>
-              )}
               {stamp && (
                 <p className="text-[11px] text-text-muted-2 mt-1">
                   {isDone ? "✓" : isSkipped ? "⨯ skipped" : ""} {completedBy ?? "—"} · {stamp}
@@ -284,20 +329,6 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged }
           </li>
         );
       })}
-      <li className="text-[11px] text-text-muted-2 italic pt-1 leading-relaxed">
-        <strong>Klik</strong> (badge biru) — klik checkbox untuk advance stage
-        lead ke posisi itu. Step auto-check setelah stage berubah. Untuk
-        mundurkan stage, ubah lewat dropdown stage.
-        <br />
-        <strong>Event</strong> (badge ungu) — diisi otomatis oleh Resend /
-        Fonnte / lead creation. Tidak clickable.
-        <br />
-        <strong>Calendar</strong> (badge hijau) — diisi otomatis oleh Google
-        Calendar sync saat lead booking. Tidak clickable manual.
-        <br />
-        <strong>Manual step</strong> (tanpa badge) — klik untuk done/pending,
-        klik kanan untuk skip.
-      </li>
     </ul>
   );
 }

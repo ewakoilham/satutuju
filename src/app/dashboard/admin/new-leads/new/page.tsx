@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import PipelineSubnav from "@/components/admin/leads/PipelineSubnav";
 import { FUNDING_PLANS, fundingPlanLabelId, type FundingPlan } from "@/lib/leads/types";
 
 /**
@@ -61,13 +62,8 @@ export default function NewLeadPage() {
 
   return (
     <div className="space-y-5">
+      <PipelineSubnav />
       <div>
-        <Link
-          href="/dashboard/admin/new-leads"
-          className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground mb-2"
-        >
-          <Icon name="chevron-left" size={14} /> Semua leads
-        </Link>
         <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)]">
           Tambah Lead Manual
         </h1>
