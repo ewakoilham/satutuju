@@ -7,9 +7,10 @@ import { LEAD_DECISIONS, type LeadDecision } from "@/lib/leads/types";
  * Right column of the Call Cockpit — the decision pad. Always-visible
  * scorecard + deposit tier + final decision picker + save buttons.
  *
- * Score → tier mapping (heuristic; admin can override):
- *   score >= 4 → Tier 1 (premium / siap)
- *   score >= 2 → Tier 2 (standard)
+ * Score → tier mapping (heuristic; admin can override).
+ * Checklist max is 6 items:
+ *   score >= 5 → Tier 1 (premium / siap)
+ *   score >= 3 → Tier 2 (standard)
  *   else       → Tier 3 (coaching-heavy)
  *
  * Save flow:
@@ -23,8 +24,8 @@ import { LEAD_DECISIONS, type LeadDecision } from "@/lib/leads/types";
  * Deposit tier — semua lead bayar deposit Rp 1jt yang sama, tier hanya
  * menentukan eligibility diskon program. Mapping default heuristic
  * (admin masih bisa override per lead via tier picker):
- *   score >= 4 → Tier 1 (applicable for discount)
- *   score >= 2 → Tier 2 (may be applicable)
+ *   score >= 5 → Tier 1 (applicable for discount)
+ *   score >= 3 → Tier 2 (may be applicable)
  *   else       → Tier 3 (not applicable)
  */
 const DEPOSIT_TIERS: Record<number, { label: string; eligibility: string; desc: string; eligibilityTone: "success" | "warn" | "muted" }> = {
@@ -92,8 +93,10 @@ const TONE_COLORS: Record<"success" | "warn" | "muted" | "danger", { dot: string
 };
 
 export function suggestDepositTier(score: number): number {
-  if (score >= 4) return 1;
-  if (score >= 2) return 2;
+  // Thresholds calibrated against the 6-item readiness checklist.
+  // Update both this and the comment block above if items change.
+  if (score >= 5) return 1;
+  if (score >= 3) return 2;
   return 3;
 }
 
@@ -128,11 +131,11 @@ export default function DecisionPad({
 }: Props) {
   const suggested = suggestDepositTier(score);
   const effective = depositTier ?? suggested;
-  const scoreCopy = score === 5
+  const scoreCopy = score === 6
     ? "Siap di-pair sekarang"
-    : score >= 4
+    : score >= 5
       ? "Sangat siap — dorong proceed"
-      : score >= 2
+      : score >= 3
         ? "Partial — butuh coaching"
         : score === 0
           ? "Belum ada data"
@@ -146,11 +149,11 @@ export default function DecisionPad({
           Readiness Score (live)
         </div>
         <div className="flex gap-4 items-center mt-2.5">
-          <ScoreRing score={score} max={5} />
+          <ScoreRing score={score} max={6} />
           <div className="flex-1 min-w-0">
             <div className="text-[12px] text-text-muted mb-1">{scoreCopy}</div>
             <div className="flex gap-1">
-              {[0, 1, 2, 3, 4].map((i) => (
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <span
                   key={i}
                   className={`flex-1 h-1.5 rounded-full ${i < score ? "bg-primary" : "bg-border/60"}`}

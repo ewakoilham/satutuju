@@ -78,8 +78,8 @@ export async function PATCH(
 
   if (body.readinessScore !== undefined) {
     const n = Number(body.readinessScore);
-    if (!Number.isInteger(n) || n < 0 || n > 5) {
-      return NextResponse.json({ error: "readinessScore must be 0-5" }, { status: 400 });
+    if (!Number.isInteger(n) || n < 0 || n > 6) {
+      return NextResponse.json({ error: "readinessScore must be 0-6" }, { status: 400 });
     }
     update.readinessScore = n;
   }

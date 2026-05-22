@@ -46,7 +46,7 @@ interface DetailResponse {
   statuses: LeadStepStatusRow[];
 }
 
-const READINESS_LENGTH = 5;
+const READINESS_LENGTH = 6;
 
 // Timestamp helpers — pulled from src/lib/datetime-id.ts so we always
 // display WIB (Asia/Jakarta), regardless of where the request is served

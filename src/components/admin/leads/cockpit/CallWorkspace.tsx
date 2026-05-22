@@ -39,16 +39,22 @@ const DEFAULT_READINESS: ReadinessItem[] = [
     askExample: '"Skornya berapa per band? Ada plan re-take untuk skill yang kurang?"',
   },
   {
-    short: "Shortlist kampus",
-    label: "Sudah ada 3+ kampus shortlist + program-nya",
-    hint: "Kalau hanya 1 kampus, dorong eksplorasi 2 alternatif (negara sama atau berbeda).",
-    askExample: '"Selain pilihan utama, ada plan B atau C? Sudah research entry requirement-nya?"',
+    short: "Kampus tujuan jelas",
+    label: "Sudah memiliki kampus tujuan & program tujuan yang jelas dan bulat",
+    hint: "Konfirmasi mentee yakin sama 1-2 kampus utama + program spesifik. Kalau masih bimbang, gali alasan dan deal-breaker-nya.",
+    askExample: '"Kampus utama mana? Kenapa milih program itu spesifik? Ada plan B?"',
   },
   {
     short: "Funding plan jelas",
     label: "Funding plan jelas (LPDP / self-funded / partial)",
     hint: "Kalau LPDP: tahap mana, sudah punya LoA conditional? Self-funded: estimasi total biaya?",
     askExample: '"Sudah di tahap apa LPDP-nya? Ada Plan B funding kalau ditolak?"',
+  },
+  {
+    short: "Social impact",
+    label: "Memiliki social impact (track record kontribusi sosial yang bisa diangkat di essay/interview)",
+    hint: "Wajib untuk beasiswa kompetitif (LPDP, Chevening, DAAD). Tanya volunteer work, komunitas, advokasi, atau dampak terukur dari riset/profesi.",
+    askExample: '"Ada pengalaman kontribusi sosial yang udah jalan? Mis. komunitas, riset yang impact-ful, volunteer panjang?"',
   },
   {
     short: "Timeline realistis",
@@ -318,7 +324,7 @@ function LiveTab({
             </div>
           </div>
           <div className="text-[12px] text-text-muted">
-            Score: <strong className="text-primary text-[14px] tabular-nums">{score} / 5</strong>
+            Score: <strong className="text-primary text-[14px] tabular-nums">{score} / 6</strong>
           </div>
         </div>
         <div className="space-y-2">
