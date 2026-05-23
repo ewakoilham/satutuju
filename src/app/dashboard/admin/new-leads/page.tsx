@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import {
@@ -182,7 +182,17 @@ export default function NewLeadsListPage() {
     setSelected(new Set());
   }, [bucketFilter, stageFilter, debouncedSearch, activeSegment]);
 
+  // Tracks the latest in-flight list request so older responses can't
+  // overwrite newer state (e.g. rapid stage clicks → overlapping fetches).
+  const fetchSeqRef = useRef(0);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+
   const fetchList = useCallback(async () => {
+    fetchAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    fetchAbortRef.current = ctrl;
+    const seq = ++fetchSeqRef.current;
+
     setLoading(true);
     setError(null);
     const params = new URLSearchParams();
@@ -196,7 +206,9 @@ export default function NewLeadsListPage() {
       const res = await fetch(`/api/new-leads?${params.toString()}`, {
         credentials: "include",
         cache: "no-store",
+        signal: ctrl.signal,
       });
+      if (seq !== fetchSeqRef.current) return; // stale — discard
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setError(body.error || `HTTP ${res.status}`);
@@ -204,16 +216,19 @@ export default function NewLeadsListPage() {
         return;
       }
       const json = (await res.json()) as ListResponse;
+      if (seq !== fetchSeqRef.current) return; // stale — discard
       setData(json);
     } catch (err) {
+      if ((err as Error).name === "AbortError") return; // superseded
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
   }, [bucketFilter, stageFilter, debouncedSearch, offset, pageSize]);
 
   useEffect(() => {
     void fetchList();
+    return () => fetchAbortRef.current?.abort();
   }, [fetchList]);
 
   // Lightweight stats fetch for KPI + sidebar counts. Refreshes only on
@@ -338,14 +353,31 @@ export default function NewLeadsListPage() {
     setActiveSegment(id);
     // Always replace stage filter — segments are primarily stage-based.
     setStageFilter(new Set(seg.stages));
-    // Only touch bucket filter when the segment itself constrains
-    // buckets (so clicking "Menunggu respons" doesn't blow away an
-    // existing bucket-A pick).
-    if (seg.buckets.length > 0) {
+    // "Semua" = no filters at all (clears any leftover bucket filter so
+    // admin gets a clean reset). Other segments either set their own
+    // bucket constraint OR leave admin's bucket pick in place so the
+    // two filters compose.
+    if (id === "all") {
+      setBucketFilter(new Set());
+    } else if (seg.buckets.length > 0) {
       setBucketFilter(new Set(seg.buckets));
     }
     setOpenLead(null);
   }
+
+  /** One-click escape hatch: drop ALL filters and return to "Semua". */
+  function resetAllFilters() {
+    setActiveSegment("all");
+    setStageFilter(new Set());
+    setBucketFilter(new Set());
+    setSearch("");
+    setOpenLead(null);
+  }
+  const hasAnyFilter =
+    activeSegment !== "all" ||
+    bucketFilter.size > 0 ||
+    stageFilter.size > 0 ||
+    search.trim().length > 0;
 
   function toggleBucketFilter(b: LeadBucket) {
     // Bucket toggle composes with whatever segment is active — don't
@@ -707,6 +739,8 @@ export default function NewLeadsListPage() {
           activeBuckets={bucketFilter}
           onSegmentClick={selectSegment}
           onBucketClick={toggleBucketFilter}
+          hasAnyFilter={hasAnyFilter}
+          onReset={resetAllFilters}
         />
 
         {/* Middle: list */}
