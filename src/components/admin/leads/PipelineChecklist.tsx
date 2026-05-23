@@ -10,6 +10,7 @@ import {
   TRIGGER_CATEGORY,
   TRIGGER_HINT,
   decodeStageNote,
+  isTerminalOffRamp,
   type LeadStage,
   type LeadStageHistory,
   type LeadStepDefinition,
@@ -222,6 +223,13 @@ export default function PipelineChecklist({
   }
 
   return (
+    <>
+      {isTerminalOffRamp(currentStage) && (
+        <div className="text-[11.5px] italic text-text-muted px-3 py-2 mb-2 rounded-lg bg-surface-elevated/40 border border-border/60 leading-snug">
+          Lead di-terminate (<strong className="not-italic">{STAGE_LABEL[currentStage]}</strong>)
+          — pipeline tidak aktif. Pindahkan stage lewat dropdown untuk re-engage.
+        </div>
+      )}
     <ul className="space-y-2">
       {visibleSteps.map((step) => {
         const s = statusById.get(step.id);
@@ -433,5 +441,6 @@ export default function PipelineChecklist({
         );
       })}
     </ul>
+    </>
   );
 }

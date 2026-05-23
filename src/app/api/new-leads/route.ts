@@ -224,6 +224,7 @@ export async function POST(req: NextRequest) {
       parsedField: cls.parsedField,
       isCampusPartner: cls.isCampusPartner,
       hasCountryMentor: cls.hasCountryMentor,
+      partnerProgramScope: cls.partnerProgramScope,
       stage: "new",
       createdAt: now,
       updatedAt: now,

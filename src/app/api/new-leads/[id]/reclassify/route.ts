@@ -50,6 +50,7 @@ export async function POST(
       parsedField: result.parsedField,
       isCampusPartner: result.isCampusPartner,
       hasCountryMentor: result.hasCountryMentor,
+      partnerProgramScope: result.partnerProgramScope,
       updatedAt: now,
     })
     .eq("id", id)

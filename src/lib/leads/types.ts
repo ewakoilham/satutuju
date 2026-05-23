@@ -24,6 +24,25 @@ export const LEAD_STAGES = [
 ] as const;
 export type LeadStage = (typeof LEAD_STAGES)[number];
 
+/**
+ * Stages that represent a hard end to the funnel — NOT part of the
+ * linear progression. They can fire from any earlier stage without
+ * implying the lead traversed the intermediate stages. Phase 11.3:
+ *
+ *   • Transitioning TO an off-ramp resets every stage-click step to
+ *     pending (those linear actions didn't actually happen).
+ *   • Transitioning OUT of an off-ramp re-syncs step state against
+ *     the new linear position.
+ *   • Forward-fan-out is skipped when target is an off-ramp.
+ *
+ * Note: `matched` is the linear goal-state, NOT an off-ramp.
+ */
+export const TERMINAL_OFF_RAMP_STAGES: readonly LeadStage[] = ["declined", "rejected"];
+
+export function isTerminalOffRamp(stage: LeadStage): boolean {
+  return (TERMINAL_OFF_RAMP_STAGES as readonly string[]).includes(stage);
+}
+
 /** Stages where Call Panel is contextually relevant — admin needs to
  *  capture readiness/notes/decision data here. Used by both the panel
  *  itself (to hide for earlier stages) and its parent section wrapper. */
@@ -321,6 +340,11 @@ export interface Lead {
    *  cleared — so historical notes are preserved per-stage in the
    *  history table while the active note is here. Phase 11. */
   stageNote: string | null;
+  /** When the lead matched a partner university, the partner's program
+   *  scope (Tokyo Cocoro = "English Language", Kudan = "All", …).
+   *  null when the matched university has no restriction OR the lead
+   *  isn't matched to a partner. Phase 12. */
+  partnerProgramScope: string | null;
   mentorMatchedId: string | null;
   // Bookkeeping
   createdAt: string;

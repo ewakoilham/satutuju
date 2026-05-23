@@ -22,7 +22,7 @@ export const LEAD_SELECT_COLUMNS =
   'stage, "outreachSentAt", "emailOpenedAt", "emailClickedAt", ' +
   '"whatsappSentAt", "whatsappReadAt", ' +
   '"callScheduledAt", "callCompletedAt", "calendarEventId", "assignedInterviewer", "depositTier", ' +
-  '"readinessScore", "callNotes", "redFlags", decision, "stageNote", "mentorMatchedId", ' +
+  '"readinessScore", "callNotes", "redFlags", decision, "stageNote", "partnerProgramScope", "mentorMatchedId", ' +
   '"createdAt", "updatedAt"';
 
 export const LEAD_STAGE_HISTORY_COLUMNS =

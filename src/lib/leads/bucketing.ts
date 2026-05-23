@@ -1,10 +1,23 @@
 import type { LeadBucket, ParsedField } from "./types";
+import UNIVERSITIES_JSON from "@/data/universities.json";
 
 /** A mentor entry with at minimum a country — accepts both the seed type
  *  (src/lib/mentors.ts) and the merged runtime type. */
 interface MentorLike {
   country?: string | null;
 }
+
+/** Shape of one row in src/data/universities.json. EVERY row is a real
+ *  partner — they all pay commission via AECC. `degreeLevel` is the
+ *  partner's program scope ("All" = no restriction; everything else
+ *  carries forward as `partnerProgramScope`). Phase 12. */
+interface UniversityRow {
+  id: number;
+  name: string;
+  country: string;
+  degreeLevel: string;
+}
+const UNIVERSITIES = UNIVERSITIES_JSON as readonly UniversityRow[];
 
 export interface BucketResult {
   bucket: LeadBucket;
@@ -14,6 +27,11 @@ export interface BucketResult {
   parsedField: ParsedField;
   isCampusPartner: boolean | null;
   hasCountryMentor: boolean;
+  /** Phase 12 — partner's program scope (Cocoro="English Language",
+   *  Kudan="All", etc.) when the parsed campus is in universities.json.
+   *  `null` when scope = "All" (admin doesn't need a restriction warning)
+   *  OR when no partner matched. */
+  partnerProgramScope: string | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -27,14 +45,17 @@ export interface BucketResult {
 // matter — longest matched canonical wins.
 // ──────────────────────────────────────────────────────────────────────────
 
+/**
+ * Phase 12: partner status is now sourced exclusively from
+ * `src/data/universities.json`. CAMPUS_ALIASES is purely a curated
+ * name/country detector — whether a matched alias is also a partner
+ * is decided AFTER the match by looking up the canonical name in
+ * `UNIVERSITIES`. The `isPartner` field on this interface is gone.
+ */
 interface CampusAlias {
   canonical: string;
   country: string;
   patterns: string[]; // regex source strings, word-boundary handled by matcher
-  // Defaults to true. Set to false for universities we recognize purely
-  // to disambiguate the country (e.g. Italian universities help us route
-  // to Italy bucket D) but that are NOT in our partner network.
-  isPartner?: boolean;
 }
 
 const CAMPUS_ALIASES: CampusAlias[] = [
@@ -137,7 +158,9 @@ const CAMPUS_ALIASES: CampusAlias[] = [
   { canonical: "RWTH Aachen",                   country: "Germany",        patterns: ["rwth", "aachen"] },
 
   // ── Singapore ────────────────────────────────────────────────────────────
-  { canonical: "NUS",                           country: "Singapore",      patterns: ["nus\\b", "national university of singapore"] },
+  // Canonical matches the universities.json row exactly so PARTNER_LOOKUP
+  // catches abbrev inputs ("NUS, Singapore") as well as full-name inputs.
+  { canonical: "National University of Singapore", country: "Singapore",   patterns: ["nus\\b", "national university of singapore"] },
   { canonical: "NTU Singapore",                 country: "Singapore",      patterns: ["ntu\\b", "nanyang technological"] },
   { canonical: "SMU Singapore",                 country: "Singapore",      patterns: ["smu\\b", "singapore management"] },
   { canonical: "SUTD",                          country: "Singapore",      patterns: ["sutd"] },
@@ -171,11 +194,23 @@ const CAMPUS_ALIASES: CampusAlias[] = [
   { canonical: "CUHK",                          country: "Hong Kong",      patterns: ["cuhk", "chinese university of hong kong"] },
 
   // ── Japan ────────────────────────────────────────────────────────────────
+  // Non-partner Japanese unis kept for country disambiguation:
   { canonical: "University of Tokyo",           country: "Japan",          patterns: ["university of tokyo", "todai", "u-tokyo"] },
   { canonical: "Kyoto University",              country: "Japan",          patterns: ["kyoto university"] },
   { canonical: "Osaka University",              country: "Japan",          patterns: ["osaka university"] },
   { canonical: "Waseda University",             country: "Japan",          patterns: ["waseda"] },
   { canonical: "Keio University",               country: "Japan",          patterns: ["keio"] },
+  // Japan PARTNERS (rows present in universities.json) — adding
+  // aliases here so the curated matcher picks them up before falling
+  // back to the universities.json full scan. Canonical names match
+  // the JSON exactly (case-sensitive equality is used by PARTNER_LOOKUP).
+  { canonical: "TOKYO COCORO JAPANESE LANGUAGE SCHOOL", country: "Japan",  patterns: ["tokyo cocoro", "cocoro"] },
+  { canonical: "KUDAN INSTITUTE OF JAPANESE LANGUAGE & CULTURE", country: "Japan", patterns: ["kudan institute", "kudan"] },
+  { canonical: "KYOTO JAPANESE LANGUAGE SCHOOL", country: "Japan",         patterns: ["kyoto japanese language school"] },
+  { canonical: "NIPPON ACADEMY",                country: "Japan",          patterns: ["nippon academy"] },
+  { canonical: "KOKUSAI EISAI GAKUEN",          country: "Japan",          patterns: ["kokusai eisai", "kokusai eisai gakuen"] },
+  { canonical: "AO INTERNATIONAL SCHOOL, JAPAN (LANGUAGE SCHOOL)", country: "Japan", patterns: ["ao international school"] },
+  { canonical: "international College of Liberal Arts, iCLA Japan", country: "Japan", patterns: ["icla", "international college of liberal arts"] },
 
   // ── South Korea ──────────────────────────────────────────────────────────
   { canonical: "Seoul National University",     country: "South Korea",    patterns: ["seoul national", "snu\\b"] },
@@ -187,11 +222,96 @@ const CAMPUS_ALIASES: CampusAlias[] = [
   // ── Italy (country disambiguator only — no partner network here yet) ────
   // These entries help classifyLead route the lead to Italy (and therefore
   // bucket D), but do NOT mark the campus as a Satu Tuju partner.
-  { canonical: "University of Ferrara",         country: "Italy",          patterns: ["ferrara"],                                isPartner: false },
-  { canonical: "Bocconi University",            country: "Italy",          patterns: ["bocconi"],                                isPartner: false },
-  { canonical: "Politecnico di Milano",         country: "Italy",          patterns: ["politecnico di milano", "polimi"],        isPartner: false },
-  { canonical: "University of Bologna",         country: "Italy",          patterns: ["university of bologna", "unibo"],         isPartner: false },
+  // Italy entries — used purely for country disambiguation. None are
+  // in universities.json so they automatically resolve to non-partner.
+  { canonical: "University of Ferrara",         country: "Italy",          patterns: ["ferrara"] },
+  { canonical: "Bocconi University",            country: "Italy",          patterns: ["bocconi"] },
+  { canonical: "Politecnico di Milano",         country: "Italy",          patterns: ["politecnico di milano", "polimi"] },
+  { canonical: "University of Bologna",         country: "Italy",          patterns: ["university of bologna", "unibo"] },
 ];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Partner lookup — Phase 12 single source of truth.
+//
+// universities.json holds every real partner (each row pays commission
+// via the AECC agency). When the curated CAMPUS_ALIASES matcher returns
+// a canonical name, we look it up here to decide isPartner + scope.
+//
+// PARTNER_LOOKUP: case-insensitive canonical → { scope }
+// PARTNER_NAMES_SORTED: full-text scan fallback for unis that don't
+//   have a curated CAMPUS_ALIASES entry (most of the 3500+ list).
+//   Pre-sorted by length-desc so the first substring hit is the most
+//   specific match.
+// ──────────────────────────────────────────────────────────────────────────
+
+interface PartnerEntry { canonical: string; country: string; scope: string | null }
+
+/** Normalize for case-insensitive matching against canonical names. */
+function partnerKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** Map `degreeLevel` → scope shown to admin. "All" is the no-restriction
+ *  marker and folds to null so the UI doesn't warn unnecessarily. */
+function deriveScope(degreeLevel: string | undefined | null): string | null {
+  if (!degreeLevel) return null;
+  const trimmed = degreeLevel.trim();
+  if (trimmed === "" || trimmed.toLowerCase() === "all") return null;
+  return trimmed;
+}
+
+const PARTNER_LOOKUP: Map<string, PartnerEntry> = (() => {
+  const m = new Map<string, PartnerEntry>();
+  for (const u of UNIVERSITIES) {
+    const key = partnerKey(u.name);
+    m.set(key, { canonical: u.name, country: u.country, scope: deriveScope(u.degreeLevel) });
+  }
+  return m;
+})();
+
+/**
+ * universities.json has a handful of garbage rows whose name is a
+ * single generic word ("College", "London", "Academy", "Bridge", …).
+ * These false-match almost any lead input as substrings, so we skip
+ * them entirely from the fallback matcher. New garbage rows added
+ * later automatically get filtered if their name has ≤1 distinctive
+ * word or is too short.
+ */
+function isUsableForFallbackMatch(normName: string): boolean {
+  if (normName.length < 10) return false;
+  // Must contain at least 2 distinct tokens (≥4 chars each) — single-
+  // word names like "London", "Academy" don't qualify.
+  const tokens = normName.split(/\s+/).filter((t) => t.length >= 4);
+  return tokens.length >= 2;
+}
+
+/** Partner names sorted longest-first for the substring-scan fallback.
+ *  Stores both the normalized form (for matching) and the original row.
+ *  Skips garbage rows (see isUsableForFallbackMatch). */
+const PARTNER_NAMES_SORTED: Array<{ norm: string; row: PartnerEntry }> = (() => {
+  const list: Array<{ norm: string; row: PartnerEntry }> = [];
+  for (const [, row] of PARTNER_LOOKUP) {
+    const norm = normalize(row.canonical);
+    if (isUsableForFallbackMatch(norm)) list.push({ norm, row });
+  }
+  list.sort((a, b) => b.norm.length - a.norm.length);
+  return list;
+})();
+
+/** Find a universities.json partner whose full name appears (word-
+ *  boundary anchored) inside the normalized lead input. Returns the
+ *  longest match (most specific). Used as a fallback when CAMPUS_ALIASES
+ *  doesn't match. */
+function matchPartnerByName(normInput: string): PartnerEntry | null {
+  for (const { norm, row } of PARTNER_NAMES_SORTED) {
+    // Word-boundary check: surround partner name with spaces and look
+    // for the surrounded form in the padded normInput. Both ends MUST
+    // sit at a word boundary so we don't match "london" as substring
+    // of "london england".
+    if (normInput.includes(` ${norm} `)) return row;
+  }
+  return null;
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Country keyword map. Used when no specific campus is matched. Each
@@ -292,12 +412,13 @@ export function classifyLead(
       parsedField: "unclear",
       isCampusPartner: null,
       hasCountryMentor: false,
+      partnerProgramScope: null,
     };
   }
 
   // Step 1+3: match a specific campus from the curated alias list.
   const campusMatch = matchCampus(normInput);
-  const parsedCampus = campusMatch?.canonical ?? null;
+  let parsedCampus = campusMatch?.canonical ?? null;
   let parsedCountry = campusMatch?.country ?? null;
 
   // Step 1 fallback: country keyword scan.
@@ -316,21 +437,41 @@ export function classifyLead(
       parsedField: matchField(normInput),
       isCampusPartner: null,
       hasCountryMentor: false,
+      partnerProgramScope: null,
     };
   }
 
   // Step 2: field
   const parsedField = matchField(normInput);
 
-  // Step 4: cross-reference
+  // Step 4: cross-reference partner status against universities.json.
+  // First try by canonical name (from curated alias match), then fall
+  // back to a substring scan over universities.json for partners not
+  // yet in CAMPUS_ALIASES.
+  let partnerEntry: PartnerEntry | null = null;
+  if (parsedCampus) {
+    partnerEntry = PARTNER_LOOKUP.get(partnerKey(parsedCampus)) ?? null;
+  }
+  if (!partnerEntry) {
+    const scanned = matchPartnerByName(normInput);
+    if (scanned) {
+      partnerEntry = scanned;
+      // Promote the JSON match to parsedCampus/parsedCountry if no
+      // curated alias landed earlier.
+      if (!parsedCampus) parsedCampus = scanned.canonical;
+      if (!parsedCountry) parsedCountry = scanned.country;
+    }
+  }
+
   const hasCountryMentor =
     parsedCountry !== null && mentors.some((m) => (m.country ?? "") === parsedCountry);
   // Tri-state semantics:
-  //   true  → alias matched AND alias is in our partner network
-  //   false → alias matched but explicitly NOT a partner (country-only hint)
+  //   true  → matched a row in universities.json (real partner)
+  //   false → campus parsed but not a partner (country disambiguator only)
   //   null  → no specific campus parsed
   const isCampusPartner: boolean | null =
-    parsedCampus !== null ? (campusMatch?.isPartner ?? true) : null;
+    partnerEntry !== null ? true : (parsedCampus !== null ? false : null);
+  const partnerProgramScope: string | null = partnerEntry?.scope ?? null;
 
   // Step 5: assign bucket — country is the only hard requirement. Field
   // is captured for downstream filtering but doesn't gate bucketing
@@ -361,6 +502,7 @@ export function classifyLead(
     parsedField,
     hasCountryMentor,
     isCampusPartner,
+    partnerProgramScope,
     input: targetCampusAndProgram,
   });
 
@@ -372,6 +514,7 @@ export function classifyLead(
     parsedField,
     isCampusPartner,
     hasCountryMentor,
+    partnerProgramScope,
   };
 }
 
@@ -522,16 +665,20 @@ function buildReason(args: {
   parsedField: ParsedField;
   hasCountryMentor: boolean;
   isCampusPartner: boolean | null;
+  partnerProgramScope: string | null;
   input: string;
 }): string {
-  const { bucket, parsedCountry, parsedCampus, parsedField, hasCountryMentor, isCampusPartner, input } = args;
+  const { bucket, parsedCountry, parsedCampus, parsedField, hasCountryMentor, isCampusPartner, partnerProgramScope, input } = args;
   if (bucket === "unclassified") {
     return `Country unclear from "${input}" — manual review needed`;
   }
   const parts: string[] = [];
   parts.push(`${parsedCountry} (${hasCountryMentor ? "mentor available" : "no mentor"})`);
   if (parsedCampus) {
-    parts.push(`${parsedCampus}${isCampusPartner === true ? " (partner)" : " (not in partner list)"}`);
+    const partnerTag = isCampusPartner === true
+      ? (partnerProgramScope ? ` (partner · hanya ${partnerProgramScope})` : " (partner)")
+      : " (not in partner list)";
+    parts.push(`${parsedCampus}${partnerTag}`);
   } else {
     parts.push("no specific campus parsed");
   }

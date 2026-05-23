@@ -152,6 +152,24 @@ export default function ContextRail({ lead, history, outreach }: Props) {
         <CheckLine on={lead.isCampusPartner === true}>
           {lead.parsedCampus || "Kampus tujuan"} = partner
         </CheckLine>
+        {/* Phase 12: program-scope restriction. Visible only when the
+            partner accepts a narrow program (e.g. Cocoro = English
+            Language). Amber to catch admin's eye — committing a lead
+            outside this scope means zero commission for Satu Tuju. */}
+        {lead.isCampusPartner === true && lead.partnerProgramScope && (
+          <div
+            className="mt-1.5 inline-flex items-start gap-1.5 text-[11px] text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-2 py-1 leading-snug"
+            title="Komisi hanya berlaku kalau program lead match dengan scope ini. Verifikasi manual saat call — kalau lead minta program di luar scope, perlakukan sebagai non-partner."
+          >
+            <Icon name="flag" size={12} className="mt-0.5 text-amber-700 flex-shrink-0" />
+            <span>
+              Partner kampus <strong className="font-semibold">hanya untuk: {lead.partnerProgramScope}</strong>
+              <span className="block text-[10px] text-amber-800/80 italic">
+                Verifikasi program lead saat call · komisi cuma berlaku kalau match
+              </span>
+            </span>
+          </div>
+        )}
       </Section>
 
       <Section title="Engagement">

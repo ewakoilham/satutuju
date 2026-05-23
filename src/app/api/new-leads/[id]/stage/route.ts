@@ -2,9 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_STAGES, STAGE_TO_STEP_TRIGGER, encodeStageNote, type LeadStage, type StepAutoTrigger } from "@/lib/leads/types";
+import {
+  LEAD_STAGES,
+  STAGE_TO_STEP_TRIGGER,
+  encodeStageNote,
+  isTerminalOffRamp,
+  type LeadStage,
+  type StepAutoTrigger,
+} from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
 import { completeStepsByTriggers } from "@/lib/leads/step-helpers";
+
+/** All stage-click triggers — the linear-funnel steps that can be
+ *  reset when entering a terminal off-ramp or re-synced when leaving
+ *  one. Derived from STAGE_TO_STEP_TRIGGER at module load. */
+const ALL_STAGE_CLICK_TRIGGERS: readonly StepAutoTrigger[] = Object.values(
+  STAGE_TO_STEP_TRIGGER,
+).filter((t): t is StepAutoTrigger => Boolean(t));
+
+/** Reset stage-click LeadStepStatus rows to pending. Used by both the
+ *  backward-revert path (subset of triggers) and the to-terminal path
+ *  (all stage-click triggers). One lookup + one bulk update. */
+async function resetStepStatusesByTriggers(
+  leadId: string,
+  triggers: readonly StepAutoTrigger[],
+  now: string,
+): Promise<void> {
+  if (triggers.length === 0) return;
+  const { data: steps } = await supabase
+    .from("LeadStepDefinition")
+    .select("id")
+    .in("autoTrigger", triggers as unknown as string[]);
+  const stepIds = (steps ?? []).map((s) => s.id as string);
+  if (stepIds.length === 0) return;
+  await supabase
+    .from("LeadStepStatus")
+    .update({ status: "pending", completedAt: null, completedBy: null, updatedAt: now })
+    .eq("leadId", leadId)
+    .in("stepId", stepIds);
+}
 
 /**
  * Change a lead's stage. Writes a LeadStageHistory row capturing the
@@ -105,32 +141,47 @@ export async function PATCH(
     .single();
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
-  // Phase 11.1: when stage moves backward, reset step statuses for any
-  // step whose autoTrigger represents a stage now in the future. This
-  // preserves the source-of-truth invariant (step.done ↔ stage has
-  // been visited) when admin clicks a done stage-click step to revert.
+  // Phase 11.3: branch on terminal-off-ramp involvement.
+  //   1. toTerminal  → reset ALL stage-click steps to pending; don't
+  //                    fan-out (lead didn't actually visit them).
+  //   2. fromTerminal → re-sync: tick every stage-click step whose
+  //                    represented stage idx ≤ newIdx; reset the rest.
+  //   3. linear ↔ linear → existing Phase 11.1/11.2 backward-reset +
+  //                    forward-fan-out around the [from, to] window.
   const curIdx = LEAD_STAGES.indexOf(current.stage);
   const newIdx = LEAD_STAGES.indexOf(newStage);
-  if (newIdx < curIdx) {
-    const futureStages = LEAD_STAGES.slice(newIdx + 1, curIdx + 1);
-    const futureTriggers = futureStages
+  const toTerminal = isTerminalOffRamp(newStage);
+  const fromTerminal = isTerminalOffRamp(current.stage);
+
+  if (toTerminal) {
+    await resetStepStatusesByTriggers(id, ALL_STAGE_CLICK_TRIGGERS, now);
+  } else if (fromTerminal) {
+    // Re-sync step statuses against the new linear position. Tick the
+    // stage-click steps whose represented stage idx ≤ newIdx; reset
+    // the rest (defensive — they may be stale from the previous
+    // pre-terminal life of this lead).
+    const ticked: StepAutoTrigger[] = [];
+    const reset: StepAutoTrigger[] = [];
+    for (const trigger of ALL_STAGE_CLICK_TRIGGERS) {
+      // Find the stage that owns this trigger in STAGE_TO_STEP_TRIGGER.
+      const ownerStage = (Object.entries(STAGE_TO_STEP_TRIGGER) as [LeadStage, StepAutoTrigger | undefined][])
+        .find(([, t]) => t === trigger)?.[0];
+      if (!ownerStage) continue;
+      const stageIdx = LEAD_STAGES.indexOf(ownerStage);
+      if (stageIdx <= newIdx) ticked.push(trigger);
+      else reset.push(trigger);
+    }
+    await resetStepStatusesByTriggers(id, reset, now);
+    if (ticked.length) await completeStepsByTriggers(id, ticked).catch(() => {});
+  } else if (newIdx < curIdx) {
+    // Linear backward: reset stage-click triggers for stages now in
+    // the future (the existing Phase 11.1 invariant).
+    const futureTriggers = LEAD_STAGES.slice(newIdx + 1, curIdx + 1)
       .map((s) => STAGE_TO_STEP_TRIGGER[s])
       .filter((t): t is StepAutoTrigger => Boolean(t));
-    if (futureTriggers.length) {
-      const { data: stepsToReset } = await supabase
-        .from("LeadStepDefinition")
-        .select("id")
-        .in("autoTrigger", futureTriggers);
-      const stepIds = (stepsToReset ?? []).map((s) => s.id as string);
-      if (stepIds.length) {
-        await supabase
-          .from("LeadStepStatus")
-          .update({ status: "pending", completedAt: null, completedBy: null, updatedAt: now })
-          .eq("leadId", id)
-          .in("stepId", stepIds);
-      }
-    }
+    await resetStepStatusesByTriggers(id, futureTriggers, now);
   }
+  // (Linear forward case handled below the history insert.)
 
   await supabase.from("LeadStageHistory").insert({
     id: newStageHistoryId(),
@@ -142,11 +193,10 @@ export async function PATCH(
     createdAt: now,
   });
 
-  // Forward transitions auto-tick every stage-click step in
-  // (curIdx, newIdx]. Bulk call keeps it a single round-trip even when
-  // admin jumps multiple stages — preserves step.done ↔ stage-visited
-  // invariant without N serial DB calls.
-  if (newIdx > curIdx) {
+  // Linear forward fan-out: auto-tick every stage-click step in
+  // (curIdx, newIdx]. Skipped when target is terminal (handled above)
+  // or when source is terminal (re-sync already covered everything).
+  if (!toTerminal && !fromTerminal && newIdx > curIdx) {
     const fwdTriggers = LEAD_STAGES.slice(curIdx + 1, newIdx + 1)
       .map((s) => STAGE_TO_STEP_TRIGGER[s])
       .filter((t): t is StepAutoTrigger => Boolean(t));

@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         parsedField: result.parsedField,
         isCampusPartner: result.isCampusPartner,
         hasCountryMentor: result.hasCountryMentor,
+        partnerProgramScope: result.partnerProgramScope,
         updatedAt: now,
       })
       .eq("id", lead.id);

@@ -127,6 +127,7 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
     parsedField: classification.parsedField,
     isCampusPartner: classification.isCampusPartner,
     hasCountryMentor: classification.hasCountryMentor,
+    partnerProgramScope: classification.partnerProgramScope,
     updatedAt: now,
   };
 
