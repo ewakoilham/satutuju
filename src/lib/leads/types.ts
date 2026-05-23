@@ -361,6 +361,67 @@ export interface LeadStageHistory {
   createdAt: string;
 }
 
+/** Phase 13: mentor-side lead view — strict subset of `Lead`, no
+ *  bucket/stage/decision/call notes ever serialised here. Server's
+ *  MENTOR_LEAD_SELECT_COLUMNS is the source of truth for the wire
+ *  shape. */
+export interface MentorLeadView {
+  id: string;
+  name: string;
+  email: string;
+  whatsappNumber: string | null;
+  targetCampusAndProgram: string;
+  fundingPlan: FundingPlan | string;
+  submittedAt: string | null;
+  tallySubmissionId: string | null;
+  parsedCountry: string | null;
+  parsedCampus: string | null;
+  parsedField: ParsedField | string | null;
+  createdAt: string;
+  // Server-decorated:
+  flaggedByMe: boolean;
+  noteCount: number;
+}
+
+/** Phase 13: per-lead notes. Top-level by mentor (parentNoteId=null);
+ *  admin replies set parentNoteId. Edit window of 15 minutes — UI hides
+ *  the pencil after that. */
+export interface LeadNote {
+  id: string;
+  leadId: string;
+  authorId: string;
+  parentNoteId: string | null;
+  content: string;
+  editedAt: string | null;
+  createdAt: string;
+}
+
+/** LeadNote enriched with author info + nested replies (1 level). */
+export interface LeadNoteThread extends LeadNote {
+  authorName: string;
+  authorRole: "admin" | "mentor" | "mentee" | string;
+  replies: LeadNoteThread[];
+}
+
+/** Phase 13: mentor flagging a lead they personally know. Unique per
+ *  (lead, mentor). DELETE removes the row to un-flag. */
+export interface MentorLeadFlag {
+  id: string;
+  leadId: string;
+  mentorId: string;
+  context: string | null;
+  createdAt: string;
+}
+
+/** Flag enriched with mentor profile snippet for admin-side display. */
+export interface MentorLeadFlagWithMentor extends MentorLeadFlag {
+  mentorName: string;
+}
+
+/** Window within which the author can still edit a LeadNote.
+ *  Synced between the UI gate and the server-side enforcement. */
+export const LEAD_NOTE_EDIT_WINDOW_MS = 15 * 60 * 1000;
+
 export interface OutreachLog {
   id: string;
   leadId: string;

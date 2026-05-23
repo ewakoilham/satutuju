@@ -7,7 +7,10 @@ import {
   OUTREACH_LOG_COLUMNS,
   LEAD_STEP_DEFINITION_COLUMNS,
   LEAD_STEP_STATUS_COLUMNS,
+  LEAD_NOTE_COLUMNS,
+  MENTOR_LEAD_FLAG_COLUMNS,
 } from "@/lib/db-columns";
+import type { LeadNote, LeadNoteThread } from "@/lib/leads/types";
 
 /**
  * Read a single lead with all related rows for the detail page:
@@ -27,12 +30,15 @@ export async function GET(
 
   const { id } = await params;
 
-  const [leadRes, historyRes, outreachRes, stepsRes, statusesRes] = await Promise.all([
+  const [leadRes, historyRes, outreachRes, stepsRes, statusesRes, notesRes, flagsRes] = await Promise.all([
     supabase.from("Lead").select(LEAD_SELECT_COLUMNS).eq("id", id).single(),
     supabase.from("LeadStageHistory").select(LEAD_STAGE_HISTORY_COLUMNS).eq("leadId", id).order("createdAt", { ascending: false }),
     supabase.from("OutreachLog").select(OUTREACH_LOG_COLUMNS).eq("leadId", id).order("sentAt", { ascending: false }),
     supabase.from("LeadStepDefinition").select(LEAD_STEP_DEFINITION_COLUMNS).eq("isActive", true).order("order", { ascending: true }),
     supabase.from("LeadStepStatus").select(LEAD_STEP_STATUS_COLUMNS).eq("leadId", id),
+    // Phase 13: mentor notes + replies for this lead.
+    supabase.from("LeadNote").select(LEAD_NOTE_COLUMNS).eq("leadId", id).order("createdAt", { ascending: false }),
+    supabase.from("MentorLeadFlag").select(MENTOR_LEAD_FLAG_COLUMNS).eq("leadId", id).order("createdAt", { ascending: false }),
   ]);
 
   if (leadRes.error) {
@@ -40,12 +46,69 @@ export async function GET(
     return NextResponse.json({ error: leadRes.error.message }, { status: code });
   }
 
+  // Hydrate author/mentor names for the notes thread + flag chips.
+  const allRows = (notesRes.data ?? []) as LeadNote[];
+  const flagRows = (flagsRes.data ?? []) as { id: string; leadId: string; mentorId: string; context: string | null; createdAt: string }[];
+  const userIds = Array.from(
+    new Set([
+      ...allRows.map((n) => n.authorId),
+      ...flagRows.map((f) => f.mentorId),
+    ]),
+  );
+  const userMeta: Record<string, { name: string; role: string }> = {};
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from("User")
+      .select("id, name, role")
+      .in("id", userIds);
+    for (const u of users ?? []) {
+      userMeta[u.id as string] = { name: u.name as string, role: u.role as string };
+    }
+  }
+
+  // Build 1-level thread: top-level notes (parentNoteId=null) with
+  // their admin replies nested under `replies`.
+  const topLevel = allRows.filter((n) => !n.parentNoteId);
+  const repliesByParent = new Map<string, LeadNote[]>();
+  for (const n of allRows) {
+    if (n.parentNoteId) {
+      const arr = repliesByParent.get(n.parentNoteId) ?? [];
+      arr.push(n);
+      repliesByParent.set(n.parentNoteId, arr);
+    }
+  }
+  const decorate = (n: LeadNote): LeadNoteThread => {
+    const meta = userMeta[n.authorId];
+    return {
+      ...n,
+      authorName: meta?.name ?? "—",
+      authorRole: meta?.role ?? "—",
+      replies: [],
+    };
+  };
+  const thread: LeadNoteThread[] = topLevel.map((parent) => {
+    const out = decorate(parent);
+    const kids = repliesByParent.get(parent.id) ?? [];
+    out.replies = kids
+      .slice()
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map(decorate);
+    return out;
+  });
+
+  const flags = flagRows.map((f) => ({
+    ...f,
+    mentorName: userMeta[f.mentorId]?.name ?? "—",
+  }));
+
   return NextResponse.json({
     lead: leadRes.data,
     history: historyRes.data ?? [],
     outreach: outreachRes.data ?? [],
     steps: stepsRes.data ?? [],
     statuses: statusesRes.data ?? [],
+    notes: thread,
+    flags,
   });
 }
 

@@ -24,6 +24,10 @@ interface Props {
   selected: boolean;
   isActive: boolean;
   progress: { done: number; total: number };
+  /** Count of top-level mentor notes on this lead (Phase 13). When > 0,
+   *  the row shows a small chat-icon badge so admin knows to scroll
+   *  the detail page for mentor input. */
+  mentorNoteCount?: number;
   onSelect: () => void;
   onOpen: () => void;
   onReachout: (channel: "email" | "whatsapp" | "both") => void;
@@ -36,6 +40,7 @@ export default function LeadInboxRow({
   selected,
   isActive,
   progress,
+  mentorNoteCount = 0,
   onSelect,
   onOpen,
   onReachout,
@@ -78,7 +83,18 @@ export default function LeadInboxRow({
       />
       <LeadAvatar name={lead.name} size={28} />
       <div className="min-w-0">
-        <div className="font-semibold text-foreground truncate">{lead.name}</div>
+        <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+          <span className="truncate">{lead.name}</span>
+          {mentorNoteCount > 0 && (
+            <span
+              className="inline-flex items-center gap-0.5 px-1 py-px rounded text-[9.5px] font-bold bg-primary-50 text-primary flex-shrink-0"
+              title={`${mentorNoteCount} catatan dari mentor`}
+            >
+              <Icon name="chat" size={8} />
+              {mentorNoteCount}
+            </span>
+          )}
+        </div>
         <div className="text-[11px] text-text-muted-2 truncate">{lead.email}</div>
       </div>
       <div className="min-w-0">

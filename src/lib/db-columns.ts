@@ -46,3 +46,20 @@ export const LEAD_AUTO_SEND_SETTING_COLUMNS =
 
 export const GOOGLE_CALENDAR_AUTH_COLUMNS =
   'id, "refreshToken", scope, "googleEmail", "connectedAt", "connectedBy", "lastSyncAt", "lastSyncToken", "updatedAt"';
+
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 13: mentor-side lead visibility. Strict whitelist — never let
+// stage/bucket/decision/callNotes/etc. land in a mentor's query.
+// ──────────────────────────────────────────────────────────────────────────
+
+export const MENTOR_LEAD_SELECT_COLUMNS =
+  'id, name, email, "whatsappNumber", "targetCampusAndProgram", "fundingPlan", ' +
+  '"submittedAt", "tallySubmissionId", ' +
+  '"parsedCountry", "parsedCampus", "parsedField", ' +
+  '"createdAt"';
+
+export const LEAD_NOTE_COLUMNS =
+  'id, "leadId", "authorId", "parentNoteId", content, "editedAt", "createdAt"';
+
+export const MENTOR_LEAD_FLAG_COLUMNS =
+  'id, "leadId", "mentorId", context, "createdAt"';

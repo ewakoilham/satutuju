@@ -40,6 +40,7 @@ interface ListResponse {
   total: number;
   progress: Record<string, { done: number; total: number }>;
   bucketCounts: Record<string, number>;
+  mentorNoteCount: Record<string, number>;
 }
 
 interface StatsLite {
@@ -839,6 +840,7 @@ export default function NewLeadsListPage() {
                     selected={selected.has(lead.id)}
                     isActive={openLead?.id === lead.id}
                     progress={data.progress[lead.id] ?? { done: 0, total: 0 }}
+                    mentorNoteCount={data.mentorNoteCount?.[lead.id] ?? 0}
                     onSelect={() => toggleOne(lead.id)}
                     onOpen={() => setOpenLead(lead)}
                     onReachout={(ch) => void doSingleReachout(lead.id, ch)}

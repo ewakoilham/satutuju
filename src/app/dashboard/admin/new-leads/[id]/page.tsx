@@ -18,12 +18,16 @@ import {
   type Lead,
   type LeadStage,
   type LeadStageHistory,
+  type LeadNoteThread,
+  type MentorLeadFlagWithMentor,
   type OutreachLog,
   type LeadStepDefinition,
   type LeadStepStatusRow,
 } from "@/lib/leads/types";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import type { SaveState } from "@/components/admin/leads/cockpit/DecisionPad";
+import MentorNotesPanel from "@/components/admin/leads/MentorNotesPanel";
+import { useUser } from "@/lib/hooks";
 
 /**
  * Call Cockpit detail page (Phase 8). Three-column layout optimized for
@@ -47,6 +51,8 @@ interface DetailResponse {
   outreach: OutreachLog[];
   steps: LeadStepDefinition[];
   statuses: LeadStepStatusRow[];
+  notes?: LeadNoteThread[];
+  flags?: MentorLeadFlagWithMentor[];
 }
 
 const READINESS_LENGTH = 6;
@@ -59,6 +65,7 @@ const relativeTime = formatJakartaRelative;
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { user: currentUser } = useUser();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -341,6 +348,18 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           </h2>
           <MentorMatchPanel lead={lead} onChanged={fetchDetail} />
         </section>
+      )}
+
+      {/* Phase 13: mentor input — notes + flags. Always visible (mentors
+          may leave context even before admin gets to the call). */}
+      {currentUser && (
+        <MentorNotesPanel
+          leadId={lead.id}
+          notes={data.notes ?? []}
+          flags={data.flags ?? []}
+          currentUserId={currentUser.userId}
+          onChanged={fetchDetail}
+        />
       )}
 
       {/* Pipeline Checklist now lives inside the DecisionPad (right

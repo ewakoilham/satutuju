@@ -150,11 +150,27 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Phase 13: surface mentor-note counts per lead so inbox rows can
+  // show a chat-icon indicator. One bulk query keyed on leadIds.
+  const mentorNoteCount: Record<string, number> = {};
+  if (leadIds.length > 0) {
+    const { data: noteRows } = await supabase
+      .from("LeadNote")
+      .select('"leadId"')
+      .is("parentNoteId", null)
+      .in("leadId", leadIds);
+    for (const n of noteRows ?? []) {
+      const lid = n.leadId as string;
+      mentorNoteCount[lid] = (mentorNoteCount[lid] ?? 0) + 1;
+    }
+  }
+
   return NextResponse.json({
     leads: leads ?? [],
     total: count ?? 0,
     progress,
     bucketCounts,
+    mentorNoteCount,
   });
 }
 

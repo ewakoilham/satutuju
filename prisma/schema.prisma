@@ -442,6 +442,8 @@ model Lead {
   history                LeadStageHistory[]
   outreach               OutreachLog[]
   stepStatuses           LeadStepStatus[]
+  notes                  LeadNote[]
+  mentorFlags            MentorLeadFlag[]
 
   @@index([bucket])
   @@index([stage])
@@ -449,6 +451,49 @@ model Lead {
   @@index([submittedAt])
   @@index([email])
   @@index([calendarEventId])
+}
+
+/**
+ * Phase 13: mentors leave top-level notes on incoming leads; admins
+ * reply with 1-level threading (parentNoteId set). API enforces:
+ *   - top-level (parentNoteId=null) → author must be mentor
+ *   - reply (parentNoteId=X) → author must be admin AND parent must be top-level
+ *   - edit window: 15 minutes after createdAt; editedAt records the
+ *     change. No delete.
+ */
+model LeadNote {
+  id           String    @id @default(cuid())
+  leadId       String
+  authorId     String    // User.id (mentor for top-level, admin for replies)
+  parentNoteId String?
+  content      String
+  editedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  lead    Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  parent  LeadNote?  @relation("LeadNoteReplies", fields: [parentNoteId], references: [id], onDelete: Cascade)
+  replies LeadNote[] @relation("LeadNoteReplies")
+
+  @@index([leadId])
+  @@index([authorId])
+  @@index([parentNoteId])
+}
+
+/** Phase 13: mentor flags a lead they personally know. Surfaced to
+ *  admin as a chip with optional context one-liner. Unique per
+ *  (lead, mentor) — toggle by POST/DELETE. */
+model MentorLeadFlag {
+  id        String   @id @default(cuid())
+  leadId    String
+  mentorId  String   // User.id (role=mentor)
+  context   String?
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, mentorId])
+  @@index([leadId])
+  @@index([mentorId])
 }
 
 model LeadStageHistory {

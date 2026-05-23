@@ -62,6 +62,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
   ],
   mentor: [
     { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
+    { href: "/dashboard/leads",        label: "Leads",        icon: "users", activePrefix: "/dashboard/leads" },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
     { href: "/dashboard/universities", label: "Universities", icon: "school"      },
