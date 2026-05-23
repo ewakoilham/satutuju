@@ -74,11 +74,6 @@ interface Props {
   onSegmentClick: (id: SegmentId) => void;
   onBucketClick: (bucket: LeadBucket) => void;
   activeBuckets: Set<LeadBucket>;
-  /** Whether any filter (segment / bucket / search) is currently
-   *  non-default. Drives visibility of the "Reset filter" affordance. */
-  hasAnyFilter?: boolean;
-  /** Clears every filter and snaps the inbox back to "Semua". */
-  onReset?: () => void;
 }
 
 export default function SmartSegments({
@@ -88,23 +83,9 @@ export default function SmartSegments({
   onSegmentClick,
   onBucketClick,
   activeBuckets,
-  hasAnyFilter = false,
-  onReset,
 }: Props) {
   return (
     <aside className="w-[200px] flex-shrink-0 bg-surface border border-border rounded-xl p-1.5 self-start">
-      {/* Reset-filter affordance — only when a filter is actually active. */}
-      {hasAnyFilter && onReset && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 mb-1.5 rounded-lg text-[11px] font-medium text-danger bg-danger-light/40 hover:bg-danger-light border border-danger/30 transition"
-          title="Hapus semua filter (segment, bucket, search) — kembali ke Semua"
-        >
-          <Icon name="x" size={11} /> Reset semua filter
-        </button>
-      )}
-
       {/* Smart segments */}
       {SEGMENTS.map((s) => {
         const isActive = active === s.id;

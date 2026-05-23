@@ -365,19 +365,6 @@ export default function NewLeadsListPage() {
     setOpenLead(null);
   }
 
-  /** One-click escape hatch: drop ALL filters and return to "Semua". */
-  function resetAllFilters() {
-    setActiveSegment("all");
-    setStageFilter(new Set());
-    setBucketFilter(new Set());
-    setSearch("");
-    setOpenLead(null);
-  }
-  const hasAnyFilter =
-    activeSegment !== "all" ||
-    bucketFilter.size > 0 ||
-    stageFilter.size > 0 ||
-    search.trim().length > 0;
 
   function toggleBucketFilter(b: LeadBucket) {
     // Bucket toggle composes with whatever segment is active — don't
@@ -739,8 +726,6 @@ export default function NewLeadsListPage() {
           activeBuckets={bucketFilter}
           onSegmentClick={selectSegment}
           onBucketClick={toggleBucketFilter}
-          hasAnyFilter={hasAnyFilter}
-          onReset={resetAllFilters}
         />
 
         {/* Middle: list */}
