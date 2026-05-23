@@ -8,10 +8,13 @@ import LeadAvatar from "@/components/admin/leads/inbox/LeadAvatar";
 import {
   fundingPlanLabelId,
   type Lead,
+  type LeadNoteThread,
   type LeadStageHistory,
+  type MentorLeadFlagWithMentor,
   type OutreachLog,
 } from "@/lib/leads/types";
 import { formatJakartaRelativeShort } from "@/lib/datetime-id";
+import MentorNotesPanel from "@/components/admin/leads/MentorNotesPanel";
 
 /**
  * Left rail of the Call Cockpit — always-glanceable context that the
@@ -37,11 +40,18 @@ interface Props {
   lead: Lead;
   history: LeadStageHistory[];
   outreach: OutreachLog[];
+  /** Phase 13.3 — mentor notes section embedded inline between
+   *  Klasifikasi and Engagement so admin notices it during the call.
+   *  Single source of truth: data flows from /api/new-leads/[id]. */
+  notes?: LeadNoteThread[];
+  flags?: MentorLeadFlagWithMentor[];
+  currentUserId?: string;
+  onMentorNotesChanged?: () => void;
 }
 
 const relativeTime = formatJakartaRelativeShort;
 
-export default function ContextRail({ lead, history, outreach }: Props) {
+export default function ContextRail({ lead, history, outreach, notes, flags, currentUserId, onMentorNotesChanged }: Props) {
   const [mentors, setMentors] = useState<MentorLite[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
 
@@ -171,6 +181,23 @@ export default function ContextRail({ lead, history, outreach }: Props) {
           </div>
         )}
       </Section>
+
+      {/* Phase 13.3: Catatan dari mentor — sits between Klasifikasi
+          and Engagement so admin notices the mentor's context as they
+          review the lead. Shared component with /dashboard/admin/new-
+          leads's LeadDetailPanel + the detail page so there's a single
+          source of truth for the thread. */}
+      {currentUserId && (
+        <Section title="Catatan dari mentor">
+          <MentorNotesPanel
+            leadId={lead.id}
+            notes={notes ?? []}
+            flags={flags ?? []}
+            currentUserId={currentUserId}
+            onChanged={onMentorNotesChanged ?? (() => {})}
+          />
+        </Section>
+      )}
 
       <Section title="Engagement">
         {engagement.length === 0 ? (

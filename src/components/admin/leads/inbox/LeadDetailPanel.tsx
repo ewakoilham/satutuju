@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import LeadBucketBadge from "@/components/admin/leads/LeadBucketBadge";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
+import MentorNotesPanel from "@/components/admin/leads/MentorNotesPanel";
 import LeadAvatar from "./LeadAvatar";
-import { fundingPlanLabelId, type Lead } from "@/lib/leads/types";
+import {
+  fundingPlanLabelId,
+  type Lead,
+  type LeadNoteThread,
+  type MentorLeadFlagWithMentor,
+} from "@/lib/leads/types";
 import { formatJakartaStamp, formatJakartaRelative } from "@/lib/datetime-id";
+import { useUser } from "@/lib/hooks";
 
 /**
  * Right slide-over for the Smart Inbox. Read-mostly: gives admin a
@@ -24,6 +31,8 @@ interface DetailResponse {
   history?: Array<{ id: string; fromStage: string | null; toStage: string; changedBy: string; note: string | null; createdAt: string }>;
   statuses?: Array<{ id: string; stepId: string; status: string; completedAt: string | null; completedBy: string | null }>;
   steps?: Array<{ id: string; order: number; label: string; description: string | null; autoTrigger: string | null; isActive: boolean }>;
+  notes?: LeadNoteThread[];
+  flags?: MentorLeadFlagWithMentor[];
 }
 
 interface Props {
@@ -58,6 +67,7 @@ function aiBriefFor(lead: Lead): string {
 }
 
 export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDeleted }: Props) {
+  const { user: currentUser } = useUser();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [channel, setChannel] = useState<"email" | "whatsapp" | "both">("both");
@@ -120,22 +130,29 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
 
   // Fetch full lead detail (history + pipeline checklist) so the panel
   // can show real timeline + step states. Lightweight (~5 KB).
-  useEffect(() => {
-    let cancelled = false;
+  const fetchDetail = useCallback(async () => {
     setLoading(true);
-    setData(null);
-    fetch(`/api/new-leads/${lead.id}`, { credentials: "include", cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (cancelled) return;
-        setData(j);
-        setLoading(false);
-      })
-      .catch(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const res = await fetch(`/api/new-leads/${lead.id}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as DetailResponse;
+      setData(j);
+    } catch {
+      // network errors are silent here — the slide-over is read-mostly
+      // and surfaces "Loading…" as a fallback.
+    } finally {
+      setLoading(false);
+    }
   }, [lead.id]);
+
+  // Initial + lead-swap fetch.
+  useEffect(() => {
+    setData(null);
+    void fetchDetail();
+  }, [fetchDetail]);
 
   const steps = data?.steps ?? [];
   const statuses = data?.statuses ?? [];
@@ -242,6 +259,22 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
             {aiBriefFor(lead)}
           </div>
         </div>
+
+        {/* Phase 13.3: Catatan dari mentor — shared MentorNotesPanel,
+            same data + actions as the detail-page ContextRail render.
+            Only the layout wrapper differs (Section here vs ContextRail's
+            Section there). */}
+        {currentUser && (
+          <Section title="Catatan dari mentor">
+            <MentorNotesPanel
+              leadId={lead.id}
+              notes={data?.notes ?? []}
+              flags={data?.flags ?? []}
+              currentUserId={currentUser.userId}
+              onChanged={() => void fetchDetail()}
+            />
+          </Section>
+        )}
 
         {/* Target */}
         <Section title="Target studi">

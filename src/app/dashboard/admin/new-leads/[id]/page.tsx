@@ -26,7 +26,6 @@ import {
 } from "@/lib/leads/types";
 import LeadStageBadge from "@/components/admin/leads/LeadStageBadge";
 import type { SaveState } from "@/components/admin/leads/cockpit/DecisionPad";
-import MentorNotesPanel from "@/components/admin/leads/MentorNotesPanel";
 import { useUser } from "@/lib/hooks";
 
 /**
@@ -302,7 +301,15 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
       {/* 3-column cockpit */}
       <div className="flex gap-3.5 items-start flex-col xl:flex-row">
-        <ContextRail lead={lead} history={history} outreach={outreach} />
+        <ContextRail
+          lead={lead}
+          history={history}
+          outreach={outreach}
+          notes={data.notes ?? []}
+          flags={data.flags ?? []}
+          currentUserId={currentUser?.userId}
+          onMentorNotesChanged={fetchDetail}
+        />
         <CallWorkspace
           lead={lead}
           readiness={readiness}
@@ -350,17 +357,9 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         </section>
       )}
 
-      {/* Phase 13: mentor input — notes + flags. Always visible (mentors
-          may leave context even before admin gets to the call). */}
-      {currentUser && (
-        <MentorNotesPanel
-          leadId={lead.id}
-          notes={data.notes ?? []}
-          flags={data.flags ?? []}
-          currentUserId={currentUser.userId}
-          onChanged={fetchDetail}
-        />
-      )}
+      {/* Phase 13.3: Catatan dari mentor moved into the ContextRail
+          (left column, between Klasifikasi and Engagement) so admin
+          sees mentor context inline during call review. */}
 
       {/* Pipeline Checklist now lives inside the DecisionPad (right
           column of the cockpit) so admin sees progress + branching in

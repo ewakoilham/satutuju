@@ -83,16 +83,21 @@ export default function MentorNotesPanel({ leadId, notes, flags, currentUserId, 
 
   const totalReplies = notes.reduce((acc, n) => acc + n.replies.length, 0);
 
+  // Phase 13.3: render as a self-contained section block — parent
+  // wraps with whatever container (Section helper in ContextRail,
+  // card in slide-over, etc.) so the same component slots into
+  // multiple layouts without the wrapper drift that would otherwise
+  // happen if we duplicated note threads per surface.
   return (
-    <section className="card p-5 space-y-4">
-      <div className="flex items-baseline justify-between gap-2 flex-wrap">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted-2 flex items-center gap-2">
-          <Icon name="chat" size={14} className="text-primary" />
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-text-muted-2 flex items-center gap-1.5">
+          <Icon name="chat" size={11} className="text-primary" />
           Catatan dari Mentor
-          <span className="text-text-muted-2 font-normal normal-case tracking-normal">
-            {notes.length} catatan · {totalReplies} balasan
-          </span>
-        </h2>
+        </div>
+        <span className="text-[10.5px] text-text-muted-2">
+          {notes.length} catatan · {totalReplies} balasan
+        </span>
       </div>
 
       {/* Flag chips */}
@@ -221,6 +226,6 @@ export default function MentorNotesPanel({ leadId, notes, flags, currentUserId, 
           ))}
         </ul>
       )}
-    </section>
+    </div>
   );
 }
