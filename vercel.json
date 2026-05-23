@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/tally-sync",
-      "schedule": "0 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/calendar-sync",
