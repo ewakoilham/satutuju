@@ -62,6 +62,7 @@ export const STEP_AUTO_TRIGGERS = [
   "whatsapp_sent",
   "whatsapp_read",
   "call_scheduled",    // fired when Google Calendar sync detects a booking
+  "waitlist",          // fired when stage advances to waitlist (Phase 11.2)
   "deposit_pending",   // fired when stage advances to deposit_pending
   "deposit_agreed",    // fired when stage advances to deposit_agreed
   "deposit_paid",      // fired when stage advances to deposit_paid
@@ -96,6 +97,7 @@ export const TRIGGER_CATEGORY: Record<StepAutoTrigger, StepAutoTriggerCategory> 
   whatsapp_sent:   "event",
   whatsapp_read:   "event",
   call_scheduled:  "stage-system",
+  waitlist:        "stage-click",
   deposit_pending: "stage-click",
   deposit_agreed:  "stage-click",
   deposit_paid:    "stage-click",
@@ -118,6 +120,7 @@ export const TRIGGER_LABEL: Record<StepAutoTrigger, string> = {
   whatsapp_sent:   "WhatsApp terkirim",
   whatsapp_read:   "WhatsApp dibaca",
   call_scheduled:  "Call terjadwal",
+  waitlist:        "Stage → waitlist",
   deposit_pending: "Stage → deposit pending",
   deposit_agreed:  "Stage → bersedia bayar",
   deposit_paid:    "Stage → deposit lunas",
@@ -135,11 +138,47 @@ export const TRIGGER_HINT: Record<StepAutoTrigger, string> = {
   whatsapp_sent:   "otomatis saat WhatsApp terkirim",
   whatsapp_read:   "otomatis saat WhatsApp dibaca",
   call_scheduled:  "otomatis saat Google Calendar booking",
+  waitlist:        "klik untuk advance",
   deposit_pending: "klik untuk advance",
   deposit_agreed:  "klik untuk advance",
   deposit_paid:    "klik untuk advance",
   matched:         "otomatis saat dipair via tab Pairings",
 };
+
+/**
+ * Stage-specific placeholder used by the inline note textarea in the
+ * pipeline checklist (advance form). Hints at the typical context an
+ * admin would record when transitioning the lead to that stage.
+ * Defaults to a generic message if a stage isn't in the map.
+ */
+export const STAGE_NOTE_PLACEHOLDER: Partial<Record<LeadStage, string>> = {
+  waitlist:        "mis. Belum siap secara timeline · follow-up 2 minggu lagi tgl 5 Juni",
+  deposit_pending: "mis. Invoice sudah dikirim via WA · tunggu balasan dalam 1×24 jam",
+  deposit_agreed:  "mis. Mentee commit transfer 30 Juni setelah gajian · nominal Rp 1jt full",
+  deposit_paid:    "mis. Transfer Rp 1jt diterima 25 Mei · bukti via WA · siap matching",
+};
+
+/**
+ * Stage-note marker shared by the /stage route (writes the marker into
+ * LeadStageHistory.note) and PipelineChecklist (reads it back for
+ * past-stage display). Centralised here so both ends of the protocol
+ * cannot drift apart.
+ *
+ * Encoded form: `[catatan stage <stage>] <body>`
+ */
+const STAGE_NOTE_MARKER_RX = /\[catatan stage [^\]]+\]\s*([\s\S]+)/;
+
+/** Wrap a note with the stage marker for storage in history.note. */
+export function encodeStageNote(stage: LeadStage, body: string): string {
+  return `[catatan stage ${stage}] ${body}`;
+}
+
+/** Strip the stage marker from a stored history note. Returns the raw
+ *  note unchanged when no marker is present. */
+export function decodeStageNote(note: string): string {
+  const m = STAGE_NOTE_MARKER_RX.exec(note);
+  return m ? m[1].trim() : note;
+}
 
 /** Display metadata for each trigger category. Used by Pipeline Manager
  *  (badge color + section header) and PipelineChecklist (badge tone). */
@@ -186,6 +225,7 @@ export const CATEGORY_META: Record<
  */
 export const STAGE_TO_STEP_TRIGGER: Partial<Record<LeadStage, StepAutoTrigger>> = {
   call_scheduled:  "call_scheduled",
+  waitlist:        "waitlist",
   deposit_pending: "deposit_pending",
   deposit_agreed:  "deposit_agreed",
   deposit_paid:    "deposit_paid",

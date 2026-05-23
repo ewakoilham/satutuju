@@ -317,6 +317,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           leadId={lead.id}
           steps={steps}
           statuses={statuses}
+          history={history}
           onChanged={fetchDetail}
           stageNote={stageNote}
           onStageNoteChange={(v) => { dirtyRef.current = true; setStageNote(v); }}

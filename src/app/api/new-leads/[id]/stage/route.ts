@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { LEAD_SELECT_COLUMNS } from "@/lib/db-columns";
-import { LEAD_STAGES, STAGE_TO_STEP_TRIGGER, type LeadStage } from "@/lib/leads/types";
+import { LEAD_STAGES, STAGE_TO_STEP_TRIGGER, encodeStageNote, type LeadStage, type StepAutoTrigger } from "@/lib/leads/types";
 import { newStageHistoryId } from "@/lib/leads/ids";
-import { completeStepByTrigger } from "@/lib/leads/step-helpers";
+import { completeStepsByTriggers } from "@/lib/leads/step-helpers";
 
 /**
  * Change a lead's stage. Writes a LeadStageHistory row capturing the
@@ -54,7 +54,7 @@ export async function PATCH(
     .from("Lead")
     .select('stage, "stageNote"')
     .eq("id", id)
-    .single();
+    .single<{ stage: LeadStage; stageNote: string | null }>();
   if (lookupErr) {
     const code = lookupErr.code === "PGRST116" ? 404 : 500;
     return NextResponse.json({ error: lookupErr.message }, { status: code });
@@ -77,13 +77,15 @@ export async function PATCH(
     return NextResponse.json({ lead: leadNoOp, changed: false });
   }
 
-  // Capture the outgoing Lead.stageNote into the history row's note.
-  // If both a transition note and a stageNote exist, concatenate so
-  // neither is lost.
-  const outgoingStageNote = (current as { stageNote?: string | null }).stageNote ?? null;
+  // Compose the history row's note: transition note + incoming stage
+  // note (tied to destination stage) + outgoing stage note (parked
+  // value from the stage we're leaving). Both stage notes are wrapped
+  // with the shared marker so PipelineChecklist can decode them.
+  const outgoingStageNote = current.stageNote ?? null;
   const composedHistoryNote = [
     note,
-    outgoingStageNote ? `[catatan stage ${current.stage}] ${outgoingStageNote}` : null,
+    incomingStageNote ? encodeStageNote(newStage, incomingStageNote) : null,
+    outgoingStageNote ? encodeStageNote(current.stage, outgoingStageNote) : null,
   ].filter(Boolean).join("\n").slice(0, 2000) || null;
 
   const now = new Date().toISOString();
@@ -103,6 +105,33 @@ export async function PATCH(
     .single();
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
+  // Phase 11.1: when stage moves backward, reset step statuses for any
+  // step whose autoTrigger represents a stage now in the future. This
+  // preserves the source-of-truth invariant (step.done ↔ stage has
+  // been visited) when admin clicks a done stage-click step to revert.
+  const curIdx = LEAD_STAGES.indexOf(current.stage);
+  const newIdx = LEAD_STAGES.indexOf(newStage);
+  if (newIdx < curIdx) {
+    const futureStages = LEAD_STAGES.slice(newIdx + 1, curIdx + 1);
+    const futureTriggers = futureStages
+      .map((s) => STAGE_TO_STEP_TRIGGER[s])
+      .filter((t): t is StepAutoTrigger => Boolean(t));
+    if (futureTriggers.length) {
+      const { data: stepsToReset } = await supabase
+        .from("LeadStepDefinition")
+        .select("id")
+        .in("autoTrigger", futureTriggers);
+      const stepIds = (stepsToReset ?? []).map((s) => s.id as string);
+      if (stepIds.length) {
+        await supabase
+          .from("LeadStepStatus")
+          .update({ status: "pending", completedAt: null, completedBy: null, updatedAt: now })
+          .eq("leadId", id)
+          .in("stepId", stepIds);
+      }
+    }
+  }
+
   await supabase.from("LeadStageHistory").insert({
     id: newStageHistoryId(),
     leadId: id,
@@ -113,13 +142,17 @@ export async function PATCH(
     createdAt: now,
   });
 
-  // Auto-complete any pipeline step whose autoTrigger matches this
-  // stage transition (e.g. moving to deposit_paid ticks the
-  // "Bersedia Membayar Deposit" step). Helper is no-op if no step
-  // listens for the trigger.
-  const trigger = STAGE_TO_STEP_TRIGGER[newStage];
-  if (trigger) {
-    await completeStepByTrigger(id, trigger).catch(() => {});
+  // Forward transitions auto-tick every stage-click step in
+  // (curIdx, newIdx]. Bulk call keeps it a single round-trip even when
+  // admin jumps multiple stages — preserves step.done ↔ stage-visited
+  // invariant without N serial DB calls.
+  if (newIdx > curIdx) {
+    const fwdTriggers = LEAD_STAGES.slice(curIdx + 1, newIdx + 1)
+      .map((s) => STAGE_TO_STEP_TRIGGER[s])
+      .filter((t): t is StepAutoTrigger => Boolean(t));
+    if (fwdTriggers.length) {
+      await completeStepsByTriggers(id, fwdTriggers).catch(() => {});
+    }
   }
 
   return NextResponse.json({ lead, changed: true });

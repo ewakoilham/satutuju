@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import PipelineChecklist from "@/components/admin/leads/PipelineChecklist";
 import {
   STAGE_LABEL,
   type LeadStage,
+  type LeadStageHistory,
   type LeadStepDefinition,
   type LeadStepStatusRow,
 } from "@/lib/leads/types";
@@ -26,21 +27,29 @@ import {
  *     reversal goes via stage dropdown.
  */
 
-const DEPOSIT_TIERS: Record<number, { label: string; eligibility: string; desc: string; eligibilityTone: "success" | "warn" | "muted" }> = {
+/**
+ * Deposit tier bands — anchored to readiness checklist score (0–6).
+ * Thresholds mirror `suggestDepositTier()` so admin sees the rule and
+ * the score-band in one glance.
+ */
+const DEPOSIT_TIERS: Record<number, { label: string; band: string; eligibility: string; desc: string; eligibilityTone: "success" | "warn" | "muted" }> = {
   1: {
     label: "Tier 1 — Premium / siap",
+    band: "5–6 ✓",
     eligibility: "Applicable for discount",
     desc: "Lead matang. Layak dapet diskon penuh program.",
     eligibilityTone: "success",
   },
   2: {
     label: "Tier 2 — Standard",
+    band: "3–4 ✓",
     eligibility: "May be applicable",
     desc: "Mentee partial-ready. Diskon parsial atau case-by-case.",
     eligibilityTone: "warn",
   },
   3: {
     label: "Tier 3 — Coaching-heavy",
+    band: "0–2 ✓",
     eligibility: "Not applicable for discount",
     desc: "Butuh banyak coaching. Full price program.",
     eligibilityTone: "muted",
@@ -55,14 +64,9 @@ const TIER_ELIGIBILITY_COLOR: Record<"success" | "warn" | "muted", string> = {
   muted:   "text-slate-600 bg-slate-100",
 };
 
-/**
- * Stages where a per-stage note textarea is shown. Lead is parked or
- * mid-deposit-flow — admin often needs to leave a contextual note
- * (e.g. "menunggu transfer setelah gajian").
- */
-const STAGES_WITH_NOTE: ReadonlySet<LeadStage> = new Set<LeadStage>([
-  "waitlist", "deposit_pending", "deposit_agreed", "deposit_paid",
-]);
+// Phase 11.2: Waitlist now has its own checklist button, so the
+// standalone "Catatan stage" textarea in DecisionPad is gone — all
+// per-stage notes are managed inline inside PipelineChecklist.
 
 /**
  * Stages where the terminal-decisions section is meaningful. Past
@@ -121,6 +125,7 @@ interface Props {
   leadId: string;
   steps: LeadStepDefinition[];
   statuses: LeadStepStatusRow[];
+  history: LeadStageHistory[];
   onChanged: () => void;
   /** Current stage's note (Lead.stageNote). Only persisted while lead
    *  sits in this stage; rolled over to LeadStageHistory on transition. */
@@ -140,6 +145,7 @@ export default function DecisionPad({
   leadId,
   steps,
   statuses,
+  history,
   onChanged,
   stageNote,
   onStageNoteChange,
@@ -147,9 +153,6 @@ export default function DecisionPad({
 }: Props) {
   const [terminalBusy, setTerminalBusy] = useState<LeadStage | null>(null);
   const [terminalErr, setTerminalErr] = useState<string | null>(null);
-  // Local textarea state so typing is responsive; sync from prop changes.
-  const [noteDraft, setNoteDraft] = useState(stageNote);
-  useEffect(() => { setNoteDraft(stageNote); }, [stageNote]);
 
   async function advanceToTerminal(stage: LeadStage, label: string) {
     if (terminalBusy) return;
@@ -197,7 +200,6 @@ export default function DecisionPad({
           : "Lemah — fokus build dasar";
 
   const showTerminal = STAGES_WITH_TERMINAL.has(currentStage);
-  const showStageNote = STAGES_WITH_NOTE.has(currentStage);
 
   return (
     <aside className="w-[320px] flex-shrink-0 self-start bg-surface border border-border rounded-xl flex flex-col">
@@ -251,7 +253,12 @@ export default function DecisionPad({
                   Auto-suggested
                 </span>
               )}
-              <div className="text-[12.5px] font-semibold text-foreground">{t.label}</div>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-[12.5px] font-semibold text-foreground">{t.label}</span>
+                <span className="text-[10.5px] font-mono text-text-muted-2 tabular-nums">
+                  {t.band}
+                </span>
+              </div>
               <div className="mt-1.5">
                 <span
                   className={`inline-block text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${TIER_ELIGIBILITY_COLOR[t.eligibilityTone]}`}
@@ -276,35 +283,15 @@ export default function DecisionPad({
           statuses={statuses}
           onChanged={onChanged}
           currentStage={currentStage}
+          history={history}
+          stageNote={stageNote}
+          onStageNoteChange={onStageNoteChange}
         />
       </div>
 
-      {/* Per-stage notes — for parking/pending stages only. */}
-      {showStageNote && (
-        <div className="px-4 py-3.5 border-b border-border/60">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <div className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.06em]">
-              Catatan stage · {STAGE_LABEL[currentStage]}
-            </div>
-            <SaveIndicator state={saveState} />
-          </div>
-          <textarea
-            value={noteDraft}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            onBlur={() => {
-              if (noteDraft !== stageNote) onStageNoteChange(noteDraft);
-            }}
-            disabled={readOnly}
-            placeholder="mis. Mentee minta perpanjangan deadline transfer · follow-up tgl 1"
-            rows={3}
-            className="w-full text-[12px] px-2.5 py-2 rounded-lg border border-border bg-surface focus:border-primary focus:outline-none resize-none disabled:opacity-50"
-            maxLength={2000}
-          />
-          <p className="text-[10.5px] text-text-muted-2 italic mt-1 leading-snug">
-            Catatan ini disimpan untuk stage <strong>{STAGE_LABEL[currentStage]}</strong>. Saat stage berubah, catatan otomatis di-archive ke history.
-          </p>
-        </div>
-      )}
+      {/* Phase 11.2: per-stage notes are now entirely inline inside
+          PipelineChecklist (each step button hosts its own note). The
+          standalone DecisionPad note section was removed. */}
 
       {/* Keputusan terminal — Declined / Rejected only (waitlist is linear). */}
       {showTerminal && (

@@ -94,11 +94,25 @@ export async function completeStepByTrigger(
   trigger: StepAutoTrigger,
   completedBy: string = "system",
 ): Promise<{ ok: boolean; completed: number; error?: string }> {
-  // Find the active step definitions that listen for this trigger
+  return completeStepsByTriggers(leadId, [trigger], completedBy);
+}
+
+/**
+ * Bulk variant: fire multiple triggers in a single round-trip pair
+ * (one definition lookup + one status update). Used by /stage on
+ * forward transitions so a multi-stage jump doesn't fan out into N
+ * serial DB calls.
+ */
+export async function completeStepsByTriggers(
+  leadId: string,
+  triggers: readonly StepAutoTrigger[],
+  completedBy: string = "system",
+): Promise<{ ok: boolean; completed: number; error?: string }> {
+  if (triggers.length === 0) return { ok: true, completed: 0 };
   const { data: steps, error: stepsErr } = await supabase
     .from("LeadStepDefinition")
     .select("id")
-    .eq("autoTrigger", trigger)
+    .in("autoTrigger", triggers as unknown as string[])
     .eq("isActive", true);
   if (stepsErr) return { ok: false, completed: 0, error: stepsErr.message };
   if (!steps || steps.length === 0) return { ok: true, completed: 0 };
@@ -106,8 +120,6 @@ export async function completeStepByTrigger(
   const stepIds = steps.map((s) => s.id);
   const now = new Date().toISOString();
 
-  // Update only pending rows — preserves prior completion timestamps if
-  // the event re-fires.
   const { data: updated, error: updErr } = await supabase
     .from("LeadStepStatus")
     .update({

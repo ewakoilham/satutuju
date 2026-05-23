@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import {
   LEAD_STAGES,
   STAGE_LABEL,
+  STAGE_NOTE_PLACEHOLDER,
   STAGE_TO_STEP_TRIGGER,
   TRIGGER_CATEGORY,
   TRIGGER_HINT,
+  decodeStageNote,
   type LeadStage,
+  type LeadStageHistory,
   type LeadStepDefinition,
   type LeadStepStatusRow,
   type StepAutoTrigger,
@@ -21,44 +24,23 @@ interface Props {
   steps: LeadStepDefinition[];
   statuses: LeadStepStatusRow[];
   onChanged?: () => void;
-  /** When provided, the checklist filters out auto (event +
-   *  stage-system) steps that represent stages the lead has already
-   *  passed — so admin only sees the steps that are still actionable.
-   *  Manual + stage-click steps always remain visible. */
-  currentStage?: LeadStage;
+  /** Lead's current stage. Required for backward-revert logic and
+   *  inline-note placement (current-stage step gets the editable
+   *  textarea; past stages show read-only history note). */
+  currentStage: LeadStage;
+  /** Stage transitions for this lead. Used to surface past notes
+   *  (stored on LeadStageHistory.note) inline under each past stage's
+   *  step button. */
+  history: LeadStageHistory[];
+  /** Current stage's note (Lead.stageNote). Bound to the inline
+   *  textarea for whichever step button matches currentStage. */
+  stageNote: string;
+  onStageNoteChange: (v: string) => void;
 }
 
 /**
- * For each auto trigger, the LEAD_STAGE the step represents. Used to
- * prune the checklist as the lead advances: once the lead's stage is
- * at-or-past this stage, the auto step is no longer actionable and
- * gets filtered out.
- *
- * `classified` maps to "new" because every lead in the system has
- * already passed classification by the time it's visible at all.
- */
-const STAGE_FOR_AUTO_TRIGGER: Partial<Record<StepAutoTrigger, LeadStage>> = {
-  classified:      "new",
-  email_sent:      "outreach_sent",
-  email_opened:    "email_opened",
-  email_clicked:   "email_clicked",
-  whatsapp_sent:   "outreach_sent",
-  whatsapp_read:   "whatsapp_read",
-  call_scheduled:  "call_scheduled",
-  matched:         "matched",
-};
-
-const STAGE_INDEX: Record<LeadStage, number> = (() => {
-  const out = {} as Record<LeadStage, number>;
-  LEAD_STAGES.forEach((s, i) => { out[s] = i; });
-  return out;
-})();
-
-/**
  * Map from a trigger back to the stage that owns it. Inverse of
- * STAGE_TO_STEP_TRIGGER. Built once on module load so per-step click
- * handlers can resolve "what stage should I advance to?" without
- * walking the map every render.
+ * STAGE_TO_STEP_TRIGGER. Built once on module load.
  */
 const STAGE_FOR_TRIGGER: Partial<Record<StepAutoTrigger, LeadStage>> = (() => {
   const out: Partial<Record<StepAutoTrigger, LeadStage>> = {};
@@ -74,46 +56,75 @@ function formatStamp(iso: string | null): string | null {
 }
 
 /**
- * Per-lead pipeline checklist.
- *
- *   • Manual steps  → click box toggles done ↔ pending; right-click to skip.
- *   • Auto steps    → READ-ONLY. Driven entirely by system events
- *                     (email sent, deposit_pending stage transition, etc.).
- *                     Admin cannot manually check/uncheck them; doing so
- *                     causes data drift (a step says "done" while the
- *                     underlying stage hasn't moved).
- *
- * If admin needs to force a state, the right path is to advance the lead
- * STAGE (via /stage endpoint or Decision Pad on the detail page) — the
- * step auto-fires from there.
+ * Latest note from history for transitions INTO the given stage.
+ * The marker stripping is delegated to decodeStageNote() in types.ts —
+ * keeps encode/decode paired in one place.
  */
-export default function PipelineChecklist({ leadId, steps, statuses, onChanged, currentStage }: Props) {
+function noteForPastStage(stage: LeadStage, history: LeadStageHistory[]): string | null {
+  const matching = history
+    .filter((h) => h.toStage === stage && h.note)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  return matching?.note ? decodeStageNote(matching.note) : null;
+}
+
+/**
+ * Per-lead pipeline checklist — Phase 11.1.
+ *
+ * Visible steps: only stage-click and manual. Event + stage-system
+ * (Klasifikasi otomatis through Schedule initial call, plus Match
+ * dengan mentor) are hidden — admin can't act on them anyway.
+ *
+ * Stage-click steps support BOTH forward and backward movement:
+ *   • Click pending step → advance lead.stage to step's target
+ *   • Click done step → revert lead.stage to the previous LEAD_STAGES
+ *     index. Server side, /api/new-leads/[id]/stage resets the step
+ *     statuses for stages now in the future so no drift.
+ *
+ * Each stage-click step exposes its per-stage note inline:
+ *   • Current-stage step → editable textarea bound to Lead.stageNote
+ *   • Past-stage step → read-only italic snippet from history
+ *   • Future-stage step → nothing
+ */
+export default function PipelineChecklist({
+  leadId,
+  steps,
+  statuses,
+  onChanged,
+  currentStage,
+  history,
+  stageNote,
+  onStageNoteChange,
+}: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [localStatuses, setLocalStatuses] = useState<LeadStepStatusRow[]>(statuses);
+  useEffect(() => { setLocalStatuses(statuses); }, [statuses]);
+
+  // Phase 11.2: which step has its inline advance-form open. The form
+  // hosts a textarea so admin can capture context BEFORE the stage
+  // change. Submit → confirm modal → advance + persist note.
+  const [advancingStepId, setAdvancingStepId] = useState<string | null>(null);
+  const [advanceNote, setAdvanceNote] = useState("");
+
+  // Local note draft so typing in the current-stage editable textarea
+  // stays responsive; sync from prop.
+  const [noteDraft, setNoteDraft] = useState(stageNote);
+  useEffect(() => { setNoteDraft(stageNote); }, [stageNote]);
 
   const statusById = new Map<string, LeadStepStatusRow>();
   for (const s of localStatuses) statusById.set(s.stepId, s);
 
-  // Filter visible steps: hide auto (event + stage-system) steps that
-  // represent stages the lead has already moved past. Manual and
-  // stage-click steps always stay visible — they're admin's primary
-  // action surface and may still need to be clicked retroactively.
-  // When currentStage is undefined (e.g. consumer didn't pass it),
-  // show everything (legacy behavior).
+  // Phase 11.1 — show only stage-click + manual. Event and
+  // stage-system steps happen automatically and the admin can't act on
+  // them, so they're clutter in this surface.
   const visibleSteps = useMemo(() => {
-    if (!currentStage) return steps;
-    const curIdx = STAGE_INDEX[currentStage] ?? -1;
     return steps.filter((step) => {
       const trigger = step.autoTrigger as StepAutoTrigger | null;
-      if (!trigger) return true;                          // manual — keep
-      const category = TRIGGER_CATEGORY[trigger];
-      if (category === "stage-click") return true;        // admin's primary action surface
-      const repStage = STAGE_FOR_AUTO_TRIGGER[trigger];
-      if (!repStage) return true;                         // no mapping → keep
-      const repIdx = STAGE_INDEX[repStage];
-      return curIdx < repIdx;                             // hide if lead is at-or-past
+      if (!trigger) return true;                              // manual
+      return TRIGGER_CATEGORY[trigger] === "stage-click";    // only stage-click
     });
-  }, [steps, currentStage]);
+  }, [steps]);
+
+  const curIdx = LEAD_STAGES.indexOf(currentStage);
 
   async function setStatus(stepId: string, status: StepStatus, note?: string) {
     setBusy(stepId);
@@ -143,23 +154,26 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
     }
   }
 
-  /**
-   * Advance the lead's stage to `nextStage`. The /stage endpoint writes
-   * Lead.stage + LeadStageHistory + auto-fires the step whose
-   * autoTrigger matches that stage (server-side STAGE_TO_STEP_TRIGGER
-   * map). Refetches via onChanged so the parent sees fresh data.
-   */
-  async function advanceStage(stepId: string, nextStage: string) {
+  async function advanceStage(
+    stepId: string,
+    nextStage: LeadStage,
+    direction: "forward" | "backward",
+    incomingStageNote: string | null = null,
+  ) {
     setBusy(stepId);
     try {
+      const stepLabel = steps.find((s) => s.id === stepId)?.label ?? stepId;
+      const note = direction === "forward"
+        ? `Advanced via pipeline checklist (klik step "${stepLabel}")`
+        : `Mundurkan via pipeline checklist (klik step "${stepLabel}")`;
       const res = await fetch(`/api/new-leads/${leadId}/stage`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          stage: nextStage,
-          note: `Advanced via pipeline checklist (click step "${steps.find((s) => s.id === stepId)?.label ?? stepId}")`,
-        }),
+        // stageNote: only the advance form (forward) supplies one; the
+        // /stage route treats undefined as "leave Lead.stageNote alone
+        // after capture" so the conditional spread is unnecessary.
+        body: JSON.stringify({ stage: nextStage, note, stageNote: incomingStageNote }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -170,6 +184,21 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
     } finally {
       setBusy(null);
     }
+  }
+
+  function openAdvanceForm(stepId: string) {
+    setAdvancingStepId(stepId);
+    setAdvanceNote("");
+  }
+  function cancelAdvanceForm() {
+    setAdvancingStepId(null);
+    setAdvanceNote("");
+  }
+  async function submitAdvanceForm(stepId: string, stageTarget: LeadStage, stageTargetLabel: string) {
+    if (!confirm(`Pindahkan stage ke "${stageTargetLabel}"? Catatan akan disimpan.`)) return;
+    await advanceStage(stepId, stageTarget, "forward", advanceNote.trim() || null);
+    setAdvancingStepId(null);
+    setAdvanceNote("");
   }
 
   if (steps.length === 0) {
@@ -184,13 +213,10 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
     );
   }
 
-  // All steps filtered out by stage progression — say so explicitly
-  // rather than show an empty card, so admin knows it isn't broken.
   if (visibleSteps.length === 0) {
     return (
       <div className="text-xs text-text-muted-2 py-3 text-center italic">
-        Semua step otomatis sudah lewat untuk stage ini — tunggu admin actions berikutnya
-        (atau gunakan keputusan terminal di bawah).
+        Tidak ada step manual untuk lead ini.
       </div>
     );
   }
@@ -210,33 +236,52 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
           : s?.completedBy ?? null;
         const isBusy = busy === step.id;
         const trigger = step.autoTrigger as StepAutoTrigger | null;
-        const category = trigger ? TRIGGER_CATEGORY[trigger] : null;
         const stageTarget = trigger ? STAGE_FOR_TRIGGER[trigger] : null;
-        // Stage-click triggers are clickable from the checklist. Event-
-        // driven AND stage-system (calendar) triggers stay read-only.
-        const isClickableAuto = category === "stage-click" && !!stageTarget;
+        const isStageClick = !!stageTarget; // all visible auto steps are stage-click
         const triggerHint = trigger ? TRIGGER_HINT[trigger] : null;
         const stageTargetLabel = stageTarget ? STAGE_LABEL[stageTarget] : null;
 
+        // Determine note placement: editable for current-stage, read-only
+        // historical snippet for past stages, nothing for future.
+        const stageIdx = stageTarget ? LEAD_STAGES.indexOf(stageTarget) : -1;
+        const isCurrentStage = stageTarget !== null && currentStage === stageTarget;
+        const isPastStage = stageTarget !== null && curIdx > stageIdx;
+        const historicalNote = isPastStage && stageTarget
+          ? noteForPastStage(stageTarget, history)
+          : null;
+
+        // Backward revert target — the immediately-prior LEAD_STAGES index.
+        const prevStage = stageTarget && stageIdx > 0 ? LEAD_STAGES[stageIdx - 1] : null;
+
         const onClickBox = () => {
           if (isBusy) return;
-          if (isDone) return; // no un-check from checklist; reverse via stage dropdown
           if (isAuto) {
-            if (!isClickableAuto || !stageTarget) return;
-            if (
-              confirm(
-                `Advance stage lead ke "${stageTargetLabel}"? Step ini akan auto-check setelah stage berubah.`,
-              )
-            ) {
-              void advanceStage(step.id, stageTarget);
+            if (!isStageClick || !stageTarget) return;
+            if (isDone) {
+              // Backward: revert to prev stage. Server resets step
+              // statuses now-in-the-future so no drift.
+              if (!prevStage) return;
+              if (confirm(
+                `Mundurkan lead dari "${stageTargetLabel}" → "${STAGE_LABEL[prevStage]}"? Step "${step.label}" akan reset ke pending.`,
+              )) {
+                void advanceStage(step.id, prevStage, "backward");
+              }
+              return;
             }
+            // Phase 11.2: don't fire confirm immediately. Open the
+            // inline form so admin can write a stage note first.
+            openAdvanceForm(step.id);
+            return;
+          }
+          // Manual step
+          if (isDone) {
+            setStatus(step.id, "pending");
             return;
           }
           setStatus(step.id, "done");
         };
 
-        // Right-click → skip. Manual only — auto steps controlled by
-        // system events / stage transitions.
+        // Right-click → skip. Manual only.
         const onContextMenu = (e: React.MouseEvent) => {
           e.preventDefault();
           if (isBusy || isAuto) return;
@@ -250,10 +295,8 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
 
         const checkboxTitle = isAuto
           ? isDone
-            ? `Auto-completed (${triggerHint}). Untuk mundur, ubah stage lead lewat dropdown stage.`
-            : isClickableAuto
-              ? `Klik untuk advance stage ke "${stageTargetLabel}" (step auto-check setelah stage berubah).`
-              : `Akan auto-complete: ${triggerHint}`
+            ? `Klik untuk mundurkan stage ke "${prevStage ? STAGE_LABEL[prevStage] : "—"}".`
+            : `Klik untuk advance stage ke "${stageTargetLabel}" (step auto-check setelah stage berubah).`
           : isDone
             ? "Klik untuk uncheck (manual)"
             : "Klik untuk mark done (manual)";
@@ -277,19 +320,15 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
             <button
               type="button"
               onClick={onClickBox}
-              disabled={isBusy || isDone || (isAuto && !isClickableAuto)}
+              disabled={isBusy}
               aria-label={checkboxTitle}
               title={checkboxTitle}
               className={`mt-0.5 flex-shrink-0 grid place-items-center w-5 h-5 rounded border-2 transition-colors ${
                 isDone
-                  ? "bg-primary border-primary text-white cursor-default"
+                  ? "bg-primary border-primary text-white hover:bg-primary/90 cursor-pointer"
                   : isSkipped
                     ? "bg-surface-elevated border-border text-text-muted-2"
-                    : isAuto
-                      ? isClickableAuto
-                        ? "bg-white border-primary-200 hover:border-primary hover:bg-primary-50 cursor-pointer"
-                        : "bg-surface-elevated border-border cursor-not-allowed"
-                      : "bg-white border-gray-300 hover:border-primary cursor-pointer"
+                    : "bg-white border-primary-200 hover:border-primary hover:bg-primary-50 cursor-pointer"
               }`}
             >
               {isDone && <Icon name="check" size={12} />}
@@ -309,13 +348,9 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
                 {triggerHint && (
                   <span
                     className="text-[11px] text-text-muted-2 italic"
-                    title={
-                      isClickableAuto
-                        ? `Klik untuk advance stage ke "${stageTargetLabel}".`
-                        : undefined
-                    }
+                    title={isStageClick ? `Klik untuk advance stage ke "${stageTargetLabel}".` : undefined}
                   >
-                    ({triggerHint})
+                    ({isDone ? "klik untuk mundurkan" : triggerHint})
                   </span>
                 )}
               </div>
@@ -324,6 +359,74 @@ export default function PipelineChecklist({ leadId, steps, statuses, onChanged, 
                   {isDone ? "✓" : isSkipped ? "⨯ skipped" : ""} {completedBy ?? "—"} · {stamp}
                   {s?.note ? ` · ${s.note}` : ""}
                 </p>
+              )}
+
+              {/* Phase 11.2 — inline advance form. Opens when admin
+                  clicks an empty stage-click checkbox; submit triggers
+                  the confirm modal and the actual /stage advance. */}
+              {advancingStepId === step.id && isStageClick && stageTarget && (
+                <div className="mt-2 space-y-1.5 bg-primary-50/40 border border-primary-200/60 rounded-lg p-2.5">
+                  <label className="text-[10.5px] font-bold text-text-muted-2 uppercase tracking-[0.05em] block">
+                    Catatan untuk stage {stageTargetLabel} (opsional)
+                  </label>
+                  <textarea
+                    value={advanceNote}
+                    onChange={(e) => setAdvanceNote(e.target.value)}
+                    autoFocus
+                    rows={3}
+                    maxLength={2000}
+                    placeholder={STAGE_NOTE_PLACEHOLDER[stageTarget] ?? "Catatan opsional untuk stage ini"}
+                    className="w-full text-[12px] px-2.5 py-2 rounded-lg border border-border bg-surface focus:border-primary focus:outline-none resize-none"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={cancelAdvanceForm}
+                      disabled={isBusy}
+                      className="btn-ghost text-xs"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void submitAdvanceForm(step.id, stageTarget, stageTargetLabel!)}
+                      disabled={isBusy}
+                      className="btn-primary text-xs inline-flex items-center gap-1"
+                    >
+                      <Icon name="check" size={11} /> Simpan &amp; lanjutkan
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline per-step note. Current → editable textarea.
+                  Past → read-only italic snippet. Future → nothing. */}
+              {isCurrentStage && (
+                <div className="mt-2">
+                  <textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    onBlur={() => {
+                      if (noteDraft !== stageNote) onStageNoteChange(noteDraft);
+                    }}
+                    placeholder={STAGE_NOTE_PLACEHOLDER[currentStage] ?? `Catatan untuk stage "${STAGE_LABEL[currentStage]}"`}
+                    rows={2}
+                    className="w-full text-[12px] px-2.5 py-1.5 rounded-lg border border-border bg-surface focus:border-primary focus:outline-none resize-none"
+                    maxLength={2000}
+                  />
+                  <p className="text-[10px] text-text-muted-2 italic mt-0.5 leading-snug">
+                    Catatan untuk stage ini · auto-save · disimpan ke history saat stage berubah.
+                  </p>
+                </div>
+              )}
+              {!isCurrentStage && historicalNote && (
+                <div
+                  className="mt-2 text-[11.5px] italic text-text-muted leading-snug px-2.5 py-1.5 rounded-md bg-surface-elevated/40 border border-border/40 line-clamp-3"
+                  title={historicalNote}
+                >
+                  <span className="not-italic font-semibold text-text-muted-2">Catatan: </span>
+                  {historicalNote}
+                </div>
               )}
             </div>
           </li>
