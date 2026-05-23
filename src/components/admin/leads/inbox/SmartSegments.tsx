@@ -42,6 +42,10 @@ interface SegmentDef {
 export const SEGMENTS: SegmentDef[] = [
   { id: "all",             label: "Semua",                       icon: "inbox",    iconColor: "text-text-muted-2", buckets: [], stages: [] },
   { id: "new",             label: "Belum dikontak",              icon: "sparkles", iconColor: "text-primary",      buckets: [], stages: ["new"] },
+  // "Butuh review" promoted to slot 3 so unclassified leads are
+  // surfaced for triage immediately after new arrivals, before admin
+  // dives into outreach/funnel work.
+  { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
   { id: "wait",            label: "Menunggu respons",            icon: "clock",    iconColor: "text-text-muted-2", buckets: [], stages: ["outreach_sent"] },
   { id: "engaged",         label: "Engaged",                     icon: "fire",     iconColor: "text-orange-600",   buckets: [], stages: ["whatsapp_read", "email_opened", "email_clicked"] },
   { id: "hot",             label: "Siap call",                   icon: "flag",     iconColor: "text-violet-600",   buckets: [], stages: ["call_scheduled"] },
@@ -50,7 +54,6 @@ export const SEGMENTS: SegmentDef[] = [
   { id: "deposit_pending", label: "Menunggu konfirmasi deposit", icon: "clock",    iconColor: "text-amber-600",    buckets: [], stages: ["deposit_pending"] },
   { id: "deposit_agreed",  label: "Bersedia membayar deposit",   icon: "tag",      iconColor: "text-lime-600",     buckets: [], stages: ["deposit_agreed"] },
   { id: "deposit_paid",    label: "Deposit lunas",                icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["deposit_paid"] },
-  { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
   { id: "won",             label: "Lolos seleksi",               icon: "check",    iconColor: "text-emerald-600",  buckets: [], stages: ["matched"] },
   { id: "closed",          label: "Tidak lanjut",                icon: "x",        iconColor: "text-slate-500",    buckets: [], stages: ["declined", "rejected"] },
 ];

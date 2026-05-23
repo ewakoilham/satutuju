@@ -426,11 +426,30 @@ function isIncompleteInput(rawTrimmed: string, normInput: string): boolean {
   return false;
 }
 
+/** Common Indonesian cities that host universities. Used as a fallback
+ *  domestic signal for English-named campuses like "Garut University,
+ *  Garut" — applicant didn't write "Indonesia" but the city is a
+ *  giveaway. Only triggers when no foreign signal matched first.
+ *
+ *  Curated to avoid known ambiguities — Padang (also a city in Spain
+ *  context "padang grass"? rare), Bogor (uniquely Indonesian). Extend
+ *  as new domestic submissions appear. */
+const INDONESIAN_CITY_KEYWORDS = [
+  "jakarta", "bandung", "surabaya", "yogyakarta", "yogya", "jogja", "jogjakarta",
+  "medan", "semarang", "palembang", "makassar", "denpasar", "bali",
+  "malang", "solo", "balikpapan", "samarinda", "banjarmasin", "manado",
+  "padang", "pekanbaru", "bogor", "depok", "tangerang", "bekasi",
+  "sukabumi", "cirebon", "tasikmalaya", "garut", "purwokerto",
+  "mataram", "lombok", "jayapura", "kupang", "ambon", "ternate",
+  "bengkulu", "jambi", "lampung", "aceh", "pontianak", "kendari",
+];
+
 /** True when the applicant's target is clearly in Indonesia — either
- *  spelled out ("indonesia", "ID") or signaled by Bahasa-specific
- *  university lexicon ("universitas …"). Runs AFTER all foreign-campus
- *  and foreign-country matchers so cases like "University of Ferrara,
- *  Indonesia" still resolve to Italy. */
+ *  spelled out ("indonesia", "ID"), Bahasa-specific university lexicon
+ *  ("universitas …"), known Indonesian abbreviation, or a recognized
+ *  Indonesian city paired with university/institute lexicon. Runs AFTER
+ *  all foreign-campus and foreign-country matchers so cases like
+ *  "University of Ferrara, Indonesia" still resolve to Italy. */
 function isDomesticIndonesia(normInput: string, rawTrimmed: string): boolean {
   const trimmedLower = rawTrimmed.toLowerCase();
   // Bare country code: applicant wrote literally "ID" (or "id" / " id ").
@@ -441,6 +460,15 @@ function isDomesticIndonesia(normInput: string, rawTrimmed: string): boolean {
   if (/\buniversitas\b/i.test(normInput)) return true;
   // Common Indonesian university abbreviations (word-bounded).
   if (/\b(itb|ugm|its|ipb|unair|unpad|unsri|unhas|undip|uin|unesa|usu)\b/i.test(normInput)) return true;
+  // City + campus-word combo: "Garut University, Garut", "Bogor
+  // Institute …". Only when paired with a university/institute keyword
+  // so a stray city name doesn't trigger.
+  const hasCampusWord = /\b(university|institute|college|sekolah tinggi|politeknik|akademi)\b/i.test(normInput);
+  if (hasCampusWord) {
+    for (const city of INDONESIAN_CITY_KEYWORDS) {
+      if (new RegExp(`\\b${city}\\b`, "i").test(normInput)) return true;
+    }
+  }
   return false;
 }
 
