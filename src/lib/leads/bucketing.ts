@@ -84,21 +84,26 @@ const CAMPUS_ALIASES: CampusAlias[] = [
   // variant — accept both. Bare "manchester" by itself is too broad
   // (city name) so we anchor on the word "university" or "uni".
   { canonical: "University of Manchester",      country: "United Kingdom",             patterns: ["university of manchester", "manchester university", "manchester uni"] },
-  { canonical: "University of Edinburgh",       country: "United Kingdom",             patterns: ["university of edinburgh", "edinburgh uni"] },
-  { canonical: "University of Glasgow",         country: "United Kingdom",             patterns: ["university of glasgow", "glasgow uni"] },
-  { canonical: "University of Bristol",         country: "United Kingdom",             patterns: ["university of bristol", "bristol uni"] },
-  { canonical: "University of Leeds",           country: "United Kingdom",             patterns: ["university of leeds", "leeds uni"] },
-  { canonical: "University of Sheffield",       country: "United Kingdom",             patterns: ["university of sheffield", "sheffield uni"] },
-  { canonical: "University of Birmingham",      country: "United Kingdom",             patterns: ["university of birmingham", "birmingham uni"] },
-  { canonical: "University of Nottingham",      country: "United Kingdom",             patterns: ["university of nottingham", "nottingham uni"] },
+  // Phase 14: applicants commonly write reversed word order ("Edinburgh
+  // University, UK") for these "University of X" unis. The `\bX uni\b`
+  // pattern alone misses these because there's no word boundary between
+  // `uni` and `versity`. We accept both orders explicitly here as belt-
+  // and-suspenders alongside the token-set fallback in matchPartnerByName.
+  { canonical: "University of Edinburgh",       country: "United Kingdom",             patterns: ["university of edinburgh", "edinburgh university", "edinburgh uni"] },
+  { canonical: "University of Glasgow",         country: "United Kingdom",             patterns: ["university of glasgow", "glasgow university", "glasgow uni"] },
+  { canonical: "University of Bristol",         country: "United Kingdom",             patterns: ["university of bristol", "bristol university", "bristol uni"] },
+  { canonical: "University of Leeds",           country: "United Kingdom",             patterns: ["university of leeds", "leeds university", "leeds uni"] },
+  { canonical: "University of Sheffield",       country: "United Kingdom",             patterns: ["university of sheffield", "sheffield university", "sheffield uni"] },
+  { canonical: "University of Birmingham",      country: "United Kingdom",             patterns: ["university of birmingham", "birmingham university", "birmingham uni"] },
+  { canonical: "University of Nottingham",      country: "United Kingdom",             patterns: ["university of nottingham", "nottingham university", "nottingham uni"] },
   { canonical: "Durham University",             country: "United Kingdom",             patterns: ["durham"] },
-  { canonical: "University of Bath",            country: "United Kingdom",             patterns: ["university of bath", "bath uni"] },
+  { canonical: "University of Bath",            country: "United Kingdom",             patterns: ["university of bath", "bath university", "bath uni"] },
   { canonical: "Queen Mary University of London", country: "United Kingdom",           patterns: ["queen mary", "qmul"] },
   { canonical: "University of St Andrews",      country: "United Kingdom",             patterns: ["st andrews", "st\\. andrews"] },
   { canonical: "Lancaster University",          country: "United Kingdom",             patterns: ["lancaster"] },
   { canonical: "University of Southampton",     country: "United Kingdom",             patterns: ["southampton"] },
   { canonical: "University of Exeter",          country: "United Kingdom",             patterns: ["exeter"] },
-  { canonical: "University of York",            country: "United Kingdom",             patterns: ["university of york", "york uni"] },
+  { canonical: "University of York",            country: "United Kingdom",             patterns: ["university of york", "york university", "york uni"] },
 
   // ── New Zealand ──────────────────────────────────────────────────────────
   { canonical: "University of Auckland",        country: "New Zealand",    patterns: ["university of auckland", "auckland uni", "uoa\\b"] },
@@ -298,10 +303,50 @@ const PARTNER_NAMES_SORTED: Array<{ norm: string; row: PartnerEntry }> = (() => 
   return list;
 })();
 
+/** Filler words to ignore when comparing token sets. Keep this list
+ *  short and conservative — anything left in is treated as a *required*
+ *  token of the canonical name. */
+const TOKEN_SET_STOPWORDS = new Set([
+  "of", "the", "and", "for", "at", "in", "on", "to", "a", "an", "de", "le", "la",
+]);
+
+/** Phase 14 token-set fallback for partner matching. Handles word-order
+ *  variation that the contiguous-substring scan can't: e.g. applicant
+ *  writes "Edinburgh University, UK" but the canonical row is
+ *  "University of Edinburgh".
+ *
+ *  Rule: ALL non-stopword tokens of the canonical must appear as word
+ *  tokens in the input. We require ≥ 2 meaningful tokens so noise rows
+ *  like "London College" can't false-match an input like "Cardiff
+ *  University, London". The candidate with the most matching tokens
+ *  wins (longest canonical breaks ties). */
+function tokenSetMatchPartner(normInput: string): PartnerEntry | null {
+  const inputTokens = new Set(normInput.split(/\s+/).filter(Boolean));
+  let best: { row: PartnerEntry; tokenCount: number; nameLength: number } | null = null;
+  for (const { norm, row } of PARTNER_NAMES_SORTED) {
+    const tokens = norm.split(/\s+/).filter(Boolean);
+    const meaningful = tokens.filter((t) => !TOKEN_SET_STOPWORDS.has(t));
+    if (meaningful.length < 2) continue;
+    if (!meaningful.every((t) => inputTokens.has(t))) continue;
+    if (
+      !best ||
+      meaningful.length > best.tokenCount ||
+      (meaningful.length === best.tokenCount && norm.length > best.nameLength)
+    ) {
+      best = { row, tokenCount: meaningful.length, nameLength: norm.length };
+    }
+  }
+  return best?.row ?? null;
+}
+
 /** Find a universities.json partner whose full name appears (word-
  *  boundary anchored) inside the normalized lead input. Returns the
  *  longest match (most specific). Used as a fallback when CAMPUS_ALIASES
- *  doesn't match. */
+ *  doesn't match.
+ *
+ *  Phase 14: falls through to a token-set match when the contiguous-
+ *  substring scan misses, so word-order variations ("Edinburgh
+ *  University, UK" vs canonical "University of Edinburgh") still land. */
 function matchPartnerByName(normInput: string): PartnerEntry | null {
   for (const { norm, row } of PARTNER_NAMES_SORTED) {
     // Word-boundary check: surround partner name with spaces and look
@@ -310,7 +355,7 @@ function matchPartnerByName(normInput: string): PartnerEntry | null {
     // of "london england".
     if (normInput.includes(` ${norm} `)) return row;
   }
-  return null;
+  return tokenSetMatchPartner(normInput);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -446,14 +491,34 @@ export function classifyLead(
 
   // Step 4: cross-reference partner status against universities.json.
   // First try by canonical name (from curated alias match), then fall
-  // back to a substring scan over universities.json for partners not
-  // yet in CAMPUS_ALIASES.
+  // back to a substring + token-set scan over universities.json for
+  // partners not yet in CAMPUS_ALIASES.
+  //
+  // Phase 14 typo handling: applicants sometimes spell "University" the
+  // Bahasa way ("Universitas of Edinburgh"). When a clearly-foreign
+  // country signal landed (parsedCountry set to something other than
+  // Indonesia), retry campus + partner matching with the typo
+  // normalized. Gated on non-Indonesia so genuine "Universitas
+  // Indonesia" inputs stay domestic (they short-circuit earlier via
+  // isDomesticIndonesia anyway, but the guard is belt-and-suspenders).
+  const hasUniversitasTypo =
+    parsedCountry !== null &&
+    parsedCountry !== "Indonesia" &&
+    /\buniversitas\b/.test(normInput);
+  const matchInput = hasUniversitasTypo
+    ? normInput.replace(/\buniversitas\b/g, "university")
+    : normInput;
+  if (!parsedCampus && hasUniversitasTypo) {
+    const retry = matchCampus(matchInput);
+    if (retry) parsedCampus = retry.canonical;
+  }
+
   let partnerEntry: PartnerEntry | null = null;
   if (parsedCampus) {
     partnerEntry = PARTNER_LOOKUP.get(partnerKey(parsedCampus)) ?? null;
   }
   if (!partnerEntry) {
-    const scanned = matchPartnerByName(normInput);
+    const scanned = matchPartnerByName(matchInput);
     if (scanned) {
       partnerEntry = scanned;
       // Promote the JSON match to parsedCampus/parsedCountry if no
