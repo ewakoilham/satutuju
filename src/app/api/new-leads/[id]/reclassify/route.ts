@@ -40,6 +40,19 @@ export async function POST(
   );
 
   const now = new Date().toISOString();
+  const bucketChanged = current.bucket !== result.bucket;
+  // Phase 15: when re-classification shifts the bucket, clear the
+  // review fields so admin re-verifies the new signal. (If the bucket
+  // is unchanged, leave any existing review intact — nothing new to
+  // look at.) We use a conditional spread instead of an explicit
+  // branch so the .update() payload stays a single shape.
+  const reviewReset = bucketChanged
+    ? {
+        classificationReviewedAt: null,
+        classificationReviewedBy: null,
+        classificationReviewNote: null,
+      }
+    : {};
   const { data: lead, error: updErr } = await supabase
     .from("Lead")
     .update({
@@ -51,6 +64,7 @@ export async function POST(
       isCampusPartner: result.isCampusPartner,
       hasCountryMentor: result.hasCountryMentor,
       partnerProgramScope: result.partnerProgramScope,
+      ...reviewReset,
       updatedAt: now,
     })
     .eq("id", id)
@@ -58,7 +72,7 @@ export async function POST(
     .single();
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
-  if (current.bucket !== result.bucket) {
+  if (bucketChanged) {
     await supabase.from("LeadStageHistory").insert({
       id: newStageHistoryId(),
       leadId: id,
@@ -70,5 +84,5 @@ export async function POST(
     });
   }
 
-  return NextResponse.json({ lead, changed: current.bucket !== result.bucket });
+  return NextResponse.json({ lead, changed: bucketChanged });
 }

@@ -14,6 +14,8 @@ const DELAY_MS = 250;
  *   - leads with `outreachSentAt != null` (already sent)
  *   - leads with `stage != "new"` (already moved past)
  *   - leads created less than `delayMinutes` ago (still in cooldown)
+ *   - **Phase 15:** leads with `classificationReviewedAt = null`
+ *     (admin hasn't confirmed classification yet — hard gate)
  *
  * Sequential send with 250ms pacing — same as bulk-outreach. Caps at
  * 50 sends per run to keep cron execution under Vercel's timeout.
@@ -40,7 +42,15 @@ export async function GET(req: NextRequest) {
   const delayMinutes = Number(setting.delayMinutes) || 60;
 
   // Find qualifying leads: stage=new, outreachSentAt null, bucket has
-  // a template, and created at least delayMinutes ago.
+  // a template, classification reviewed by admin (Phase 15), and
+  // created at least delayMinutes ago.
+  //
+  // We DON'T add `.not("classificationReviewedAt", "is", null)` to the
+  // query itself — instead we partition in JS so we can report how many
+  // candidates were held back by the review gate vs. dropped for other
+  // reasons. That visibility matters for the auto-send settings UI: if
+  // 12 leads sit in the queue the admin wants to know they're waiting
+  // on a human, not a bug.
   const cutoffIso = new Date(Date.now() - delayMinutes * 60 * 1000).toISOString();
   const { data: leads, error: loadErr } = await supabase
     .from("Lead")
@@ -54,9 +64,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: loadErr.message }, { status: 500 });
   }
 
-  const eligible = ((leads ?? []) as unknown as Lead[]).filter(
+  const withTemplate = ((leads ?? []) as unknown as Lead[]).filter(
     (l) => templateBucketFor(l.bucket) !== null,
   );
+  const unreviewedSkipped = withTemplate.filter((l) => !l.classificationReviewedAt).length;
+  const eligible = withTemplate.filter((l) => !!l.classificationReviewedAt);
 
   let sent = 0;
   let failed = 0;
@@ -109,6 +121,7 @@ export async function GET(req: NextRequest) {
     sent,
     failed,
     skipped,
+    unreviewedSkipped,
     delayMinutes,
     results,
   });

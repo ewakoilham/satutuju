@@ -346,6 +346,18 @@ export interface Lead {
    *  isn't matched to a partner. Phase 12. */
   partnerProgramScope: string | null;
   mentorMatchedId: string | null;
+  /** Phase 15: classification review gate. Null = admin hasn't yet
+   *  confirmed (or overridden) the auto-classification. While null,
+   *  the lead is invisible to auto-outreach cron and all manual
+   *  outreach buttons are disabled in the UI. */
+  classificationReviewedAt: string | null;
+  /** User.id of the admin who reviewed, OR the literal "system_backfill"
+   *  for the one-shot migration backfill. */
+  classificationReviewedBy: string | null;
+  /** Optional free-text recorded when the review action included a
+   *  bucket override (e.g. "Edinburgh wrongly bucketed B → moving to A
+   *  manually"). Empty for plain confirms. */
+  classificationReviewNote: string | null;
   // Bookkeeping
   createdAt: string;
   updatedAt: string;

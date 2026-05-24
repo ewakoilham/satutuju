@@ -59,8 +59,20 @@ export async function POST(
     return NextResponse.json({ error: lookupErr.message }, { status: code });
   }
 
+  // Phase 15: hard gate. Outreach (auto or manual) requires the admin
+  // to have explicitly reviewed (or overridden) the classification.
+  // 409 Conflict — the request is well-formed but the lead state
+  // doesn't permit it yet.
+  const typedLead = lead as unknown as Lead;
+  if (!typedLead.classificationReviewedAt) {
+    return NextResponse.json(
+      { ok: false, error: "Klasifikasi belum direview admin. Konfirmasi klasifikasi dulu sebelum kirim outreach." },
+      { status: 409 },
+    );
+  }
+
   const result = await reachoutLead({
-    lead: lead as unknown as Lead,
+    lead: typedLead,
     channels,
     changedBy: user.userId,
   });

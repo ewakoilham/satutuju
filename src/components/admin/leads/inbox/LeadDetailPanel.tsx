@@ -42,6 +42,11 @@ interface Props {
   onReachout: (leadId: string, channel: "email" | "whatsapp" | "both") => void;
   /** Called after a successful DELETE so parent can refresh list + close panel. */
   onDeleted?: () => void;
+  /** Phase 15: called after a successful classification review (plain
+   *  confirm) so the parent inbox can refresh its list + segment counts.
+   *  Optional — panel falls back to a local override flag when the
+   *  parent doesn't pass this in. */
+  onChanged?: () => void;
 }
 
 const formatStamp = formatJakartaStamp;
@@ -66,7 +71,7 @@ function aiBriefFor(lead: Lead): string {
   }
 }
 
-export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDeleted }: Props) {
+export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDeleted, onChanged }: Props) {
   const { user: currentUser } = useUser();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +81,14 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
+  // Phase 15: classification review. Local override flag lets the panel
+  // update immediately on successful confirm without waiting for a
+  // parent refetch (the lead prop is stale until parent re-runs).
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [locallyReviewedAt, setLocallyReviewedAt] = useState<string | null>(null);
+  const [reviewErr, setReviewErr] = useState<string | null>(null);
+  const effectiveReviewedAt = lead.classificationReviewedAt ?? locallyReviewedAt;
+  const needsReview = !effectiveReviewedAt;
   const hasWa = !!lead.whatsappNumber;
   // If lead has no WA, default to email-only so the Reachout button
   // doesn't prompt a skip on first click.
@@ -89,7 +102,34 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
     setDeleteConfirmOpen(false);
     setDeleteConfirmText("");
     setDeleteErr(null);
+    setLocallyReviewedAt(null);
+    setReviewErr(null);
   }, [lead.id]);
+
+  async function confirmReview() {
+    if (reviewBusy) return;
+    setReviewBusy(true);
+    setReviewErr(null);
+    try {
+      const res = await fetch(`/api/new-leads/${lead.id}/review`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setReviewErr(json.error || `HTTP ${res.status}`);
+        return;
+      }
+      setLocallyReviewedAt(json?.lead?.classificationReviewedAt ?? new Date().toISOString());
+      onChanged?.();
+    } catch (e) {
+      setReviewErr(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setReviewBusy(false);
+    }
+  }
 
   function channelLabel(c: typeof channel): string {
     if (c === "email") return "Email saja";
@@ -224,8 +264,9 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
         <button
           type="button"
           onClick={() => setReachoutConfirmOpen(true)}
-          disabled={busy}
-          className="btn-primary text-xs inline-flex items-center gap-1.5 disabled:opacity-50"
+          disabled={busy || needsReview}
+          title={needsReview ? "Konfirmasi klasifikasi dulu" : undefined}
+          className="btn-primary text-xs inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Icon name="send" size={13} />
           {busy ? "Mengirim…" : "Reachout"}
@@ -251,6 +292,54 @@ export default function LeadDetailPanel({ lead, busy, onClose, onReachout, onDel
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
+        {/* Phase 15: review-gate card. Pinned ABOVE the AI brief so admin
+            can't scroll past it. When unreviewed: prominent amber card
+            with primary "Konfirmasi" + secondary "Klasifikasi salah".
+            When reviewed: collapses to a single confirmation line so
+            admin sees provenance without visual noise. */}
+        {needsReview ? (
+          <div className="m-5 p-3 rounded-lg bg-amber-50 border border-amber-300 text-[12.5px] leading-relaxed text-amber-900">
+            <div className="flex gap-2.5 items-start">
+              <Icon name="flag" size={14} className="text-amber-700 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-semibold mb-0.5">Klasifikasi butuh review admin</div>
+                <div className="text-[11.5px] leading-snug text-amber-800">
+                  Tidak ada outreach (auto atau manual) yang dikirim sebelum admin konfirmasi.
+                  Cek: bucket <strong>{lead.bucket}</strong>
+                  {lead.parsedCountry && <> · negara <strong>{lead.parsedCountry}</strong></>}
+                  {lead.parsedCampus && <> · kampus <strong>{lead.parsedCampus}</strong></>}.
+                </div>
+                {reviewErr && (
+                  <div className="text-[11px] text-rose-700 mt-1">{reviewErr}</div>
+                )}
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => void confirmReview()}
+                    disabled={reviewBusy}
+                    className="text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-600 text-white hover:bg-amber-700 font-medium disabled:opacity-50"
+                  >
+                    <Icon name="check" size={12} />
+                    {reviewBusy ? "Menyimpan…" : "Konfirmasi klasifikasi"}
+                  </button>
+                  <Link
+                    href={`/dashboard/admin/new-leads/${lead.id}`}
+                    className="text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-amber-300 text-amber-900 hover:bg-amber-100"
+                    title="Buka detail untuk override bucket"
+                  >
+                    Klasifikasi salah → override
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-5 mt-5 mb-3 text-[11.5px] text-emerald-800 inline-flex items-center gap-1.5">
+            <Icon name="check" size={11} className="text-emerald-600" />
+            Klasifikasi sudah direview {relativeTime(effectiveReviewedAt!)}
+          </div>
+        )}
+
         {/* AI brief */}
         <div className="m-5 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-[12.5px] leading-relaxed text-yellow-900 flex gap-2.5">
           <Icon name="sparkles" size={14} className="text-yellow-700 flex-shrink-0 mt-0.5" />

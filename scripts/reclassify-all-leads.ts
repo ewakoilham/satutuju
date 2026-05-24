@@ -39,16 +39,24 @@ async function main() {
 
   let changed = 0;
   let unchanged = 0;
+  let bucketChanged = 0;
   const transitions = new Map<string, number>();
   for (const lead of leads) {
     const cls = classifyLead(lead.targetCampusAndProgram ?? "", mentorCountries);
+    const bucketDiff = cls.bucket !== lead.bucket;
     const diff =
-      cls.bucket !== lead.bucket ||
+      bucketDiff ||
       cls.isCampusPartner !== lead.isCampusPartner ||
       (cls.partnerProgramScope ?? null) !== (lead.partnerProgramScope ?? null);
     if (!diff) { unchanged++; continue; }
     const transitionKey = `${lead.bucket}→${cls.bucket}`;
     transitions.set(transitionKey, (transitions.get(transitionKey) ?? 0) + 1);
+    // Phase 15: clear the review fields when the BUCKET changes — the
+    // signal admin previously confirmed is now stale. Partner-scope-only
+    // changes don't reset (the bucket decision is what admin reviews).
+    const reviewReset = bucketDiff
+      ? { classificationReviewedAt: null, classificationReviewedBy: null, classificationReviewNote: null }
+      : {};
     const { error: updErr } = await supabase.from("Lead").update({
       bucket: cls.bucket,
       bucketReason: cls.reason,
@@ -58,6 +66,7 @@ async function main() {
       isCampusPartner: cls.isCampusPartner,
       hasCountryMentor: cls.hasCountryMentor,
       partnerProgramScope: cls.partnerProgramScope,
+      ...reviewReset,
       updatedAt: new Date().toISOString(),
     }).eq("id", lead.id);
     if (updErr) {
@@ -65,8 +74,12 @@ async function main() {
       continue;
     }
     changed++;
+    if (bucketDiff) bucketChanged++;
   }
   console.log(`✓ ${changed} changed · ${unchanged} unchanged`);
+  if (bucketChanged > 0) {
+    console.log(`  ↳ ${bucketChanged} leads had bucket change → review flag reset (admin needs to re-confirm)`);
+  }
   console.log("Transitions:");
   for (const [k, n] of [...transitions.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${k}: ${n}`);

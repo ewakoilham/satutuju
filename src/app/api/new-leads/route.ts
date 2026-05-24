@@ -37,6 +37,9 @@ export async function GET(req: NextRequest) {
   const fundings      = searchParams.getAll("funding");
   const interviewer   = searchParams.get("interviewer");
   const engagement    = searchParams.get("engagement");
+  // Phase 15: `reviewed=false` → only unreviewed leads (review-gate
+  // segment). `reviewed=true` → only reviewed. Absent → no filter.
+  const reviewedParam = searchParams.get("reviewed");
   const q             = (searchParams.get("q") || "").trim();
   const from          = searchParams.get("from");
   const to            = searchParams.get("to");
@@ -72,6 +75,9 @@ export async function GET(req: NextRequest) {
   else if (engagement === "clicked") query = query.not("emailClickedAt", "is", null);
   else if (engagement === "not_opened") query = query.is("emailOpenedAt", null);
 
+  if (reviewedParam === "false") query = query.is("classificationReviewedAt", null);
+  else if (reviewedParam === "true") query = query.not("classificationReviewedAt", "is", null);
+
   if (from) query = query.gte("submittedAt", new Date(from).toISOString());
   if (to) {
     const toEnd = new Date(to);
@@ -94,6 +100,8 @@ export async function GET(req: NextRequest) {
   if (engagement === "opened") bucketsQuery = bucketsQuery.not("emailOpenedAt", "is", null);
   else if (engagement === "clicked") bucketsQuery = bucketsQuery.not("emailClickedAt", "is", null);
   else if (engagement === "not_opened") bucketsQuery = bucketsQuery.is("emailOpenedAt", null);
+  if (reviewedParam === "false") bucketsQuery = bucketsQuery.is("classificationReviewedAt", null);
+  else if (reviewedParam === "true") bucketsQuery = bucketsQuery.not("classificationReviewedAt", "is", null);
   if (from) bucketsQuery = bucketsQuery.gte("submittedAt", new Date(from).toISOString());
   if (to) {
     const toEnd = new Date(to);

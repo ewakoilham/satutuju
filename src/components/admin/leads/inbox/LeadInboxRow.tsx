@@ -49,6 +49,11 @@ export default function LeadInboxRow({
 }: Props) {
   const [hover, setHover] = useState(false);
   const hasWa = !!lead.whatsappNumber;
+  // Phase 15: lead's auto-classification hasn't been confirmed by admin
+  // yet → hover quick-actions (mail, WA, schedule call) are disabled
+  // and we surface a small amber pill next to the bucket badge.
+  const needsReview = !lead.classificationReviewedAt;
+  const reviewBlockTitle = "Konfirmasi klasifikasi dulu di detail panel";
 
   return (
     <div
@@ -118,7 +123,15 @@ export default function LeadInboxRow({
           )}
         </div>
       </div>
-      <LeadBucketBadge bucket={lead.bucket} />
+      <div className="flex items-center gap-1">
+        <LeadBucketBadge bucket={lead.bucket} />
+        {needsReview && (
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"
+            title="Klasifikasi belum direview admin"
+          />
+        )}
+      </div>
       <LeadStageBadge stage={lead.stage} />
       <EngagementIcons lead={lead} />
       <div className="flex flex-col items-end gap-[3px]">
@@ -132,24 +145,30 @@ export default function LeadInboxRow({
       >
         <button
           type="button"
-          title="Kirim email"
+          title={needsReview ? reviewBlockTitle : "Kirim email"}
           onClick={(e) => {
             e.stopPropagation();
-            onReachout("email");
+            if (!needsReview) onReachout("email");
           }}
-          disabled={busy}
-          className="w-7 h-7 rounded-md border border-border bg-surface text-text-muted hover:border-primary-200 hover:text-primary transition disabled:opacity-40 inline-flex items-center justify-center"
+          disabled={busy || needsReview}
+          className="w-7 h-7 rounded-md border border-border bg-surface text-text-muted hover:border-primary-200 hover:text-primary transition disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center"
         >
           <Icon name="mail" size={13} />
         </button>
         <button
           type="button"
-          title={hasWa ? "Kirim WhatsApp" : "Lead tanpa nomor WA"}
+          title={
+            needsReview
+              ? reviewBlockTitle
+              : hasWa
+                ? "Kirim WhatsApp"
+                : "Lead tanpa nomor WA"
+          }
           onClick={(e) => {
             e.stopPropagation();
-            if (hasWa) onReachout("whatsapp");
+            if (!needsReview && hasWa) onReachout("whatsapp");
           }}
-          disabled={busy || !hasWa}
+          disabled={busy || !hasWa || needsReview}
           className="w-7 h-7 rounded-md border border-border bg-surface text-text-muted hover:border-primary-200 hover:text-primary transition disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center justify-center"
         >
           <Icon name="chat" size={13} />

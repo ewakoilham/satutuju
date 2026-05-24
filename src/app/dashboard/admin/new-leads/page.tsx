@@ -50,6 +50,9 @@ interface StatsLite {
    *  counts when a bucket filter is active so the sidebar number
    *  matches the visible list. */
   bucketStageCounts: Record<string, Record<string, number>>;
+  /** Phase 15: leads where classificationReviewedAt IS NULL. Drives
+   *  the "Butuh review klasifikasi" segment counter + nav badge. */
+  unreviewedCount: number;
 }
 
 /** Selectable page-size options. API caps at 200. */
@@ -94,6 +97,12 @@ function computeSegmentCounts(
     keys.reduce((a, k) => a + (src[k] ?? 0), 0);
   return {
     all:             scopedTotal,
+    // Phase 15: needs_review count is sourced from stats.unreviewedCount
+    // (not stageCounts) since it's a separate dimension. When a bucket
+    // filter is active the count doesn't compose with it — admin sees
+    // the global unreviewed total either way, which is the correct
+    // attention-grabber.
+    needs_review:    stats?.unreviewedCount ?? 0,
     new:             stageCounts.new ?? 0,
     wait:            stageCounts.outreach_sent ?? 0,
     engaged:         sum(["whatsapp_read", "email_opened", "email_clicked"], stageCounts),
@@ -202,6 +211,11 @@ export default function NewLeadsListPage() {
     if (debouncedSearch) params.set("q", debouncedSearch);
     params.set("limit", String(pageSize));
     params.set("offset", String(offset));
+    // Phase 15: needs_review segment adds the `reviewed=false` filter
+    // server-side so the list pane stays narrow even with 100+ rows.
+    if (SEGMENT_BY_ID.get(activeSegment)?.unreviewedOnly) {
+      params.set("reviewed", "false");
+    }
 
     try {
       const res = await fetch(`/api/new-leads?${params.toString()}`, {
@@ -225,7 +239,7 @@ export default function NewLeadsListPage() {
     } finally {
       if (seq === fetchSeqRef.current) setLoading(false);
     }
-  }, [bucketFilter, stageFilter, debouncedSearch, offset, pageSize]);
+  }, [bucketFilter, stageFilter, debouncedSearch, offset, pageSize, activeSegment]);
 
   useEffect(() => {
     void fetchList();
@@ -244,6 +258,7 @@ export default function NewLeadsListPage() {
           bucketCounts: j.bucketCounts ?? {},
           stageCounts: j.stageCounts ?? {},
           bucketStageCounts: j.bucketStageCounts ?? {},
+          unreviewedCount: j.unreviewedCount ?? 0,
         });
       })
       .catch(() => {});
@@ -427,7 +442,56 @@ export default function NewLeadsListPage() {
   }, [selected, data?.leads]);
   const effectiveIds = skipAlreadySent ? notSentIds : Array.from(selected);
 
+  // Phase 15: how many selected leads are unreviewed. Drives both the
+  // "Konfirmasi (n)" bulk button and a warning when the admin tries to
+  // bulk-reachout a mix of reviewed + unreviewed leads.
+  const unreviewedSelectedIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const l of visibleLeads) {
+      if (selected.has(l.id) && !l.classificationReviewedAt) ids.push(l.id);
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, data?.leads]);
+
   // ── Bulk actions ──────────────────────────────────────────────────
+  /** Phase 15: bulk-confirm classification review for selected leads.
+   *  Fires the new /api/new-leads/review-bulk endpoint and refreshes
+   *  stats so the segment counter + nav badge update. */
+  async function runBulkReviewConfirm() {
+    if (unreviewedSelectedIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/new-leads/review-bulk", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds: unreviewedSelectedIds }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || `HTTP ${res.status}`);
+      } else {
+        setSyncMsg({
+          kind: "ok",
+          text:
+            json.reviewed > 0
+              ? `Klasifikasi dikonfirmasi untuk ${json.reviewed} lead.` +
+                (json.skippedAlready > 0 ? ` ${json.skippedAlready} sudah pernah direview.` : "")
+              : "Semua lead di seleksi sudah direview sebelumnya.",
+        });
+        setSelected(new Set());
+        await fetchList();
+        bumpMutationTick();
+        setTimeout(() => setSyncMsg(null), 6000);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function runBulkReclassify() {
     if (selected.size === 0) return;
     if (!confirm(`Re-classify ${selected.size} leads dengan logika bucketing terbaru?`)) return;
@@ -747,6 +811,17 @@ export default function NewLeadsListPage() {
               <>
                 <span className="text-sm font-semibold text-foreground">{selected.size} dipilih</span>
                 <div className="flex gap-1.5 ml-auto flex-wrap">
+                  {unreviewedSelectedIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => void runBulkReviewConfirm()}
+                      disabled={bulkBusy}
+                      className="text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 font-medium disabled:opacity-50"
+                      title="Tandai klasifikasi sudah benar untuk lead yang belum direview"
+                    >
+                      <Icon name="check" size={12} /> Konfirmasi klasifikasi ({unreviewedSelectedIds.length})
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -903,6 +978,13 @@ export default function NewLeadsListPage() {
             onDeleted={() => {
               setSyncMsg({ kind: "ok", text: `Lead "${openLead.name}" dihapus.` });
               setTimeout(() => setSyncMsg(null), 4000);
+              void fetchList();
+              bumpMutationTick();
+            }}
+            onChanged={() => {
+              // Phase 15: review-confirm or panel-side mutation — refresh
+              // list + stats so the row + segment counter + nav badge
+              // reflect the new state.
               void fetchList();
               bumpMutationTick();
             }}
@@ -1063,6 +1145,13 @@ export default function NewLeadsListPage() {
           {willSkipUnclassified > 0 && (
             <div className="text-xs text-text-muted-2 px-3 py-2 rounded bg-zinc-50 border border-zinc-200">
               ⓘ {willSkipUnclassified} lead di bucket <code className="font-mono">unclassified</code> akan di-skip backend (tidak ada template).
+            </div>
+          )}
+
+          {unreviewedSelectedIds.length > 0 && (
+            <div className="text-xs text-amber-900 px-3 py-2 rounded bg-amber-50 border border-amber-200">
+              ⚠ {unreviewedSelectedIds.length} lead di seleksi <strong>belum direview admin</strong> — akan di-skip backend.
+              Konfirmasi klasifikasi dulu (tombol di bulk bar) supaya ikut terkirim.
             </div>
           )}
 

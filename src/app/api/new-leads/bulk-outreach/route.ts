@@ -106,6 +106,24 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // Phase 15: skip leads whose classification hasn't been reviewed.
+    // Same gate as the single-outreach endpoint, but partition-style
+    // rather than 409 so the rest of the batch still ships.
+    if (!lead.classificationReviewedAt) {
+      results.push({
+        leadId: id,
+        bucket: lead.bucket,
+        outcomes: channels.map((ch) => ({
+          channel: ch,
+          status: "skipped" as const,
+          reason: "klasifikasi belum direview admin",
+        })),
+      });
+      leadsAllSkipped++;
+      channelsSkipped += channels.length;
+      continue;
+    }
+
     const r = await reachoutLead({ lead, channels, changedBy: user.userId });
     results.push({
       leadId: id,

@@ -23,6 +23,9 @@ export const LEAD_SELECT_COLUMNS =
   '"whatsappSentAt", "whatsappReadAt", ' +
   '"callScheduledAt", "callCompletedAt", "calendarEventId", "assignedInterviewer", "depositTier", ' +
   '"readinessScore", "callNotes", "redFlags", decision, "stageNote", "partnerProgramScope", "mentorMatchedId", ' +
+  // Phase 15 — review-gate fields. All three nullable; missing values
+  // mean "not yet reviewed by admin".
+  '"classificationReviewedAt", "classificationReviewedBy", "classificationReviewNote", ' +
   '"createdAt", "updatedAt"';
 
 export const LEAD_STAGE_HISTORY_COLUMNS =

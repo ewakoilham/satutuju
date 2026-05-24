@@ -16,6 +16,7 @@ import type { LeadBucket, LeadStage } from "@/lib/leads/types";
 
 export type SegmentId =
   | "all"
+  | "needs_review"     // Phase 15: classificationReviewedAt IS NULL
   | "new"
   | "wait"
   | "engaged"
@@ -25,7 +26,7 @@ export type SegmentId =
   | "deposit_pending"
   | "deposit_agreed"
   | "deposit_paid"
-  | "review"
+  | "review"           // legacy: bucket = unclassified (couldn't even infer country)
   | "won"
   | "closed";
 
@@ -37,15 +38,22 @@ interface SegmentDef {
   iconColor: string;
   buckets: LeadBucket[];   // empty = no filter
   stages: LeadStage[];     // empty = no filter
+  /** Phase 15: when true, segment also implies `reviewed=false`
+   *  filter on the list endpoint. */
+  unreviewedOnly?: boolean;
 }
 
 export const SEGMENTS: SegmentDef[] = [
   { id: "all",             label: "Semua",                       icon: "inbox",    iconColor: "text-text-muted-2", buckets: [], stages: [] },
+  // Phase 15: top-priority segment — admin can't kirim outreach (auto or
+  // manual) until each lead's auto-classification is confirmed. Pinned
+  // at the top in amber so it stands out at first glance.
+  { id: "needs_review",    label: "Butuh review klasifikasi",    icon: "flag",     iconColor: "text-amber-600",    buckets: [], stages: [], unreviewedOnly: true },
   { id: "new",             label: "Belum dikontak",              icon: "sparkles", iconColor: "text-primary",      buckets: [], stages: ["new"] },
-  // "Butuh review" promoted to slot 3 so unclassified leads are
-  // surfaced for triage immediately after new arrivals, before admin
-  // dives into outreach/funnel work.
-  { id: "review",          label: "Butuh review",                icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
+  // Legacy "Butuh review" = bucket=unclassified (rare cases where even
+  // country couldn't be inferred). Renamed to disambiguate from the new
+  // Phase 15 review-gate segment above.
+  { id: "review",          label: "Klasifikasi unclassified",    icon: "flag",     iconColor: "text-slate-500",    buckets: ["unclassified"], stages: [] },
   { id: "wait",            label: "Menunggu respons",            icon: "clock",    iconColor: "text-text-muted-2", buckets: [], stages: ["outreach_sent"] },
   { id: "engaged",         label: "Engaged",                     icon: "fire",     iconColor: "text-orange-600",   buckets: [], stages: ["whatsapp_read", "email_opened", "email_clicked"] },
   { id: "hot",             label: "Siap call",                   icon: "flag",     iconColor: "text-violet-600",   buckets: [], stages: ["call_scheduled"] },
@@ -93,6 +101,10 @@ export default function SmartSegments({
       {SEGMENTS.map((s) => {
         const isActive = active === s.id;
         const count = segmentCounts[s.id] ?? 0;
+        // Phase 15: needs_review segment uses amber styling when it
+        // has a non-zero count, so admin can't miss it even when
+        // scanning the sidebar at a glance.
+        const isUrgent = s.id === "needs_review" && count > 0;
         return (
           <button
             key={s.id}
@@ -100,17 +112,31 @@ export default function SmartSegments({
             onClick={() => onSegmentClick(s.id)}
             className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-[12.5px] transition mb-px ${
               isActive
-                ? "bg-primary-50 text-primary font-semibold"
-                : "text-foreground hover:bg-surface-elevated/60 font-medium"
+                ? isUrgent
+                  ? "bg-amber-100 text-amber-900 font-semibold"
+                  : "bg-primary-50 text-primary font-semibold"
+                : isUrgent
+                  ? "bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold"
+                  : "text-foreground hover:bg-surface-elevated/60 font-medium"
             }`}
           >
-            <Icon name={s.icon} size={13} className={isActive ? "text-primary" : s.iconColor} />
+            <Icon
+              name={s.icon}
+              size={13}
+              className={
+                isActive
+                  ? isUrgent ? "text-amber-700" : "text-primary"
+                  : isUrgent ? "text-amber-700" : s.iconColor
+              }
+            />
             <span className="flex-1 truncate">{s.label}</span>
             <span
               className={`text-[11px] font-semibold tabular-nums min-w-[18px] text-center px-1.5 py-px rounded ${
-                isActive
-                  ? "text-primary bg-transparent"
-                  : "text-text-muted-2 bg-surface-elevated/80"
+                isUrgent
+                  ? "text-amber-900 bg-amber-200/70"
+                  : isActive
+                    ? "text-primary bg-transparent"
+                    : "text-text-muted-2 bg-surface-elevated/80"
               }`}
             >
               {count}

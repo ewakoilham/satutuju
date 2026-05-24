@@ -52,11 +52,19 @@ export async function PATCH(
 
   const now = new Date().toISOString();
   const newReason = `[manual override by ${user.userId}] ${reason.slice(0, 500)}`;
+  // Phase 15: a manual override IS itself a review action. The admin
+  // looked at the lead, judged the classifier wrong, and corrected it —
+  // there's nothing further to review. So we set the review fields in
+  // the same UPDATE rather than forcing the admin to click "Konfirmasi"
+  // again after override.
   const { data: lead, error: updErr } = await supabase
     .from("Lead")
     .update({
       bucket: newBucket,
       bucketReason: newReason,
+      classificationReviewedAt: now,
+      classificationReviewedBy: user.userId,
+      classificationReviewNote: reason.slice(0, 500),
       updatedAt: now,
     })
     .eq("id", id)

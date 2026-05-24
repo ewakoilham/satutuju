@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest) {
   // count(*) queries.
   const { data, error } = await supabase
     .from("Lead")
-    .select("bucket, stage, outreachSentAt, emailOpenedAt, emailClickedAt, callScheduledAt, callCompletedAt, mentorMatchedId");
+    .select("bucket, stage, outreachSentAt, emailOpenedAt, emailClickedAt, callScheduledAt, callCompletedAt, mentorMatchedId, classificationReviewedAt");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   type LeadStats = {
@@ -37,6 +37,7 @@ export async function GET(_req: NextRequest) {
     callScheduledAt: string | null;
     callCompletedAt: string | null;
     mentorMatchedId: string | null;
+    classificationReviewedAt: string | null;
   };
 
   const rows = (data ?? []) as LeadStats[];
@@ -49,6 +50,10 @@ export async function GET(_req: NextRequest) {
   // matches the visible list). Keyed: bucketStageCounts[bucket][stage].
   const bucketStageCounts: Record<string, Record<string, number>> = {};
   let sent = 0, opened = 0, clicked = 0, callScheduled = 0, callCompleted = 0, matched = 0;
+  // Phase 15: how many leads still need admin review of their auto-
+  // classification. Drives the new "Butuh review klasifikasi" segment
+  // count + the nav badge.
+  let unreviewedCount = 0;
 
   for (const r of rows) {
     bucketCounts[r.bucket] = (bucketCounts[r.bucket] ?? 0) + 1;
@@ -61,6 +66,7 @@ export async function GET(_req: NextRequest) {
     if (r.callScheduledAt) callScheduled++;
     if (r.callCompletedAt) callCompleted++;
     if (r.mentorMatchedId) matched++;
+    if (!r.classificationReviewedAt) unreviewedCount++;
   }
 
   return NextResponse.json({
@@ -68,6 +74,7 @@ export async function GET(_req: NextRequest) {
     bucketCounts,
     stageCounts,
     bucketStageCounts,
+    unreviewedCount,
     funnel: {
       total,
       sent,

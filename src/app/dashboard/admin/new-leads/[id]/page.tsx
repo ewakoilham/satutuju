@@ -76,6 +76,9 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [redFlags, setRedFlags] = useState("");
   const [depositTier, setDepositTier] = useState<number | null>(null);
   const [stageNote, setStageNote] = useState("");
+  // Phase 15 — classification review state.
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewErr, setReviewErr] = useState<string | null>(null);
   // Auto-save indicator. saving = in-flight; saved = transient ✓; error = failed.
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // Tracks whether form state has been edited since last fetch — guards
@@ -117,6 +120,33 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     void fetchDetail();
   }, [fetchDetail]);
+
+  /** Phase 15: confirm classification. Refreshes detail to pick up the
+   *  updated review fields + history. Bucket override is handled
+   *  separately (existing PATCH /bucket flow). */
+  async function confirmReview() {
+    if (reviewBusy) return;
+    setReviewBusy(true);
+    setReviewErr(null);
+    try {
+      const res = await fetch(`/api/new-leads/${id}/review`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setReviewErr(json.error || `HTTP ${res.status}`);
+        return;
+      }
+      await fetchDetail();
+    } catch (e) {
+      setReviewErr(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setReviewBusy(false);
+    }
+  }
 
   function toggleReadiness(i: number) {
     dirtyRef.current = true;
@@ -282,6 +312,55 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </div>
+
+      {/* Phase 15: review-gate banner. Visible when admin hasn't yet
+          confirmed (or overridden) the auto-classification. Sits above
+          the call banner so it's the first thing the admin sees on the
+          page. When reviewed, collapses to a single confirmation line. */}
+      {!lead.classificationReviewedAt ? (
+        <div className="card p-4 bg-amber-50 border-amber-300">
+          <div className="flex gap-3 items-start">
+            <Icon name="flag" size={18} className="text-amber-700 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-amber-900">Klasifikasi butuh review admin</div>
+              <div className="text-[12.5px] text-amber-800 leading-snug mt-0.5">
+                Outreach (auto atau manual) belum bisa dikirim sampai admin konfirmasi klasifikasi auto di bawah ini.
+                Saat ini lead ada di bucket <strong>{lead.bucket}</strong>
+                {lead.parsedCountry && <> · negara <strong>{lead.parsedCountry}</strong></>}
+                {lead.parsedCampus && <> · kampus <strong>{lead.parsedCampus}</strong></>}.
+                {lead.isCampusPartner === true && <> (partner kampus ✓)</>}
+                {lead.isCampusPartner === false && <> (bukan partner kampus)</>}
+              </div>
+              {reviewErr && <div className="text-[12px] text-rose-700 mt-1">{reviewErr}</div>}
+              <div className="flex gap-2 mt-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => void confirmReview()}
+                  disabled={reviewBusy}
+                  className="text-xs inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-600 text-white hover:bg-amber-700 font-medium disabled:opacity-50"
+                >
+                  <Icon name="check" size={12} />
+                  {reviewBusy ? "Menyimpan…" : "Konfirmasi klasifikasi"}
+                </button>
+                <span className="text-[11.5px] text-amber-800 self-center italic">
+                  Salah klasifikasi? Pilih bucket lain via tombol &quot;Ubah bucket&quot; di list inbox, atau koreksi via SQL.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-[12px] text-emerald-800 inline-flex items-center gap-1.5">
+          <Icon name="check" size={12} className="text-emerald-600" />
+          Klasifikasi sudah direview {relativeTime(lead.classificationReviewedAt)}
+          {lead.classificationReviewedBy && lead.classificationReviewedBy !== "system_backfill" && (
+            <span className="text-text-muted-2"> · oleh {lead.classificationReviewedBy}</span>
+          )}
+          {lead.classificationReviewedBy === "system_backfill" && (
+            <span className="text-text-muted-2"> · backfill</span>
+          )}
+        </div>
+      )}
 
       {/* Call banner — shown whenever a call is scheduled, regardless of
           whether the call has happened yet (the pill flips to "selesai"
