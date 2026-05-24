@@ -453,6 +453,7 @@ model Lead {
   stepStatuses           LeadStepStatus[]
   notes                  LeadNote[]
   mentorFlags            MentorLeadFlag[]
+  mentorViews            MentorLeadView[]
 
   @@index([bucket])
   @@index([stage])
@@ -487,6 +488,27 @@ model LeadNote {
   @@index([leadId])
   @@index([authorId])
   @@index([parentNoteId])
+}
+
+/**
+ * Phase 16: per-mentor view-state of a lead. Lets us flag "admin
+ * replied since you last looked" without firing a notification for
+ * every reply. Upserted whenever the mentor opens the lead's detail
+ * slide-over. Absence (no row) = mentor never opened this lead →
+ * any admin reply counts as unread.
+ */
+model MentorLeadView {
+  id            String   @id @default(cuid())
+  mentorId      String   // User.id (role=mentor)
+  leadId        String
+  lastViewedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorId, leadId])
+  @@index([mentorId])
+  @@index([leadId])
 }
 
 /** Phase 13: mentor flags a lead they personally know. Surfaced to

@@ -16,6 +16,81 @@ export type Mentor = {
   flagCode?: string; // ISO 3166-1 alpha-2, lowercase — used for flag image
 };
 
+/**
+ * Phase 16 — explicit mentor User → country override map. Source of
+ * truth for the mentor leads inbox "Sama dengan negara studiku" match.
+ *
+ * Keyed by email (lowercased) because User.name is unreliable: some
+ * mentor accounts use nicknames ("Venzo"), some use short forms
+ * ("razak"), and some use full names ("Akmal Firmansyah"). Email is
+ * stable and unique.
+ *
+ * **When onboarding a new mentor, add their email + country here.**
+ *
+ * The mentor leads triage stream silently returns 0 matches when a
+ * mentor user isn't listed — better to under-match than to spam every
+ * lead with a green badge that doesn't apply.
+ */
+export const MENTOR_USER_COUNTRY: Record<string, string> = {
+  // ── Production mentors (sourced from MENTORS array, matched by hand
+  //    against the User table emails on 2026-05-24). ─────────────────
+  "firmansyah.akmals@gmail.com":  "United Kingdom",   // Akmal Firmansyah
+  "bunarizal@gmail.com":          "New Zealand",      // Buna Rizal Rachman
+  "hanannhakim@outlook.com":      "United Kingdom",   // Hanan Hakim
+  "hasnahafida101@gmail.com":     "United Kingdom",   // Hasna Hafida
+  "aqilmaulana1@gmail.com":       "Australia",        // Muhammad Aqil Maulana
+  "rizkyantifika@gmail.com":      "Australia",        // Fika Rizkyanti
+  "ilham.razak@satutuju.id":      "Australia",        // Muhammad Ilham Razak (work email)
+  "ilhamrazakofficial@gmail.com": "Australia",        // Muhammad Ilham Razak (personal)
+  "angelhorta313@gmail.com":      "New Zealand",      // Angela Benedicta Horta
+  "raihanbagus.work@gmail.com":   "Netherlands",      // Raihan Bagus Sakti Aji
+  "arifansyah.wicaksono@gmail.com": "Australia",      // Arifansyah Wicaksono
+  "isna.arifahr@gmail.com":       "Australia",        // Isna Arifah Rahmawati
+  // ── Admin / power-user accounts that still need country mapping. ──
+  "venzozufar47@gmail.com":       "Australia",        // Venzo (admin/mentor hybrid)
+};
+
+/**
+ * Resolve the coverage country for a mentor user. Used by Phase 16
+ * "Sama dengan negara studiku" matching on the mentor leads inbox.
+ *
+ * Resolution order:
+ *   1. Explicit MENTOR_USER_COUNTRY override (by email, case-insensitive).
+ *      This is the source of truth — add new mentors here.
+ *   2. Name match against MENTORS array (legacy fallback — works when
+ *      User.name equals MENTORS[].fullName case-insensitively).
+ *
+ * Returns null when neither path resolves. Callers should treat null
+ * as "matching feature disabled for this user" — never throw.
+ */
+export function getMentorCountry(args: {
+  email?: string | null;
+  name?: string | null;
+}): string | null {
+  if (args.email) {
+    const overridden = MENTOR_USER_COUNTRY[args.email.trim().toLowerCase()];
+    if (overridden) return overridden;
+  }
+  if (args.name) {
+    const byName = findMentorByUserName(args.name);
+    if (byName?.country) return byName.country;
+  }
+  return null;
+}
+
+/** Phase 16 (legacy fallback): resolve the slim Mentor entry that
+ *  matches a signed-in mentor user (typically `currentUser.name` from
+ *  the JWT). Matches by full name (case-insensitive). Kept as a
+ *  fallback inside `getMentorCountry` for mentors whose User.name
+ *  happens to equal MENTORS[].fullName — but `MENTOR_USER_COUNTRY` is
+ *  the source of truth going forward. */
+export function findMentorByUserName(userName: string | null | undefined): Mentor | null {
+  if (!userName) return null;
+  const target = userName.trim().toLowerCase();
+  if (!target) return null;
+  return MENTORS.find((m) => m.fullName.toLowerCase() === target) ?? null;
+}
+
 export const MENTORS: Mentor[] = [
   {
     fullName: "Akmal Firmansyah",

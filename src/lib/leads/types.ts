@@ -393,6 +393,16 @@ export interface MentorLeadView {
   // Server-decorated:
   flaggedByMe: boolean;
   noteCount: number;
+  /** Phase 16: true when there's at least one admin reply (a LeadNote
+   *  with parentNoteId set, authored by a non-mentor) created AFTER
+   *  the mentor's last MentorLeadView.lastViewedAt for this lead.
+   *  Drives the red dot on the row's notes pill + the
+   *  "Admin balas catatanmu" KPI. */
+  hasUnreadAdminReply?: boolean;
+  /** Phase 16: true when `parsedCountry === currentMentor.country`
+   *  (mentor's coverage country, looked up from `src/lib/mentors.ts`).
+   *  Drives the "Cocok negaraku" row badge + KPI tile. */
+  matchesMyCountry?: boolean;
 }
 
 /** Phase 13: per-lead notes. Top-level by mentor (parentNoteId=null);

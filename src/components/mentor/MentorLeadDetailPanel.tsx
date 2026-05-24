@@ -77,6 +77,16 @@ export default function MentorLeadDetailPanel({ leadId, onClose, onChanged }: Pr
     setEditingId(null);
     setEditDraft("");
     void fetchDetail();
+    // Phase 16: mark this lead as viewed so admin replies older than
+    // now stop counting as unread. Fire-and-forget. We intentionally
+    // do NOT call onChanged() after this — that would trigger a full
+    // list refetch and flash the list back into a loading state right
+    // after the user clicked. The parent clears the row's unread badge
+    // optimistically; this POST just makes that persistent server-side.
+    void fetch(`/api/mentor/leads/${leadId}/mark-viewed`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
   }, [leadId, fetchDetail]);
 
   async function toggleFlag() {

@@ -98,10 +98,22 @@ export async function completeStepByTrigger(
 }
 
 /**
- * Bulk variant: fire multiple triggers in a single round-trip pair
- * (one definition lookup + one status update). Used by /stage on
- * forward transitions so a multi-stage jump doesn't fan out into N
- * serial DB calls.
+ * Bulk variant: fire multiple triggers in a single round-trip pair.
+ * Used by /stage on forward transitions so a multi-stage jump doesn't
+ * fan out into N serial DB calls.
+ *
+ * Upsert semantics (Phase 17 fix): for each matching step definition,
+ * the lead either has an existing pending row → UPDATE to done, or
+ * no row at all (because the step was added AFTER the lead was
+ * created) → INSERT a new "done" row directly. Idempotent on rows
+ * already "done" / "skipped" — they're left alone.
+ *
+ * Why the upsert matters: the previous version only did the UPDATE
+ * branch. When a step was added late (e.g. "Waitlist" introduced
+ * after 136 leads already existed), advancing one of those leads to
+ * the waitlist stage silently no-op'd the step status — Lead.stage
+ * said "waitlist" but the checklist showed it un-ticked. Single
+ * source of truth was broken.
  */
 export async function completeStepsByTriggers(
   leadId: string,
@@ -117,22 +129,75 @@ export async function completeStepsByTriggers(
   if (stepsErr) return { ok: false, completed: 0, error: stepsErr.message };
   if (!steps || steps.length === 0) return { ok: true, completed: 0 };
 
-  const stepIds = steps.map((s) => s.id);
+  const stepIds = steps.map((s) => s.id as string);
   const now = new Date().toISOString();
 
-  const { data: updated, error: updErr } = await supabase
+  // Existence check: split the matching step ids into "row exists" vs
+  // "row missing". One round trip.
+  const { data: existingRows, error: existingErr } = await supabase
     .from("LeadStepStatus")
-    .update({
+    .select('"stepId", status')
+    .eq("leadId", leadId)
+    .in("stepId", stepIds);
+  if (existingErr) return { ok: false, completed: 0, error: existingErr.message };
+  const existingByStep = new Map<string, string>();
+  for (const r of (existingRows ?? []) as Array<{ stepId: string; status: string }>) {
+    existingByStep.set(r.stepId, r.status);
+  }
+
+  const missingStepIds: string[] = [];
+  const pendingStepIds: string[] = [];
+  for (const sid of stepIds) {
+    const status = existingByStep.get(sid);
+    if (status === undefined) missingStepIds.push(sid);
+    else if (status === "pending") pendingStepIds.push(sid);
+    // status === "done" | "skipped" → leave alone (idempotent).
+  }
+
+  let completed = 0;
+
+  if (pendingStepIds.length > 0) {
+    const { data: updated, error: updErr } = await supabase
+      .from("LeadStepStatus")
+      .update({ status: "done", completedAt: now, completedBy, updatedAt: now })
+      .eq("leadId", leadId)
+      .in("stepId", pendingStepIds)
+      .select("id");
+    if (updErr) return { ok: false, completed, error: updErr.message };
+    completed += updated?.length ?? 0;
+  }
+
+  if (missingStepIds.length > 0) {
+    const rows = missingStepIds.map((sid) => ({
+      id: generateId(),
+      leadId,
+      stepId: sid,
       status: "done",
       completedAt: now,
       completedBy,
+      createdAt: now,
       updatedAt: now,
-    })
-    .eq("leadId", leadId)
-    .in("stepId", stepIds)
-    .eq("status", "pending")
-    .select("id");
-  if (updErr) return { ok: false, completed: 0, error: updErr.message };
+    }));
+    const { error: insErr } = await supabase
+      .from("LeadStepStatus")
+      .insert(rows);
+    if (insErr) {
+      // Phase 17.1: 23505 (unique_violation) means another concurrent
+      // caller inserted the row(s) between our existence check and our
+      // insert. Treat as success — the step is now correctly done
+      // either way. Without this catch, duplicate webhook deliveries
+      // or rapid user double-clicks would surface as failed stage
+      // transitions even though the DB ended up consistent.
+      if (insErr.code !== "23505") {
+        return { ok: false, completed, error: insErr.message };
+      }
+      // For the racing-loser path, we don't know exactly which rows
+      // were ours vs theirs — be conservative and report `completed`
+      // as the rows we successfully held before the race.
+    } else {
+      completed += rows.length;
+    }
+  }
 
-  return { ok: true, completed: updated?.length ?? 0 };
+  return { ok: true, completed };
 }

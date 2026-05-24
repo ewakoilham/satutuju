@@ -21,3 +21,6 @@ export const newLeadId = () => makeId("lead_");
 export const newStageHistoryId = () => makeId("lsh_");
 export const newOutreachLogId = () => makeId("olg_");
 export const newStepStatusId = () => makeId("csl_");
+// Phase 16 — per-mentor view-state of a lead, used to track unread
+// admin replies in the mentor leads inbox.
+export const newMentorLeadViewId = () => makeId("mlv_");
