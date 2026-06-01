@@ -10,9 +10,14 @@ import { syncFromCalendar } from "@/lib/leads/sync-from-calendar";
  * booking detection without hammering Google's quota.
  */
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
-  if (expected && auth !== expected) {
+  // Fail closed: refuse if CRON_SECRET is unset rather than running
+  // unauthenticated (otherwise anyone could trigger sync + DB load).
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    console.error("[calendar-sync] CRON_SECRET not set");
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

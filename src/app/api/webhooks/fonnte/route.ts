@@ -77,14 +77,22 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── Auth gates ─────────────────────────────────────────────────
-  // 1. Optional shared-secret check.
+  // 1. Shared-secret check (mandatory — fail closed). Without this an
+  //    attacker who knows a message id could forge delivery/read events
+  //    and advance leads through the pipeline.
   const expectedSecret = process.env.FONNTE_WEBHOOK_SECRET;
-  if (expectedSecret && body.token !== expectedSecret) {
+  if (!expectedSecret) {
+    console.error("[fonnte] FONNTE_WEBHOOK_SECRET not set");
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
+  if (body.token !== expectedSecret) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
-  // 2. Device match — reject inbound from other devices.
+  // 2. Device match — reject inbound from other devices. Note: no
+  //    `body.device &&` short-circuit, so omitting the field can't bypass
+  //    the check when a device is configured.
   const expectedDevice = process.env.FONNTE_DEVICE_NUMBER;
-  if (expectedDevice && body.device && body.device !== expectedDevice) {
+  if (expectedDevice && body.device !== expectedDevice) {
     return NextResponse.json({ error: "Wrong device" }, { status: 401 });
   }
 

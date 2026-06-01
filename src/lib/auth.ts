@@ -1,9 +1,14 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "satutuju-dev-secret"
-);
+// Fail closed: never fall back to a hardcoded key. A missing JWT_SECRET
+// must crash, not silently sign tokens with a secret anyone reading the
+// source could use to forge admin sessions.
+const rawSecret = process.env.JWT_SECRET;
+if (!rawSecret) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+const secret = new TextEncoder().encode(rawSecret);
 
 export interface JWTPayload {
   userId: string;
