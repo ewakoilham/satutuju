@@ -13,16 +13,23 @@ datasource db {
 // ──────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("mentee") // "admin" | "mentor" | "mentee"
-  avatar                String?
-  resetToken            String?
-  resetTokenExpiresAt   DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String? // Nullable: Google-OAuth-only users won't have a password.
+  name                String
+  role                String    @default("mentee") // "admin" | "mentor" | "mentee"
+  avatar              String?
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+
+  // v5 auth additions
+  googleId         String?   @unique // Google `sub` claim — set on first OAuth login
+  isActivated      Boolean   @default(true) // Pre-v5 users grandfather in as activated
+  twoFactorEnabled Boolean   @default(false)
+  invitedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Mentor relations
   mentorPairings Pairing[] @relation("MentorPairings")
@@ -46,36 +53,36 @@ model User {
 }
 
 model MentorProfile {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
+  id                  String  @id @default(cuid())
+  userId              String  @unique
   // Study Experience
-  fullName           String?
-  city               String?
-  undergradMajor     String?
+  fullName            String?
+  city                String?
+  undergradMajor      String?
   undergradUniversity String?
-  postgradMajor      String?
+  postgradMajor       String?
   postgradUniversity  String?
-  fundingScheme      String?  // "lpdp" | "self-funded" | "other"
-  fundingOther       String?
-  currentField       String?
-  currentFieldOther  String?
+  fundingScheme       String? // "lpdp" | "self-funded" | "other"
+  fundingOther        String?
+  currentField        String?
+  currentFieldOther   String?
   // Mentoring Preference
-  personality        String?  // "introvert" | "extrovert" | "ambivert"
-  mentorStyle        String?  // "gentle" … "direct"
-  workStyle          String?  // "structured" … "flexible"
-  communicationStyle String?  // "casual" … "formal"
-  primaryRoles       String?  // JSON array, max 2
+  personality         String? // "introvert" | "extrovert" | "ambivert"
+  mentorStyle         String? // "gentle" … "direct"
+  workStyle           String? // "structured" … "flexible"
+  communicationStyle  String? // "casual" … "formal"
+  primaryRoles        String? // JSON array, max 2
 
   // Identity (used by Perjanjian Kemitraan Mentor — see MentorContract)
   // Stored as String? to mirror MenteeProfile conventions and keep
   // form-binding simple (HTML date inputs return strings).
-  placeOfBirth       String?
-  dateOfBirth        String?  // "YYYY-MM-DD"
-  idType             String?  // "KTP" | "Paspor"
-  idNumber           String?
-  npwp               String?
-  legalAddress       String?  // alamat resmi sesuai KTP/paspor
-  phoneNumber        String?
+  placeOfBirth String?
+  dateOfBirth  String? // "YYYY-MM-DD"
+  idType       String? // "KTP" | "Paspor"
+  idNumber     String?
+  npwp         String?
+  legalAddress String? // alamat resmi sesuai KTP/paspor
+  phoneNumber  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,27 +91,27 @@ model MentorProfile {
 }
 
 model MenteeProfile {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Personal Information
-  fullLegalName      String?
-  dateOfBirth        String?
-  studentId          String?
-  phoneNumber        String?
+  fullLegalName String?
+  dateOfBirth   String?
+  studentId     String?
+  phoneNumber   String?
 
   // National ID / Identity
-  idNumber           String?
-  nationality        String?
-  passportNumber     String?
-  currentAddress     String?
-  legalAddress       String?
+  idNumber       String?
+  nationality    String?
+  passportNumber String?
+  currentAddress String?
+  legalAddress   String?
 
   // Academic Background
-  mostRecentSchool   String?
-  levelOfStudy       String?
-  curriculum         String?
-  gpa                String?
+  mostRecentSchool String?
+  levelOfStudy     String?
+  curriculum       String?
+  gpa              String?
 
   // Goals and Preferences
   intendedStudyProgram    String?
@@ -116,27 +123,27 @@ model MenteeProfile {
   postGraduationPlan      String?
 
   // Test Preparation
-  englishTestStatus  String?
-  englishTestType    String?
-  englishTestDate    String?
-  englishTestScore   String?
+  englishTestStatus String?
+  englishTestType   String?
+  englishTestDate   String?
+  englishTestScore  String?
 
   // Visa Status
-  hasAppliedVisa              Boolean?
-  familyAppliedVisa           Boolean?
-  hasRelativesInStudyCountry  Boolean?
-  hasPermanentResidency       Boolean?
+  hasAppliedVisa             Boolean?
+  familyAppliedVisa          Boolean?
+  hasRelativesInStudyCountry Boolean?
+  hasPermanentResidency      Boolean?
 
   // Funding
-  fundingSource      String?
-  studyBudget        String?
+  fundingSource String?
+  studyBudget   String?
 
   // Mentoring Preferences
-  preferredPersonality    String?  // "introvert" | "extrovert" | "ambivert" | "not-sure"
-  preferredMentoringStyle String?  // "gentle" … "direct"
-  preferredWorkingStyle   String?  // "structured" … "flexible"
-  preferredCommStyle      String?  // "formal" … "casual"
-  preferredRoles          String?  // JSON array, max 2
+  preferredPersonality    String? // "introvert" | "extrovert" | "ambivert" | "not-sure"
+  preferredMentoringStyle String? // "gentle" … "direct"
+  preferredWorkingStyle   String? // "structured" … "flexible"
+  preferredCommStyle      String? // "formal" … "casual"
+  preferredRoles          String? // JSON array, max 2
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -151,9 +158,9 @@ model MenteeProfile {
 model ScheduleSlot {
   id        String   @id @default(cuid())
   mentorId  String
-  date      String   // "YYYY-MM-DD"
-  startTime String   // "HH:MM"
-  endTime   String   // "HH:MM"
+  date      String // "YYYY-MM-DD"
+  startTime String // "HH:MM"
+  endTime   String // "HH:MM"
   notes     String?
   status    String   @default("available") // "available" | "pending" | "booked"
   createdAt DateTime @default(now())
@@ -164,17 +171,18 @@ model ScheduleSlot {
 }
 
 model ScheduleBooking {
-  id             String   @id @default(cuid())
-  slotId         String
-  menteeId       String
-  message        String?
-  sessionId      String?  // FK to Session being discussed
-  requestedStart String?  // "HH:MM" — chosen 90-min window start
-  requestedEnd   String?  // "HH:MM" — chosen 90-min window end
+  id                    String   @id @default(cuid())
+  slotId                String
+  menteeId              String
+  message               String?
+  sessionId             String? // FK to Session being discussed
+  requestedStart        String? // "HH:MM" — chosen 90-min window start
+  requestedEnd          String? // "HH:MM" — chosen 90-min window end
   status                String   @default("pending") // "pending" | "accepted" | "rejected"
-  rejectionReason       String?  // Mandatory reason filled by mentor on rejection
-  googleCalendarEventId String?  // Google Calendar event ID for cleanup
-  googleMeetLink        String?  // Google Meet join URL
+  rejectionReason       String? // Mandatory reason filled by mentor on rejection
+  googleCalendarEventId String? // Google Calendar event ID for cleanup
+  googleMeetLink        String? // Google Meet join URL
+  meetEventId           String? // Phase D.3 — Calendar event id from per-user Meet auto-create
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -187,29 +195,29 @@ model ScheduleBooking {
 // ──────────────────────────────────────────────
 
 model Pairing {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   mentorId  String
   menteeId  String
-  status    String   @default("active") // "active" | "completed" | "paused"
-  track     String   @default("full") // "full" (10 sessions) — extensible later
-  startDate DateTime @default(now())
+  status    String    @default("active") // "active" | "completed" | "paused"
+  track     String    @default("full") // "full" (10 sessions) — extensible later
+  startDate DateTime  @default(now())
   endDate   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  mentor  User      @relation("MentorPairings", fields: [mentorId], references: [id])
-  mentee  User      @relation("MenteePairings", fields: [menteeId], references: [id])
+  mentor User @relation("MentorPairings", fields: [mentorId], references: [id])
+  mentee User @relation("MenteePairings", fields: [menteeId], references: [id])
 
-  sessions       Session[]
-  documents      Document[]
-  tasks          Task[]
-  progressNotes  ProgressNote[]
+  sessions      Session[]
+  documents     Document[]
+  tasks         Task[]
+  progressNotes ProgressNote[]
 
   // Mentee profile data
-  targetProgram     String?
-  priorityUnis      String? // JSON array of university names
-  ieltsScore        String?
-  northStarCard     String? // Mentor's north star card for this pairing
+  targetProgram String?
+  priorityUnis  String? // JSON array of university names
+  ieltsScore    String?
+  northStarCard String? // Mentor's north star card for this pairing
 
   @@unique([mentorId, menteeId])
 }
@@ -219,22 +227,28 @@ model Pairing {
 // ──────────────────────────────────────────────
 
 model Session {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   pairingId   String
-  sessionNum  Int      // 1-10
-  phase       String   // "discovery" | "planning" | "writing" | "execution" | "closing"
-  topic       String   // e.g. "Perkenalan & Profil Mentee"
-  status      String   @default("upcoming") // "upcoming" | "scheduled" | "completed" | "skipped"
+  sessionNum  Int // 1-10
+  phase       String // "discovery" | "planning" | "writing" | "execution" | "closing"
+  topic       String // e.g. "Perkenalan & Profil Mentee"
+  status      String    @default("upcoming") // "upcoming" | "scheduled" | "completed" | "skipped"
   scheduledAt DateTime?
   completedAt DateTime?
 
   // Session tracking
-  mentorRating    Int?   // 1-5 (mentee rates the mentor)
-  menteeEnergy    Int?   // 1-5 (mentor observes mentee energy)
-  keyOutput       String?
-  obstacles       String?
-  summaryNotes    String? // 24-hour post-session summary
-  menteeFeedback  String? // Mentee's impression/comment about the session
+  mentorRating   Int? // 1-5 (mentee rates the mentor)
+  menteeEnergy   Int? // 1-5 (mentor observes mentee energy)
+  keyOutput      String?
+  obstacles      String?
+  summaryNotes   String? // 24-hour post-session summary
+  menteeFeedback String? // Mentee's impression/comment about the session
+
+  // v5 Sesi phase tracking
+  prepCompletedAt   DateTime? // Mentor pressed "Mulai sesi" (Sebelum → Setelah)
+  mentorPreviewAt   DateTime? // Mentor opened "Mentee POV" preview
+  mentorSubmittedAt DateTime? // Mentor pressed "Setuju & kirim ke mentee"
+  menteeViewedAt    DateTime? // Mentee read the published report
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -249,18 +263,18 @@ model Session {
 // ──────────────────────────────────────────────
 
 model Document {
-  id          String   @id @default(cuid())
-  pairingId   String
-  category    String   // "cv" | "motivation_letter" | "transcript" | "ielts" | "recommendation" | "essay_lpdp" | "other"
-  name        String
-  fileName    String
-  filePath    String
-  fileSize    Int
-  mimeType    String
-  status      String   @default("uploaded") // "uploaded" | "under_review" | "needs_revision" | "approved"
-  version     Int      @default(1)
-  uploadedBy  String   // userId
-  feedback    String?  // Mentor feedback on this document
+  id         String  @id @default(cuid())
+  pairingId  String
+  category   String // "cv" | "motivation_letter" | "transcript" | "ielts" | "recommendation" | "essay_lpdp" | "other"
+  name       String
+  fileName   String
+  filePath   String
+  fileSize   Int
+  mimeType   String
+  status     String  @default("uploaded") // "uploaded" | "under_review" | "needs_revision" | "approved"
+  version    Int     @default(1)
+  uploadedBy String // userId
+  feedback   String? // Mentor feedback on this document
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -273,14 +287,14 @@ model Document {
 // ──────────────────────────────────────────────
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   pairingId   String
-  sessionNum  Int?     // Which session this task relates to
+  sessionNum  Int? // Which session this task relates to
   title       String
   description String?
-  status      String   @default("pending") // "pending" | "in_progress" | "completed" | "overdue"
+  status      String    @default("pending") // "pending" | "in_progress" | "completed" | "overdue"
   dueDate     DateTime?
-  assignedBy  String   // userId (mentor)
+  assignedBy  String // userId (mentor)
   completedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -294,12 +308,12 @@ model Task {
 // ──────────────────────────────────────────────
 
 model ProgressNote {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   pairingId  String
   sessionNum Int?
-  authorId   String   // userId
+  authorId   String // userId
   content    String
-  type       String   @default("note") // "note" | "achievement" | "concern" | "action_item"
+  type       String @default("note") // "note" | "achievement" | "concern" | "action_item"
 
   createdAt DateTime @default(now())
 
@@ -311,13 +325,13 @@ model ProgressNote {
 // ──────────────────────────────────────────────
 
 model Notification {
-  id      String   @id @default(cuid())
+  id      String  @id @default(cuid())
   userId  String
   title   String
   message String
-  type    String   @default("info") // "info" | "task" | "document" | "session" | "alert"
-  read    Boolean  @default(false)
-  link    String?  // URL to navigate to
+  type    String  @default("info") // "info" | "task" | "document" | "session" | "alert"
+  read    Boolean @default(false)
+  link    String? // URL to navigate to
 
   createdAt DateTime @default(now())
 
@@ -333,31 +347,163 @@ model Notification {
 // allowing the mentor to re-sign with a new contractNumber.
 
 model MentorContract {
-  id              String    @id @default(cuid())
-  userId          String    @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
-  contractNumber  String    @unique         // e.g. "001/ST-MTR/V/2026"
-  status          String                    // "PENDING_SIGNATURE" | "SIGNED" | "VOID"
-  templateVersion String                    // pinned at sign time, e.g. "2026.05.10"
+  contractNumber  String @unique // e.g. "001/ST-MTR/V/2026"
+  status          String // "PENDING_SIGNATURE" | "SIGNED" | "VOID"
+  templateVersion String // pinned at sign time, e.g. "2026.05.10"
 
   // Frozen at sign time so future MentorProfile edits don't mutate the
   // signed record. JSON shape: { fullName, placeOfBirth, dateOfBirth,
   // idType, idNumber, npwp, legalAddress, phoneNumber }.
   identitySnapshot Json?
 
-  signatureDataUrl String?   @db.Text       // base64 PNG of drawn signature
+  signatureDataUrl String?   @db.Text // base64 PNG of drawn signature
   signedAt         DateTime?
-  signatureHash    String?                  // sha256(version + snapshot + dataUrl)
+  signatureHash    String? // sha256(version + snapshot + dataUrl)
   ipAddress        String?
   userAgent        String?   @db.Text
 
-  pdfPath          String?                  // Supabase storage path
+  pdfPath String? // Supabase storage path
 
-  voidedAt         DateTime?
-  voidReason       String?
+  voidedAt   DateTime?
+  voidReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// v5 AUTH FOUNDATION
+// ──────────────────────────────────────────────
+
+/// One-time invite token issued by an admin. Recipient clicks the email
+/// link → /activate?token=... → they pick a password (or sign in with
+/// Google) → corresponding User row is created/activated. Tokens expire
+/// after 7 days and burn on first use.
+model InviteToken {
+  id        String    @id @default(cuid())
+  email     String
+  role      String // "mentor" | "mentee" | "admin"
+  invitedBy String // userId of the admin who issued the invite
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+/// Magic link for password reset + future "passwordless" sign-in. Single
+/// use, expires in 24h. Purpose discriminates handling on /api/auth/magic/[token].
+model MagicLink {
+  id        String    @id @default(cuid())
+  userId    String
+  purpose   String // "reset" | "passwordless"
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+/// Append-only log of login attempts for rate-limit + audit. `identifier`
+/// is prefixed "email:foo@bar.com" or "ip:1.2.3.4" so we can window-query
+/// either dimension. A daily cron prunes rows older than 24h.
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String
+  success    Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt(sort: Desc)])
+}
+
+/// One TOTP secret per user. Encrypted at rest with MAGIC_LINK_SECRET via
+/// AES-256-GCM. `verified` flips to true after the user enters a valid code
+/// once during /api/auth/2fa/setup. After that, every login PIN-checks.
+model TotpSecret {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  secret    String // encrypted blob: base64(iv || ciphertext || tag)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Phase D.3 — per-user Google OAuth refresh token + granted scopes. The
+/// refresh token is what lets us call Calendar API later (creating Meet links
+/// on "Mulai sesi") without forcing the mentor through another consent
+/// prompt. One row per user; re-connecting overwrites scopes + token.
+model GoogleConnection {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  googleSub    String // Google `sub` claim — sanity check on re-consent
+  refreshToken String // plaintext for now; rotate via re-consent if leaked
+  scopes       String // space-separated scope list as granted by Google
+  expiresAt    DateTime? // bookkeeping for the last access-token expiry
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ──────────────────────────────────────────────
+// v5 JADWAL / SESI / KAMPUS additions
+// ──────────────────────────────────────────────
+
+/// Mentor's recurring availability. The cascade job materializes these
+/// into ScheduleSlot rows for the next 8 weeks (idempotent UPSERT keyed
+/// on mentor + date + startTime).
+model AvailabilityRule {
+  id         String   @id @default(cuid())
+  mentorId   String
+  dayOfWeek  Int // 0=Sunday .. 6=Saturday
+  startTime  String // "HH:MM"
+  endTime    String // "HH:MM"
+  recurMode  String // "unlimited" | "fixed"
+  weeksAhead Int? // when recurMode="fixed", limit materialization to N weeks
+  active     Boolean  @default(true)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([mentorId, active])
+}
+
+/// The 5-15 session plan a mentor finalizes for a new mentee.
+/// `rows` is a JSON array of { id, order, title, phase, durationMinutes }.
+/// Status transitions: draft → finalized → acknowledged (mentee opens it).
+model SessionPlan {
+  id             String    @id @default(cuid())
+  pairingId      String    @unique
+  status         String    @default("draft") // "draft" | "finalized" | "acknowledged"
+  rows           Json // SessionPlanRow[]
+  finalizedAt    DateTime?
+  acknowledgedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+/// Pre-session preparation checklist. One row per Session.id; `items` lives
+/// in JSON so the structure can evolve without migrations.
+model SessionPrepChecklist {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  items     Json // [{ id, label, done, category }]
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+/// Mentor-curated wishlist of universities per mentee.
+model UniversityWishlist {
+  id           String   @id @default(cuid())
+  menteeId     String
+  universityId Int
+  addedById    String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@unique([menteeId, universityId])
+  @@index([menteeId])
 }

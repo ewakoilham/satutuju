@@ -16,11 +16,10 @@ const geistMono = Geist_Mono({
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  // Heading usage in this codebase is exclusively font-semibold (600),
-  // font-bold (700), and font-extrabold (800) — verified by grep across
-  // every var(--font-heading) site. Weight 400 was unused and dropped
-  // to save ~25 KB of font payload.
-  weight: ["600", "700", "800"],
+  // 500 italic is the signature "lede" line in dashboard greetings + headings;
+  // 600/700/800 cover semibold/bold/extrabold. Both styles must be loaded.
+  weight: ["500", "600", "700", "800"],
+  style: ["normal", "italic"],
 });
 
 const instrumentSerif = Instrument_Serif({

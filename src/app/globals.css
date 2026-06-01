@@ -5,7 +5,7 @@
   --primary: #3958b3;
   --primary-deep: #4f64b1;
   --brand-blue-soft: #c6ddef;
-  --brand-lavender: #c6ddef;
+  --brand-lavender: #d5c6ef;
   --brand-yellow: #fefaef;
 
   /* Primary scale (harmonized around #3958b3) */
@@ -151,7 +151,7 @@ html.dark {
   --primary: #3958b3;
   --primary-deep: #4f64b1;
   --brand-blue-soft: #c6ddef;
-  --brand-lavender: #c6ddef;
+  --brand-lavender: #d5c6ef;
   --brand-yellow: #fefaef;
   --primary-50: #edf1fa;
   --primary-100: #dce4f5;

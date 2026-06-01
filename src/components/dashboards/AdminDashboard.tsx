@@ -10,7 +10,8 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import StatCard from "@/components/ui/StatCard";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { ConfirmModal } from "@/components/ui/Modal";
-import { useTheme } from "@/lib/theme";
+// useTheme moved to the dashboard topbar (layout.tsx) so all roles share
+// the toggle. Admin no longer needs its own copy.
 
 interface User {
   id: string;
@@ -64,7 +65,6 @@ type AdminTab = "pairings" | "quality";
 type PairingsTab = "active" | "archived";
 
 export default function AdminDashboard() {
-  const { resolvedTheme, setTheme } = useTheme();
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [mentors, setMentors] = useState<User[]>([]);
   const [mentees, setMentees] = useState<User[]>([]);
@@ -262,13 +262,9 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="btn-secondary p-2.5"
-            title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            <Icon name={resolvedTheme === "dark" ? "sun" : "moon"} size={16} />
-          </button>
+          {/* Theme toggle moved to the dashboard topbar so it's available
+              to mentor + mentee too. The button here is removed; the
+              "New Pairing" CTA stays. */}
           <button
             onClick={() => setShowCreate(!showCreate)}
             className="btn-primary"

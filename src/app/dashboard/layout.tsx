@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
+import "./dashboard.css";
 
 // Profile & Settings are removed from main nav — they live in the avatar dropdown.
 // `NavGroup` collapses two or more sibling tabs under a single dropdown so the
@@ -35,21 +36,22 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
         { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
       ],
     },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
-    { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
+    { href: "/dashboard/schedule",     label: "Jadwal",       icon: "calendar"   },
+    { href: "/dashboard/resources",    label: "Materi",       icon: "book"       },
+    { href: "/dashboard/universities", label: "Kampus",       icon: "graduation" },
   ],
   mentor: [
-    { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
-    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
+    { href: "/dashboard",              label: "Beranda",      icon: "dashboard"  },
+    { href: "/dashboard/mentee",       label: "Mentee",       icon: "graduation" },
+    { href: "/dashboard/schedule",     label: "Jadwal",       icon: "calendar"   },
+    { href: "/dashboard/resources",    label: "Materi",       icon: "book"       },
+    { href: "/dashboard/universities", label: "Kampus",       icon: "school"     },
   ],
   mentee: [
-    { href: "/dashboard",              label: "My Journey",   icon: "map"         },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
-    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
+    { href: "/dashboard",              label: "Beranda",      icon: "dashboard"  },
+    { href: "/dashboard/schedule",     label: "Jadwal",       icon: "calendar"   },
+    { href: "/dashboard/resources",    label: "Materi",       icon: "book"       },
+    { href: "/dashboard/universities", label: "Kampus",       icon: "school"     },
   ],
 };
 
@@ -69,7 +71,7 @@ const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon:
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useUser();
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const logoSrc = resolvedTheme === "dark" ? "/logo-wordmark-white.png" : "/logo-wordmark.png";
   const { notifications, unreadCount, markRead } = useNotifications();
   const router   = useRouter();
@@ -138,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dashboard-shell min-h-screen bg-background">
       {/* ── Top Nav ──────────────────────────────────────────────────────── */}
       <header className="bg-surface/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -250,8 +252,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </nav>
             </div>
 
-            {/* Right: notifications + avatar dropdown */}
+            {/* Right: theme toggle + notifications + avatar dropdown */}
             <div className="flex items-center gap-2 sm:gap-3">
+
+              {/* Theme toggle — available to all roles, not just admin. */}
+              <button
+                type="button"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="relative p-2 text-text-muted hover:bg-brand-blue-soft hover:text-primary rounded-lg transition"
+                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={resolvedTheme === "dark" ? "Mode terang" : "Mode gelap"}
+              >
+                <Icon name={resolvedTheme === "dark" ? "sun" : "moon"} size={20} />
+              </button>
 
               {/* Notifications */}
               <div className="relative" ref={notifRef}>

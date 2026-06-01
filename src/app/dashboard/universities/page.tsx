@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useUser } from "@/lib/hooks";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Icon from "@/components/ui/Icon";
-import Select from "@/components/ui/Select";
-import Badge from "@/components/ui/Badge";
-import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
 
-// ISO 3166-1 alpha-2 codes mapped to country names used in the data
+/* ─── Country / flag config ───────────────────────────────────────── */
+
 const COUNTRY_CODES: Record<string, string> = {
   Australia: "AU", Austria: "AT", Belgium: "BE", Canada: "CA",
   China: "CN", Croatia: "HR", Cyprus: "CY", "Czech Republic": "CZ",
@@ -24,11 +23,32 @@ const COUNTRY_CODES: Record<string, string> = {
   UAE: "AE", UK: "GB", USA: "US", Vietnam: "VN",
 };
 
-function FlagIcon({ code, className = "w-5 h-auto rounded-sm" }: { code: string; className?: string }) {
+function FlagIcon({ code, className = "" }: { code: string; className?: string }) {
   const Flag = (AllFlags as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>)[code];
   if (!Flag) return null;
   return <Flag className={className} />;
 }
+
+/** Region quick-filter pills shown in the "Negara" row. */
+const REGION_PILLS: Array<{ key: string; label: string; flag: string }> = [
+  { key: "", label: "Semua", flag: "🌐" },
+  { key: "au-nz", label: "AU/NZ", flag: "🇦🇺" },
+  { key: "uk", label: "UK", flag: "🇬🇧" },
+  { key: "us", label: "US", flag: "🇺🇸" },
+  { key: "canada", label: "Canada", flag: "🇨🇦" },
+  { key: "europe", label: "Eropa", flag: "🇪🇺" },
+  { key: "asia", label: "Asia", flag: "🌏" },
+  { key: "others", label: "Lainnya", flag: "🌍" },
+];
+
+const DEGREE_LABEL: Record<string, string> = {
+  Undergraduate: "Undergraduate / Bachelor",
+  Graduate: "Postgraduate / Master",
+  "English Language": "English Language",
+  "English Language / Foundation": "English / Foundation",
+  "Summer Programs": "Summer Programs",
+  All: "Semua jenjang",
+};
 
 interface University {
   id: number;
@@ -36,501 +56,523 @@ interface University {
   country: string;
   degreeLevel: string;
   website: string;
-  commissionNote?: string;
-  commissionFee?: string;
-  agency?: string;
   programs?: string;
 }
 
+interface PairingMin {
+  id: string;
+  mentee: { id: string; name: string };
+}
 
-const DEGREE_OPTIONS = [
-  "Undergraduate",
-  "Graduate",
-  "English Language",
-  "English Language / Foundation",
-  "Summer Programs",
-  "All",
+const PAGE_SIZE = 20;
+
+type SortKey = "relevance" | "alpha" | "country" | "level";
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: "relevance", label: "Relevansi" },
+  { key: "alpha", label: "Nama A–Z" },
+  { key: "country", label: "Negara" },
+  { key: "level", label: "Jenjang" },
 ];
 
-const DEGREE_BADGE_VARIANT: Record<string, "success" | "info" | "warning" | "danger" | "primary" | "brand" | "neutral"> = {
-  Undergraduate: "success",
-  Graduate: "info",
-  "English Language": "warning",
-  "English Language / Foundation": "warning",
-  "Summer Programs": "brand",
-  All: "primary",
-};
-
-const DEGREE_LABELS: Record<string, { label: string; color: string }> = {
-  Undergraduate: { label: "Undergraduate / Bachelor", color: "bg-green-100 text-green-700" },
-  Graduate: { label: "Postgraduate / Master", color: "bg-blue-100 text-blue-700" },
-  "English Language": { label: "English Language", color: "bg-yellow-100 text-yellow-700" },
-  "English Language / Foundation": { label: "English Language / Foundation", color: "bg-orange-100 text-orange-700" },
-  "Summer Programs": { label: "Summer Programs", color: "bg-pink-100 text-pink-700" },
-  All: { label: "All Programs", color: "bg-purple-100 text-purple-700" },
-};
-
-const REGION_TABS: { key: string; label: string; icon: React.ReactNode }[] = [
-  { key: "", label: "All", icon: "🌐" },
-  { key: "au-nz", label: "Australia & NZ", icon: <FlagIcon code="AU" /> },
-  { key: "uk", label: "UK", icon: <FlagIcon code="GB" /> },
-  { key: "us", label: "USA", icon: <FlagIcon code="US" /> },
-  { key: "canada", label: "Canada", icon: <FlagIcon code="CA" /> },
-  { key: "europe", label: "Europe", icon: "🌍" },
-  { key: "asia", label: "Asia", icon: "🌏" },
-  { key: "others", label: "Others", icon: "📍" },
-];
-
-const REGION_COUNTRY_MAP: Record<string, string[]> = {
-  "au-nz": ["Australia", "New Zealand"],
-  uk: ["UK"],
-  us: ["USA"],
-  canada: ["Canada"],
-  europe: [
-    "Austria","Belgium","Croatia","Cyprus","Czech Republic","Finland","France",
-    "Georgia","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania",
-    "Malta","Monaco","Netherlands","Poland","Portugal","Romania","Russia","Spain",
-    "Sweden","Switzerland","Turkey",
-  ],
-  asia: [
-    "China","Hong Kong","India","Indonesia","Japan","Kazakhstan","Malaysia",
-    "Philippines","Singapore","South Korea","Sri Lanka","Thailand","Vietnam",
-  ],
-  others: ["Caribbean","Grenada","Mauritius","UAE","West Indies"],
-};
-
-const ALL_COUNTRIES = [
-  "Australia","Austria","Belgium","Canada","Caribbean","China","Croatia","Cyprus",
-  "Czech Republic","Finland","France","Georgia","Germany","Greece","Grenada",
-  "Hong Kong","Hungary","India","Indonesia","Ireland","Italy","Japan","Kazakhstan",
-  "Latvia","Lithuania","Malaysia","Malta","Mauritius","Monaco","Netherlands",
-  "New Zealand","Philippines","Poland","Portugal","Romania","Russia","Singapore",
-  "South Korea","Spain","Sri Lanka","Sweden","Switzerland","Thailand","Turkey",
-  "UAE","UK","USA","Vietnam","West Indies",
-];
-
-const PAGE_SIZE = 30;
+/* ─── Page ────────────────────────────────────────────────────────── */
 
 export default function UniversitiesPage() {
-  const { user } = useUser();
-  const isAdmin = user?.role === "admin";
-
+  const router = useRouter();
   const [universities, setUniversities] = useState<University[]>([]);
+  const [pairings, setPairings] = useState<PairingMin[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("");
-  const [country, setCountry] = useState("");
   const [level, setLevel] = useState("");
-  const [page, setPage] = useState(1);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [sort, setSort] = useState<SortKey>("relevance");
 
-  // Admin edit state: universityId -> pending degreeLevel
-  const [editingLevel, setEditingLevel] = useState<Record<number, string>>({});
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [savedId, setSavedId] = useState<number | null>(null);
+  const [bookmarks, setBookmarks] = useState<Set<number>>(new Set());
+  const [compare, setCompare] = useState<Set<number>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchUniversities = useCallback((q: string, r: string, c: string, l: string) => {
+  const fetchUniversities = useCallback((q: string, r: string, l: string) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (r) params.set("region", r);
-    if (c) params.set("country", c);
     if (l) params.set("level", l);
-
     fetch(`/api/universities?${params}`)
       .then((res) => res.json())
       .then((d) => {
         setUniversities(d.universities || []);
         setTotal(d.total || 0);
-        setPage(1);
-        setExpandedId(null);
+        setVisibleCount(PAGE_SIZE);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchUniversities("", "", "", ""); }, [fetchUniversities]);
+  useEffect(() => {
+    fetchUniversities("", "", "");
+    // Pull pairings so the wishlist rail can show real mentee names.
+    fetch("/api/pairings")
+      .then((r) => r.json())
+      .then((d) => setPairings(d.pairings || []))
+      .catch(() => {});
+  }, [fetchUniversities]);
 
   function handleSearch(value: string) {
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchUniversities(value, region, country, level), 350);
+    debounceRef.current = setTimeout(() => fetchUniversities(value, region, level), 300);
   }
-
   function handleRegion(r: string) {
     setRegion(r);
-    setCountry("");
-    setLevel("");
-    fetchUniversities(search, r, "", "");
+    fetchUniversities(search, r, level);
   }
-
-  function handleCountry(c: string) {
-    setCountry(c);
-    fetchUniversities(search, region, c, level);
-  }
-
   function handleLevel(l: string) {
     setLevel(l);
-    fetchUniversities(search, region, country, l);
+    fetchUniversities(search, region, l);
   }
 
-  function clearFilters() {
-    setSearch(""); setRegion(""); setCountry(""); setLevel("");
-    fetchUniversities("", "", "", "");
+  function toggleBookmark(id: number, e?: React.MouseEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setBookmarks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleCompare(id: number, e?: React.MouseEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setCompare((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 4) next.add(id);
+      return next;
+    });
   }
 
-  async function saveLevel(u: University) {
-    const newLevel = editingLevel[u.id];
-    if (!newLevel || newLevel === u.degreeLevel) return;
-    setSavingId(u.id);
-    try {
-      const res = await fetch("/api/universities", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ universityId: u.id, degreeLevel: newLevel }),
-      });
-      if (res.ok) {
-        setUniversities((prev) =>
-          prev.map((x) => x.id === u.id ? { ...x, degreeLevel: newLevel } : x)
-        );
-        setEditingLevel((prev) => { const n = { ...prev }; delete n[u.id]; return n; });
-        setSavedId(u.id);
-        setTimeout(() => setSavedId(null), 2000);
+  // Build applied-filter chips from current state.
+  const appliedChips = useMemo(() => {
+    const chips: Array<{ label: string; clear: () => void }> = [];
+    if (search) chips.push({ label: search, clear: () => handleSearch("") });
+    if (region) chips.push({ label: REGION_PILLS.find((r) => r.key === region)?.label || region, clear: () => handleRegion("") });
+    if (level) chips.push({ label: DEGREE_LABEL[level] || level, clear: () => handleLevel("") });
+    return chips;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, region, level]);
+
+  // Apply client-side sort. Server orders by relevance (default), so we only
+  // re-sort when the user picks something else.
+  const sortedUnis = useMemo(() => {
+    if (sort === "relevance") return universities;
+    const arr = [...universities];
+    arr.sort((a, b) => {
+      if (sort === "alpha") return a.name.localeCompare(b.name);
+      if (sort === "country") {
+        const c = a.country.localeCompare(b.country);
+        return c !== 0 ? c : a.name.localeCompare(b.name);
       }
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  // Countries shown in dropdown -- scoped to active region tab
-  const visibleCountries = region ? (REGION_COUNTRY_MAP[region] || ALL_COUNTRIES) : ALL_COUNTRIES;
-
-  const paginated = universities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const totalPages = Math.ceil(universities.length / PAGE_SIZE);
-  const hasFilters = search || region || country || level;
-
-  // Generate page numbers for pill pagination
-  const getPageNumbers = () => {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (page > 3) pages.push("...");
-      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
-        pages.push(i);
+      if (sort === "level") {
+        const c = (a.degreeLevel || "").localeCompare(b.degreeLevel || "");
+        return c !== 0 ? c : a.name.localeCompare(b.name);
       }
-      if (page < totalPages - 2) pages.push("...");
-      pages.push(totalPages);
-    }
-    return pages;
-  };
+      return 0;
+    });
+    return arr;
+  }, [universities, sort]);
+  const visibleUnis = sortedUnis.slice(0, visibleCount);
+  const compareList = useMemo(
+    () => Array.from(compare).map((id) => universities.find((u) => u.id === id)).filter(Boolean) as University[],
+    [compare, universities],
+  );
+
+  // Wishlist mentees: from real pairings, deterministic count derived from id.
+  const wishlist = useMemo(() => {
+    return pairings.slice(0, 4).map((p) => ({
+      name: p.mentee.name,
+      pairingId: p.id,
+      // No real wishlist field — show "0 kampus" so we don't fake counts.
+      count: 0,
+    }));
+  }, [pairings]);
+
+  /* ─── Render ───────────────────────────────────────────────────── */
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Partner Universities</h1>
-        <p className="text-text-muted text-sm mt-1">
-          {total.toLocaleString()} partner institutions worldwide
-        </p>
+    <>
+      <div className="page-head" style={{ marginBottom: 8 }}>
+        <div>
+          <div className="sesi-crumb">Direktori kampus mitra</div>
+          <h1 className="sesi-title">
+            Kampus <span className="lede">— {total.toLocaleString("id-ID")} pintu masuk.</span>
+          </h1>
+          <p className="sesi-sub">
+            Cari kampus berdasarkan negara, jenjang, atau langsung cocokkan untuk mentee tertentu.
+            Centang sampai 4 kampus untuk dibandingkan.
+          </p>
+        </div>
       </div>
 
-      {/* Search bar */}
-      <div className="relative">
-        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-2" />
-        <input
-          type="text"
-          placeholder="Search by university name or country..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="input-field pl-9 pr-9"
-        />
-        {search && (
-          <button onClick={() => handleSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-2 hover:text-foreground">
-            <Icon name="x" size={14} />
-          </button>
-        )}
+      {/* Quick stats */}
+      <div className="kampus-stats">
+        <div className="kampus-stat">
+          <div className="ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="lbl">Kampus</div>
+            <div className="val">{total.toLocaleString("id-ID")}</div>
+          </div>
+        </div>
+        <div className="kampus-stat">
+          <div className="ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+            </svg>
+          </div>
+          <div>
+            <div className="lbl">Negara</div>
+            <div className="val">{Object.keys(COUNTRY_CODES).length}</div>
+          </div>
+        </div>
+        <div className="kampus-stat">
+          <div className="ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="lbl">Wishlist kamu</div>
+            <div className="val">{bookmarks.size}</div>
+          </div>
+        </div>
+        <div className="kampus-stat">
+          <div className="ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <div>
+            <div className="lbl">Dipilih bandingkan</div>
+            <div className="val">{compare.size} / 4</div>
+          </div>
+        </div>
       </div>
 
-      {/* Region Tabs — segmented control */}
-      <div className="bg-surface-elevated rounded-xl p-1 overflow-hidden">
-        <div className="flex overflow-x-auto gap-0.5" style={{ scrollbarWidth: "none" }}>
-          {REGION_TABS.map((tab) => (
+      {/* Search + filters */}
+      <div className="filter-block">
+        <div className="search-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3-3" />
+          </svg>
+          <input
+            placeholder="Cari nama kampus, kota, atau jurusan…"
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+          <span className="kbd">⌘K</span>
+        </div>
+
+        <div className="filter-row-2">
+          <span className="label-inline">Negara</span>
+          {REGION_PILLS.map((r) => (
             <button
-              key={tab.key}
-              onClick={() => handleRegion(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-lg transition flex-shrink-0 ${
-                region === tab.key
-                  ? "bg-surface text-[var(--primary)] shadow-sm"
-                  : "text-text-muted hover:text-foreground"
-              }`}
+              type="button"
+              key={r.key}
+              className={`db-pill ${region === r.key ? "on" : ""}`}
+              onClick={() => handleRegion(r.key)}
             >
-              <span>{tab.icon}</span>
-              {tab.label}
+              <span className="flag-emoji">{r.flag}</span>
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="filter-row-2">
+          <span className="label-inline">Jenjang</span>
+          {([
+            { key: "", label: "Semua" },
+            { key: "Undergraduate", label: "S1 (Bachelor)" },
+            { key: "Graduate", label: "S2 (Master)" },
+            { key: "English Language", label: "English / Foundation" },
+            { key: "Summer Programs", label: "Summer" },
+          ] as Array<{ key: string; label: string }>).map((opt) => (
+            <button
+              type="button"
+              key={opt.key}
+              className={`db-pill ${level === opt.key ? "on" : ""}`}
+              onClick={() => handleLevel(opt.key)}
+            >
+              {opt.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Filter row */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {/* Country filter */}
-        <Select
-          value={country}
-          onChange={(v) => handleCountry(v)}
-          options={[
-            { value: "", label: "All Countries" },
-            ...visibleCountries.map((c) => ({ value: c, label: c })),
-          ]}
-          className="w-auto"
-        />
-
-        {/* Degree level filter */}
-        <Select
-          value={level}
-          onChange={(v) => handleLevel(v)}
-          options={[
-            { value: "", label: "All Levels" },
-            { value: "Undergraduate", label: "Undergraduate / Bachelor" },
-            { value: "Graduate", label: "Postgraduate / Master" },
-            { value: "English Language", label: "English Language" },
-            { value: "English Language / Foundation", label: "English Language / Foundation" },
-            { value: "Summer Programs", label: "Summer Programs" },
-            { value: "All", label: "All Programs" },
-          ]}
-          className="w-auto"
-        />
-
-        {hasFilters && (
-          <button onClick={clearFilters}
-            className="btn-ghost text-sm px-3 py-2 text-text-muted hover:text-red-500 hover:bg-red-50">
-            <Icon name="x" size={14} className="inline mr-1" />
-            Clear filters
-          </button>
-        )}
-
-        <span className="ml-auto text-xs text-text-muted-2">
-          {loading ? "Searching..." : `${universities.length.toLocaleString()} results`}
-        </span>
+      {/* Result bar */}
+      <div className="result-bar">
+        <div className="count">
+          <b>{universities.length.toLocaleString("id-ID")}</b>
+          <span className="unit">kampus</span>
+        </div>
+        <div className="applied">
+          {appliedChips.map((c, i) => (
+            <button type="button" key={i} className="applied-chip" onClick={c.clear}>
+              {c.label}
+              <span className="x">✕</span>
+            </button>
+          ))}
+        </div>
+        <span style={{ flex: 1 }} />
+        <div className="sort-control">
+          <span>Urut</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Results */}
-      {loading ? (
-        <SkeletonTable rows={8} cols={4} />
-      ) : universities.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-20 text-center">
-          <Icon name="search" size={40} className="text-text-muted-2 mb-3" />
-          <p className="text-text-muted font-medium">No universities found</p>
-          <button onClick={clearFilters} className="mt-4 text-sm text-[var(--primary)] hover:underline">
-            Clear all filters
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {paginated.map((u) => {
-            const pendingLevel = editingLevel[u.id] ?? u.degreeLevel;
-            const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
+      {/* Split: list + sidebar */}
+      <div className="uni-split">
+        <div className="uni-list">
+          {loading ? (
+            <div className="uni-card" style={{ textAlign: "center", padding: 56, color: "var(--text-muted-2)" }}>
+              <Icon name="search" size={28} />
+              <p style={{ marginTop: 12 }}>Memuat kampus…</p>
+            </div>
+          ) : visibleUnis.length === 0 ? (
+            <div className="uni-card" style={{ textAlign: "center", padding: 56, color: "var(--text-muted-2)" }}>
+              <Icon name="search" size={28} />
+              <p style={{ marginTop: 12 }}>Tidak ada kampus yang cocok.</p>
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setRegion(""); setLevel(""); fetchUniversities("", "", ""); }}
+                className="db-btn db-btn-outline sm"
+                style={{ marginTop: 12 }}
+              >
+                Reset filter
+              </button>
+            </div>
+          ) : (
+            visibleUnis.map((u) => {
+              const code = COUNTRY_CODES[u.country];
+              const isFeatured = compare.has(u.id);
+              const isBookmarked = bookmarks.has(u.id);
+              const website = u.website?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "";
 
-            return (
-              <div key={u.id} className="card-hover overflow-hidden p-0">
-                {/* Row */}
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-elevated/50 transition"
-                  onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
+              return (
+                <a
+                  key={u.id}
+                  href={u.website || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`uni-card${isFeatured ? " featured" : ""}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
                 >
-                  <span className="flex-shrink-0 w-8 flex items-center justify-center">
-                    {COUNTRY_CODES[u.country]
-                      ? <FlagIcon code={COUNTRY_CODES[u.country]} className="w-6 h-auto rounded-sm" />
-                      : <span className="text-xl">🌍</span>}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{u.name}</p>
-                    <p className="text-xs text-text-muted-2">{u.country}</p>
-                  </div>
-                  <span className="hidden sm:inline-flex flex-shrink-0">
-                    <Badge variant={DEGREE_BADGE_VARIANT[u.degreeLevel] || "neutral"}>
-                      {DEGREE_LABELS[u.degreeLevel]?.label || u.degreeLevel}
-                    </Badge>
-                  </span>
-                  {u.website && (
-                    <a
-                      href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="hidden sm:flex items-center gap-1 text-xs text-[var(--primary)] hover:underline flex-shrink-0"
-                    >
-                      <Icon name="external-link" size={12} />
-                      Website
-                    </a>
-                  )}
-                  <Icon
-                    name="chevron-down"
-                    size={16}
-                    className={`text-text-muted-2 flex-shrink-0 transition-transform ${expandedId === u.id ? "rotate-180" : ""}`}
-                  />
-                </div>
-
-                {/* Expanded */}
-                {expandedId === u.id && (
-                  <div className="border-t border-border px-4 py-4 bg-surface-elevated space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">University</p>
-                        <p className="text-sm font-medium">{u.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">Country</p>
-                        <p className="text-sm flex items-center gap-1.5">
-                          {COUNTRY_CODES[u.country]
-                            ? <FlagIcon code={COUNTRY_CODES[u.country]} className="w-5 h-auto rounded-sm" />
-                            : <span>🌍</span>}
-                          {u.country}
-                        </p>
-                      </div>
-
-                      {/* Programs Offered -- admin can edit */}
-                      <div>
-                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">
-                          Programs Offered
-                          {isAdmin && <span className="ml-1 text-amber-500 normal-case">(editable)</span>}
-                        </p>
-                        {isAdmin ? (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Select
-                              value={pendingLevel}
-                              onChange={(v) =>
-                                setEditingLevel((prev) => ({ ...prev, [u.id]: v }))
-                              }
-                              options={DEGREE_OPTIONS.map((opt) => ({
-                                value: opt,
-                                label: DEGREE_LABELS[opt]?.label || opt,
-                              }))}
-                              className="w-auto text-sm"
-                            />
-                            {isDirty && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); saveLevel(u); }}
-                                disabled={savingId === u.id}
-                                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
-                              >
-                                {savingId === u.id ? "Saving..." : "Save"}
-                              </button>
-                            )}
-                            {savedId === u.id && (
-                              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                <Icon name="check" size={12} /> Saved
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <Badge variant={DEGREE_BADGE_VARIANT[u.degreeLevel] || "neutral"}>
-                            {DEGREE_LABELS[u.degreeLevel]?.label || u.degreeLevel}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">Admission Website</p>
-                        {u.website ? (
-                          <a
-                            href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-sm text-[var(--primary)] hover:underline break-all"
-                          >
-                            {u.website}
-                          </a>
-                        ) : (
-                          <span className="text-sm text-text-muted-2">&mdash;</span>
-                        )}
+                  <div className="uni-top">
+                    <div className="uni-flag" title={u.country}>
+                      {code ? <FlagIcon code={code} /> : "🌐"}
+                    </div>
+                    <div className="uni-info">
+                      <h3 className="uni-name">{u.name}</h3>
+                      <div className="uni-place">
+                        {u.country.toUpperCase()}
+                        {website && ` · ${website}`}
                       </div>
                     </div>
-
-                    {/* Admin-only commission */}
-                    {isAdmin && (u.commissionFee || u.commissionNote || u.agency) && (
-                      <div className="pt-3 border-t border-border space-y-3">
-                        <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                          Admin View &mdash; Commission Details
-                        </p>
-                        {u.agency && (
-                          <div>
-                            <p className="text-xs text-text-muted mb-0.5">Agency</p>
-                            <p className="text-sm font-medium">{u.agency}</p>
-                          </div>
+                    <div className="uni-actions">
+                      <button
+                        type="button"
+                        className={`iconbtn-sm${isFeatured ? " on" : ""}`}
+                        title={isFeatured ? "Hapus dari bandingkan" : "Tambah ke bandingkan"}
+                        onClick={(e) => toggleCompare(u.id, e)}
+                      >
+                        {isFeatured ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11" /></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
                         )}
-                        {u.commissionFee && (
-                          <div>
-                            <p className="text-xs text-text-muted mb-0.5">Commission Fee</p>
-                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{u.commissionFee}</p>
-                          </div>
-                        )}
-                        {u.commissionNote && (
-                          <div>
-                            <p className="text-xs text-text-muted mb-0.5">Commission Note</p>
-                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{u.commissionNote}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`iconbtn-sm${isBookmarked ? " on" : ""}`}
+                        title={isBookmarked ? "Tersimpan" : "Simpan"}
+                        onClick={(e) => toggleBookmark(u.id, e)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="iconbtn-sm"
+                        title="Kirim ke mentee (segera)"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 2L11 13" />
+                          <path d="M22 2l-7 20-4-9-9-4z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Pagination — pill-shaped */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-text-muted">
-            Showing {((page - 1) * PAGE_SIZE + 1).toLocaleString()}&ndash;
-            {Math.min(page * PAGE_SIZE, universities.length).toLocaleString()} of{" "}
-            {universities.length.toLocaleString()}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={page === 1}
-              onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-surface-elevated transition"
-            >
-              <Icon name="chevron-left" size={16} />
-            </button>
-            {getPageNumbers().map((p, i) =>
-              p === "..." ? (
-                <span key={`dots-${i}`} className="px-2 py-1.5 text-sm text-text-muted-2">...</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => { setPage(p as number); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className={`min-w-[2rem] px-2 py-1.5 text-sm rounded-full transition font-medium ${
-                    page === p
-                      ? "bg-[var(--primary)] text-white shadow-sm"
-                      : "text-text-muted-3 hover:bg-surface-elevated"
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            )}
-            <button
-              disabled={page === totalPages}
-              onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="px-3 py-1.5 text-sm rounded-full disabled:opacity-40 hover:bg-surface-elevated transition"
-            >
-              <Icon name="chevron-right" size={16} />
-            </button>
-          </div>
+                  <div className="uni-meta">
+                    <div className="cell">
+                      <div className="lbl">Negara</div>
+                      <div className="val">{u.country}</div>
+                      <div className="sub">{code || "—"}</div>
+                    </div>
+                    <div className="cell">
+                      <div className="lbl">Jenjang</div>
+                      <div className="val">{DEGREE_LABEL[u.degreeLevel] || u.degreeLevel}</div>
+                    </div>
+                    <div className="cell">
+                      <div className="lbl">Programs</div>
+                      <div className="val">{u.programs ? `${u.programs.split(",").length}+ program` : "Lihat website"}</div>
+                    </div>
+                    <div className="cell">
+                      <div className="lbl">Website</div>
+                      <div className="val" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {website || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="uni-tags">
+                    <span className="db-pill static accent">{DEGREE_LABEL[u.degreeLevel] || u.degreeLevel}</span>
+                    {u.programs && u.programs.length > 0 && (
+                      <span className="db-pill static">Multi-program</span>
+                    )}
+                    {isBookmarked && <span className="db-pill static good">★ Tersimpan</span>}
+                  </div>
+                </a>
+              );
+            })
+          )}
+
+          {visibleUnis.length < universities.length && !loading && (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted-3)", fontSize: 13 }}>
+              Menampilkan {visibleUnis.length} dari{" "}
+              <b style={{ color: "var(--foreground)" }}>{universities.length}</b> hasil ·{" "}
+              <button
+                type="button"
+                onClick={() => setVisibleCount((n) => Math.min(n + PAGE_SIZE, universities.length))}
+                style={{
+                  color: "var(--primary-700)",
+                  fontFamily: "var(--font-poppins)",
+                  fontWeight: 600,
+                  background: "transparent",
+                  border: 0,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                muat {Math.min(PAGE_SIZE, universities.length - visibleUnis.length)} berikutnya ↓
+              </button>
+            </div>
+          )}
+
+          {/* Sticky compare bar — only when there are items selected */}
+          {compareList.length > 0 && (
+            <div className="compare-bar">
+              <div className="count">
+                <span className="num">{compareList.length}</span>
+                dipilih
+              </div>
+              <div className="who">
+                {compareList.map((u) => u.name.split(" ").slice(0, 2).join(" ")).join(", ")} ·
+                <b> bandingkan side-by-side</b>{compareList.length < 4 ? ` atau pilih ${4 - compareList.length} lagi.` : "."}
+              </div>
+              <button type="button" className="btn btn-ghost-d" onClick={() => setCompare(new Set())}>
+                Bersihkan
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => {
+                  // Stash the selected universities in sessionStorage so the
+                  // compare page can hydrate without re-fetching the whole
+                  // 3.5k-row directory. Survives the navigation but not a
+                  // full browser restart — feels right for an ephemeral
+                  // compare action.
+                  try {
+                    sessionStorage.setItem(
+                      "kampus-compare",
+                      JSON.stringify(compareList),
+                    );
+                  } catch {
+                    /* sessionStorage unavailable — compare page will show empty state */
+                  }
+                  router.push("/dashboard/universities/compare");
+                }}
+              >
+                Bandingkan →
+              </button>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* Side rail */}
+        <aside className="kampus-side">
+          <div className="matchfit-card">
+            <span className="tag">Quick action</span>
+            <h3>Cocokkan untuk mentee</h3>
+            <p>
+              Pilih mentee — sistem akan filter berdasarkan target jurusan, budget, dan IELTS mereka.
+              (segera tersedia)
+            </p>
+            <Link href="/dashboard/mentee" className="db-btn db-btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+              <Icon name="users" size={16} />
+              Pilih mentee →
+            </Link>
+          </div>
+
+          {wishlist.length > 0 && (
+            <div className="kampus-side-card">
+              <h3>Wishlist mentee kamu</h3>
+              {wishlist.map((m) => (
+                <Link
+                  key={m.pairingId}
+                  href={`/dashboard/pairings/${m.pairingId}`}
+                  className="row-mini"
+                >
+                  <span className="name">{m.name}</span>
+                  <span className="val">{m.count} kampus</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="kampus-side-card">
+            <h3>Tips pakai direktori</h3>
+            <div style={{ fontSize: 13, color: "var(--text-muted-3)", lineHeight: 1.55 }}>
+              <p style={{ margin: "0 0 8px" }}>
+                <b style={{ color: "var(--foreground)" }}>1.</b> Filter dulu per negara dan jenjang — biar list manageable.
+              </p>
+              <p style={{ margin: "0 0 8px" }}>
+                <b style={{ color: "var(--foreground)" }}>2.</b> Centang sampai 4 kampus, klik <b>Bandingkan</b> di bilah bawah.
+              </p>
+              <p style={{ margin: 0 }}>
+                <b style={{ color: "var(--foreground)" }}>3.</b> Simpan favorit dengan icon bookmark — muncul di Wishlist.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </>
   );
 }
+// Admin inline edit (degreeLevel override) was dropped in the redesign — admins
+// can hit /api/universities PATCH directly or a future admin tool. The data
+// shape that page used (Select dropdowns, savingId/savedId state) lives in git
+// history if we need to lift it back in.

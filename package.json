@@ -13,9 +13,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.19.2",
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.101.1",
+    "@types/qrcode": "^1.5.6",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "country-flag-icons": "^1.6.15",
@@ -24,7 +26,9 @@
     "jsonwebtoken": "^9.0.3",
     "marked": "^18.0.3",
     "next": "16.2.2",
+    "otpauth": "^9.5.1",
     "prisma": "^6.19.2",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-signature-canvas": "^1.1.0-alpha.2",
