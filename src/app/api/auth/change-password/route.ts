@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { validatePassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -11,6 +12,11 @@ export async function POST(req: NextRequest) {
 
   if (!currentPassword || !newPassword) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  const pwError = validatePassword(newPassword);
+  if (pwError) {
+    return NextResponse.json({ error: pwError }, { status: 400 });
   }
 
   // Fetch stored password hash

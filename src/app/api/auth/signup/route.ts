@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { supabase } from "@/lib/supabase";
 import { createToken } from "@/lib/auth";
+import { validatePassword } from "@/lib/password";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return NextResponse.json({ error: pwError }, { status: 400 });
     }
 
     // Admin role cannot be self-assigned via signup
@@ -51,7 +57,7 @@ export async function POST(req: NextRequest) {
     if (error || !user) {
       console.error("Signup insert error:", error);
       return NextResponse.json(
-        { error: "Internal server error", detail: error?.message },
+        { error: "Internal server error" },
         { status: 500 }
       );
     }
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
     const error = err as Error & { code?: string; meta?: unknown };
     console.error("Signup error:", error.message, error.code, error.meta);
     return NextResponse.json(
-      { error: "Internal server error", detail: error.message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
