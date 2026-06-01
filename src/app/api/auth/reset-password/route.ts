@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
+import { validatePassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
   const { token, password } = await req.json();
@@ -8,8 +9,9 @@ export async function POST(req: NextRequest) {
   if (!token || typeof token !== "string") {
     return NextResponse.json({ error: "Invalid or expired reset link" }, { status: 400 });
   }
-  if (!password || typeof password !== "string") {
-    return NextResponse.json({ error: "Password is required" }, { status: 400 });
+  const pwError = validatePassword(password);
+  if (pwError) {
+    return NextResponse.json({ error: pwError }, { status: 400 });
   }
 
   const now = new Date().toISOString();

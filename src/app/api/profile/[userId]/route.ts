@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { pickProfileFields } from "@/lib/profile-fields";
 
 export async function GET(
   _req: NextRequest,
@@ -103,13 +104,10 @@ export async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-
-  // Remove fields that should not be set by the client
-  delete body.id;
-  delete body.userId;
-  delete body.createdAt;
-  delete body.updatedAt;
+  const raw = await req.json();
+  // Whitelist editable columns — never spread arbitrary client keys into
+  // the DB write (mass-assignment guard).
+  const body = pickProfileFields(raw);
 
   // Check if profile exists
   const { data: existing } = await supabase

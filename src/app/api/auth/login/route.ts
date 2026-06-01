@@ -46,9 +46,10 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err: unknown) {
     const error = err as Error & { code?: string; meta?: unknown };
+    // Log details server-side; never leak DB/internal messages to clients.
     console.error("Login error:", error.message, error.code, error.meta);
     return NextResponse.json(
-      { error: "Internal server error", detail: error.message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
