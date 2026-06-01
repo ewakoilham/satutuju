@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await syncTallySubmissions();
+    // Incremental: stop at the first already-synced submission so a
+    // steady-state tick is one Tally page + one batched existence check.
+    const result = await syncTallySubmissions({ incremental: true });
     // Log so Vercel function logs show the outcome of each tick.
     console.log(
       `[tally-sync] synced ${result.total} total / created ${result.created} / updated ${result.updated} / skipped ${result.skipped} / errors ${result.errors.length}`,
