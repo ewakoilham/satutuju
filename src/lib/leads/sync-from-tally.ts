@@ -6,7 +6,8 @@ import { newLeadId, newStageHistoryId } from "@/lib/leads/ids";
 import { completeStepByTrigger, seedStepStatusesForLead } from "@/lib/leads/step-helpers";
 import { MENTORS } from "@/lib/mentors";
 import {
-  fetchAllEnrichedSubmissions,
+  listSubmissions,
+  enrichSubmission,
   pickField,
   pickFieldByType,
   type EnrichedSubmission,
@@ -88,7 +89,15 @@ function parseSubmission(sub: EnrichedSubmission): ParsedFields {
   };
 }
 
-async function ingestSubmission(sub: EnrichedSubmission): Promise<
+/**
+ * Upsert one submission. The caller supplies `existingLeadId` (from a
+ * batched existence check) so we don't pay a per-row SELECT here — pass
+ * `null` for a brand-new submission, or the existing Lead id to update.
+ */
+async function ingestSubmission(
+  sub: EnrichedSubmission,
+  existingLeadId: string | null,
+): Promise<
   | { action: "created"; leadId: string }
   | { action: "updated"; leadId: string }
   | { action: "skipped"; reason: string }
@@ -131,20 +140,13 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
     updatedAt: now,
   };
 
-  const { data: existing, error: lookupErr } = await supabase
-    .from("Lead")
-    .select("id")
-    .eq("tallySubmissionId", tallySubmissionId)
-    .maybeSingle();
-  if (lookupErr) return { action: "error", error: lookupErr.message };
-
-  if (existing) {
+  if (existingLeadId) {
     const { error: updErr } = await supabase
       .from("Lead")
       .update(baseFields)
-      .eq("id", existing.id);
+      .eq("id", existingLeadId);
     if (updErr) return { action: "error", error: updErr.message };
-    return { action: "updated", leadId: existing.id };
+    return { action: "updated", leadId: existingLeadId };
   }
 
   const id = newLeadId();
@@ -184,28 +186,88 @@ async function ingestSubmission(sub: EnrichedSubmission): Promise<
   return { action: "created", leadId: id };
 }
 
-export async function syncTallySubmissions(): Promise<SyncResult> {
-  const submissions = await fetchAllEnrichedSubmissions();
-  const result: SyncResult = {
-    total: submissions.length,
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    errors: [],
-  };
+/**
+ * Pull submissions from Tally and upsert them into the Lead table.
+ *
+ * Tally returns submissions newest-first. In `incremental` mode (used by
+ * the every-N-minutes cron) we walk pages from the top and STOP at the
+ * first submission already in the DB — everything older is already
+ * ingested, so there's nothing to do. This turns a steady-state run into
+ * a single Tally page + a single batched existence check (no work when
+ * nothing new came in), instead of re-fetching and re-writing every lead.
+ *
+ * In full mode (the admin "Sync" button) we walk every page and re-upsert
+ * all rows — useful for back-filling re-classification after the matching
+ * logic changes. Either way the per-page existence check is a single
+ * batched `.in(...)` query rather than one SELECT per submission.
+ */
+export async function syncTallySubmissions(
+  opts: { incremental?: boolean } = {},
+): Promise<SyncResult> {
+  const incremental = opts.incremental ?? false;
+  const result: SyncResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
 
-  for (const sub of submissions) {
+  const limit = 50;
+  const MAX_PAGES = 50;
+  let page = 1;
+  let stop = false;
+
+  while (page <= MAX_PAGES && !stop) {
+    let listing;
     try {
-      const r = await ingestSubmission(sub);
-      switch (r.action) {
-        case "created": result.created++; break;
-        case "updated": result.updated++; break;
-        case "skipped": result.skipped++; break;
-        case "error":   result.errors.push(`${sub.id}: ${r.error}`); break;
-      }
+      listing = await listSubmissions({ page, limit });
     } catch (err) {
-      result.errors.push(`${sub.id}: ${err instanceof Error ? err.message : String(err)}`);
+      result.errors.push(`page ${page}: ${err instanceof Error ? err.message : String(err)}`);
+      break;
     }
+    if (listing.submissions.length === 0) break;
+
+    const enriched = listing.submissions.map((s) => enrichSubmission(s, listing.questions));
+    result.total += enriched.length;
+
+    // Batched existence check: one query for the whole page instead of
+    // one SELECT per submission.
+    const ids = enriched.map((e) => e.id);
+    const { data: existingRows, error: existErr } = await supabase
+      .from("Lead")
+      .select("id, tallySubmissionId")
+      .in("tallySubmissionId", ids);
+    if (existErr) {
+      result.errors.push(`page ${page} existence check: ${existErr.message}`);
+      break;
+    }
+    const existingByTally = new Map<string, string>();
+    for (const row of existingRows ?? []) {
+      existingByTally.set(row.tallySubmissionId as string, row.id as string);
+    }
+
+    for (const sub of enriched) {
+      const existingLeadId = existingByTally.get(sub.id) ?? null;
+
+      // Incremental stop condition: the first already-known submission
+      // means every later (older) submission is known too.
+      if (incremental && existingLeadId) {
+        result.skipped++;
+        stop = true;
+        break;
+      }
+
+      try {
+        const r = await ingestSubmission(sub, existingLeadId);
+        switch (r.action) {
+          case "created": result.created++; break;
+          case "updated": result.updated++; break;
+          case "skipped": result.skipped++; break;
+          case "error":   result.errors.push(`${sub.id}: ${r.error}`); break;
+        }
+      } catch (err) {
+        result.errors.push(`${sub.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    if (listing.submissions.length < limit) break;
+    if (listing.hasMore === false) break;
+    page++;
   }
 
   return result;
