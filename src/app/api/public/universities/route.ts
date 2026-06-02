@@ -55,6 +55,44 @@ const ALL_GROUPED = Object.values(REGION_COUNTRIES).flat();
 const DEFAULT_LIMIT = 60;
 const MAX_LIMIT = 200;
 
+/** Clean a raw university name for PUBLIC display only (source JSON is left
+ *  untouched): collapse newlines/whitespace and strip stray leading/trailing
+ *  punctuation like a dangling "-" or ",". */
+function tidyName(raw: string): string {
+  return String(raw ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[\s\-–—,:;/(]+$/u, "")
+    .replace(/^[\s\-–—,:;)]+/u, "")
+    .trim();
+}
+
+/** Collapse rows that are the same university (same name + country) into one
+ *  public entry. The source file keeps every row (distinct agency/commission
+ *  data); this dedupe is purely for the public list so a campus shows once.
+ *  Prefers a non-blank website and shows no specific level badge when a
+ *  campus spans multiple programs or is unrestricted. */
+function dedupe(rows: PublicUniversity[]): PublicUniversity[] {
+  const byKey = new Map<string, PublicUniversity & { _levels: Set<string> }>();
+  for (const u of rows) {
+    const key = `${u.name.toLowerCase()}||${u.country.toLowerCase()}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { ...u, _levels: new Set([u.degreeLevel].filter(Boolean)) });
+    } else {
+      existing._levels.add(u.degreeLevel);
+      if (!existing.website && u.website) existing.website = u.website;
+    }
+  }
+  const out: PublicUniversity[] = [];
+  for (const e of byKey.values()) {
+    const levels = [...e._levels].filter((l) => l && l !== "All");
+    const degreeLevel = levels.length === 1 ? levels[0] : "All";
+    out.push({ id: e.id, name: e.name, country: e.country, degreeLevel, website: e.website });
+  }
+  return out;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").toLowerCase().trim();
@@ -81,10 +119,10 @@ export async function GET(req: NextRequest) {
 
   let results: PublicUniversity[] = ALL_UNIVERSITIES.map((u) => ({
     id: u.id,
-    name: u.name,
+    name: tidyName(u.name),
     country: u.country,
     degreeLevel: overrideMap[u.id] ?? u.degreeLevel,
-    website: u.website,
+    website: (u.website ?? "").trim(),
   }));
 
   if (region && REGION_COUNTRIES[region]) {
@@ -112,6 +150,10 @@ export async function GET(req: NextRequest) {
       return false;
     });
   }
+
+  // Collapse same-campus duplicate rows for the public list (after filtering,
+  // so a level/country filter still matches any underlying row).
+  results = dedupe(results);
 
   const total = results.length;
   const page = results
