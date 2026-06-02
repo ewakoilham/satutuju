@@ -17,6 +17,7 @@ export default function Footer() {
       title: t.columns.program,
       links: [
         { label: t.links.mentorship, href: "/signup" },
+        { label: "Daftar Universitas", href: "/universities" },
         { label: t.links.community, href: "#" },
       ],
     },
