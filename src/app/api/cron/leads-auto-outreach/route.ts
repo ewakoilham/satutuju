@@ -24,9 +24,15 @@ const DELAY_MS = 250;
 const MAX_PER_RUN = 50;
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
-  if (expected && auth !== expected) {
+  // Fail closed: this endpoint sends real outreach emails. If CRON_SECRET
+  // is unset we must refuse, not run unauthenticated (which would let
+  // anyone trigger sends and burn the email quota).
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    console.error("[leads-auto-outreach] CRON_SECRET not set");
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "satutuju-prod-2026-xK9mP3qR7vL2nF8j"
-);
+// Fail closed: never fall back to a hardcoded key. Must match the secret
+// used in src/lib/auth.ts to sign tokens; a known fallback here would let
+// anyone forge a valid admin JWT.
+const rawJwtSecret = process.env.JWT_SECRET;
+if (!rawJwtSecret) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+const JWT_SECRET = new TextEncoder().encode(rawJwtSecret);
 
 const SUPABASE_URL   = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY!;
