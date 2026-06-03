@@ -4166,3 +4166,18 @@
   list-style: disc;
 }
 .dashboard-shell .rs-detail-cols li::marker { color: var(--primary, #3958b3); }
+
+/* ── Rencana Sesi: mentee accept bar ───────────────────────────────────── */
+.dashboard-shell .rs-accept-bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--brand-blue-soft, #c6ddef);
+  border: 1px solid var(--primary-200, #b9c9eb);
+  border-radius: var(--radius-xl, 1rem);
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.dashboard-shell .rs-accept-text {
+  flex: 1; min-width: 220px; font-size: 13.5px; line-height: 1.5;
+  color: var(--primary-900, #111d42);
+}
+.dashboard-shell .rs-accept-bar .db-btn { white-space: nowrap; }
+.dashboard-shell .rs-accept-done { font-size: 13.5px; font-weight: 600; color: var(--success, #10b981); }

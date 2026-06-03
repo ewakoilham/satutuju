@@ -65,6 +65,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   // First-time "how to use the planner" nudge. Read from localStorage in an
   // effect (not at init) to avoid an SSR/hydration mismatch.
@@ -286,6 +287,20 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     }
   }
 
+  // Mentee accepts the finalized plan → unlocks sessions on the mentor side.
+  async function handleAccept() {
+    setAccepting(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/session-plans/${pairingId}/acknowledge`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error || "Gagal menerima rencana."); return; }
+      setPlan((cur) => (cur ? { ...cur, status: "acknowledged", acknowledgedAt: new Date().toISOString() } : cur));
+    } finally {
+      setAccepting(false);
+    }
+  }
+
   if (loading) return <SkeletonDashboard />;
   if (err && !plan) {
     return (
@@ -400,6 +415,23 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           <div className="min-note">minimal {PLAN_MIN_SESSIONS}</div>
         </div>
       </div>
+
+      {isMentee && (
+        <div className="rs-accept-bar">
+          {plan.status === "acknowledged" ? (
+            <span className="rs-accept-done">✓ Kamu sudah menerima rencana sesi ini. Mentor bisa mulai menjadwalkan sesi.</span>
+          ) : (
+            <>
+              <span className="rs-accept-text">
+                Kalau rencana sesi ini sudah oke buat kamu, terima — supaya mentor bisa mulai menjadwalkan sesinya.
+              </span>
+              <button type="button" className="db-btn db-btn-primary" onClick={handleAccept} disabled={accepting}>
+                {accepting ? "Memproses…" : "Terima rencana sesi"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="rs-split">
         <div className="rs-main">

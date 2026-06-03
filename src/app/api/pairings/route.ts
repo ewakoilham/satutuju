@@ -100,6 +100,18 @@ export async function GET() {
     }
   }
 
+  // Per-pairing session-plan status — drives the mentor card state
+  // (propose → menunggu mentee → unlocked) and the mentee's read/accept view.
+  const pairingIds = (pairings || []).map((p: Record<string, unknown>) => p.id as string);
+  const planStatusByPairing: Record<string, string> = {};
+  if (pairingIds.length > 0) {
+    const { data: plans } = await supabase
+      .from("SessionPlan")
+      .select("pairingId, status")
+      .in("pairingId", pairingIds);
+    for (const pl of plans || []) planStatusByPairing[pl.pairingId as string] = pl.status as string;
+  }
+
   // Sort sessions by sessionNum and compute _count equivalents
   const result = (pairings || []).map((p: Record<string, unknown>) => {
     const sessions = Array.isArray(p.sessions)
@@ -118,6 +130,7 @@ export async function GET() {
       sessions,
       _count: { documents: documentsCount, tasks: tasksCount },
       menteeProfile: menteeProfiles[p.menteeId as string] || null,
+      sessionPlanStatus: planStatusByPairing[p.id as string] || null,
     };
   });
 
