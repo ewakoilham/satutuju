@@ -15,12 +15,19 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String
+  password  String? // Nullable: Google-OAuth-only users won't have a password.
   name      String
   role      String   @default("mentee") // "admin" | "mentor" | "mentee"
   avatar                String?
   resetToken            String?
   resetTokenExpiresAt   DateTime?
+
+  // v5 auth additions
+  googleId         String?   @unique // Google `sub` claim — set on first OAuth login
+  isActivated      Boolean   @default(true) // Pre-v5 users grandfather in as activated
+  twoFactorEnabled Boolean   @default(false)
+  invitedAt        DateTime?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -644,4 +651,32 @@ model GoogleCalendarAuth {
   lastSyncAt       DateTime?                    // last successful events.list run
   lastSyncToken    String?                      // Google's sync token for incremental fetch
   updatedAt        DateTime  @updatedAt
+}
+
+// ──────────────────────────────────────────────
+// v5 AUTH: invites + Google connection
+// ──────────────────────────────────────────────
+
+model InviteToken {
+  id        String    @id @default(cuid())
+  email     String
+  role      String // "mentor" | "mentee" | "admin"
+  invitedBy String // userId of the admin who issued the invite
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+model GoogleConnection {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  googleSub    String // Google `sub` claim — sanity check on re-consent
+  refreshToken String // plaintext for now; rotate via re-consent if leaked
+  scopes       String // space-separated scope list as granted by Google
+  expiresAt    DateTime? // bookkeeping for the last access-token expiry
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
