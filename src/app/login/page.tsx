@@ -1,316 +1,178 @@
 "use client";
 
-/** Login page — v5 redesign.
- *
- *  States (managed in `view`):
- *    "default"     fresh form
- *    "wrong"       last login attempt failed (anti-enumeration copy)
- *    "forgot"      modal overlay for sending reset link
- *
- *  Google button kicks off /api/auth/google-login (302 → Google → callback).
- *  Email + kunci form posts to /api/auth/login; on 200 it redirects to
- *  /dashboard, on any 4xx it shows the anti-enumeration "wrong" copy. */
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import Logo from "@/components/ui/Logo";
+import Icon from "@/components/ui/Icon";
 
-import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import "./login.css";
-
-type View = "default" | "wrong" | "forgot";
-
-// Wrapped in <Suspense> by the default export below — useSearchParams()
-// requires a suspense boundary or the static build fails to prerender.
-function LoginPageInner() {
+export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const initialErr = params.get("err");
-
-  const [view, setView] = useState<View>("default");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotSent, setForgotSent] = useState(false);
-  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Surface server-side redirect errors via ?err= once.
+  // Surface errors bounced back from the Google login callback (?err=...).
+  // Read from the URL client-side so we don't need useSearchParams (which
+  // would force a Suspense boundary / break the static build).
   useEffect(() => {
-    if (!initialErr) return;
-    const map: Record<string, string> = {
-      "google-not-configured": "Login Google belum dikonfigurasi. Coba pakai email + kunci.",
-      "oauth-state": "Sesi OAuth tidak valid. Coba mulai lagi dari awal.",
-      "google-exchange": "Gagal verifikasi Google. Coba lagi.",
-      "email-unverified": "Email Google kamu belum diverifikasi.",
-      "user-create": "Gagal membuat akun. Coba lagi atau hubungi admin.",
+    const err = new URLSearchParams(window.location.search).get("err");
+    if (!err) return;
+    const messages: Record<string, string> = {
+      "google-not-configured": "Login Google belum tersedia. Gunakan email + kunci.",
+      "oauth-state": "Sesi login Google kedaluwarsa. Coba lagi.",
+      "google-exchange": "Gagal memverifikasi akun Google. Coba lagi.",
+      "email-unverified": "Email Google kamu belum terverifikasi.",
+      "user-create": "Gagal membuat akun. Hubungi admin.",
     };
-    setErrMsg(map[initialErr] || "Terjadi kesalahan. Coba lagi.");
-  }, [initialErr]);
+    setError(messages[err] || "Login Google gagal. Coba lagi.");
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setErrMsg(null);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
 
-      if (!res.ok) {
-        setView("wrong");
-        setErrMsg(data.error || "Email atau kunci salah.");
-        return;
-      }
-      router.push("/dashboard");
-    } finally {
-      setLoading(false);
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(data.error || "Login failed");
+      return;
     }
-  }
 
-  async function handleForgotSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
-      });
-    } finally {
-      setLoading(false);
-      setForgotSent(true);
-    }
+    router.push("/dashboard");
   }
-
-  const showWrongAlert = view === "wrong";
 
   return (
-    <div className="lh-shell">
-      <div className="lh-backdrop">
-        <span className="lh-blob lh-blob-1" />
-        <span className="lh-blob lh-blob-2" />
-        <span className="lh-blob lh-blob-3" />
+    <div className="force-light min-h-screen flex items-center justify-center bg-brand-blue-soft relative overflow-hidden px-4 py-12">
+      {/* Decorative illustrations */}
+      <Image src="/illustrations/puzzle-piece.png" alt="" width={140} height={150} className="absolute top-12 right-16 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/open-book.png" alt="" width={120} height={120} className="absolute bottom-20 left-12 opacity-15 pointer-events-none" />
+      <Image src="/illustrations/globe.png" alt="" width={100} height={100} className="absolute bottom-12 right-20 opacity-10 pointer-events-none" />
 
-        <div className="lh-frame">
-          <div className="lh-card">
-            <div className="lh-card-head">
-              <div className="lh-logo">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                  <rect width="40" height="40" rx="9" fill="#3958b3" />
-                  <path d="M12 14h16M12 20h16M12 26h10" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-                </svg>
-                <span className="lh-logo-word">satu tuju</span>
-              </div>
-              <span className="lh-gated">khusus mentor &amp; mentee</span>
+      <div className="relative w-full max-w-md">
+        <div className="text-center mb-6">
+          <Logo variant="main" size="md" className="mx-auto mb-2" />
+          <p className="text-sm text-primary-600/70">Mentorship Platform</p>
+        </div>
+
+        <div className="card shadow-[var(--shadow-lg)] border-brand-lavender/30 p-8 rounded-2xl bg-white/95 backdrop-blur-sm">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-blue-soft rounded-2xl mb-3">
+              <Icon name="user" size={22} className="text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground font-[family-name:var(--font-heading)]">
+              Sign In
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
+          </div>
+
+          {error && (
+            <div className="bg-danger-light text-danger text-sm px-4 py-2.5 rounded-xl mb-4 flex items-center gap-2 animate-slide-in-up">
+              <Icon name="x" size={14} />
+              {error}
+            </div>
+          )}
+
+          {/* Google sign-in */}
+          <a
+            href="/api/auth/google-login"
+            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border border-border bg-white hover:bg-surface-elevated transition font-medium text-sm text-foreground"
+          >
+            <GoogleMark />
+            Lanjut dengan Google
+          </a>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-gray-400 font-medium tracking-wide">ATAU</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="input-field"
+                placeholder="you@example.com"
+              />
             </div>
 
-            <h1 className="lh-title">
-              Halo lagi,<br />
-              <span className="lh-title-italic">kak.</span>
-            </h1>
-            <p className="lh-sub">Masuk dengan akun yang sudah disiapkan tim setelah seleksi.</p>
-
-            <a className="lh-google" href="/api/auth/google-login">
-              <GoogleMark />
-              <span>Lanjut dengan Google</span>
-            </a>
-            <div className="lh-divider"><span>atau</span></div>
-
-            {showWrongAlert && (
-              <div className="lh-alert lh-alert-warn">
-                <strong>Email atau kunci salah.</strong>
-                <p>Pastikan kamu pakai email yang sama dengan saat seleksi.</p>
-                <small>Pesan ini sama untuk semua kasus, supaya akun member tidak bisa ditebak.</small>
-              </div>
-            )}
-            {!showWrongAlert && errMsg && (
-              <div className="lh-alert lh-alert-warn">
-                <strong>{errMsg}</strong>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="lh-form" noValidate>
-              <label className="lh-field">
-                <span className="lh-field-label">Email</span>
-                <div className={`lh-input ${showWrongAlert ? "lh-input-error" : ""} ${loading ? "lh-input-disabled" : ""}`}>
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    placeholder="kamu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Password
               </label>
-
-              <label className="lh-field">
-                <span className="lh-field-label">Kunci</span>
-                <div className={`lh-input ${showWrongAlert ? "lh-input-error" : ""} ${loading ? "lh-input-disabled" : ""}`}>
-                  <input
-                    type={showPw ? "text" : "password"}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="lh-eye"
-                    onClick={() => setShowPw((x) => !x)}
-                    aria-label={showPw ? "Sembunyikan kunci" : "Tampilkan kunci"}
-                  >
-                    <EyeIcon hidden={showPw} />
-                  </button>
-                </div>
-              </label>
-
-              <div className="lh-forgot">
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="input-field pr-11"
+                  placeholder="Enter your password"
+                />
                 <button
                   type="button"
-                  onClick={() => { setForgotEmail(email); setForgotSent(false); setView("forgot"); }}
-                  className="lh-link-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition"
                 >
-                  Lupa kunci?
+                  <Icon name={showPassword ? "eye-off" : "eye"} size={18} />
                 </button>
               </div>
-
-              <button
-                type="submit"
-                className="lh-cta"
-                disabled={loading}
-              >
-                {loading ? "Memproses…" : "Masuk →"}
-              </button>
-            </form>
-
-            <div className="lh-foot-divider" />
-            <div className="lh-apply">
-              <span>Belum punya akun?</span>
-              <a href="https://satutuju.id" target="_blank" rel="noopener noreferrer">
-                Ikuti seleksi mentor / mentee →
-              </a>
-            </div>
-            <div className="lh-foot-note">seleksi → wawancara → undangan via email</div>
-          </div>
-
-          <aside className="lh-side">
-            <div className="lh-side-quote">
-              <span className="lh-side-eyebrow">Komunitas</span>
-              <p className="lh-side-text">
-                <span className="lh-quote-mark">&ldquo;</span>
-                Mentormu sudah pernah berdiri di posisi kamu. Login ini cuma langkah pertama.
-                <span className="lh-quote-mark">&rdquo;</span>
-              </p>
-              <div className="lh-side-author">
-                <div className="lh-side-av lh-side-av-c2">RY</div>
-                <div>
-                  <div className="lh-side-name">Rey Pradana</div>
-                  <div className="lh-side-meta">mentor · TU Delft &apos;23</div>
-                </div>
+              <div className="text-right mt-1">
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
-            <div className="lh-side-stats">
-              {[["120", "mentor"], ["840", "mentee"], ["45", "kampus"]].map(([n, l]) => (
-                <div key={l} className="lh-stat">
-                  <div className="lh-stat-num">{n}</div>
-                  <div className="lh-stat-lbl">{l}</div>
-                </div>
-              ))}
-            </div>
-          </aside>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3 rounded-xl text-base mt-2"
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-400 mt-6">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="text-primary font-semibold hover:underline"
+            >
+              Sign Up
+            </Link>
+          </p>
         </div>
       </div>
-
-      {view === "forgot" && (
-        <div className="lh-modal-overlay" onClick={() => setView("default")}>
-          <div className="lh-modal" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="lh-modal-close" onClick={() => setView("default")}>×</button>
-            <h2 className="lh-modal-title">Lupa kunci?</h2>
-            {!forgotSent ? (
-              <>
-                <p className="lh-modal-sub">
-                  Masukkan email kamu — kalau terdaftar, kami kirim tautan reset.
-                  Pesan ini sama untuk semua kasus, supaya akun member tidak bisa ditebak.
-                </p>
-                <form onSubmit={handleForgotSubmit} className="lh-form">
-                  <label className="lh-field">
-                    <span className="lh-field-label">Email</span>
-                    <div className="lh-input">
-                      <input
-                        type="email"
-                        autoComplete="email"
-                        placeholder="kamu@email.com"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </label>
-                  <button type="submit" className="lh-cta" disabled={loading}>
-                    {loading ? "Mengirim…" : "Kirim tautan reset →"}
-                  </button>
-                </form>
-              </>
-            ) : (
-              <div className="lh-alert lh-alert-info" role="status">
-                <strong>Cek email kamu.</strong>
-                <p>
-                  Kalau email <b>{forgotEmail}</b> terdaftar di Satu Tuju, tautan reset
-                  sudah kami kirim. Tautan berlaku 24 jam dan hanya bisa dipakai sekali.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
+/** Multicolor Google "G" mark for the sign-in button. */
 function GoogleMark() {
-  // Full-colour Google "G" mark — required by Google's branding terms.
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18">
-      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.56 2.69-3.87 2.69-6.62z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.46-.8 5.95-2.18l-2.9-2.26c-.8.55-1.84.87-3.05.87a5.27 5.27 0 0 1-4.97-3.66H.99v2.3A9 9 0 0 0 9 18z" />
-      <path fill="#FBBC05" d="M4.03 10.77a5.4 5.4 0 0 1 0-3.45V5.02H.99a9 9 0 0 0 0 7.96l3.04-2.21z" />
-      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .99 5.02L4.03 7.32A5.27 5.27 0 0 1 9 3.58z" />
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
     </svg>
-  );
-}
-
-/** Eye toggle icon for password show/hide. `hidden=true` = password is
- *  currently visible, show the crossed-out eye. */
-function EyeIcon({ hidden }: { hidden: boolean }) {
-  if (hidden) {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-        <line x1="2" y1="2" x2="22" y2="22" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginPageInner />
-    </Suspense>
   );
 }
