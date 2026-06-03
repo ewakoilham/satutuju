@@ -41,6 +41,9 @@ export async function POST(
   const file = formData.get("file") as File;
   const category = formData.get("category") as string;
   const name = formData.get("name") as string;
+  const sessionNumRaw = formData.get("sessionNum");
+  const sessionNum =
+    sessionNumRaw != null && sessionNumRaw !== "" ? Number(sessionNumRaw) : null;
 
   if (!file || !category || !name) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -91,6 +94,7 @@ export async function POST(
       filePath: urlData.publicUrl,
       fileSize: file.size,
       mimeType: file.type,
+      sessionNum,
       uploadedBy: user.userId,
       version: existing ? existing.version + 1 : 1,
       createdAt: now,

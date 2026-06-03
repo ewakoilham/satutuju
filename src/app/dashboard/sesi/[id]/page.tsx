@@ -62,6 +62,29 @@ interface Pairing {
   menteeProfile?: { intendedStudyProgram?: string; preferredDestinations?: string } | null;
 }
 
+interface TaskRow {
+  id: string;
+  pairingId: string;
+  sessionNum?: number | null;
+  title: string;
+  description?: string | null;
+  status: string; // "pending" | "in_progress" | "completed" | "overdue"
+  dueDate?: string | null;
+  completedAt?: string | null;
+}
+
+interface DocRow {
+  id: string;
+  pairingId: string;
+  sessionNum?: number | null;
+  name: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  category: string;
+  createdAt?: string | null;
+}
+
 type SavingState = "idle" | "saving" | "saved" | "error";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
@@ -235,6 +258,14 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const [noteOpen, setNoteOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
+  // Per-session action items (Task) + attachments (Document).
+  const [allTasks, setAllTasks] = useState<TaskRow[]>([]);
+  const [allDocs, setAllDocs] = useState<DocRow[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const docFileRef = useRef<HTMLInputElement | null>(null);
+
   // Tick once every 30s so the countdown + "tersimpan otomatis" labels stay fresh.
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
@@ -302,6 +333,25 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       break;
     }
   }
+
+  // Load per-session action items + attachments once the pairing is known.
+  const loadPairingId = found?.pairing.id ?? null;
+  useEffect(() => {
+    if (!loadPairingId) return;
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/pairings/${loadPairingId}/tasks`).then((r) => (r.ok ? r.json() : { tasks: [] })).catch(() => ({ tasks: [] })),
+      fetch(`/api/pairings/${loadPairingId}/documents`).then((r) => (r.ok ? r.json() : { documents: [] })).catch(() => ({ documents: [] })),
+    ]).then(([t, d]) => {
+      if (!cancelled) {
+        setAllTasks((t.tasks as TaskRow[]) || []);
+        setAllDocs((d.documents as DocRow[]) || []);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadPairingId]);
 
   // Effective draft — derived during render so we don't setState in an effect.
   const effectiveDraft: DraftFields | null = draftEdits ?? (found ? fromSession(found.session) : null);
@@ -559,6 +609,64 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
+  // ── Action items (Task) + attachments (Document) ─────────────
+  async function addTask() {
+    const title = newTaskTitle.trim();
+    if (!found || !title || taskBusy) return;
+    setTaskBusy(true);
+    try {
+      const res = await fetch(`/api/pairings/${found.pairing.id}/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title, sessionNum: found.session.sessionNum }),
+      });
+      const data = await res.json();
+      if (res.ok && data.task) {
+        setAllTasks((prev) => [data.task as TaskRow, ...prev]);
+        setNewTaskTitle("");
+      }
+    } catch (e) {
+      console.warn("[sesi] addTask failed", e);
+    } finally {
+      setTaskBusy(false);
+    }
+  }
+
+  async function toggleTask(task: TaskRow) {
+    const nextStatus = task.status === "completed" ? "pending" : "completed";
+    setAllTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)));
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    } catch (e) {
+      console.warn("[sesi] toggleTask failed", e);
+    }
+  }
+
+  async function handleDocFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !found || uploadBusy) return;
+    setUploadBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("name", file.name.replace(/\.[^.]+$/, ""));
+      fd.append("category", "other");
+      fd.append("sessionNum", String(found.session.sessionNum));
+      const res = await fetch(`/api/pairings/${found.pairing.id}/documents`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.document) setAllDocs((prev) => [data.document as DocRow, ...prev]);
+    } catch (err) {
+      console.warn("[sesi] doc upload failed", err);
+    } finally {
+      setUploadBusy(false);
+      if (docFileRef.current) docFileRef.current.value = "";
+    }
+  }
+
   /* ── Loading & error ─────────────────────────────────────────── */
 
   if (loading) return <SkeletonDashboard />;
@@ -617,6 +725,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const summaryParas = (draft.summaryNotes || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const agendaRows = AGENDA_BY_PHASE[session.phase] || AGENDA_BY_PHASE.planning;
   const moodInfo = draft.menteeEnergy != null ? MOODS.find((m) => m.value === draft.menteeEnergy) : null;
+
+  // Action items + attachments scoped to this session.
+  const sessionTasks = allTasks.filter((t) => t.sessionNum === session.sessionNum);
+  const sessionDocs = allDocs.filter((d) => d.sessionNum === session.sessionNum);
 
   // ── Hero status line + action buttons (status-aware) ─────────
   const heroStatus =
@@ -768,6 +880,90 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     </section>
   );
 
+  // ── Action items ("Yang {mentee} kerjakan") ──────────────────
+  const actionItemsCard = (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Yang {menteeFirst} kerjakan</h2>
+        <span className="stamp">action items</span>
+      </div>
+      <div className="se-list">
+        {sessionTasks.length === 0 && !isMentorRole && (
+          <div className="muted" style={{ padding: 4 }}>Belum ada action item untuk sesi ini.</div>
+        )}
+        {sessionTasks.map((t) => {
+          const done = t.status === "completed";
+          return (
+            <div key={t.id} className={`se-ai-row ${done ? "done" : ""}`}>
+              <button
+                type="button"
+                className={`se-prep-ic ${done ? "ok" : "todo"}`}
+                onClick={() => isMentorRole && toggleTask(t)}
+                disabled={!isMentorRole}
+                title={done ? "Tandai belum selesai" : "Tandai selesai"}
+                aria-label={t.title}
+              >
+                {done ? <IcCheck /> : ""}
+              </button>
+              <span className="se-ai-text">{t.title}</span>
+              <span className="se-ai-tag">Untuk mentee</span>
+            </div>
+          );
+        })}
+      </div>
+      {isMentorRole && (
+        <div className="se-ai-add">
+          <input
+            className="se-rf-input"
+            placeholder={`Tambah action item untuk ${menteeFirst}…`}
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTask(); } }}
+            disabled={taskBusy}
+          />
+          <button type="button" className="se-hero-btn primary" onClick={addTask} disabled={taskBusy || !newTaskTitle.trim()}>
+            {taskBusy ? "Menambah…" : "Tambah"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+
+  // ── Lampiran (attachments) ───────────────────────────────────
+  const attachmentsCard = (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Lampiran</h2>
+        {isMentorRole && (
+          <button type="button" className="se-prep-link" onClick={() => docFileRef.current?.click()} disabled={uploadBusy}>
+            {uploadBusy ? "Mengunggah…" : "+ Tambah file"}
+          </button>
+        )}
+      </div>
+      <input ref={docFileRef} type="file" style={{ display: "none" }} onChange={handleDocFile} />
+      {sessionDocs.length === 0 ? (
+        <div className="muted" style={{ padding: 4 }}>Tidak ada lampiran di sesi ini.</div>
+      ) : (
+        <div className="se-files">
+          {sessionDocs.map((d) => (
+            <div key={d.id} className="se-file-row">
+              <span className="se-file-ico">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              </span>
+              <div className="se-file-info">
+                <div className="se-file-name">{d.name}</div>
+                <div className="se-file-meta">{(d.fileSize / 1024).toFixed(0)} KB{d.createdAt ? ` · ${fmtDayShort(new Date(d.createdAt))}` : ""}</div>
+              </div>
+              <a className="se-file-dl" href={d.filePath} target="_blank" rel="noopener noreferrer" title="Unduh">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
   // ── Body variants ────────────────────────────────────────────
   const doneBody = (
     <>
@@ -797,6 +993,9 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           </div>
         </section>
       )}
+
+      {(sessionTasks.length > 0 || isMentorRole) && actionItemsCard}
+      {(sessionDocs.length > 0 || isMentorRole) && attachmentsCard}
 
       {isMentorRole && (
         <div className="se-foot-actions">
@@ -848,6 +1047,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       </section>
 
       {isMentorRole && reportForm}
+      {isMentorRole && actionItemsCard}
     </>
   );
 
