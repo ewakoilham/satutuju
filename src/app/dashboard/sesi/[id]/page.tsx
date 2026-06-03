@@ -1209,6 +1209,72 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               );
             })}
           </div>
+
+          {/* ── Mentee-wide overview: all documents + action items ──── */}
+          {!isMenteeRole && (
+            <>
+              <div className="se-rail-head" style={{ marginTop: 20 }}>
+                <h3>Dokumen mentee</h3>
+                <span className="count">{allDocs.length}</span>
+              </div>
+              <div className="se-rail-list">
+                {allDocs.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "4px 2px" }}>Belum ada dokumen.</div>
+                ) : (
+                  allDocs.map((d) => (
+                    <a
+                      key={d.id}
+                      href={d.filePath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="se-rail-row"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <div className="se-rail-info">
+                        <div className="se-rail-title">{d.name}</div>
+                        <div className="se-rail-meta">
+                          {d.category}{d.sessionNum ? ` · Sesi ${d.sessionNum}` : ""}
+                        </div>
+                      </div>
+                    </a>
+                  ))
+                )}
+              </div>
+
+              <div className="se-rail-head" style={{ marginTop: 20 }}>
+                <h3>Action items</h3>
+                <span className="count">{allTasks.filter((t) => t.status !== "completed").length}</span>
+              </div>
+              <div className="se-rail-list">
+                {allTasks.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "4px 2px" }}>Belum ada action item.</div>
+                ) : (
+                  [...allTasks]
+                    .sort(
+                      (a, b) =>
+                        Number(a.status === "completed") - Number(b.status === "completed") ||
+                        (a.sessionNum ?? 0) - (b.sessionNum ?? 0),
+                    )
+                    .map((t) => {
+                      const done = t.status === "completed";
+                      return (
+                        <label key={t.id} className="se-rail-row" style={{ cursor: "pointer", alignItems: "flex-start" }}>
+                          <input type="checkbox" checked={done} onChange={() => toggleTask(t)} style={{ marginTop: 3, cursor: "pointer", flexShrink: 0 }} />
+                          <div className="se-rail-info">
+                            <div className="se-rail-title" style={{ textDecoration: done ? "line-through" : "none", color: done ? "var(--text-muted-2)" : undefined }}>
+                              {t.title}
+                            </div>
+                            <div className="se-rail-meta">
+                              {t.sessionNum ? `Sesi ${t.sessionNum}` : "Umum"}{t.dueDate ? ` · ${fmtDayShort(new Date(t.dueDate))}` : ""}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })
+                )}
+              </div>
+            </>
+          )}
         </aside>
       </main>
 
