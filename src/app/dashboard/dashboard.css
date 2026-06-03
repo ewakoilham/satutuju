@@ -4544,3 +4544,131 @@
   .dashboard-shell .se-rail { position: static; }
   .dashboard-shell .se-hero h1 { font-size: 34px; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   Jadwal — Day / Month / Agenda views + "Slot baru" panel
+   Ported from design_handoff: Jadwal A.html
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Mode tabs: enable all four (remove disabled styling) ───────── */
+.dashboard-shell .mode-tabs button:not(.on):not([disabled]) { cursor: pointer; }
+
+/* ── Day view ──────────────────────────────────────────────────── */
+.dashboard-shell .dayv { padding: 14px 20px 18px; }
+.dashboard-shell .dayv-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 6px 6px 16px; border-bottom: 1px dashed var(--border); margin-bottom: 8px;
+}
+.dashboard-shell .dayv-date { display: flex; align-items: baseline; gap: 14px; }
+.dashboard-shell .dayv-dnum {
+  font-family: var(--font-poppins); font-weight: 800; font-size: 64px;
+  line-height: 1; letter-spacing: -0.04em; color: var(--primary);
+}
+.dashboard-shell .dayv-dname { display: flex; flex-direction: column; line-height: 1.2; }
+.dashboard-shell .dayv-dname b { font-family: var(--font-poppins); font-size: 18px; color: var(--primary-900); font-weight: 700; }
+.dashboard-shell .dayv-dname span { font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; margin-top: 2px; }
+.dashboard-shell .dayv-timeline { padding: 8px 8px 12px; }
+.dashboard-shell .dayv-row {
+  display: grid; grid-template-columns: 56px 1fr; gap: 14px;
+  align-items: stretch; min-height: 50px; border-top: 1px solid #ecf1f5;
+}
+.dashboard-shell .dayv-row:first-child { border-top: 0; }
+.dashboard-shell .dayv-hour { font-size: 11px; font-weight: 500; color: var(--text-muted-2); letter-spacing: 0.04em; padding-top: 6px; text-align: right; }
+.dashboard-shell .dayv-cells { padding: 5px 0; min-height: 40px; }
+.dashboard-shell .dayv-evt { padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: all .12s ease; margin-bottom: 4px; }
+.dashboard-shell .dayv-evt:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.dashboard-shell .dayv-evt.booked { background: var(--primary); color: #fff; }
+.dashboard-shell .dayv-evt.pending { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+.dashboard-shell .dayv-evt.available { background: var(--primary-50); color: var(--primary-700); border: 1px dashed var(--primary-300); }
+.dashboard-shell .dayv-evt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 3px; }
+.dashboard-shell .dayv-evt-head b { font-family: var(--font-poppins); font-weight: 600; font-size: 14px; }
+.dashboard-shell .dayv-evt-head span { font-size: 11px; opacity: 0.7; }
+.dashboard-shell .dayv-evt-sub { font-size: 12px; opacity: 0.85; line-height: 1.4; }
+.dashboard-shell .dayv-empty { text-align: center; color: var(--text-muted-2); font-size: 13px; padding: 40px 0; }
+
+/* ── Month view ────────────────────────────────────────────────── */
+.dashboard-shell .monv { padding: 14px 20px 18px; }
+.dashboard-shell .monv-head { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 6px; }
+.dashboard-shell .monv-head span {
+  font-family: var(--font-poppins); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted-2); padding: 4px 8px; text-align: center;
+}
+.dashboard-shell .monv-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.dashboard-shell .monv-cell {
+  min-height: 84px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px;
+  cursor: pointer; transition: all .12s ease;
+}
+.dashboard-shell .monv-cell:hover { border-color: var(--primary-200); background: var(--primary-50); }
+.dashboard-shell .monv-cell.out { opacity: 0.4; cursor: default; }
+.dashboard-shell .monv-cell.out:hover { background: var(--surface); border-color: var(--border); }
+.dashboard-shell .monv-cell.today { border-color: var(--primary); border-width: 2px; }
+.dashboard-shell .monv-cell.today .monv-num { color: var(--primary); font-weight: 700; }
+.dashboard-shell .monv-num { font-family: var(--font-poppins); font-size: 14px; font-weight: 600; color: var(--primary-900); line-height: 1; }
+.dashboard-shell .monv-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+.dashboard-shell .monv-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.dashboard-shell .monv-dot.booked { background: var(--primary); }
+.dashboard-shell .monv-dot.pending { background: #f59e0b; }
+.dashboard-shell .monv-dot.avail { background: transparent; border: 1.5px dashed var(--primary-300); }
+.dashboard-shell .monv-cnt { font-size: 10.5px; color: var(--text-muted); margin-top: auto; letter-spacing: 0.02em; }
+
+/* ── Agenda view ───────────────────────────────────────────────── */
+.dashboard-shell .agenda { padding: 14px 20px 18px; }
+.dashboard-shell .agenda-day-head {
+  display: flex; align-items: baseline; gap: 12px; padding: 16px 6px 8px;
+  border-bottom: 1px dashed var(--border); margin-bottom: 6px;
+}
+.dashboard-shell .agenda-day-head:first-child { padding-top: 6px; }
+.dashboard-shell .agenda-day-name { font-family: var(--font-poppins); font-weight: 800; font-size: 18px; color: var(--primary-900); letter-spacing: -0.01em; }
+.dashboard-shell .agenda-day-date { font-size: 12px; color: var(--text-muted); }
+.dashboard-shell .agenda-day-meta { font-size: 11px; color: var(--text-muted-2); margin-left: auto; letter-spacing: 0.04em; }
+.dashboard-shell .agenda-evt {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: all .12s ease;
+  margin-bottom: 6px; background: var(--surface); border: 1px solid var(--border);
+}
+.dashboard-shell .agenda-evt:hover { border-color: var(--primary-200); background: var(--primary-50); transform: translateX(2px); }
+.dashboard-shell .agenda-evt.booked { background: var(--primary-50); }
+.dashboard-shell .agenda-evt.pending { background: #fff7ed; border-color: #fed7aa; }
+.dashboard-shell .agenda-evt.available { background: var(--primary-50); border-style: dashed; }
+.dashboard-shell .agenda-evt-info { min-width: 0; }
+.dashboard-shell .agenda-evt-name { font-family: var(--font-poppins); font-weight: 600; font-size: 14px; color: var(--primary-900); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dashboard-shell .agenda-evt-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+.dashboard-shell .agenda-evt-time { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-family: var(--font-poppins); font-weight: 700; font-size: 16px; color: var(--primary-900); line-height: 1; flex-shrink: 0; }
+.dashboard-shell .agenda-evt-time span { font-size: 10px; font-weight: 500; color: var(--text-muted-2); letter-spacing: 0.04em; margin-top: 2px; }
+.dashboard-shell .agenda-empty { text-align: center; color: var(--text-muted-2); font-size: 13px; padding: 48px 0; }
+.dashboard-shell .agenda-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; font-family: var(--font-poppins); }
+
+/* ── "Slot baru" creation panel (in the side rail) ─────────────── */
+.dashboard-shell .slotbaru .when-pick {
+  font-family: var(--font-poppins); font-weight: 500; font-style: italic;
+  font-size: 15px; color: var(--primary); margin: 2px 0 14px;
+}
+.dashboard-shell .sb-field { margin-bottom: 14px; }
+.dashboard-shell .sb-label {
+  font-family: var(--font-poppins); font-size: 11px; font-weight: 600; color: var(--text-muted-2);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; display: block;
+}
+.dashboard-shell .sb-input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); font-family: inherit; font-size: 13px; color: var(--foreground); outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.dashboard-shell .sb-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
+.dashboard-shell .duration-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.dashboard-shell .duration-row .pill {
+  cursor: pointer; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  font-family: var(--font-poppins); border: 1px solid var(--border); background: var(--surface); color: var(--text-muted-3);
+}
+.dashboard-shell .duration-row .pill.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.dashboard-shell .recurring-row {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px;
+  background: var(--primary-50); border-radius: 8px; font-size: 12.5px; color: var(--text-muted-3); cursor: pointer;
+}
+.dashboard-shell .recurring-row .toggle { width: 36px; height: 20px; background: var(--border); border-radius: 999px; position: relative; flex-shrink: 0; transition: background .15s; }
+.dashboard-shell .recurring-row .toggle.on { background: var(--primary); }
+.dashboard-shell .recurring-row .toggle::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform .15s; }
+.dashboard-shell .recurring-row .toggle.on::after { transform: translateX(16px); }
+.dashboard-shell .sb-actions { display: flex; gap: 8px; padding-top: 16px; border-top: 1px solid #ecf1f5; margin-top: 18px; }
+.dashboard-shell .sb-actions button { flex: 1; }

@@ -1,20 +1,20 @@
 "use client";
 
-/** Mentor UI for recurring weekly availability.
+/** Mentor-facing UI for recurring availability rules.
  *
- *  Renders as a card on the Schedule page (mentor only). Self-contained:
- *  fetches /api/availability, lets the mentor add / edit / toggle / delete
- *  weekly rules, and calls `onChanged` after any mutation so the parent
- *  calendar refetches and the freshly-generated slots appear.
+ *  Lives in the schedule page side rail (replaces the old "segera" placeholder).
+ *  Self-contained: fetches /api/availability, lets the mentor add / edit /
+ *  toggle / delete weekly rules, and calls `onChanged` after any mutation so
+ *  the parent calendar refetches and the freshly-generated slots appear.
  *
- *  Slot generation happens server-side in availability-cascade.ts; this
- *  component only manages the rules and surfaces the cascade summary.
+ *  The actual slot generation happens server-side in availability-cascade.ts;
+ *  this component only manages the rules and surfaces the cascade summary.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import Icon from "@/components/ui/Icon";
 
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const MIN_MINS = 60;
 const MAX_MINS = 90;
 const MAX_WEEKS = 8;
@@ -99,56 +99,48 @@ export default function RecurringRulesCard({ onChanged }: { onChanged?: () => vo
   }
 
   return (
-    <div className="card">
-      <div className="flex items-start justify-between gap-3 mb-1">
-        <div>
-          <h3 className="text-sm font-semibold font-[family-name:var(--font-heading)]">Recurring availability</h3>
-          <p className="text-xs text-text-muted mt-0.5">
-            Set weekly hours once — slots are generated automatically for the next 8 weeks.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(null);
-            setEditorOpen(true);
-          }}
-          className="btn-primary text-xs py-1.5 px-3 shrink-0 inline-flex items-center gap-1"
-        >
-          <Icon name="plus" size={13} /> Add rule
-        </button>
-      </div>
+    <div className="jadwal-side-card">
+      <h3>Aturan ketersediaan rutin</h3>
+      <div className="desc">Jam mingguan yang otomatis aktif. Atur sekali, slot otomatis muncul tiap minggu.</div>
 
       {loading ? (
-        <p className="text-sm text-text-muted-2 py-2">Loading…</p>
+        <div style={{ fontSize: 13, color: "var(--text-muted-3)", padding: "8px 0" }}>Memuat…</div>
       ) : rules.length === 0 ? (
-        <p className="text-sm text-text-muted-2 py-2">
-          No recurring rules yet. Add one and the next 8 weeks of slots are created automatically.
-        </p>
+        <div style={{ fontSize: 13, color: "var(--text-muted-3)", padding: "8px 0", lineHeight: 1.5 }}>
+          Belum ada aturan rutin. Tambah satu dan slot 8 minggu ke depan dibuat otomatis.
+        </div>
       ) : (
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
           {rules.map((r) => (
             <li
               key={r.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-elevated ${r.active ? "" : "opacity-50"}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                borderRadius: 10,
+                background: "var(--surface-elevated, rgba(0,0,0,0.03))",
+                opacity: r.active ? 1 : 0.5,
+              }}
             >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "var(--font-poppins)" }}>
                   {DAYS[r.dayOfWeek]} · {r.startTime}–{r.endTime}
                 </div>
-                <div className="text-[11px] text-text-muted-2">
-                  {r.recurMode === "fixed" ? `next ${r.weeksAhead} weeks` : "every week"}
+                <div style={{ fontSize: 11, color: "var(--text-muted-2)" }}>
+                  {r.recurMode === "fixed" ? `${r.weeksAhead} minggu ke depan` : "tiap minggu"}
                   {r.notes ? ` · ${r.notes}` : ""}
                 </div>
               </div>
               <button
                 type="button"
-                title={r.active ? "Deactivate" : "Activate"}
+                title={r.active ? "Nonaktifkan" : "Aktifkan"}
                 disabled={busyId === r.id}
                 onClick={() => toggleActive(r)}
-                className="text-[11px] font-semibold text-text-muted-2 hover:text-text-base px-1.5 py-0.5 rounded"
+                style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted-2)", padding: "2px 6px", borderRadius: 6 }}
               >
-                {r.active ? "On" : "Off"}
+                {r.active ? "Aktif" : "Off"}
               </button>
               <button
                 type="button"
@@ -160,11 +152,11 @@ export default function RecurringRulesCard({ onChanged }: { onChanged?: () => vo
                 }}
                 className="text-text-muted-2 hover:text-text-base"
               >
-                <Icon name="edit" size={14} />
+                <Icon name="calendar" size={14} />
               </button>
               <button
                 type="button"
-                title="Delete"
+                title="Hapus"
                 disabled={busyId === r.id}
                 onClick={() => remove(r)}
                 className="text-text-muted-2 hover:text-red-500"
@@ -177,12 +169,32 @@ export default function RecurringRulesCard({ onChanged }: { onChanged?: () => vo
       )}
 
       {summary && (summary.created > 0 || summary.removed > 0 || summary.updated > 0) && (
-        <p className="text-[11px] text-text-muted-2 mt-2">
-          {summary.created > 0 && `+${summary.created} slots created`}
-          {summary.removed > 0 && `${summary.created > 0 ? " · " : ""}${summary.removed} removed`}
-          {summary.updated > 0 && `${summary.created > 0 || summary.removed > 0 ? " · " : ""}${summary.updated} updated`}
-        </p>
+        <div style={{ fontSize: 11, color: "var(--text-muted-2)", marginTop: 8 }}>
+          {summary.created > 0 && `+${summary.created} slot dibuat`}
+          {summary.removed > 0 && `${summary.created > 0 ? " · " : ""}${summary.removed} slot dihapus`}
+          {summary.updated > 0 && `${summary.created > 0 || summary.removed > 0 ? " · " : ""}${summary.updated} disesuaikan`}
+        </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(null);
+          setEditorOpen(true);
+        }}
+        style={{
+          marginTop: 10,
+          fontFamily: "var(--font-poppins)",
+          fontWeight: 600,
+          fontSize: 13,
+          color: "var(--accent, #2563eb)",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <Icon name="plus" size={14} /> Tambah aturan
+      </button>
 
       <RuleEditorModal
         open={editorOpen}
@@ -234,11 +246,11 @@ function RuleEditorModal({
   const durOk = durMins >= MIN_MINS && durMins <= MAX_MINS;
 
   function clientValidate(): string | null {
-    if (durMins <= 0) return "Start time must be before end time.";
-    if (durMins < MIN_MINS) return "Minimum duration is 60 minutes.";
-    if (durMins > MAX_MINS) return "Maximum duration is 90 minutes.";
+    if (durMins <= 0) return "Jam mulai harus sebelum jam selesai.";
+    if (durMins < MIN_MINS) return "Durasi minimal 60 menit.";
+    if (durMins > MAX_MINS) return "Durasi maksimal 90 menit.";
     if (recurMode === "fixed" && (weeksAhead < 1 || weeksAhead > MAX_WEEKS))
-      return `Weeks ahead must be 1–${MAX_WEEKS}.`;
+      return `Batas minggu harus 1–${MAX_WEEKS}.`;
     return null;
   }
 
@@ -272,12 +284,12 @@ function RuleEditorModal({
           });
       const data = await res.json();
       if (!res.ok) {
-        setErr(data.error || "Failed to save rule.");
+        setErr(data.error || "Gagal menyimpan aturan.");
         return;
       }
       onSaved(data.cascade);
     } catch {
-      setErr("Failed to save rule.");
+      setErr("Gagal menyimpan aturan.");
     } finally {
       setSaving(false);
     }
@@ -290,7 +302,7 @@ function RuleEditorModal({
       <div className="relative bg-surface rounded-2xl shadow-xl w-full max-w-sm p-5 z-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold font-[family-name:var(--font-heading)]">
-            {initial ? "Edit recurring rule" : "Recurring availability"}
+            {initial ? "Edit aturan rutin" : "Aturan ketersediaan rutin"}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-elevated transition text-text-muted-2">
             <Icon name="x" size={16} />
@@ -301,8 +313,12 @@ function RuleEditorModal({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-text-muted font-medium block mb-1">Day</label>
-            <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} className="input-field w-full">
+            <label className="text-xs text-text-muted font-medium block mb-1">Hari</label>
+            <select
+              value={dayOfWeek}
+              onChange={(e) => setDayOfWeek(Number(e.target.value))}
+              className="input-field w-full"
+            >
               {DAYS.map((d, i) => (
                 <option key={i} value={i}>
                   {d}
@@ -313,43 +329,47 @@ function RuleEditorModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-text-muted font-medium block mb-1">Start</label>
+              <label className="text-xs text-text-muted font-medium block mb-1">Mulai</label>
               <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="input-field w-full" />
             </div>
             <div>
-              <label className="text-xs text-text-muted font-medium block mb-1">End</label>
+              <label className="text-xs text-text-muted font-medium block mb-1">Selesai</label>
               <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="input-field w-full" />
             </div>
           </div>
           {durMins > 0 && (
             <p className={`text-[11px] font-medium text-right pr-0.5 -mt-1 ${durOk ? "text-blue-500" : "text-amber-500"}`}>
-              {durMins} min · 60–90 min only
+              {durMins} menit · 60–90 menit saja
             </p>
           )}
 
           <div>
-            <label className="text-xs text-text-muted font-medium block mb-1">Repeat</label>
+            <label className="text-xs text-text-muted font-medium block mb-1">Pengulangan</label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setRecurMode("unlimited")}
-                className={`flex-1 text-sm py-2 ${recurMode === "unlimited" ? "btn-primary" : "btn-ghost"}`}
+                className={`flex-1 text-sm py-2 rounded-lg border transition ${
+                  recurMode === "unlimited" ? "btn-primary" : "btn-ghost"
+                }`}
               >
-                Every week
+                Tiap minggu
               </button>
               <button
                 type="button"
                 onClick={() => setRecurMode("fixed")}
-                className={`flex-1 text-sm py-2 ${recurMode === "fixed" ? "btn-primary" : "btn-ghost"}`}
+                className={`flex-1 text-sm py-2 rounded-lg border transition ${
+                  recurMode === "fixed" ? "btn-primary" : "btn-ghost"
+                }`}
               >
-                Limit
+                Batasi
               </button>
             </div>
           </div>
 
           {recurMode === "fixed" && (
             <div>
-              <label className="text-xs text-text-muted font-medium block mb-1">How many weeks ahead</label>
+              <label className="text-xs text-text-muted font-medium block mb-1">Berapa minggu ke depan</label>
               <input
                 type="number"
                 min={1}
@@ -363,13 +383,13 @@ function RuleEditorModal({
 
           <div>
             <label className="text-xs text-text-muted font-medium block mb-1">
-              Notes <span className="text-text-muted-2">(optional)</span>
+              Catatan <span className="text-text-muted-2">(opsional)</span>
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. via Google Meet"
+              placeholder="mis. via Google Meet"
               className="input-field w-full"
             />
           </div>
@@ -377,10 +397,10 @@ function RuleEditorModal({
 
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="btn-ghost flex-1 text-sm py-2">
-            Cancel
+            Batal
           </button>
           <button onClick={save} disabled={saving || !durOk} className="btn-primary flex-1 text-sm py-2 disabled:opacity-50">
-            {saving ? "Saving…" : initial ? "Save" : "Add & create slots"}
+            {saving ? "Menyimpan…" : initial ? "Simpan" : "Tambah & buat slot"}
           </button>
         </div>
       </div>
