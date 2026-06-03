@@ -1,3 +1,20 @@
+/** Platform Google Calendar + Meet integration.
+ *
+ *  Uses an OAuth refresh token for a single platform Google account
+ *  (GOOGLE_REFRESH_TOKEN, authorized as e.g. admin@satutuju.id). The event —
+ *  and its Meet link — is created on that account's calendar. The account is a
+ *  real Google user, so Meet link generation works.
+ *
+ *  Required env:
+ *    GOOGLE_CLIENT_ID       OAuth client id the token was issued for
+ *    GOOGLE_CLIENT_SECRET   matching client secret
+ *    GOOGLE_REFRESH_TOKEN   refresh token for the platform account
+ *    CALENDAR_TIMEZONE      optional, defaults to Asia/Jakarta
+ *
+ *  If GOOGLE_REFRESH_TOKEN is unset, calendar operations no-op (return null)
+ *  rather than throwing, so booking/accept still works without a Meet link.
+ */
+
 import { google } from "googleapis";
 
 const tz = process.env.CALENDAR_TIMEZONE || "Asia/Jakarta";
