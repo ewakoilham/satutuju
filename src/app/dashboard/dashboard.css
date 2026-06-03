@@ -2735,8 +2735,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 24px;
-  padding-bottom: 12px;
+  margin-top: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
