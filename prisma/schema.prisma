@@ -288,6 +288,7 @@ model Document {
   filePath    String
   fileSize    Int
   mimeType    String
+  sessionNum  Int?     // Which session this attachment belongs to (nullable = pairing-level)
   status      String   @default("uploaded") // "uploaded" | "under_review" | "needs_revision" | "approved"
   version     Int      @default(1)
   uploadedBy  String   // userId

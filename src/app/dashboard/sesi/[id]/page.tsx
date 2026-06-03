@@ -1,25 +1,26 @@
-/** Sesi (3-phase) — Phase D.1 of the v5 redesign.
+/** Sesi (adaptive) — Dashboard-7 redesign.
  *
- *  A single session moves through three lifecycle panels:
- *    1. Sebelum sesi  — countdown, Meet link, prep checklist, agenda preview.
- *    2. Setelah sesi  — the existing laporan form, with an AI assist box.
- *    3. Mentee POV    — read-only render of what the mentee will see, with
- *                       "Setuju & kirim" to finalise.
+ *  One page per session (/dashboard/sesi/[id]). The left column re-renders
+ *  based on the session's derived status; the right rail lists every session
+ *  in the pairing and lets the mentor jump between them.
+ *
+ *    done     → read view: ringkasan + catatan mentor (mentor can re-edit).
+ *    current  → prep checklist + saran agenda + isi laporan (the active one).
+ *    upcoming → preview: yang akan dibahas + agenda draft + persiapan kamu.
  *
  *  Lifecycle is tracked with four Session timestamps:
- *    prepCompletedAt    → set when mentor clicks "▶ Mulai sesi"
- *    mentorPreviewAt    → set when mentor first opens the Mentee POV tab
+ *    prepCompletedAt    → set when mentor clicks "Mulai sesi"
+ *    mentorPreviewAt    → set when mentor first opens "Pratinjau mentee"
  *    mentorSubmittedAt  → set when mentor presses "Setuju & kirim"
  *    menteeViewedAt     → set when the mentee opens the report
  *
- *  Mentee role sees a stripped variant: only the Mentee POV phase, read-only.
+ *  Mentee role sees a stripped, read-only variant of the submitted report.
  */
 
 "use client";
 
 import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
-import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
 
@@ -61,19 +62,35 @@ interface Pairing {
   menteeProfile?: { intendedStudyProgram?: string; preferredDestinations?: string } | null;
 }
 
+interface TaskRow {
+  id: string;
+  pairingId: string;
+  sessionNum?: number | null;
+  title: string;
+  description?: string | null;
+  status: string; // "pending" | "in_progress" | "completed" | "overdue"
+  dueDate?: string | null;
+  completedAt?: string | null;
+}
+
+interface DocRow {
+  id: string;
+  pairingId: string;
+  sessionNum?: number | null;
+  name: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  category: string;
+  createdAt?: string | null;
+}
+
 type SavingState = "idle" | "saving" | "saved" | "error";
-type Phase = "sebelum" | "setelah" | "mentee";
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 
 const ID_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 function fmtDayShort(d: Date): string {
   return `${d.getDate()} ${ID_MONTHS[d.getMonth()]}`;
 }
@@ -86,7 +103,7 @@ function fmtAgo(seconds: number): string {
   return `${h} jam lalu`;
 }
 
-/** Countdown / since label for the Sebelum-sesi hero. */
+/** Countdown / since label for the current-session hero. */
 function fmtCountdown(targetMs: number, nowMs: number): { label: string; tone: "future" | "soon" | "past" } {
   const diff = targetMs - nowMs;
   const absMin = Math.floor(Math.abs(diff) / 60_000);
@@ -179,6 +196,26 @@ function parseTs(value?: string | null): Date | null {
   return new Date(s.endsWith("Z") ? s : s + "Z");
 }
 
+type ViewStatus = "done" | "current" | "upcoming";
+
+/* ─── Icons (inline) ──────────────────────────────────────────────── */
+
+const IcPen = () => (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+);
+const IcChat = () => (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+);
+const IcPlay = () => (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" /></svg>
+);
+const IcCal = () => (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+);
+const IcCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+);
+
 /* ─── Page ────────────────────────────────────────────────────────── */
 
 export default function SesiPage({ params }: { params: Promise<{ id: string }> }) {
@@ -196,9 +233,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(() => new Date());
 
-  // `phaseOverride` is null until the user clicks a tab; before then we derive
-  // the initial phase from server-side timestamps (computed during render).
-  const [phaseOverride, setActivePhase] = useState<Phase | null>(null);
   const [prep, setPrep] = useState<PrepItem[] | null>(null);
   const [prepLoading, setPrepLoading] = useState(true);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
@@ -214,10 +248,23 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const aiFileRef = useRef<HTMLInputElement | null>(null);
 
   // Mulai sesi (Phase D.3) — set by GET /start on mount + updated when the
-  // user presses the button. Used to show the real Meet link in the hero.
+  // user presses the button. Used to show the real Meet link.
   const [meetLinkOverride, setMeetLinkOverride] = useState<string | null>(null);
   const [startBusy, setStartBusy] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+
+  // Redesign (Dashboard-7) UI state — modals + inline edit for a done report.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  // Per-session action items (Task) + attachments (Document).
+  const [allTasks, setAllTasks] = useState<TaskRow[]>([]);
+  const [allDocs, setAllDocs] = useState<DocRow[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const docFileRef = useRef<HTMLInputElement | null>(null);
 
   // Tick once every 30s so the countdown + "tersimpan otomatis" labels stay fresh.
   useEffect(() => {
@@ -287,21 +334,30 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // Effective draft + active phase — derived during render so we don't have
-  // to setState in an effect on mount.
+  // Load per-session action items + attachments once the pairing is known.
+  const loadPairingId = found?.pairing.id ?? null;
+  useEffect(() => {
+    if (!loadPairingId) return;
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/pairings/${loadPairingId}/tasks`).then((r) => (r.ok ? r.json() : { tasks: [] })).catch(() => ({ tasks: [] })),
+      fetch(`/api/pairings/${loadPairingId}/documents`).then((r) => (r.ok ? r.json() : { documents: [] })).catch(() => ({ documents: [] })),
+    ]).then(([t, d]) => {
+      if (!cancelled) {
+        setAllTasks((t.tasks as TaskRow[]) || []);
+        setAllDocs((d.documents as DocRow[]) || []);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadPairingId]);
+
+  // Effective draft — derived during render so we don't setState in an effect.
   const effectiveDraft: DraftFields | null = draftEdits ?? (found ? fromSession(found.session) : null);
-  const effectivePhase: Phase | null = (() => {
-    if (phaseOverride !== null) return phaseOverride;
-    if (!found || !me) return null;
-    const s = found.session;
-    if (me.id === found.pairing.mentee.id) return "mentee";
-    if (s.mentorSubmittedAt) return "mentee";
-    if (s.prepCompletedAt || s.status !== "upcoming") return "setelah";
-    return "sebelum";
-  })();
 
   // Stamp menteeViewedAt the first time the mentee opens a submitted report,
-  // so the mentor can see "dilihat mentee" in the POV footer.
+  // so the mentor can see "dilihat mentee".
   const viewedStamped = useRef(false);
   useEffect(() => {
     if (viewedStamped.current) return;
@@ -380,14 +436,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }).catch((err) => console.warn("[sesi] prep save failed", err));
   }
 
-  // "▶ Mulai sesi" — call /start, which:
-  //   1. creates a Google Calendar event with a Meet link on the mentor's
-  //      personal calendar (or reuses one if the booking already has it),
-  //   2. saves the meet URL on the ScheduleBooking,
-  //   3. stamps prepCompletedAt + flips status to in_progress.
-  //
-  // On 412 "needsConnect", redirect the mentor to /api/auth/google?mode=connect
-  // to grant the calendar.events scope.
+  // "Mulai sesi" — call /start, which creates a Google Calendar event with a
+  // Meet link (or reuses one), saves it on the ScheduleBooking, and stamps
+  // prepCompletedAt + flips status to in_progress. On 412 "needsConnect" we
+  // redirect the mentor to grant the calendar.events scope.
   async function handleStartSession() {
     if (!found || startBusy) return;
     setStartBusy(true);
@@ -396,8 +448,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       const res = await fetch(`/api/sessions/${id}/start`, { method: "POST" });
       const data = await res.json();
       if (res.status === 412 && data.needsConnect && data.connectUrl) {
-        // Redirect to the OAuth flow. After consent, Google sends user back
-        // to the Sesi page and they can press "Mulai sesi" again.
         window.location.href = data.connectUrl;
         return;
       }
@@ -412,7 +462,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
         ),
       );
       setMeetLinkOverride(data.meetLink);
-      setActivePhase("setelah");
 
       // Pop the Meet open in a new tab so the mentor doesn't have to hunt.
       if (data.meetLink) window.open(data.meetLink, "_blank", "noopener,noreferrer");
@@ -423,10 +472,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // Switching into Mentee POV stamps mentorPreviewAt the first time.
-  async function gotoPhase(phase: Phase) {
-    setActivePhase(phase);
-    if (phase === "mentee" && found && !found.session.mentorPreviewAt) {
+  // Open the "Pratinjau mentee" modal; stamp mentorPreviewAt the first time.
+  async function openPreview() {
+    setPreviewOpen(true);
+    if (found && !found.session.mentorPreviewAt) {
       try {
         await patchSession({ mentorPreviewAt: true });
         setPairings((prev) =>
@@ -443,17 +492,12 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   }
 
   // ── AI assist (Phase D.2) ───────────────────────────────────
-  //
-  // We have three input modes. All of them resolve to the same POST body
-  // shape — { text | driveUrl | fileText } — and the route returns a draft
-  // that prefills (but does not save) the laporan form.
   function openAi(mode: "text" | "drive" | "file") {
     setAiMode(mode);
     setAiInput("");
     setAiError(null);
     setAiResult(null);
     if (mode === "file") {
-      // Trigger the hidden <input type="file"> right away.
       setTimeout(() => aiFileRef.current?.click(), 0);
     }
   }
@@ -481,9 +525,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     setAiBusy(true);
     setAiError(null);
     try {
-      // For text-like files we can pass the contents straight through. PDF
-      // and DOCX would need server-side parsing; we punt those for now and
-      // tell the mentor to paste the text manually instead.
       const isText = file.type.startsWith("text/") || /\.(txt|md|rtf|csv|vtt)$/i.test(file.name);
       if (!isText) {
         throw new Error(
@@ -497,7 +538,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       setAiError(err instanceof Error ? err.message : String(err));
       setAiBusy(false);
     } finally {
-      // Reset the input so re-uploading the same file fires the change event.
       if (aiFileRef.current) aiFileRef.current.value = "";
     }
   }
@@ -534,9 +574,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  /** Apply the Gemini draft to the laporan form fields. Topic + summary +
-   *  obstacles always go in; mentorNotes goes into keyOutput (the "Catatan
-   *  privat mentor" field); menteeEnergy only fills if the form is empty. */
+  /** Apply the Gemini draft to the laporan form fields. */
   function applyAiDraft() {
     if (!aiResult || !found) return;
     const base: DraftFields = draftEdits ?? fromSession(found.session);
@@ -571,6 +609,64 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
+  // ── Action items (Task) + attachments (Document) ─────────────
+  async function addTask() {
+    const title = newTaskTitle.trim();
+    if (!found || !title || taskBusy) return;
+    setTaskBusy(true);
+    try {
+      const res = await fetch(`/api/pairings/${found.pairing.id}/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title, sessionNum: found.session.sessionNum }),
+      });
+      const data = await res.json();
+      if (res.ok && data.task) {
+        setAllTasks((prev) => [data.task as TaskRow, ...prev]);
+        setNewTaskTitle("");
+      }
+    } catch (e) {
+      console.warn("[sesi] addTask failed", e);
+    } finally {
+      setTaskBusy(false);
+    }
+  }
+
+  async function toggleTask(task: TaskRow) {
+    const nextStatus = task.status === "completed" ? "pending" : "completed";
+    setAllTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)));
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    } catch (e) {
+      console.warn("[sesi] toggleTask failed", e);
+    }
+  }
+
+  async function handleDocFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !found || uploadBusy) return;
+    setUploadBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("name", file.name.replace(/\.[^.]+$/, ""));
+      fd.append("category", "other");
+      fd.append("sessionNum", String(found.session.sessionNum));
+      const res = await fetch(`/api/pairings/${found.pairing.id}/documents`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.document) setAllDocs((prev) => [data.document as DocRow, ...prev]);
+    } catch (err) {
+      console.warn("[sesi] doc upload failed", err);
+    } finally {
+      setUploadBusy(false);
+      if (docFileRef.current) docFileRef.current.value = "";
+    }
+  }
+
   /* ── Loading & error ─────────────────────────────────────────── */
 
   if (loading) return <SkeletonDashboard />;
@@ -591,19 +687,24 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   }
 
   const { pairing, session } = found;
-  if (!effectiveDraft || effectivePhase === null) return <SkeletonDashboard />;
-  // Alias to keep the JSX below readable. These are the values the
-  // user actually sees and edits.
+  if (!effectiveDraft) return <SkeletonDashboard />;
   const draft = effectiveDraft;
-  const activePhase = effectivePhase;
 
   const mentee = pairing.mentee;
+  const mentorFirst = pairing.mentor.name.split(/\s+/)[0];
+  const menteeFirst = mentee.name.split(/\s+/)[0];
   const phaseLabel = PHASE_LABELS[session.phase] || session.phase;
   const isMenteeRole = me?.id === mentee.id;
   const isMentorRole = me?.id === pairing.mentor.id;
 
-  // Sort the journey rail.
+  // Sort the journey + derive each session's status.
   const journey = [...pairing.sessions].sort((a, b) => a.sessionNum - b.sessionNum);
+  const isDone = (s: SessionRow) => s.status === "completed" || !!s.mentorSubmittedAt;
+  const firstActive = journey.find((s) => !isDone(s)) || null;
+  const statusOf = (s: SessionRow): ViewStatus =>
+    isDone(s) ? "done" : firstActive && s.id === firstActive.id ? "current" : "upcoming";
+  const viewStatus = statusOf(session);
+  const doneCount = journey.filter(isDone).length;
 
   // Save-status label.
   const savedAgo = lastSavedAt ? Math.floor((now.getTime() - lastSavedAt.getTime()) / 1000) : null;
@@ -613,543 +714,550 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       : savedAgo !== null ? `Tersimpan otomatis · ${fmtAgo(savedAgo)}`
       : "Belum ada perubahan";
 
-  // Lifecycle status for the phase strip pills.
-  const sebelumDone = !!session.prepCompletedAt;
-  const setelahDone = !!session.mentorSubmittedAt;
-
-  // Countdown for the Sebelum hero.
+  // Countdown + carry-forward.
   const scheduledDate = parseTs(session.scheduledAt);
   const countdown = scheduledDate ? fmtCountdown(scheduledDate.getTime(), now.getTime()) : null;
-
-  // Carry-forward from previous session.
   const prevSession = journey.find((s) => s.sessionNum === session.sessionNum - 1) || null;
   const previousNext = prevSession?.keyOutput?.trim() || prevSession?.summaryNotes?.trim() || null;
 
-  // Pre-flight "Sebelum kamu kirim" checklist.
-  const checks = [
-    { ok: !!draft.topic && !!draft.summaryNotes, label: "Topik & ringkasan terisi" },
-    { ok: draft.menteeEnergy !== null, label: "Mood mentee dipilih" },
-    { ok: !!draft.obstacles, label: "Catat hambatan kalau ada" },
-    { ok: !!session.mentorRating, label: "Kasih bintang ke sesi (opsional)" },
-  ];
+  const num = String(session.sessionNum).padStart(2, "0");
+  const target = pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram || null;
+  const summaryParas = (draft.summaryNotes || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const agendaRows = AGENDA_BY_PHASE[session.phase] || AGENDA_BY_PHASE.planning;
+  const moodInfo = draft.menteeEnergy != null ? MOODS.find((m) => m.value === draft.menteeEnergy) : null;
 
-  // Pretty headline for each phase.
-  const phaseSubtitle: Record<Phase, string> = {
-    sebelum: "Persiapan ringkas sebelum kalian ngobrol. Centang yang sudah, buka Meet, lalu mulai sesi.",
-    setelah: "Catat topik, ringkasan, mood, dan langkah berikutnya — tersimpan otomatis tiap kamu mengetik.",
-    mentee: "Beginilah ringkasan yang akan mentee terima. Pratinjau sebelum kamu kirim — tidak ada catatan privat di sini.",
-  };
+  // Action items + attachments scoped to this session.
+  const sessionTasks = allTasks.filter((t) => t.sessionNum === session.sessionNum);
+  const sessionDocs = allDocs.filter((d) => d.sessionNum === session.sessionNum);
+
+  // ── Hero status line + action buttons (status-aware) ─────────
+  const heroStatus =
+    isMenteeRole
+      ? session.mentorSubmittedAt ? "Laporan diterima" : "Menunggu laporan mentor"
+      : viewStatus === "done"
+        ? session.completedAt ? `Selesai · ${fmtDayShort(new Date(session.completedAt))}` : "Selesai"
+        : viewStatus === "current"
+          ? countdown ? `⏰ ${countdown.label}` : "Siap dimulai"
+          : scheduledDate ? `Dijadwalkan · ${fmtDayShort(scheduledDate)}` : "Belum dijadwalkan";
+
+  const noteBtn = !isMenteeRole && (
+    <button type="button" className="se-hero-btn" onClick={() => setNoteOpen(true)}>
+      <IcPen />Catatan mentor
+    </button>
+  );
+
+  let heroActions: React.ReactNode;
+  if (isMenteeRole) {
+    heroActions = (
+      <a className="se-hero-btn" href={`mailto:${pairing.mentor.email}`}>
+        <IcChat />Hubungi {mentorFirst}
+      </a>
+    );
+  } else if (viewStatus === "done") {
+    heroActions = (
+      <>
+        {noteBtn}
+        <a className="se-hero-btn" href={`mailto:${mentee.email}`}>
+          <IcChat />Hubungi {menteeFirst}
+        </a>
+      </>
+    );
+  } else if (viewStatus === "current") {
+    heroActions = (
+      <>
+        <button type="button" className="se-hero-btn primary" onClick={handleStartSession} disabled={startBusy}>
+          <IcPlay />{startBusy ? "Membuat Meet…" : meetLinkOverride ? "Buka Meet & lanjut" : "Mulai sesi"}
+        </button>
+        {noteBtn}
+      </>
+    );
+  } else {
+    heroActions = (
+      <>
+        <Link className="se-hero-btn primary" href="/dashboard/schedule">
+          <IcCal />Jadwalkan sesi
+        </Link>
+        {noteBtn}
+      </>
+    );
+  }
+
+  // ── Prep row renderer (current state) ────────────────────────
+  function prepRow(item: PrepItem) {
+    const tone = item.done ? "ok" : item.warn ? "warn" : "todo";
+    return (
+      <div key={item.id} className={`se-prep-row ${item.warn && !item.done ? "warn-row" : ""}`}>
+        <button
+          type="button"
+          className={`se-prep-ic ${tone}`}
+          onClick={() => togglePrep(item.id)}
+          title={item.done ? "Tandai belum siap" : "Tandai siap"}
+          aria-label={item.label}
+        >
+          {item.done ? <IcCheck /> : item.warn ? "!" : ""}
+        </button>
+        <div className="se-prep-body">
+          <div className="se-prep-title">{item.label}</div>
+          {item.sub && <div className="se-prep-sub">{item.sub}</div>}
+        </div>
+        {item.actionLink && (
+          <Link href={item.actionLink} className="se-prep-link">
+            {item.actionLabel || "buka"}
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  // ── Report form (current + done-edit) ────────────────────────
+  const reportForm = (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Isi laporan sesi</h2>
+        <span className={`save-status ${saving === "saving" ? "saving" : ""}`}>{savedLabel}</span>
+      </div>
+
+      <div className="se-rf-field">
+        <div className="se-rf-label">Topik pembahasan</div>
+        <input className="se-rf-input" placeholder="Apa fokus utama sesi ini?" value={draft.topic} onChange={(e) => update("topic", e.target.value)} />
+      </div>
+
+      <div className="se-rf-field">
+        <div className="se-rf-label">Ringkasan sesi</div>
+        <textarea className="se-rf-textarea" placeholder="Apa yang dibahas? Kesimpulan kamu sebagai mentor?" value={draft.summaryNotes} onChange={(e) => update("summaryNotes", e.target.value)} />
+        <div className="se-ai-box">
+          <div>
+            <b>✨ Bantuan AI</b> — kalau kamu pakai Gemini Note di Google Meet, ringkasan otomatis bisa ditarik ke sini.
+            <div className="se-ai-actions">
+              <button type="button" className="se-ai-gen" disabled={aiBusy} onClick={() => openAi("text")}>Hasilkan draf laporan</button>
+              <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("drive")}>Link Drive</button>
+              <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("file")}>Upload catatan</button>
+            </div>
+          </div>
+        </div>
+        <input ref={aiFileRef} type="file" accept=".txt,.md,.csv,.rtf,.vtt,text/plain" style={{ display: "none" }} onChange={handleAiFile} />
+      </div>
+
+      <div className="se-rf-field">
+        <div className="se-rf-label">Mood mentee <span className="priv">privat</span></div>
+        <div className="se-rf-mood">
+          {MOODS.map((m) => (
+            <button
+              type="button"
+              key={m.value}
+              className={draft.menteeEnergy === m.value ? "on" : ""}
+              onClick={() => update("menteeEnergy", draft.menteeEnergy === m.value ? null : m.value)}
+            >
+              <span className="face">{m.face}</span>{m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="se-rf-field">
+        <div className="se-rf-label">Hambatan / kekhawatiran</div>
+        <textarea className="se-rf-textarea sm" placeholder="Apa yang menahan mentee?" value={draft.obstacles} onChange={(e) => update("obstacles", e.target.value)} />
+      </div>
+
+      <div className="se-rf-field">
+        <div className="se-rf-label">Catatan privat mentor <span className="priv">hanya kamu</span></div>
+        <textarea className="se-rf-textarea sm" placeholder="Pengamatan jujur yang tidak dibagikan ke mentee." value={draft.keyOutput} onChange={(e) => update("keyOutput", e.target.value)} />
+      </div>
+
+      <div className="se-rf-foot">
+        {editMode ? (
+          <>
+            <button type="button" className="se-hero-btn" onClick={() => setEditMode(false)}>Selesai edit</button>
+            <button type="button" className="se-hero-btn primary" onClick={openPreview}>Pratinjau mentee</button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="se-hero-btn" onClick={openPreview}>Pratinjau mentee</button>
+            <button type="button" className="se-hero-btn primary" onClick={() => setConfirmSubmitOpen(true)}>Kirim laporan →</button>
+          </>
+        )}
+      </div>
+    </section>
+  );
+
+  // ── Action items ("Yang {mentee} kerjakan") ──────────────────
+  const actionItemsCard = (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Yang {menteeFirst} kerjakan</h2>
+        <span className="stamp">action items</span>
+      </div>
+      <div className="se-list">
+        {sessionTasks.length === 0 && !isMentorRole && (
+          <div className="muted" style={{ padding: 4 }}>Belum ada action item untuk sesi ini.</div>
+        )}
+        {sessionTasks.map((t) => {
+          const done = t.status === "completed";
+          return (
+            <div key={t.id} className={`se-ai-row ${done ? "done" : ""}`}>
+              <button
+                type="button"
+                className={`se-prep-ic ${done ? "ok" : "todo"}`}
+                onClick={() => isMentorRole && toggleTask(t)}
+                disabled={!isMentorRole}
+                title={done ? "Tandai belum selesai" : "Tandai selesai"}
+                aria-label={t.title}
+              >
+                {done ? <IcCheck /> : ""}
+              </button>
+              <span className="se-ai-text">{t.title}</span>
+              <span className="se-ai-tag">Untuk mentee</span>
+            </div>
+          );
+        })}
+      </div>
+      {isMentorRole && (
+        <div className="se-ai-add">
+          <input
+            className="se-rf-input"
+            placeholder={`Tambah action item untuk ${menteeFirst}…`}
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTask(); } }}
+            disabled={taskBusy}
+          />
+          <button type="button" className="se-hero-btn primary" onClick={addTask} disabled={taskBusy || !newTaskTitle.trim()}>
+            {taskBusy ? "Menambah…" : "Tambah"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+
+  // ── Lampiran (attachments) ───────────────────────────────────
+  const attachmentsCard = (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Lampiran</h2>
+        {isMentorRole && (
+          <button type="button" className="se-prep-link" onClick={() => docFileRef.current?.click()} disabled={uploadBusy}>
+            {uploadBusy ? "Mengunggah…" : "+ Tambah file"}
+          </button>
+        )}
+      </div>
+      <input ref={docFileRef} type="file" style={{ display: "none" }} onChange={handleDocFile} />
+      {sessionDocs.length === 0 ? (
+        <div className="muted" style={{ padding: 4 }}>Tidak ada lampiran di sesi ini.</div>
+      ) : (
+        <div className="se-files">
+          {sessionDocs.map((d) => (
+            <div key={d.id} className="se-file-row">
+              <span className="se-file-ico">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              </span>
+              <div className="se-file-info">
+                <div className="se-file-name">{d.name}</div>
+                <div className="se-file-meta">{(d.fileSize / 1024).toFixed(0)} KB{d.createdAt ? ` · ${fmtDayShort(new Date(d.createdAt))}` : ""}</div>
+              </div>
+              <a className="se-file-dl" href={d.filePath} target="_blank" rel="noopener noreferrer" title="Unduh">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  // ── Body variants ────────────────────────────────────────────
+  const doneBody = (
+    <>
+      <section className="se-card">
+        <div className="se-card-head">
+          <h2>Ringkasan sesi</h2>
+          <span className="stamp">Sesi {session.sessionNum} · {session.completedAt ? fmtDayShort(new Date(session.completedAt)) : "selesai"}</span>
+        </div>
+        <div className="se-card-body">
+          {summaryParas.length ? summaryParas.map((p, i) => <p key={i}>{p}</p>) : <p className="muted">Belum ada ringkasan untuk sesi ini.</p>}
+        </div>
+      </section>
+
+      {draft.obstacles && (
+        <section className="se-card">
+          <div className="se-card-head"><h2>Hambatan / kekhawatiran</h2></div>
+          <div className="se-card-body"><p>{draft.obstacles}</p></div>
+        </section>
+      )}
+
+      {isMentorRole && (draft.keyOutput || moodInfo) && (
+        <section className="se-card">
+          <div className="se-card-head"><h2>Catatan privat mentor</h2><span className="stamp">hanya kamu</span></div>
+          <div className="se-card-body">
+            {moodInfo && <p className="se-mood-chip">Mood mentee: <b>{moodInfo.face} {moodInfo.label}</b></p>}
+            {draft.keyOutput ? <p>{draft.keyOutput}</p> : <p className="muted">Belum ada catatan privat.</p>}
+          </div>
+        </section>
+      )}
+
+      {(sessionTasks.length > 0 || isMentorRole) && actionItemsCard}
+      {(sessionDocs.length > 0 || isMentorRole) && attachmentsCard}
+
+      {isMentorRole && (
+        <div className="se-foot-actions">
+          <button type="button" className="se-hero-btn" onClick={() => setEditMode(true)}>Edit laporan</button>
+          <button type="button" className="se-hero-btn" onClick={openPreview}>Pratinjau yang mentee lihat</button>
+        </div>
+      )}
+    </>
+  );
+
+  const currentBody = (
+    <>
+      <section className="se-card">
+        <div className="se-card-head">
+          <h2>Persiapan</h2>
+          <span className="stamp">{prep ? `${prep.filter((p) => p.done).length} siap · ${prep.filter((p) => !p.done).length} kurang` : "…"}</span>
+        </div>
+        <div className="se-list">
+          {prepLoading ? (
+            <div className="muted" style={{ padding: 4 }}>Memuat checklist…</div>
+          ) : prep && prep.length ? (
+            prep.map(prepRow)
+          ) : (
+            <div className="muted" style={{ padding: 4 }}>Tidak ada item checklist.</div>
+          )}
+        </div>
+      </section>
+
+      {previousNext && (
+        <section className="se-card">
+          <div className="se-card-head"><h2>Dari Sesi {prevSession?.sessionNum}</h2><span className="stamp">carry-forward</span></div>
+          <div className="se-card-body">
+            <p>{previousNext}</p>
+            {prevSession && <Link className="se-prep-link" href={`/dashboard/sesi/${prevSession.id}`}>Buka laporan sesi sebelumnya →</Link>}
+          </div>
+        </section>
+      )}
+
+      <section className="se-card">
+        <div className="se-card-head"><h2>Saran agenda</h2><span className="stamp">60 menit · {phaseLabel}</span></div>
+        <div className="se-list">
+          {agendaRows.map((row, i) => (
+            <div key={i} className="se-prep-row">
+              <span className="se-agenda-time">{row.slot}</span>
+              <div className="se-prep-body"><div className="se-prep-title soft">{row.topic}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {isMentorRole && reportForm}
+      {isMentorRole && actionItemsCard}
+    </>
+  );
+
+  const upcomingBody = (
+    <>
+      <section className="se-card">
+        <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
+        <div className="se-card-body">
+          <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Siapkan materi terkait dan review action items dari sesi sebelumnya sebelum sesi dijadwalkan.</p>
+        </div>
+      </section>
+
+      <section className="se-card">
+        <div className="se-card-head"><h2>Saran agenda</h2><span className="stamp">draft</span></div>
+        <div className="se-list">
+          {agendaRows.map((row, i) => (
+            <div key={i} className="se-prep-row">
+              <span className="se-agenda-time">{row.slot}</span>
+              <div className="se-prep-body"><div className="se-prep-title soft">{row.topic}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="se-card">
+        <div className="se-card-head"><h2>Persiapan kamu</h2></div>
+        <div className="se-list">
+          {[
+            "Review action items dari sesi sebelumnya",
+            "Siapkan materi terkait di tab Materi",
+            "Cek dokumen mentee yang baru diunggah",
+          ].map((t, i) => (
+            <div key={i} className="se-prep-row">
+              <span className="se-prep-ic num">{i + 1}</span>
+              <div className="se-prep-body"><div className="se-prep-title soft">{t}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+
+  const menteeBody = session.mentorSubmittedAt ? (
+    <>
+      <section className="se-card">
+        <div className="se-card-head"><h2>Ringkasan sesi</h2><span className="stamp">dari {mentorFirst}</span></div>
+        <div className="se-card-body">
+          {summaryParas.length ? summaryParas.map((p, i) => <p key={i}>{p}</p>) : <p className="muted">—</p>}
+        </div>
+      </section>
+      {draft.obstacles && (
+        <section className="se-card">
+          <div className="se-card-head"><h2>Hambatan / kekhawatiran</h2></div>
+          <div className="se-card-body"><p>{draft.obstacles}</p></div>
+        </section>
+      )}
+      <div className="se-foot-note">
+        Diterima dari {mentorFirst} · {parseTs(session.mentorSubmittedAt)?.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+      </div>
+    </>
+  ) : (
+    <section className="se-card">
+      <div className="se-card-body">
+        <p className="muted">Laporan sesi ini belum dikirim mentor. Kamu akan dapat notifikasi begitu siap.</p>
+      </div>
+    </section>
+  );
+
+  const body = isMenteeRole
+    ? menteeBody
+    : viewStatus === "done"
+      ? editMode ? reportForm : doneBody
+      : viewStatus === "current"
+        ? currentBody
+        : upcomingBody;
 
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 8 }}>
-        <div>
-          <div className="sesi-crumb">
-            <Link href="/dashboard/mentee">Mentee</Link>
-            {" › "}
-            <Link href={`/dashboard/pairings/${pairing.id}`}>{mentee.name}</Link>
-            {" › "}
-            <span style={{ color: "var(--text-muted)" }}>Sesi {session.sessionNum}</span>
-          </div>
-          <h1 className="sesi-title">
-            Sesi {session.sessionNum}{" "}
-            <span className="lede">— {session.topic || "Sesi mentoring"}.</span>
-          </h1>
-          <p className="sesi-sub">{phaseSubtitle[activePhase]}</p>
+      <main className="se-wrap">
+        {/* Breadcrumb */}
+        <div className="se-crumb">
+          <Link href="/dashboard/mentee" className="back" title="Kembali ke daftar mentee">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          </Link>
+          <Link href="/dashboard/mentee">Mentee</Link>
+          <span className="sep">›</span>
+          <Link href={`/dashboard/pairings/${pairing.id}`}>{mentee.name}</Link>
+          <span className="sep">›</span>
+          <span className="cur">Sesi {session.sessionNum}</span>
         </div>
-      </div>
 
-      {/* ── Phase strip ───────────────────────────────────────── */}
-      <div className="phase-strip" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activePhase === "sebelum"}
-          className={`phase ${activePhase === "sebelum" ? "on" : sebelumDone ? "done" : ""}`}
-          onClick={() => !isMenteeRole && gotoPhase("sebelum")}
-          disabled={isMenteeRole}
-        >
-          <span className="phase-num">1</span>
-          Sebelum sesi
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activePhase === "setelah"}
-          className={`phase ${activePhase === "setelah" ? "on" : setelahDone ? "done" : ""}`}
-          onClick={() => !isMenteeRole && gotoPhase("setelah")}
-          disabled={isMenteeRole}
-        >
-          <span className="phase-num">2</span>
-          Setelah sesi · isi laporan
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activePhase === "mentee"}
-          className={`phase ${activePhase === "mentee" ? "on" : ""}`}
-          onClick={() => gotoPhase("mentee")}
-        >
-          <span className="phase-num">3</span>
-          {isMenteeRole ? "Ringkasan kamu" : "Pratinjau yang mentee lihat"}
-        </button>
-      </div>
-
-      <div className="sesi-grid">
-        <div className="sesi-main">
-          {/* ── Phase 1: Sebelum sesi ───────────────────────────── */}
-          {activePhase === "sebelum" && (
-            <>
-              <section className="sesi-hero">
-                <div className="head">
-                  <div className="av-grad lg av-c1">{initials(mentee.name)}</div>
-                  <div className="info">
-                    <div className="crumb">
-                      {countdown ? countdown.label : "Belum dijadwalkan"}
-                      {" · "}
-                      {phaseLabel}
-                    </div>
-                    <h2>{mentee.name}</h2>
-                    <div className="meta-line">
-                      {pairing.menteeProfile?.intendedStudyProgram && (
-                        <span>
-                          Target: <b>{pairing.menteeProfile.intendedStudyProgram}</b>
-                          {pairing.menteeProfile.preferredDestinations && ` · ${pairing.menteeProfile.preferredDestinations}`}
-                        </span>
-                      )}
-                      {pairing.targetProgram && !pairing.menteeProfile?.intendedStudyProgram && (
-                        <span>Target: <b>{pairing.targetProgram}</b></span>
-                      )}
-                      <span className="dot" />
-                      <span>{mentee.email}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="actions">
-                  <div className="meet-link">
-                    <span className="gico">M</span>
-                    {meetLinkOverride ? (
-                      <a
-                        href={meetLinkOverride}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="url meet-url-live"
-                      >
-                        {meetLinkOverride.replace(/^https?:\/\//, "")}
-                      </a>
-                    ) : (
-                      <span className="url">Belum ada Meet — akan dibuat saat &ldquo;Mulai sesi&rdquo;</span>
-                    )}
-                    {meetLinkOverride && (
-                      <button
-                        type="button"
-                        className="copy"
-                        title="Salin"
-                        onClick={() => navigator.clipboard?.writeText(meetLinkOverride)}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" />
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="db-btn db-btn-primary"
-                    onClick={handleStartSession}
-                    disabled={startBusy}
-                  >
-                    <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
-                    </svg>
-                    {startBusy ? "Membuat Meet…" : meetLinkOverride ? "Buka Meet & lanjut" : "Mulai sesi"}
-                  </button>
-                </div>
-                {startError && (
-                  <div className="ai-error" style={{ marginTop: 12 }}>
-                    {startError}
-                  </div>
-                )}
-              </section>
-
-              {/* Prep checklist */}
-              <section className="prep-card">
-                <div className="prep-head">
-                  <h3>Checklist persiapan</h3>
-                  <span className="prep-count">
-                    {prep ? `${prep.filter((p) => p.done).length}/${prep.length}` : "…"} siap
-                  </span>
-                </div>
-                {prepLoading ? (
-                  <div className="prep-loading">Memuat checklist…</div>
-                ) : !prep || prep.length === 0 ? (
-                  <div className="prep-loading">Tidak ada item checklist.</div>
-                ) : (
-                  <ul className="prep-list">
-                    {prep.map((item) => (
-                      <li key={item.id} className={`prep-item ${item.done ? "done" : ""} ${item.warn ? "warn" : ""}`}>
-                        <label className="prep-toggle">
-                          <input
-                            type="checkbox"
-                            checked={item.done}
-                            onChange={() => togglePrep(item.id)}
-                          />
-                          <span className="prep-check" aria-hidden="true">
-                            {item.done ? "✓" : ""}
-                          </span>
-                        </label>
-                        <div className="prep-body">
-                          <div className="prep-label">{item.label}</div>
-                          {item.sub && <div className="prep-sub">{item.sub}</div>}
-                        </div>
-                        {item.actionLink && (
-                          <Link href={item.actionLink} className="prep-action">
-                            {item.actionLabel || "buka →"}
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-
-              {/* Carry-forward from last session */}
-              {previousNext && (
-                <section className="carry-card">
-                  <div className="carry-head">
-                    <span className="carry-tag">Dari Sesi {prevSession?.sessionNum}</span>
-                    <h3>Janji + carry-forward</h3>
-                  </div>
-                  <p className="carry-text">{previousNext}</p>
-                  <Link href={`/dashboard/sesi/${prevSession?.id}`} className="carry-link">
-                    Buka laporan sesi sebelumnya →
-                  </Link>
-                </section>
-              )}
-
-              {/* Saran agenda 60 menit */}
-              <section className="agenda-card">
-                <div className="agenda-head">
-                  <h3>Saran agenda 60 menit</h3>
-                  <span className="agenda-tag">Fase {phaseLabel}</span>
-                </div>
-                <ol className="agenda-list">
-                  {(AGENDA_BY_PHASE[session.phase] || AGENDA_BY_PHASE.planning).map((row, i) => (
-                    <li key={i} className="agenda-row">
-                      <span className="agenda-slot">{row.slot}</span>
-                      <span className="agenda-topic">{row.topic}</span>
-                    </li>
-                  ))}
-                </ol>
-                <p className="agenda-foot">
-                  Agenda ini cuma saran. Sesuaikan dengan kondisi mentee — yang penting ada check-in,
-                  inti, dan janji untuk sesi berikutnya.
-                </p>
-              </section>
-            </>
-          )}
-
-          {/* ── Phase 2: Setelah sesi · isi laporan ──────────────── */}
-          {activePhase === "setelah" && isMentorRole && (
-            <section className="report-card">
-              <div className="head">
-                <h3>Laporan sesi</h3>
-                <span className={`save-status ${saving === "saving" ? "saving" : ""}`}>{savedLabel}</span>
+        {/* LEFT — main content */}
+        <div className="se-main">
+          <section className={`se-hero ${viewStatus}`}>
+            <div className="se-hero-top">
+              <div className="se-pills">
+                <span className="se-pill-sesi" data-status={viewStatus}>Sesi {num}</span>
+                <span className="se-pill-phase" data-phase={phaseLabel}>{phaseLabel}</span>
               </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="topic">
-                  Topik pembahasan
-                  <span className="req">*</span>
-                  <span className="who-sees">mentee + admin lihat</span>
-                </label>
-                <input
-                  id="topic"
-                  className="input"
-                  placeholder="Apa fokus utama sesi ini?"
-                  value={draft.topic}
-                  onChange={(e) => update("topic", e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="summary">
-                  Ringkasan sesi
-                  <span className="req">*</span>
-                  <span className="who-sees">mentee + admin lihat</span>
-                </label>
-                <textarea
-                  id="summary"
-                  className="textarea lg"
-                  placeholder="Apa yang dibahas? Apa kesimpulan kamu sebagai mentor?"
-                  value={draft.summaryNotes}
-                  onChange={(e) => update("summaryNotes", e.target.value)}
-                />
-
-                <div className="ai-box">
-                  <span className="ic">a</span>
-                  <div className="body">
-                    <b>Bantuan AI</b> <span className="db-pill static accent">Segera hadir</span> — nanti
-                    kamu bisa paste catatan Meet, link Drive, atau upload .txt dan dapat draf laporan otomatis.
-                    Untuk sekarang, isi laporan langsung di form ini — tersimpan otomatis tiap kamu mengetik.
-                    <div className="actions">
-                      <button
-                        type="button"
-                        className="primary"
-                        disabled={aiBusy}
-                        onClick={() => openAi("text")}
-                      >
-                        Hasilkan draf laporan
-                      </button>
-                      <button type="button" disabled={aiBusy} onClick={() => openAi("drive")}>
-                        Tempel link Drive
-                      </button>
-                      <button type="button" disabled={aiBusy} onClick={() => openAi("file")}>
-                        Upload catatan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                {/* Hidden file input — opened by the "Upload catatan" button */}
-                <input
-                  ref={aiFileRef}
-                  type="file"
-                  accept=".txt,.md,.csv,.rtf,.vtt,text/plain"
-                  style={{ display: "none" }}
-                  onChange={handleAiFile}
-                />
-              </div>
-
-              <div className="field">
-                <label className="field-label">
-                  Mood mentee hari ini
-                  <span className="who-sees private">cuma mentor + admin</span>
-                </label>
-                <div className="mood-row">
-                  {MOODS.map((m) => (
-                    <button
-                      type="button"
-                      key={m.value}
-                      className={`mood ${draft.menteeEnergy === m.value ? "on" : ""}`}
-                      onClick={() => update("menteeEnergy", draft.menteeEnergy === m.value ? null : m.value)}
-                    >
-                      <span className="face">{m.face}</span>
-                      <span className="lbl-m">{m.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="helper">Tracking mood membantu kamu lihat tren mentee lintas sesi.</div>
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="obstacles">
-                  Hambatan / kekhawatiran
-                  <span className="who-sees">mentee + admin lihat</span>
-                </label>
-                <textarea
-                  id="obstacles"
-                  className="textarea"
-                  placeholder="Apa yang menahan mentee?"
-                  value={draft.obstacles}
-                  onChange={(e) => update("obstacles", e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="notes">
-                  Catatan privat mentor
-                  <span className="who-sees private">hanya kamu</span>
-                </label>
-                <textarea
-                  id="notes"
-                  className="textarea"
-                  placeholder="Pengamatan jujur, hal yang tidak perlu dibagikan ke mentee. Berguna untuk sesi berikutnya."
-                  value={draft.keyOutput}
-                  onChange={(e) => update("keyOutput", e.target.value)}
-                />
-              </div>
-
-              <div className="form-footer">
-                <span className="draft-info">
-                  Draft tersimpan otomatis. Mentee & admin baru lihat setelah kamu pratinjau & kirim.
-                </span>
-                <button
-                  type="button"
-                  className="db-btn db-btn-outline"
-                  onClick={() => gotoPhase("mentee")}
-                >
-                  Pratinjau yang mentee lihat →
+              <span className="se-hero-status">{heroStatus}</span>
+            </div>
+            <h1>{session.topic || "Sesi mentoring"}</h1>
+            <p className="se-hero-sub">
+              Bersama <b>{mentee.name}</b> · mentee-mu{target ? ` · ${target}` : ""}
+            </p>
+            <div className="se-hero-actions">{heroActions}</div>
+            {viewStatus === "current" && meetLinkOverride && (
+              <div className="se-meet">
+                <span className="g">Meet</span>
+                <a href={meetLinkOverride} target="_blank" rel="noopener noreferrer">{meetLinkOverride.replace(/^https?:\/\//, "")}</a>
+                <button type="button" className="copy" title="Salin" onClick={() => navigator.clipboard?.writeText(meetLinkOverride)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                 </button>
               </div>
-            </section>
-          )}
+            )}
+            {startError && <div className="se-error">{startError}</div>}
+          </section>
 
-          {/* ── Phase 3: Mentee POV ──────────────────────────────── */}
-          {activePhase === "mentee" && (
-            <section className={`mentee-pov ${session.mentorSubmittedAt ? "is-submitted" : "is-preview"}`}>
-              <div className="pov-hero">
-                <div className="pov-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </div>
-                <div className="pov-body">
-                  <div className="pov-tag">
-                    {session.mentorSubmittedAt
-                      ? "Sudah dikirim ke mentee"
-                      : "Pratinjau · belum dikirim"}
-                  </div>
-                  <h2>
-                    {isMenteeRole
-                      ? `Ringkasan Sesi ${session.sessionNum} untuk kamu`
-                      : `Beginilah yang ${mentee.name.split(/\s+/)[0]} akan lihat`}
-                  </h2>
-                  <p>
-                    Tanpa catatan privat, mood, dan tracking internal. Hanya bagian yang aman dibagikan.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pov-grid">
-                <div className="pov-field">
-                  <div className="pov-label">Topik pembahasan</div>
-                  <div className="pov-value">
-                    {draft.topic || <em className="pov-empty">Belum diisi.</em>}
-                  </div>
-                </div>
-                <div className="pov-field">
-                  <div className="pov-label">Ringkasan sesi</div>
-                  <div className="pov-value pov-prose">
-                    {draft.summaryNotes || <em className="pov-empty">Belum diisi.</em>}
-                  </div>
-                </div>
-                <div className="pov-field">
-                  <div className="pov-label">Hambatan / kekhawatiran</div>
-                  <div className="pov-value">
-                    {draft.obstacles || <em className="pov-empty">Tidak ada hambatan yang dicatat.</em>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pov-footer">
-                {isMentorRole ? (
-                  session.mentorSubmittedAt ? (
-                    <>
-                      <span className="pov-stamp">
-                        Dikirim {parseTs(session.mentorSubmittedAt)?.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                        {session.menteeViewedAt && (
-                          <>
-                            {" · "}
-                            <b>dilihat mentee</b> {parseTs(session.menteeViewedAt)?.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                          </>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        className="db-btn db-btn-outline"
-                        onClick={() => gotoPhase("setelah")}
-                      >
-                        Edit laporan
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="pov-stamp">
-                        Setelah kamu kirim, mentee akan dapat notifikasi + email.
-                      </span>
-                      <button
-                        type="button"
-                        className="db-btn db-btn-outline"
-                        onClick={() => gotoPhase("setelah")}
-                      >
-                        ← Edit laporan
-                      </button>
-                      <button
-                        type="button"
-                        className="db-btn db-btn-primary"
-                        onClick={() => setConfirmSubmitOpen(true)}
-                      >
-                        <Icon name="check" size={16} />
-                        Setuju & kirim
-                      </button>
-                    </>
-                  )
-                ) : isMenteeRole && session.mentorSubmittedAt ? (
-                  <span className="pov-stamp">
-                    Diterima dari {pairing.mentor.name.split(/\s+/)[0]} · {parseTs(session.mentorSubmittedAt)?.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                  </span>
-                ) : (
-                  <span className="pov-stamp">Mentor belum mengirim laporan ini.</span>
-                )}
-              </div>
-            </section>
-          )}
+          {body}
         </div>
 
-        {/* ── Side rail ─────────────────────────────────────────── */}
-        <aside className="sesi-side">
-          <div className="sesi-side-card">
-            <h4>Perjalanan dengan {mentee.name.split(/\s+/)[0]}</h4>
+        {/* RIGHT — session rail */}
+        <aside className="se-rail">
+          <div className="se-rail-head">
+            <h3>Semua sesi</h3>
+            <span className="count">{doneCount} / {journey.length}</span>
+          </div>
+          <div className="se-rail-list">
             {journey.map((s) => {
-              const isCur = s.id === session.id;
-              const isDone = s.status === "completed";
-              const whenLabel = isCur
-                ? "sesi ini"
-                : s.completedAt
-                  ? fmtDayShort(new Date(s.completedAt))
-                  : s.scheduledAt
-                    ? fmtDayShort(new Date(s.scheduledAt))
-                    : "—";
+              const st = statusOf(s);
+              const active = s.id === session.id;
               return (
                 <Link
                   key={s.id}
                   href={`/dashboard/sesi/${s.id}`}
-                  className={`journey-row ${isCur ? "cur" : ""} ${isDone && !isCur ? "done" : ""}`}
+                  className={`se-rail-row ${active ? "active" : ""}`}
                 >
-                  <span className="num">{isDone && !isCur ? "" : s.sessionNum}</span>
-                  <span className="name">
-                    Sesi {s.sessionNum} — {s.topic || PHASE_LABELS[s.phase] || "Sesi"}
+                  <span className={`se-rail-dot ${st}`}>{st === "done" ? <IcCheck /> : s.sessionNum}</span>
+                  <div className="se-rail-info">
+                    <div className="se-rail-title">{s.sessionNum}. {s.topic || PHASE_LABELS[s.phase] || "Sesi"}</div>
+                    <div className="se-rail-meta">
+                      {PHASE_LABELS[s.phase] || s.phase}
+                      {s.completedAt ? ` · ${fmtDayShort(new Date(s.completedAt))}` : s.scheduledAt ? ` · ${fmtDayShort(new Date(s.scheduledAt))}` : ""}
+                    </div>
+                  </div>
+                  <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
                   </span>
-                  <span className="when">{whenLabel}</span>
                 </Link>
               );
             })}
           </div>
+        </aside>
+      </main>
 
-          <div className="sesi-side-mat">
-            <span className="tag">Materi terkait sesi {session.sessionNum}</span>
-            <h4>Pegangan untuk laporan ini</h4>
-            <div className="mat-row">
-              <span className="name">Panduan {phaseLabel}</span>
-              <Link href="/dashboard/resources">buka →</Link>
+      {/* ── Pratinjau mentee modal ─────────────────────────────── */}
+      {previewOpen && (
+        <div className="sesi-modal-backdrop" onClick={() => setPreviewOpen(false)}>
+          <div className="sesi-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="ai-modal-pill">pratinjau mentee</span>
+            <h3>Yang {menteeFirst} akan lihat</h3>
+            <p>Tanpa catatan privat &amp; mood — hanya bagian yang aman dibagikan.</p>
+            <div className="ai-preview">
+              <div className="ai-preview-field">
+                <span className="ai-preview-label">Topik</span>
+                <div className="ai-preview-value">{draft.topic || <em>—</em>}</div>
+              </div>
+              <div className="ai-preview-field">
+                <span className="ai-preview-label">Ringkasan</span>
+                <div className="ai-preview-value">{draft.summaryNotes || <em>—</em>}</div>
+              </div>
+              {draft.obstacles && (
+                <div className="ai-preview-field">
+                  <span className="ai-preview-label">Hambatan</span>
+                  <div className="ai-preview-value">{draft.obstacles}</div>
+                </div>
+              )}
             </div>
-            <div className="mat-row">
-              <span className="name">Contoh laporan terbaik</span>
-              <Link href="/dashboard/resources">buka →</Link>
-            </div>
-            <div className="mat-row">
-              <span className="name">Template feedback singkat</span>
-              <Link href="/dashboard/resources">buka →</Link>
+            <div className="sesi-modal-actions">
+              <button type="button" className="db-btn db-btn-outline" onClick={() => setPreviewOpen(false)}>Tutup</button>
+              {isMentorRole && (
+                <button type="button" className="db-btn db-btn-primary" onClick={() => { setPreviewOpen(false); setConfirmSubmitOpen(true); }}>
+                  {session.mentorSubmittedAt ? "Kirim ulang →" : "Setuju & kirim →"}
+                </button>
+              )}
             </div>
           </div>
+        </div>
+      )}
 
-          {activePhase === "setelah" && (
-            <div className="sesi-side-card">
-              <h4>Sebelum kamu kirim</h4>
-              <div className="send-check">
-                {checks.map((c, i) => (
-                  <div key={i} className={`send-check-item ${c.ok ? "" : "todo"}`}>
-                    <span className={c.ok ? "icon-y" : "icon-n"}>{c.ok ? "✓" : "○"}</span>
-                    <span>{c.label}</span>
-                  </div>
-                ))}
-              </div>
+      {/* ── Catatan mentor modal ───────────────────────────────── */}
+      {noteOpen && (
+        <div className="sesi-modal-backdrop" onClick={() => setNoteOpen(false)}>
+          <div className="sesi-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Catatan privat mentor</h3>
+            <p>Pengamatan jujur soal {menteeFirst} yang tidak dibagikan ke mentee. Tersimpan otomatis.</p>
+            <textarea
+              className="textarea lg"
+              style={{ minHeight: 160 }}
+              value={draft.keyOutput}
+              onChange={(e) => update("keyOutput", e.target.value)}
+              placeholder="Tulis catatan privat…"
+            />
+            <div className="sesi-modal-actions">
+              <span className={`save-status ${saving === "saving" ? "saving" : ""}`} style={{ marginRight: "auto" }}>{savedLabel}</span>
+              <button type="button" className="db-btn db-btn-primary" onClick={() => setNoteOpen(false)}>Selesai</button>
             </div>
-          )}
-        </aside>
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* ── AI assist modal (text / drive — file goes straight through) ─ */}
       {aiMode && aiMode !== "file" && (
@@ -1296,7 +1404,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       {confirmSubmitOpen && (
         <div className="sesi-modal-backdrop" onClick={() => !submitting && setConfirmSubmitOpen(false)}>
           <div className="sesi-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Kirim laporan ke {mentee.name.split(/\s+/)[0]}?</h3>
+            <h3>Kirim laporan ke {menteeFirst}?</h3>
             <p>
               Setelah dikirim, mentee dapat email + notifikasi, dan status sesi berubah jadi
               <b> selesai</b>. Kamu masih bisa edit nanti — tapi mentee akan lihat versi sekarang.
