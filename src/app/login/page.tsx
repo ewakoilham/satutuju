@@ -11,13 +11,15 @@
  *  Email + kunci form posts to /api/auth/login; on 200 it redirects to
  *  /dashboard, on any 4xx it shows the anti-enumeration "wrong" copy. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "./login.css";
 
 type View = "default" | "wrong" | "forgot";
 
-export default function LoginPage() {
+// Wrapped in <Suspense> by the default export below — useSearchParams()
+// requires a suspense boundary or the static build fails to prerender.
+function LoginPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const initialErr = params.get("err");
@@ -302,5 +304,13 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

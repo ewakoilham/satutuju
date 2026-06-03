@@ -7,7 +7,7 @@
  *  Body: verified-email card → kunci → criteria → konfirmasi kunci → CTA.
  *  Footer: "Atau lewati — aktivasi dengan Google saja" alt path. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "../login/login.css";
 
@@ -23,7 +23,9 @@ interface InviteMeta {
   role: "mentor" | "mentee" | "admin";
 }
 
-export default function ActivatePage() {
+// Wrapped in <Suspense> by the default export below — useSearchParams()
+// requires a suspense boundary or the static build fails to prerender.
+function ActivatePageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -271,5 +273,13 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
+  );
+}
+
+export default function ActivatePage() {
+  return (
+    <Suspense fallback={null}>
+      <ActivatePageInner />
+    </Suspense>
   );
 }
