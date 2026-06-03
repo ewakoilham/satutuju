@@ -474,6 +474,7 @@ function SessionsTab({
   onRefresh: () => void;
   onPreview: (doc: Doc) => void;
 }) {
+  const router = useRouter();
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
 
   const PHASE_STYLES: Record<string, string> = {
@@ -511,9 +512,7 @@ function SessionsTab({
           >
             <div
               className="px-6 py-4 cursor-pointer flex items-center justify-between"
-              onClick={() =>
-                setExpandedSession(isExpanded ? null : session.sessionNum)
-              }
+              onClick={() => router.push(`/dashboard/sesi/${session.id}`)}
             >
               <div className="flex items-center gap-4">
                 <div
@@ -570,11 +569,17 @@ function SessionsTab({
                 >
                   {missingDocs ? "missing documents" : session.status}
                 </Badge>
-                <Icon
-                  name={isExpanded ? "chevron-down" : "chevron-right"}
-                  size={16}
-                  className="text-text-muted-2"
-                />
+                <button
+                  type="button"
+                  title={isExpanded ? "Tutup ringkasan" : "Ringkasan cepat (buka halaman sesi untuk detail)"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedSession(isExpanded ? null : session.sessionNum);
+                  }}
+                  className="text-text-muted-2 hover:text-foreground p-1 -m-1 rounded"
+                >
+                  <Icon name={isExpanded ? "chevron-down" : "chevron-right"} size={16} />
+                </button>
               </div>
             </div>
 
