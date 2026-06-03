@@ -7,7 +7,7 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
-import { enrichUniversity, estimateUniStats } from "@/data/university-enrichment";
+import { enrichUniversity, estimateUniStats, cleanUniName } from "@/data/university-enrichment";
 import uniExtraRaw from "@/data/university-extra.json";
 
 interface UniExtra { the?: number; intlPct?: number; studentStaff?: number; website?: string }
@@ -485,9 +485,9 @@ export default function UniversitiesPage() {
               return (
                 <div key={u.id} className={`uni-card ${isSel ? "featured" : ""}`}>
                   <div className="uni-top">
-                    <UniFlag country={u.country} logo={enr?.logo} name={u.name} />
+                    <UniFlag country={u.country} logo={enr?.logo} name={cleanUniName(u.name)} />
                     <div className="uni-info" style={{ cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : u.id)}>
-                      <h3 className="uni-name">{u.name}</h3>
+                      <h3 className="uni-name">{cleanUniName(u.name)}</h3>
                       <div className="uni-place">
                         {enr?.location || u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
                         {x?.the ? ` · THE #${x.the}` : ""}
@@ -604,7 +604,7 @@ export default function UniversitiesPage() {
             <div className="compare-bar">
               <div className="count"><span className="num">{selected.length}</span> dipilih</div>
               <div className="who">
-                {selectedUnis.map((u) => u.name).join(", ")} · siap dibandingkan side-by-side.
+                {selectedUnis.map((u) => cleanUniName(u.name)).join(", ")} · siap dibandingkan side-by-side.
               </div>
               <button type="button" className="btn btn-ghost-d" onClick={() => setSelected([])}>Bersihkan</button>
               <button type="button" className="btn btn-light" onClick={() => setCompareOpen(true)}>Bandingkan →</button>
@@ -634,7 +634,7 @@ export default function UniversitiesPage() {
             ) : (
               wishlistUnis.slice(0, 8).map((u) => (
                 <div key={u.id} className="row-mini">
-                  <span className="name">{u.name}</span>
+                  <span className="name">{cleanUniName(u.name)}</span>
                   <span className="val" style={{ cursor: "pointer" }} onClick={() => toggleWishlist(u.id)} title="Hapus">{u.country} ✕</span>
                 </div>
               ))
@@ -670,7 +670,7 @@ export default function UniversitiesPage() {
               <tr>
                 <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-muted-2)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>Field</th>
                 {selectedUnis.map((u) => (
-                  <th key={u.id} style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700 }}>{u.name}</th>
+                  <th key={u.id} style={{ textAlign: "left", padding: "8px 10px", fontWeight: 700 }}>{cleanUniName(u.name)}</th>
                 ))}
               </tr>
             </thead>
