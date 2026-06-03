@@ -76,3 +76,60 @@ export function enrichUniversity(name: string): UniEnrichment | null {
   }
   return null;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   ESTIMATES (marked with * in the UI)
+
+   The dataset has no tuition / English-test / intake fields, and there is
+   no free authoritative feed that covers UK/AU/EU/Asia institutions. Those
+   figures realistically only exist as country-level ranges. So instead of
+   inventing per-university numbers, we surface honest *country + degree-level
+   ballparks* and flag every one with a "*" + a disclaimer in the UI.
+
+   Sources for the ranges (2025): Mastersportal, UniversityLiving, official
+   university intl pages. Always verify on the institution's own site.
+   ════════════════════════════════════════════════════════════════════ */
+
+interface CountryEstimate {
+  /** International tuition / year (postgraduate). */
+  pg: string;
+  /** International tuition / year (undergraduate). */
+  ug: string;
+  ielts: string;
+  intake: string;
+}
+
+const COUNTRY_ESTIMATES: Record<string, CountryEstimate> = {
+  Australia:     { pg: "A$ 32–55k",  ug: "A$ 28–45k",  ielts: "6.5", intake: "Feb · Jul" },
+  "New Zealand": { pg: "NZ$ 30–45k", ug: "NZ$ 26–40k", ielts: "6.5", intake: "Feb · Jul" },
+  UK:            { pg: "£ 18–30k",   ug: "£ 15–28k",   ielts: "6.5", intake: "Sep · Jan" },
+  USA:           { pg: "US$ 25–55k", ug: "US$ 25–55k", ielts: "6.5–7.0", intake: "Aug · Jan" },
+  Canada:        { pg: "C$ 20–40k",  ug: "C$ 18–35k",  ielts: "6.5", intake: "Sep · Jan" },
+  Ireland:       { pg: "€ 12–25k",   ug: "€ 10–22k",   ielts: "6.5", intake: "Sep" },
+  Germany:       { pg: "€ 0–20k",    ug: "€ 0–15k",    ielts: "6.5", intake: "Okt · Apr" },
+  Netherlands:   { pg: "€ 15–20k",   ug: "€ 10–15k",   ielts: "6.5", intake: "Sep · Feb" },
+  France:        { pg: "€ 4–20k",    ug: "€ 3–15k",    ielts: "6.5", intake: "Sep · Jan" },
+  Singapore:     { pg: "S$ 30–55k",  ug: "S$ 30–50k",  ielts: "6.5", intake: "Aug · Jan" },
+  "Hong Kong":   { pg: "HK$ 140–210k", ug: "HK$ 140–190k", ielts: "6.5", intake: "Sep · Jan" },
+  Japan:         { pg: "¥ 0.5–1.5jt", ug: "¥ 0.5–1.2jt", ielts: "6.0–6.5", intake: "Apr · Sep" },
+  "South Korea": { pg: "₩ 6–12jt",   ug: "₩ 5–10jt",   ielts: "6.0–6.5", intake: "Mar · Sep" },
+  Switzerland:   { pg: "CHF 1.5–25k", ug: "CHF 1.5–20k", ielts: "6.5", intake: "Sep · Feb" },
+};
+
+export interface UniEstimate {
+  tuition: string | null;
+  ielts: string | null;
+  intake: string | null;
+}
+
+/** Honest country + degree-level ballpark. Returns nulls for short programs
+ *  (language / foundation / summer) where a year-tuition figure is misleading,
+ *  and for countries we don't have a range for. UI must render these with "*". */
+export function estimateUniStats(country: string, degreeLevel: string): UniEstimate {
+  const c = COUNTRY_ESTIMATES[country];
+  if (!c) return { tuition: null, ielts: null, intake: null };
+  const isShort = /English|Foundation|Summer/i.test(degreeLevel);
+  if (isShort) return { tuition: null, ielts: c.ielts, intake: c.intake };
+  const tuition = degreeLevel === "Undergraduate" ? c.ug : c.pg;
+  return { tuition, ielts: c.ielts, intake: c.intake };
+}

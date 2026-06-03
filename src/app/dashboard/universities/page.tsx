@@ -7,7 +7,7 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
-import { enrichUniversity } from "@/data/university-enrichment";
+import { enrichUniversity, estimateUniStats } from "@/data/university-enrichment";
 
 // ISO 3166-1 alpha-2 codes mapped to country names used in the data
 const COUNTRY_CODES: Record<string, string> = {
@@ -440,6 +440,10 @@ export default function UniversitiesPage() {
         </div>
       </div>
 
+      <p className="est-legend">
+        <span className="est-star">*</span> Estimasi biaya, IELTS &amp; intake berdasarkan negara &amp; jenjang — selalu cek situs resmi kampus untuk angka pasti. QS rank &amp; logo bersifat aktual.
+      </p>
+
       {/* ── Split layout ─────────────────────────────────────────── */}
       <div className="uni-split">
         <div className="uni-list">
@@ -460,6 +464,7 @@ export default function UniversitiesPage() {
               const pendingLevel = editingLevel[u.id] ?? u.degreeLevel;
               const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
               const enr = enrichUniversity(u.name);
+              const est = estimateUniStats(u.country, u.degreeLevel);
               return (
                 <div key={u.id} className={`uni-card ${isSel ? "featured" : ""}`}>
                   <div className="uni-top">
@@ -509,22 +514,20 @@ export default function UniversitiesPage() {
 
                   <div className="uni-meta">
                     <div className="cell">
-                      <div className="lbl">Negara</div>
-                      <div className="val">{u.country}</div>
+                      <div className="lbl">Estimasi biaya/th <span className="est-star">*</span></div>
+                      <div className="val">{est.tuition || "—"}</div>
+                    </div>
+                    <div className="cell">
+                      <div className="lbl">IELTS <span className="est-star">*</span></div>
+                      <div className="val">{est.ielts || "—"}</div>
+                    </div>
+                    <div className="cell">
+                      <div className="lbl">Intake <span className="est-star">*</span></div>
+                      <div className="val">{est.intake || "—"}</div>
                     </div>
                     <div className="cell">
                       <div className="lbl">Jenjang</div>
                       <div className="val">{DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</div>
-                    </div>
-                    {u.programs && (
-                      <div className="cell">
-                        <div className="lbl">Program</div>
-                        <div className="val">{u.programs}</div>
-                      </div>
-                    )}
-                    <div className="cell">
-                      <div className="lbl">Website</div>
-                      <div className="val">{u.website ? "Tersedia" : "—"}</div>
                     </div>
                   </div>
 
@@ -670,6 +673,9 @@ export default function UniversitiesPage() {
                 { lbl: "Jenjang", get: (u: University) => DEGREE_LABELS[u.degreeLevel] || u.degreeLevel },
                 { lbl: "Program", get: (u: University) => u.programs || "—" },
                 { lbl: "QS Rank 2025", get: (u: University) => { const e = enrichUniversity(u.name); return e?.qsRank ? `#${e.qsRank}` : "—"; } },
+                { lbl: "Estimasi biaya/th *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).tuition || "—" },
+                { lbl: "IELTS *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).ielts || "—" },
+                { lbl: "Intake *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).intake || "—" },
                 { lbl: "Website", get: (u: University) => (u.website ? "Tersedia" : "—") },
                 ...(isAdmin ? [{ lbl: "Agency", get: (u: University) => u.agency || "—" }] : []),
               ].map((row) => (
