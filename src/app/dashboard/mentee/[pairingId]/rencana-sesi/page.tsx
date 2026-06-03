@@ -104,13 +104,19 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   // Drag state — index of the row being dragged.
   const dragIdx = useRef<number | null>(null);
 
-  // Load pairing + plan in parallel on mount.
+  // Current user id — to tell whether the viewer is the mentor (edits) or
+  // the mentee (read-only view of their finalized plan).
+  const [meId, setMeId] = useState<string | null>(null);
+
+  // Load pairing + plan + current user in parallel on mount.
   useEffect(() => {
     Promise.all([
       fetch(`/api/pairings`).then((r) => r.json()),
       fetch(`/api/session-plans/${pairingId}`).then((r) => r.json()),
+      fetch(`/api/auth/me`).then((r) => r.json()).catch(() => ({})),
     ])
-      .then(([pairingsResp, planResp]) => {
+      .then(([pairingsResp, planResp, meResp]) => {
+        setMeId(meResp?.user?.userId || meResp?.user?.id || null);
         const p = (pairingsResp.pairings || []).find((x: PairingInfo) => x.id === pairingId);
         if (!p) {
           setErr("Pairing tidak ditemukan atau kamu tidak punya akses.");
@@ -121,7 +127,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           return;
         }
         setPairing(p);
-        setPlan(planResp.plan);
+        setPlan(planResp.plan); // may be null for a mentee whose plan isn't finalized yet
       })
       .catch((e) => setErr(String(e)))
       .finally(() => setLoading(false));
@@ -290,7 +296,25 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
       </div>
     );
   }
-  if (!pairing || !plan) return null;
+  if (!pairing) return null;
+
+  const isMentee = !!meId && pairing.mentee.id === meId && pairing.mentor.id !== meId;
+
+  // Mentee whose plan isn't finalized yet → the API returns null (drafts are
+  // hidden from mentees). Show a friendly wait state instead of a blank/403.
+  if (!plan) {
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        <h1 className="sesi-title">Rencana sesi belum siap.</h1>
+        <p className="sesi-sub" style={{ margin: "12px auto 24px" }}>
+          {isMentee
+            ? "Mentor kamu belum menyelesaikan rencana sesi. Kamu akan dapat email begitu rencananya siap."
+            : "Rencana sesi belum tersedia."}
+        </p>
+        <Link href="/dashboard" className="db-btn db-btn-outline sm">← Kembali ke dashboard</Link>
+      </div>
+    );
+  }
 
   const total = plan.rows.length;
   const totalMin = planTotalMinutes(plan.rows);
@@ -305,18 +329,29 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
       <div className="page-head" style={{ marginBottom: 8 }}>
         <div>
           <div className="sesi-crumb">
-            <Link href="/dashboard/mentee">Mentee</Link>
-            {" › "}
-            <span>{pairing.mentee.name}</span>
+            {isMentee ? (
+              <Link href="/dashboard">Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/dashboard/mentee">Mentee</Link>
+                {" › "}
+                <span>{pairing.mentee.name}</span>
+              </>
+            )}
             {" › "}
             <span style={{ color: "var(--text-muted)" }}>Rencana sesi</span>
           </div>
           <h1 className="sesi-title">
-            Susun rencana sesi <span className="lede">— bareng {pairing.mentee.name.split(/\s+/)[0]}.</span>
+            {isMentee ? (
+              <>Rencana sesi kamu <span className="lede">— bareng {pairing.mentor.name.split(/\s+/)[0]}.</span></>
+            ) : (
+              <>Susun rencana sesi <span className="lede">— bareng {pairing.mentee.name.split(/\s+/)[0]}.</span></>
+            )}
           </h1>
           <p className="sesi-sub">
-            Mulai dari saran kurikulum {PLAN_MIN_SESSIONS}–{PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan,
-            hapus atau tambah sesi (minimum {PLAN_MIN_SESSIONS}). Finalisasi setelah {pairing.mentee.name.split(/\s+/)[0]} setuju.
+            {isMentee
+              ? "Ini rencana sesi yang sudah disusun mentor kamu. Klik ikon ⓘ di tiap sesi untuk lihat tujuan, output, dan dokumen yang perlu disiapkan."
+              : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi setelah ${pairing.mentee.name.split(/\s+/)[0]} setuju.`}
           </p>
         </div>
       </div>

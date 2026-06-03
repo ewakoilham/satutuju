@@ -33,29 +33,42 @@ async function loadPairing(pairingId: string) {
   return data;
 }
 
-async function assertAccess(pairingId: string) {
+async function resolveAccess(pairingId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   const pairing = await loadPairing(pairingId);
   if (!pairing) return { error: NextResponse.json({ error: "Pairing not found" }, { status: 404 }) };
   const isAdmin = user.role === "admin";
   const isMentor = pairing.mentorId === user.userId;
-  if (!isAdmin && !isMentor) return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  return { user, pairing };
+  const isMentee = pairing.menteeId === user.userId;
+  return { user, pairing, isAdmin, isMentor, isMentee };
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ pairingId: string }> }) {
   const { pairingId } = await params;
-  const access = await assertAccess(pairingId);
-  if (access.error) return access.error;
+  const a = await resolveAccess(pairingId);
+  if (a.error) return a.error;
+  // Mentor/admin edit; mentee reads only.
+  if (!a.isAdmin && !a.isMentor && !a.isMentee) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const canEdit = a.isAdmin || a.isMentor;
 
-  let { data: plan } = await supabase
+  const { data: existing } = await supabase
     .from("SessionPlan")
     .select("id, pairingId, status, rows, finalizedAt, acknowledgedAt, createdAt, updatedAt")
     .eq("pairingId", pairingId)
     .maybeSingle();
+  let plan = existing;
 
-  // Seed on first read so the mentor lands on the editable default template.
+  // Mentee view is read-only and only sees a finalized plan — never seed a
+  // draft on their behalf, and don't expose the mentor's in-progress draft.
+  if (!canEdit) {
+    if (!plan || plan.status === "draft") return NextResponse.json({ plan: null });
+    return NextResponse.json({ plan });
+  }
+
+  // Mentor/admin: seed on first read so they land on the editable default.
   if (!plan) {
     const rows = buildDefaultPlan();
     const nowIso = new Date().toISOString();
@@ -83,8 +96,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pai
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pairingId: string }> }) {
   const { pairingId } = await params;
-  const access = await assertAccess(pairingId);
-  if (access.error) return access.error;
+  const a = await resolveAccess(pairingId);
+  if (a.error) return a.error;
+  if (!a.isAdmin && !a.isMentor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const rows = body.rows as SessionPlanRow[] | undefined;
