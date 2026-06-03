@@ -37,6 +37,10 @@ export const PLAN_MIN_SESSIONS = 5;
 export const PLAN_MAX_SESSIONS = 15;
 export const PLAN_DEFAULT_DURATION = 75;
 export const PLAN_PHASES: PlanPhase[] = ["Discovery", "Planning", "Writing", "Execution", "Closing"];
+// Duration is now free-entry (mentor types the minutes); we only bound it to a
+// sane range instead of a fixed set.
+export const PLAN_MIN_DURATION = 15;
+export const PLAN_MAX_DURATION = 240;
 export const PLAN_ALLOWED_DURATIONS = [45, 60, 75, 90, 105, 120];
 
 const PHASE_LABEL: Record<string, PlanPhase> = {
@@ -86,8 +90,9 @@ export function validatePlan(plan: SessionPlanRow[]): string | null {
   for (const row of plan) {
     if (!row.title.trim()) return "Setiap sesi harus punya judul.";
     if (!PLAN_PHASES.includes(row.phase)) return `Fase tidak valid: ${row.phase}`;
-    if (!PLAN_ALLOWED_DURATIONS.includes(row.durationMinutes)) {
-      return `Durasi tidak valid (${row.durationMinutes} menit). Pilih ${PLAN_ALLOWED_DURATIONS.join("/")}.`;
+    if (!Number.isFinite(row.durationMinutes) || !Number.isInteger(row.durationMinutes) ||
+        row.durationMinutes < PLAN_MIN_DURATION || row.durationMinutes > PLAN_MAX_DURATION) {
+      return `Durasi harus ${PLAN_MIN_DURATION}–${PLAN_MAX_DURATION} menit.`;
     }
   }
   return null;

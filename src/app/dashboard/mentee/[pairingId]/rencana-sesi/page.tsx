@@ -22,9 +22,10 @@ import { useRouter } from "next/navigation";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import Modal from "@/components/ui/Modal";
 import {
-  PLAN_ALLOWED_DURATIONS,
   PLAN_MAX_SESSIONS,
   PLAN_MIN_SESSIONS,
+  PLAN_MIN_DURATION,
+  PLAN_MAX_DURATION,
   PLAN_PHASES,
   type SessionPlanRow,
   planTotalMinutes,
@@ -159,14 +160,10 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
       }),
     );
   }
-  function cycleDuration(id: string) {
-    mutate((rows) =>
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        const i = PLAN_ALLOWED_DURATIONS.indexOf(r.durationMinutes);
-        return { ...r, durationMinutes: PLAN_ALLOWED_DURATIONS[(i + 1) % PLAN_ALLOWED_DURATIONS.length] };
-      }),
-    );
+  /** Free-entry duration (minutes), clamped to the allowed range. */
+  function setDuration(id: string, minutes: number) {
+    const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, Math.round(minutes)));
+    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: n } : r)));
   }
   function duplicateRow(id: string) {
     mutate((rows) => {
@@ -370,7 +367,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                 <ul>
                   <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang sesi.</li>
                   <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
-                  <li><b>Klik pil fase atau durasi</b> untuk menyesuaikan.</li>
+                  <li><b>Klik pil fase</b> untuk ganti fase, dan <b>ketik angka durasi</b> (menit).</li>
                   <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
                   <li>Klik ikon <b>ⓘ</b> di kanan untuk lihat detail tiap sesi (tujuan &amp; persiapan).</li>
                   <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
@@ -428,15 +425,27 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                     >
                       {row.phase}
                     </button>
-                    <button
-                      type="button"
-                      className="rs-dur"
-                      onClick={() => !isFinalized && cycleDuration(row.id)}
-                      disabled={isFinalized}
-                      title={isFinalized ? "Durasi tidak bisa diubah setelah finalisasi" : "Klik untuk ganti durasi"}
-                    >
-                      {row.durationMinutes} mnt
-                    </button>
+                    <span className="rs-dur" title={isFinalized ? "Durasi tidak bisa diubah setelah finalisasi" : "Ketik durasi dalam menit"}>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="rs-dur-input"
+                        defaultValue={row.durationMinutes}
+                        min={PLAN_MIN_DURATION}
+                        max={PLAN_MAX_DURATION}
+                        step={5}
+                        disabled={isFinalized}
+                        aria-label="Durasi sesi (menit)"
+                        onBlur={(e) => {
+                          const raw = parseInt(e.currentTarget.value, 10);
+                          const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, isNaN(raw) ? row.durationMinutes : raw));
+                          e.currentTarget.value = String(n);
+                          if (n !== row.durationMinutes) setDuration(row.id, n);
+                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                      />
+                      <span className="rs-dur-unit">mnt</span>
+                    </span>
                   </div>
                 </div>
                 <div className="rs-actions">
