@@ -26,6 +26,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    // Invite-only gate: refuse anyone not approved/activated by an admin,
+    // even if a row exists. (New accounts only arrive via admin invite →
+    // activation, which sets isActivated = true.)
+    if (!user.isActivated) {
+      return NextResponse.json(
+        { error: "Akun belum diaktifkan. Hubungi tim Satu Tuju." },
+        { status: 403 },
+      );
+    }
+
     const token = await createToken({
       userId: user.id,
       email: user.email,

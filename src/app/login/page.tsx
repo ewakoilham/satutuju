@@ -151,13 +151,13 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-gray-400 mt-6">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/signup"
+            Akses hanya lewat undangan. Butuh bantuan?{" "}
+            <a
+              href="mailto:hello@satutuju.id"
               className="text-primary font-semibold hover:underline"
             >
-              Sign Up
-            </Link>
+              Hubungi tim
+            </a>
           </p>
         </div>
       </div>
