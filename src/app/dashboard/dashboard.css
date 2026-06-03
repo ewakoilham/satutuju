@@ -4152,3 +4152,17 @@
   position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
   pointer-events: none; font-size: 9px; line-height: 1; color: currentColor; opacity: .75;
 }
+
+/* ── Rencana Sesi detail: black bold headings + bulleted lists ─────────── */
+.dashboard-shell .rs-detail-label {
+  color: var(--foreground, #1a1a2e);
+  font-weight: 700;
+}
+.dashboard-shell .rs-detail-cols ul {
+  list-style: disc;
+  padding-left: 18px;
+}
+.dashboard-shell .rs-detail-cols li {
+  list-style: disc;
+}
+.dashboard-shell .rs-detail-cols li::marker { color: var(--primary, #3958b3); }
