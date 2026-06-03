@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
@@ -12,7 +12,6 @@ import {
   DayColumn,
   computeGhostFromClick,
   snapCellClick,
-  InlineCreateCard,
   EditSlotModal,
   BookingModal,
   SlotPopover,
@@ -63,10 +62,15 @@ export default function SchedulePage() {
 
   const refresh = useScheduleData(user?.role, mentorFilter, dispatch);
 
-  // View mode is decorative for now — the calendar always renders week view.
-  // Hari / Bulan / Agenda are wired as disabled placeholders so the design's
-  // tab pattern is visible without us shipping incomplete views.
-  const [viewMode] = useState<"minggu">("minggu");
+  // Calendar view: Hari (day) / Minggu (week) / Bulan (month) / Agenda (list).
+  const [view, setView] = useState<"hari" | "minggu" | "bulan" | "agenda">("minggu");
+  // Selected day for the Hari view (null = today / first day of week).
+  const [dayDate, setDayDate] = useState<string | null>(null);
+  // "Slot baru" side-panel fields (mentor, while creating a slot).
+  const [sbNotes, setSbNotes] = useState("");
+  const [sbRecur, setSbRecur] = useState(false);
+  const [sbSaving, setSbSaving] = useState(false);
+  const [sbErr, setSbErr] = useState<string | null>(null);
 
   // Derived
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -115,17 +119,12 @@ export default function SchedulePage() {
   const isAdmin = user?.role === "admin";
 
   // Drag-to-create hook (mentor only)
-  const drag = useDragToCreate(user?.role, "minggu" === viewMode ? state.mode : state.mode, weekSlots, dispatch);
+  const drag = useDragToCreate(user?.role, state.mode, weekSlots, dispatch);
+
+  // Active day for the Hari view.
+  const activeDay = dayDate ?? today;
 
   // ── API actions ─────────────────────────────────────────────────────────
-
-  async function handleSaveNew(d: { date: string; startTime: string; endTime: string; notes: string }) {
-    const res = await fetch("/api/schedule", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d),
-    });
-    if (!res.ok) throw new Error((await res.json()).error || "Failed to save");
-    await refresh();
-  }
 
   async function handleSaveEdit(d: { date: string; startTime: string; endTime: string; notes: string }) {
     if (mode.type !== "editing") return;
@@ -219,13 +218,222 @@ export default function SchedulePage() {
     dispatch({ type: "VIEW_SLOT", slot, anchorX: e.clientX, anchorY: e.clientY });
   }
 
-  const handleUpdateCreateTime = useCallback((st: string, et: string) => {
-    dispatch({ type: "UPDATE_CREATE_TIME", startTime: st, endTime: et });
-  }, [dispatch]);
-
   const handlePreviewChange = useCallback((startTime: string, endTime: string) => {
     dispatch({ type: "UPDATE_GHOST", startTime, endTime });
   }, [dispatch]);
+
+  // ── "Slot baru" panel state ─────────────────────────────────────────────
+  const creatingKey = mode.type === "creating" ? `${mode.date}|${mode.startTime}|${mode.endTime}` : "";
+  useEffect(() => {
+    if (creatingKey) { setSbNotes(""); setSbRecur(false); }
+  }, [creatingKey]);
+
+  // ── View-render helpers ─────────────────────────────────────────────────
+  const ID_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const dur = (s: Slot) => toMins(s.endTime) - toMins(s.startTime);
+  function slotKind(s: Slot): "booked" | "pending" | "available" {
+    const bs = s.bookings || [];
+    if (bs.some((b) => b.status === "accepted")) return "booked";
+    if (bs.some((b) => b.status === "pending")) return "pending";
+    return "available";
+  }
+  function slotLabel(s: Slot): { name: string; sub: string } {
+    const b = (s.bookings || []).find((x) => x.status === "accepted") ?? (s.bookings || []).find((x) => x.status === "pending");
+    if (b) {
+      const who = b.mentee?.name || "Mentee";
+      const name = b.session ? `${who} · Sesi ${b.session.sessionNum}` : who;
+      return { name, sub: b.session?.topic || s.notes || `${dur(s)} menit` };
+    }
+    return { name: "Tersedia", sub: s.notes || `${dur(s)} menit` };
+  }
+  const parseDay = (ds: string) => new Date(ds + "T00:00:00");
+
+  async function handleSaveSlotBaru() {
+    if (mode.type !== "creating") return;
+    const { date, startTime, endTime } = mode;
+    setSbSaving(true);
+    setSbErr(null);
+    try {
+      if (sbRecur) {
+        // Recurring → create an availability rule (8 weeks of slots).
+        const res = await fetch("/api/availability", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dayOfWeek: parseDay(date).getDay(), startTime, endTime,
+            recurMode: "fixed", weeksAhead: 8, notes: sbNotes.trim() || null,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Gagal membuat aturan");
+      } else {
+        const res = await fetch("/api/schedule", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, startTime, endTime, notes: sbNotes.trim() }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Gagal menyimpan slot");
+      }
+      dispatch({ type: "DISMISS" });
+      await refresh();
+    } catch (e) {
+      setSbErr(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setSbSaving(false);
+    }
+  }
+
+  function setCreateDuration(mins: number) {
+    if (mode.type !== "creating") return;
+    dispatch({ type: "UPDATE_CREATE_TIME", startTime: mode.startTime, endTime: minsToTime(toMins(mode.startTime) + mins) });
+  }
+
+  function renderDayView() {
+    const d = parseDay(activeDay);
+    const daySlots = slots
+      .filter((s) => s.date === activeDay)
+      .sort((a, b) => toMins(a.startTime) - toMins(b.startTime));
+    const sesiCount = daySlots.filter((s) => slotKind(s) !== "available").length;
+    const openCount = daySlots.filter((s) => slotKind(s) === "available").length;
+    return (
+      <div className="dayv">
+        <div className="dayv-head">
+          <div className="dayv-date">
+            <div className="dayv-dnum">{d.getDate()}</div>
+            <div className="dayv-dname">
+              <b>{ID_DAYS[d.getDay()]}</b>
+              <span>{ID_MONTHS[d.getMonth()]} {d.getFullYear()}{activeDay === today ? " · hari ini" : ""}</span>
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            <b style={{ color: "var(--primary-900)" }}>{sesiCount} sesi</b> ·{" "}
+            <b style={{ color: "var(--primary-900)" }}>{openCount} slot kosong</b>
+          </div>
+        </div>
+        <div className="dayv-timeline">
+          {Array.from({ length: TOTAL_H }, (_, i) => {
+            const h = HOUR_START + i;
+            const rowSlots = daySlots.filter((s) => Math.floor(toMins(s.startTime) / 60) === h);
+            return (
+              <div className="dayv-row" key={h}>
+                <span className="dayv-hour">{String(h).padStart(2, "0")}:00</span>
+                <div className="dayv-cells">
+                  {rowSlots.map((s) => {
+                    const k = slotKind(s);
+                    const { name, sub } = slotLabel(s);
+                    return (
+                      <div key={s.id} className={`dayv-evt ${k}`} onClick={(e) => handleSlotClick(e, s)}>
+                        <div className="dayv-evt-head"><b>{name}</b><span>{dur(s)} mnt</span></div>
+                        <div className="dayv-evt-sub">{sub} · {s.startTime} → {s.endTime}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {daySlots.length === 0 && <div className="dayv-empty">Tidak ada slot pada hari ini.</div>}
+        </div>
+      </div>
+    );
+  }
+
+  function renderMonthView() {
+    const ref = parseDay(activeDay);
+    const first = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const gridStart = new Date(first);
+    gridStart.setDate(1 - first.getDay());
+    const month = first.getMonth();
+    const byDate = new Map<string, Slot[]>();
+    for (const s of slots) {
+      const a = byDate.get(s.date) || [];
+      a.push(s);
+      byDate.set(s.date, a);
+    }
+    return (
+      <div className="monv">
+        <div className="monv-head">
+          {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((d) => <span key={d}>{d}</span>)}
+        </div>
+        <div className="monv-grid">
+          {Array.from({ length: 42 }, (_, i) => {
+            const dt = new Date(gridStart);
+            dt.setDate(gridStart.getDate() + i);
+            const ds = toDateStr(dt);
+            const out = dt.getMonth() !== month;
+            const isToday = ds === today;
+            const dayS = byDate.get(ds) || [];
+            const kinds = new Set(dayS.map(slotKind));
+            return (
+              <div
+                key={i}
+                className={`monv-cell${out ? " out" : ""}${isToday ? " today" : ""}`}
+                onClick={() => { if (!out) { setDayDate(ds); setView("hari"); } }}
+              >
+                <span className="monv-num">{dt.getDate()}</span>
+                {!out && dayS.length > 0 && (
+                  <>
+                    <span className="monv-dots">
+                      {kinds.has("booked") && <span className="monv-dot booked" />}
+                      {kinds.has("pending") && <span className="monv-dot pending" />}
+                      {kinds.has("available") && <span className="monv-dot avail" />}
+                    </span>
+                    <span className="monv-cnt">{dayS.length} slot</span>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderAgendaView() {
+    const upcoming = slots
+      .filter((s) => s.date >= today)
+      .sort((a, b) => (a.date === b.date ? toMins(a.startTime) - toMins(b.startTime) : a.date.localeCompare(b.date)));
+    if (upcoming.length === 0) {
+      return <div className="agenda"><div className="agenda-empty">Belum ada slot mendatang.</div></div>;
+    }
+    const groups: { date: string; items: Slot[] }[] = [];
+    for (const s of upcoming) {
+      let g = groups[groups.length - 1];
+      if (!g || g.date !== s.date) { g = { date: s.date, items: [] }; groups.push(g); }
+      g.items.push(s);
+    }
+    return (
+      <div className="agenda">
+        {groups.map((g) => {
+          const dt = parseDay(g.date);
+          const isToday = g.date === today;
+          return (
+            <div key={g.date}>
+              <div className="agenda-day-head">
+                <span className="agenda-day-name">{isToday ? "Hari ini" : ID_DAYS[dt.getDay()]}</span>
+                <span className="agenda-day-date">{dt.getDate()} {ID_MONTHS[dt.getMonth()]}</span>
+                <span className="agenda-day-meta">{g.items.length} slot</span>
+              </div>
+              {g.items.map((s) => {
+                const k = slotKind(s);
+                const { name, sub } = slotLabel(s);
+                const initials = name.replace(/·.*$/, "").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+                return (
+                  <div key={s.id} className={`agenda-evt ${k}`} onClick={(e) => handleSlotClick(e, s)}>
+                    <div className="agenda-ico" style={k === "available" ? { background: "var(--primary-100)", color: "var(--primary)" } : { background: "var(--primary)", color: "#fff" }}>
+                      {k === "available" ? "⏰" : initials}
+                    </div>
+                    <div className="agenda-evt-info">
+                      <div className="agenda-evt-name">{name}</div>
+                      <div className="agenda-evt-sub">{sub}</div>
+                    </div>
+                    <div className="agenda-evt-time">{s.startTime}<span>{dur(s)}m</span></div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -347,10 +555,17 @@ export default function SchedulePage() {
           </span>
         )}
         <div className="mode-tabs" role="tablist">
-          <button type="button" role="tab" disabled title="Mode harian segera">Hari</button>
-          <button type="button" role="tab" className="on">Minggu</button>
-          <button type="button" role="tab" disabled title="Mode bulanan segera">Bulan</button>
-          <button type="button" role="tab" disabled title="Mode agenda segera">Agenda</button>
+          {(["hari", "minggu", "bulan", "agenda"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              className={view === v ? "on" : ""}
+              onClick={() => setView(v)}
+            >
+              {v === "hari" ? "Hari" : v === "minggu" ? "Minggu" : v === "bulan" ? "Bulan" : "Agenda"}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -367,6 +582,8 @@ export default function SchedulePage() {
               </p>
             </div>
           ) : (
+            <>
+            {view === "minggu" && (
             <div className="overflow-x-auto">
               <div style={{ minWidth: 640 }}>
                 {/* Day headers */}
@@ -468,6 +685,11 @@ export default function SchedulePage() {
                 )}
               </div>
             </div>
+            )}
+            {view === "hari" && renderDayView()}
+            {view === "bulan" && renderMonthView()}
+            {view === "agenda" && renderAgendaView()}
+            </>
           )}
 
           {/* Legend */}
@@ -499,6 +721,62 @@ export default function SchedulePage() {
         <aside className="jadwal-side">
           {isMentor && (
             <>
+              {mode.type === "creating" && (
+                <div className="jadwal-side-card slotbaru">
+                  <h3>Slot baru</h3>
+                  <div className="when-pick">
+                    {ID_DAYS[parseDay(mode.date).getDay()]} {parseDay(mode.date).getDate()} {ID_MONTHS[parseDay(mode.date).getMonth()]} · {mode.startTime} — {mode.endTime}
+                  </div>
+
+                  <div className="sb-field">
+                    <label className="sb-label">Durasi</label>
+                    <div className="duration-row">
+                      {[60, 90, 120].map((d) => {
+                        const cur = toMins(mode.endTime) - toMins(mode.startTime);
+                        return (
+                          <span
+                            key={d}
+                            className={`pill${cur === d ? " on" : ""}`}
+                            onClick={() => setCreateDuration(d)}
+                          >
+                            {d} mnt
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="sb-field">
+                    <label className="sb-label">Catatan (opsional)</label>
+                    <input
+                      className="sb-input"
+                      value={sbNotes}
+                      onChange={(e) => setSbNotes(e.target.value)}
+                      placeholder="contoh: hanya untuk sesi review essay"
+                    />
+                  </div>
+
+                  <div className="recurring-row" onClick={() => setSbRecur((v) => !v)}>
+                    <div className={`toggle${sbRecur ? " on" : ""}`} />
+                    <span>
+                      Ulangi tiap <b style={{ color: "var(--primary-900)" }}>{ID_DAYS[parseDay(mode.date).getDay()]}</b> selama{" "}
+                      <b style={{ color: "var(--primary-900)" }}>8 minggu</b>
+                    </span>
+                  </div>
+
+                  {sbErr && <p style={{ color: "var(--danger)", fontSize: 12, marginTop: 10 }}>{sbErr}</p>}
+
+                  <div className="sb-actions">
+                    <button type="button" className="btn-primary text-sm py-2" disabled={sbSaving} onClick={handleSaveSlotBaru}>
+                      {sbSaving ? "Menyimpan…" : "Simpan slot"}
+                    </button>
+                    <button type="button" className="btn-ghost text-sm py-2" onClick={() => dispatch({ type: "DISMISS" })}>
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <RecurringRulesCard onChanged={refresh} />
 
               <div className="jadwal-side-card">
@@ -546,21 +824,8 @@ export default function SchedulePage() {
         </aside>
       </div>
 
-      {/* ── Overlays (unchanged from previous implementation) ──────── */}
-
-      {mode.type === "creating" && (
-        <InlineCreateCard
-          date={mode.date}
-          startTime={mode.startTime}
-          endTime={mode.endTime}
-          anchorX={mode.anchorX}
-          anchorY={mode.anchorY}
-          existingSlots={weekSlots.filter((s) => s.date === mode.date)}
-          onClose={() => dispatch({ type: "DISMISS" })}
-          onSave={handleSaveNew}
-          onUpdateTime={handleUpdateCreateTime}
-        />
-      )}
+      {/* ── Overlays ───────────────────────────────────────────────── */}
+      {/* Slot creation is handled by the "Slot baru" side panel (mentor). */}
 
       {mode.type === "viewing" && (
         <SlotPopover
