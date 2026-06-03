@@ -258,14 +258,22 @@ export default function UniversitiesPage() {
 
   function matchMentee(m: MenteeLite) {
     setMenteeOpen(false);
-    const q = (m.target || "").trim();
-    setSearch(q);
-    // Try to map a preferred destination to a known country for the filter.
+    // The directory is searchable by university name/country, NOT by major —
+    // so we filter by the mentee's destination country + degree level instead
+    // of putting the major text into the keyword box (which would match nothing).
     const dest = (m.destinations || "").trim();
+    const target = (m.target || "").trim();
     const matchedCountry = ALL_COUNTRIES.find((c) => dest.toLowerCase().includes(c.toLowerCase())) || "";
-    setCountry(matchedCountry);
+    const lvl = /\b(master|magister|s2|graduate|postgrad|phd|doctora|mba)\b/i.test(target)
+      ? "Graduate"
+      : /\b(bachelor|undergrad|s1|sarjana)\b/i.test(target)
+        ? "Undergraduate"
+        : "";
+    setSearch("");
     setRegion("");
-    fetchUniversities(q, "", matchedCountry, level);
+    setCountry(matchedCountry);
+    setLevel(lvl);
+    fetchUniversities("", "", matchedCountry, lvl);
   }
 
   async function saveLevel(u: University) {
