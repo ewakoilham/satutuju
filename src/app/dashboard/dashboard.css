@@ -4449,7 +4449,15 @@
   border-radius: 20px; padding: 20px 20px 12px;
   box-shadow: var(--shadow-card);
   position: sticky; top: 24px;
+  /* The whole rail scrolls independently of the left column, capped to the
+     viewport — so "Semua sesi" + "Dokumen mentee" + "Action items" stay
+     reachable no matter how long the left side gets. */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
+.dashboard-shell .se-rail::-webkit-scrollbar { width: 6px; }
+.dashboard-shell .se-rail::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
 .dashboard-shell .se-rail-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 4px 14px; border-bottom: 1px solid #eef1f6; margin-bottom: 6px;
@@ -4459,8 +4467,8 @@
   letter-spacing: -0.01em; color: var(--primary-900); margin: 0;
 }
 .dashboard-shell .se-rail-head .count { font-family: var(--font-mono); font-size: 14px; color: var(--text-muted-2); }
-.dashboard-shell .se-rail-list { display: flex; flex-direction: column; max-height: 70vh; overflow: auto; }
-.dashboard-shell .se-rail-list::-webkit-scrollbar { width: 0; }
+/* Lists flow naturally; the parent .se-rail owns the scroll now. */
+.dashboard-shell .se-rail-list { display: flex; flex-direction: column; }
 .dashboard-shell .se-rail-row {
   display: flex; align-items: center; gap: 13px;
   padding: 12px 12px; border-radius: 13px; cursor: pointer;
@@ -4541,7 +4549,7 @@
 
 @media (max-width: 1080px) {
   .dashboard-shell .se-wrap { grid-template-columns: 1fr; }
-  .dashboard-shell .se-rail { position: static; }
+  .dashboard-shell .se-rail { position: static; max-height: none; overflow-y: visible; }
   .dashboard-shell .se-hero h1 { font-size: 34px; }
 }
 
