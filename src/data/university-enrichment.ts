@@ -133,3 +133,55 @@ export function estimateUniStats(country: string, degreeLevel: string): UniEstim
   const tuition = degreeLevel === "Undergraduate" ? c.ug : c.pg;
   return { tuition, ielts: c.ielts, intake: c.intake };
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   DISPLAY NAME CLEANUP
+
+   Many directory rows are pathway/agency entries whose names carry provider
+   tags — e.g. "(KAPLAN) KIC / University of Westminster" or "Newcastle
+   University - INTO UK". This strips those tags for *display only* (search +
+   matching still use the raw name). It is conservative: it only drops a
+   provider that appears as a "/"-prefix or a " - "-suffix, so genuine names
+   like "Kaplan Business School" are left untouched.
+   ════════════════════════════════════════════════════════════════════ */
+
+const NAME_PROVIDER =
+  /\b(kaplan|kic|into|navitas|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+const NAME_NOISE =
+  /\b(international pathway college|international study centre|international college|pathway college)\b/gi;
+const looksLikeUni = (p: string) =>
+  /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
+
+export function cleanUniName(raw: string): string {
+  let s = String(raw || "").trim();
+  const orig = s;
+
+  // 1) Provider prefix before a slash → keep the part after it.
+  if (s.includes("/")) {
+    const parts = s.split("/").map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const left = parts.slice(0, -1).join(" ");
+      if (NAME_PROVIDER.test(left) || /\bkic\b/i.test(left)) s = parts[parts.length - 1];
+    }
+  }
+
+  // 2) " - " split → keep the institution side, drop the provider/agency side.
+  if (s.includes(" - ")) {
+    const segs = s.split(" - ").map((p) => p.trim()).filter(Boolean);
+    const score = (p: string) => {
+      let sc = 0;
+      if (looksLikeUni(p)) sc += 3;
+      if (NAME_PROVIDER.test(p)) sc -= 4;
+      if (/\bacademy\b/i.test(p)) sc -= 1;
+      return sc;
+    };
+    segs.sort((a, b) => score(b) - score(a));
+    s = segs[0];
+  }
+
+  // 3) Drop pathway-noise phrases; tidy (parens preserved).
+  s = s.replace(NAME_NOISE, "");
+  s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—-]+|[\s/,–—-]+$/g, "").trim();
+
+  return !s || s.length < 3 ? orig : s;
+}
