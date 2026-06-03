@@ -10,6 +10,11 @@ import { Resend } from "resend";
 
 const FROM_DEFAULT = "Satu Tuju <noreply@satutuju.id>";
 
+// Absolute, publicly-reachable logo for email clients (they can't use
+// relative paths or our React Logo component, and many block SVG — so a
+// hosted PNG on the live domain). Override with EMAIL_LOGO_URL if it moves.
+const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://www.satutuju.id/logo-main.png";
+
 function appUrl(): string {
   return process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3100";
 }
@@ -52,9 +57,8 @@ function shell(opts: {
     <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#f4f8fa;">
       <span style="display:none;visibility:hidden;mso-hide:all;max-height:0;overflow:hidden;">${opts.preheader}</span>
       <div style="background:#fff;border:1px solid #dfe5eb;border-radius:14px;padding:28px;">
-        <div style="font-family:'Poppins','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:700;font-size:18px;color:#3958b3;letter-spacing:-0.01em;margin-bottom:18px;">
-          satu tuju
-        </div>
+        <img src="${LOGO_URL}" alt="Satu Tuju" width="120" height="81"
+             style="display:block;border:0;outline:none;text-decoration:none;height:auto;margin-bottom:18px;" />
         <h2 style="font-family:'Poppins',sans-serif;font-weight:800;font-size:24px;color:#111d42;line-height:1.2;letter-spacing:-0.01em;margin:0 0 12px;">
           ${opts.heading}
         </h2>
