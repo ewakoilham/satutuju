@@ -1,0 +1,1142 @@
+/* ── Satu Tuju · Login Hi-Fi · scoped to .lh-* ──────────── */
+
+/* The shell fills the viewport. In the original design it was sized by
+   its parent artboard; in production we attach it to the page viewport.
+
+   The auth flow is always rendered in light mode regardless of the user's
+   system theme — the soft cream gradient is the visual signature of the
+   pre-login surface. We hard-pin the relevant tokens here so dark-mode
+   themes elsewhere in the app don't bleed through. */
+.lh-shell {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: #fefaef;
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
+  color: #1a1a2e;
+
+  /* Force the design tokens to their light-mode values inside the auth
+     shell. Without this, .dark on <html> flips them and the cream cards
+     turn navy. */
+  --background: #f4f8fa;
+  --foreground: #1a1a2e;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --border: #dfe5eb;
+  --brand-yellow: #fefaef;
+  --brand-blue-soft: #c6ddef;
+  --brand-lavender: #d5c6ef;
+  --primary: #3958b3;
+  --primary-deep: #4f64b1;
+  --primary-50: #edf1fa;
+  --primary-100: #dce4f5;
+  --primary-200: #b9c9eb;
+  --primary-300: #8ea6d9;
+  --primary-700: #233a7d;
+  --primary-900: #111d42;
+  --text-muted: #64748b;
+  --text-muted-2: #94a3b8;
+  --text-muted-3: #475569;
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --text-amber: #92400e;
+}
+
+.lh-backdrop {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at top left, var(--primary-50) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, #f4ecd680 0%, transparent 60%),
+    linear-gradient(155deg, var(--brand-yellow) 0%, #fdf7e8 40%, #f1f6fb 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.lh-backdrop[data-tone="lavender"] {
+  background:
+    radial-gradient(ellipse at top right, #efe6fb 0%, transparent 55%),
+    radial-gradient(ellipse at bottom left, var(--primary-50) 0%, transparent 60%),
+    linear-gradient(155deg, var(--brand-yellow) 0%, #f4ecf8 50%, #f1f6fb 100%);
+}
+
+.lh-blob {
+  position: absolute; border-radius: 50%; filter: blur(100px);
+  pointer-events: none; mix-blend-mode: multiply;
+  will-change: transform;
+}
+.lh-blob-1 { width:480px; height:480px; top:-120px; left:-120px;
+  background: var(--brand-blue-soft); opacity:.55;
+  animation: lhBlobDrift 14s ease-in-out infinite; }
+.lh-blob-2 { width:420px; height:420px; bottom:-140px; right:-100px;
+  background: var(--brand-lavender); opacity:.42;
+  animation: lhBlobDrift 18s ease-in-out infinite reverse; }
+.lh-blob-3 { width:300px; height:300px; top:30%; right:8%;
+  background: #f4e7a3; opacity:.30;
+  animation: lhBlobDrift 22s ease-in-out infinite; }
+@keyframes lhBlobDrift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  25%      { transform: translate(28px,-18px) scale(1.06); }
+  50%      { transform: translate(-14px,22px) scale(.96); }
+  75%      { transform: translate(18px,10px) scale(1.03); }
+}
+
+/* corner illustrations — very subtle, brand motif */
+.lh-deco {
+  position: absolute;
+  opacity: .07;
+  width: 220px; height: auto;
+  pointer-events: none;
+  filter: blur(.3px);
+}
+.lh-deco-tl { top: 28px; left: 32px; transform: rotate(-12deg); }
+.lh-deco-br { bottom: 28px; right: 32px; width: 180px; transform: rotate(18deg); }
+
+.lh-grain {
+  position: absolute; inset: 0;
+  pointer-events: none; opacity: .35;
+  background-image:
+    repeating-radial-gradient(circle at 0 0, rgba(0,0,0,0.012) 0 1px, transparent 1px 4px);
+}
+
+/* ── FRAME: two-column wrapper card + side ribbon ────────── */
+.lh-frame {
+  position: relative; z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(0, 320px);
+  gap: 28px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 880px;
+}
+.lh-frame-narrow {
+  grid-template-columns: minmax(0, 520px);
+  max-width: 520px;
+}
+
+/* ── CARD ─────────────────────────────────────────────── */
+.lh-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 36px 36px 28px;
+  box-shadow:
+    0 30px 60px -20px rgb(57 88 179 / 0.18),
+    0 8px 24px -8px rgb(57 88 179 / 0.10),
+    0 0 0 1px rgb(255 255 255 / 0.5) inset;
+  position: relative;
+}
+
+.lh-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 12px;
+}
+
+/* ── Gated chip ───────────────────────────────────────── */
+.lh-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 8px;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--primary-700);
+}
+.lh-chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 2px var(--success-light);
+}
+
+/* ── Titles ───────────────────────────────────────────── */
+.lh-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 40px; line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--primary-900);
+  margin: 0 0 12px;
+}
+.lh-title-italic {
+  font-weight: 400; font-style: italic;
+  color: var(--primary);
+  letter-spacing: -0.005em;
+}
+.lh-title-center { text-align: center; }
+.lh-sub {
+  margin: 0 0 24px;
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 360px;
+}
+.lh-sub-center { text-align: center; margin-left: auto; margin-right: auto; }
+.lh-sub b { color: var(--foreground); font-weight: 600; }
+
+/* ── Google button ────────────────────────────────────── */
+.lh-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%;
+  padding: 13px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.lh-google:hover {
+  background: #fafbfc;
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.lh-google:active { transform: scale(.99); }
+.lh-google-md { padding: 10px 14px; font-size: 13px; }
+
+/* ── Divider ──────────────────────────────────────────── */
+.lh-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 0;
+}
+.lh-divider::before, .lh-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.lh-divider span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted-2);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ── Form fields ──────────────────────────────────────── */
+.lh-field { margin-bottom: 14px; }
+.lh-label {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted-3);
+  letter-spacing: 0.04em;
+  margin-bottom: 7px;
+}
+.lh-input {
+  display: flex; align-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 11px;
+  transition: all .15s ease;
+  overflow: hidden;
+}
+.lh-input:focus-within, .lh-input-focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-100);
+}
+.lh-input-error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-light);
+}
+.lh-input-disabled { background: #f8f9fb; opacity: .7; }
+.lh-input input {
+  flex: 1; min-width: 0;
+  border: 0; outline: 0; background: transparent;
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 20px;
+  color: var(--foreground);
+}
+.lh-input input::placeholder {
+  color: var(--text-muted-2);
+  /* Keep placeholder in regular sans even for password inputs — the wide
+     mono tracking we apply below is for actual typed dots, not placeholder
+     text (otherwise long Indonesian placeholders run into the eye button). */
+  letter-spacing: normal !important;
+  font-family: var(--font-sans) !important;
+}
+.lh-input input[type="password"] {
+  letter-spacing: 0.18em;
+  font-family: var(--font-mono);
+}
+.lh-eye {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 14px;
+  color: var(--text-muted-2);
+  background: transparent;
+  transition: color .12s ease;
+}
+.lh-eye:hover { color: var(--primary); }
+
+/* ── Forgot link ──────────────────────────────────────── */
+.lh-forgot {
+  text-align: right;
+  margin: -6px 0 16px;
+}
+.lh-forgot a {
+  font-family: var(--font-heading);
+  font-size: 12px; font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.02em;
+}
+.lh-forgot a:hover { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+
+/* ── Primary CTA ──────────────────────────────────────── */
+.lh-cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px; line-height: 20px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow:
+    0 8px 20px -4px rgb(57 88 179 / 0.40),
+    0 2px 4px rgb(57 88 179 / 0.12),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+.lh-cta:hover {
+  background: var(--primary-deep);
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 26px -4px rgb(57 88 179 / 0.42),
+    0 3px 6px rgb(57 88 179 / 0.15),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+.lh-cta:active { transform: scale(.99); background: var(--primary-700); }
+.lh-cta-disabled, .lh-cta:disabled {
+  background: var(--primary-200);
+  color: rgba(255,255,255,.9);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.lh-cta-md { padding: 11px 18px; font-size: 13px; }
+
+.lh-countdown { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.06em; }
+.lh-countdown-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,.85);
+  animation: lhPulse 1.4s ease-in-out infinite;
+}
+@keyframes lhPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.75);} }
+
+/* ── Foot links ───────────────────────────────────────── */
+.lh-foot-divider { height: 1px; background: var(--border); margin: 22px -8px 18px; }
+.lh-apply {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.lh-apply a {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--primary);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.lh-apply a:hover { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.lh-apply-mob { flex-direction: column; align-items: flex-start; gap: 4px; }
+.lh-foot-note {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.08em;
+  color: var(--text-muted-2);
+}
+.lh-foot-note-center { text-align: center; }
+
+/* ── Side panel (right ribbon: quote + stats) ─────────── */
+.lh-side {
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  padding: 32px 28px;
+  background: linear-gradient(160deg, var(--primary-700) 0%, var(--primary) 100%);
+  border-radius: 24px;
+  color: #fff;
+  position: relative; overflow: hidden;
+}
+.lh-side::before {
+  content: ""; position: absolute;
+  top: -80px; right: -60px; width: 280px; height: 280px;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.14), transparent 70%);
+  border-radius: 50%; pointer-events: none;
+}
+.lh-side::after {
+  content: ""; position: absolute;
+  bottom: -100px; left: -60px; width: 260px; height: 260px;
+  background: radial-gradient(circle, rgb(196 182 232 / 0.22), transparent 70%);
+  border-radius: 50%; pointer-events: none;
+}
+.lh-side-quote { position: relative; z-index: 1; }
+.lh-side-eyebrow {
+  font-family: var(--font-heading);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.6);
+  display: block; margin-bottom: 14px;
+}
+.lh-side-text {
+  font-family: var(--font-heading);
+  font-style: italic; font-weight: 400;
+  font-size: 22px; line-height: 1.3;
+  letter-spacing: -0.005em;
+  margin: 0 0 22px;
+  color: #fff;
+}
+.lh-side-text-sm {
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.6;
+  color: rgb(255 255 255 / 0.85);
+  margin: 0 0 14px;
+}
+.lh-quote-mark {
+  font-family: var(--font-heading);
+  font-style: italic; font-weight: 700;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 28px; line-height: 1; vertical-align: -4px;
+}
+.lh-side-author {
+  display: flex; align-items: center; gap: 10px;
+}
+.lh-side-name {
+  font-family: var(--font-heading);
+  font-size: 13px; font-weight: 600; color: #fff;
+}
+.lh-side-meta {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.04em;
+  color: rgb(255 255 255 / 0.7);
+}
+.lh-side-stats {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(255 255 255 / 0.18);
+  margin-top: 28px;
+}
+.lh-stat { text-align: left; }
+.lh-stat-num {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 24px; line-height: 1;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.lh-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.7);
+  margin-top: 4px;
+}
+
+.lh-tip-example {
+  background: rgb(255 255 255 / 0.12);
+  border: 1px dashed rgb(255 255 255 / 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgb(255 255 255 / 0.9);
+}
+
+/* ── Alerts ───────────────────────────────────────────── */
+.lh-alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid;
+  margin-bottom: 18px;
+}
+.lh-alert-warn   { background: var(--warning-light); border-color: #fde68a; color: var(--text-amber); }
+.lh-alert-danger { background: var(--danger-light);  border-color: #fecaca; color: var(--text-red); }
+.lh-alert-info   { background: #eff6ff;              border-color: #bfdbfe; color: #1d4ed8; }
+.lh-alert > svg { margin-top: 2px; flex-shrink: 0; }
+.lh-alert-body { flex: 1; min-width: 0; }
+.lh-alert-title {
+  font-family: var(--font-heading);
+  font-weight: 600; font-size: 13px;
+  margin-bottom: 2px;
+  color: inherit;
+}
+.lh-alert-text {
+  font-family: var(--font-sans);
+  font-size: 12px; line-height: 1.5;
+  color: inherit; opacity: .85;
+}
+.lh-alert-foot {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.04em;
+  margin-top: 6px; color: inherit; opacity: .65;
+  font-style: italic;
+}
+
+/* ── Criteria ─────────────────────────────────────────── */
+.lh-criteria {
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0 14px;          /* breathing room above so it doesn't overlap the kunci input */
+  list-style: none;             /* in case rendered as <ul> */
+  padding-left: 14px;
+}
+.lh-criteria-head {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary-700);
+  margin-bottom: 8px;
+}
+.lh-criteria-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+}
+.lh-criteria-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  transition: color .2s ease;
+}
+.lh-criteria-item.ok { color: var(--success); }
+.lh-criteria-check {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: all .2s ease;
+}
+.lh-criteria-item.ok .lh-criteria-check {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+/* ── Verified email chip ──────────────────────────────── */
+.lh-verified {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  background: var(--success-light);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.lh-verified-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--success); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.lh-verified-title {
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-green);
+}
+.lh-verified-email {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--foreground);
+}
+.lh-verified-change {
+  margin-left: auto;
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 600;
+  color: var(--text-green);
+  text-decoration: underline; text-decoration-style: dotted;
+}
+
+/* ── Stepper ──────────────────────────────────────────── */
+.lh-stepper {
+  display: flex; align-items: center; gap: 4px;
+}
+.lh-stepper-pill {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 700;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted-2);
+}
+.lh-stepper-pill.done { background: var(--primary); border-color: var(--primary); color: #fff; }
+.lh-stepper-pill.on   { background: var(--surface); border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
+.lh-stepper-line { width: 16px; height: 2px; background: var(--border); border-radius: 99px; }
+.lh-stepper-line.done { background: var(--primary); }
+.lh-stepper-label {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.06em;
+  color: var(--text-muted-2);
+  margin-left: 8px;
+}
+
+.lh-alt-path {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+.lh-alt-path a {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--primary);
+}
+.lh-alt-path a:hover { text-decoration: underline; }
+
+/* ── Belum aktif (rejection) ──────────────────────────── */
+.lh-card-rejection { text-align: center; padding-top: 32px; }
+.lh-rej-icon {
+  width: 64px; height: 64px; margin: 22px auto 18px;
+  border-radius: 50%;
+  background: var(--primary-50);
+  color: var(--primary);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 8px rgb(57 88 179 / 0.05);
+}
+.lh-explain {
+  text-align: left;
+  margin: 20px 0 22px;
+  padding: 22px 22px 18px;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.lh-explain-step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  align-items: flex-start;
+}
+.lh-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0; margin-top: 2px;
+}
+.lh-step-title {
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 600;
+  color: var(--primary-900);
+  margin-bottom: 2px;
+}
+.lh-step-text {
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.5;
+  color: var(--text-muted-3);
+}
+.lh-back {
+  display: block;
+  margin-top: 12px;
+  font-family: var(--font-heading);
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+}
+.lh-back:hover { color: var(--primary); }
+
+/* ── Welcome ──────────────────────────────────────────── */
+.lh-card-welcome { text-align: center; padding-top: 38px; }
+.lh-welcome-burst {
+  position: relative;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  margin-bottom: 22px;
+}
+.lh-welcome-icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow:
+    0 0 0 8px var(--primary-100),
+    0 0 0 16px rgb(57 88 179 / 0.05),
+    0 12px 28px -8px rgb(57 88 179 / 0.4);
+  animation: lhBurst .8s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes lhBurst { 0%{transform:scale(.4);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+.lh-welcome-eyebrow {
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--success);
+  display: block;
+}
+.lh-mentor-card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 18px;
+  text-align: left;
+  padding: 22px;
+  background: var(--brand-yellow);
+  border: 1px solid #f4e4b8;
+  border-radius: 16px;
+  margin: 24px 0 22px;
+}
+.lh-mentor-eyebrow {
+  font-family: var(--font-heading);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-amber);
+  margin-bottom: 4px;
+}
+.lh-mentor-name {
+  font-family: var(--font-heading);
+  font-size: 17px; font-weight: 700;
+  color: var(--primary-900);
+}
+.lh-mentor-meta {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.lh-mentor-msg {
+  font-family: var(--font-heading);
+  font-style: italic; font-weight: 400;
+  font-size: 14px; line-height: 1.45;
+  color: var(--primary-900);
+  padding-top: 8px;
+  border-top: 1px dashed #e8d295;
+}
+
+/* ── Mobile shell ─────────────────────────────────────── */
+.lh-shell-mobile .lh-backdrop { padding: 0; }
+.lh-mob-card {
+  position: relative; z-index: 2;
+  width: 100%; max-width: 390px;
+  background: var(--surface);
+  margin: auto;
+  padding: 32px 22px 24px;
+  border-radius: 0;
+  min-height: 100%;
+}
+.lh-mob-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 10px;
+}
+.lh-mob-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 32px; line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--primary-900);
+  margin: 0 0 8px;
+}
+.lh-mob-sub {
+  margin: 0 0 22px;
+  font-size: 13px; color: var(--text-muted);
+}
+
+/* ── Email screen ─────────────────────────────────────── */
+.lh-email-shell {
+  width: 100%; height: 100%;
+  background: linear-gradient(180deg, #eef2f7 0%, #e6ebf2 100%);
+  padding: 40px 30px;
+  overflow: auto;
+  font-family: var(--font-sans);
+}
+.lh-email-chrome {
+  max-width: 680px; margin: 0 auto 16px;
+  display: flex; align-items: center;
+  font-family: var(--font-heading);
+}
+.lh-email-tabs {
+  display: flex; gap: 4px;
+  background: rgb(255 255 255 / 0.5);
+  border: 1px solid #d8dde4;
+  border-radius: 10px;
+  padding: 4px;
+}
+.lh-email-tab {
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 7px;
+}
+.lh-email-tab.on { background: var(--surface); color: var(--foreground); font-weight: 600; box-shadow: var(--shadow-xs); }
+
+.lh-email-card {
+  max-width: 680px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow:
+    0 30px 60px -20px rgb(0 0 0 / 0.12),
+    0 8px 24px -8px rgb(0 0 0 / 0.06);
+  overflow: hidden;
+}
+.lh-email-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.lh-email-from { flex: 1; min-width: 0; }
+.lh-email-name {
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 600;
+  color: var(--foreground);
+}
+.lh-email-name span { font-weight: 400; color: var(--text-muted-2); font-size: 13px; }
+.lh-email-to {
+  font-family: var(--font-sans);
+  font-size: 12px; color: var(--text-muted);
+  margin-top: 2px;
+}
+.lh-email-date {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--text-muted-2);
+}
+
+.lh-email-subject {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 22px; line-height: 1.25;
+  color: var(--primary-900);
+  letter-spacing: -0.015em;
+  margin: 0;
+  padding: 20px 24px 0;
+}
+
+.lh-email-body { padding: 18px 24px 22px; }
+.lh-email-body p {
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 1.65;
+  color: var(--foreground);
+  margin: 0 0 14px;
+}
+.lh-email-cta-card {
+  margin: 18px 0 22px;
+  padding: 22px;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 16px;
+}
+.lh-email-cta-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary-700);
+  margin-bottom: 14px;
+}
+.lh-email-google, .lh-email-link {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: var(--shadow-xs);
+}
+.lh-email-google { border-color: var(--primary-200); }
+.lh-email-google:hover, .lh-email-link:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.lh-email-google > span, .lh-email-link > span {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+}
+.lh-email-google b, .lh-email-link b {
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 2px;
+}
+.lh-email-google small, .lh-email-link small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.lh-email-link svg:first-child {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.lh-email-google > svg:last-child, .lh-email-link > svg:last-child {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.lh-email-or {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.18em;
+  color: var(--text-muted-2);
+  text-transform: uppercase;
+  margin: 10px 0;
+  position: relative;
+}
+.lh-email-or::before, .lh-email-or::after {
+  content: ""; position: absolute; top: 50%;
+  width: 30%; height: 1px;
+  background: var(--primary-100);
+}
+.lh-email-or::before { left: 0; }
+.lh-email-or::after { right: 0; }
+.lh-email-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--primary-200);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-muted);
+}
+.lh-email-note b { color: var(--primary); font-weight: 600; }
+
+.lh-email-signoff {
+  margin-top: 18px !important;
+  font-size: 15px !important;
+  color: var(--primary) !important;
+}
+
+.lh-email-footer {
+  padding: 14px 24px 16px;
+  background: var(--brand-yellow);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 11px; line-height: 1.5;
+  color: var(--text-muted);
+}
+.lh-email-footer b { color: var(--text-muted-3); font-weight: 600; }
+.lh-email-foot-links {
+  margin-top: 6px;
+  display: flex; gap: 8px; align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.lh-email-foot-links a { color: var(--text-muted-3); text-decoration: underline; text-decoration-style: dotted; }
+.lh-email-foot-links span { color: var(--text-muted-2); }
+
+/* ── Modal style for forgot password ──────────────────── */
+.lh-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgb(26 26 46 / 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px;
+  z-index: 2;
+}
+.lh-card-modal {
+  max-width: 460px; width: 100%;
+  animation: lhFadeUp .35s ease-out;
+}
+@keyframes lhFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.lh-back-arrow {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.lh-back-arrow:hover { color: var(--primary); }
+.lh-info-block {
+  display: flex; gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 12px; line-height: 1.55;
+  color: var(--text-muted-3);
+}
+.lh-info-block > svg { color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+
+/* ── v5 page additions (activate / welcome / belum-aktif / forgot modal) ── */
+
+/* Centred card variant used on /welcome */
+.lh-card-center { text-align: center; }
+.lh-cta-center { display: inline-flex; margin: 18px auto 0; text-align: center; }
+
+/* The v5 design already styles .lh-input as a flex container and .lh-eye
+   as an inline-flex button (see top of this file). All inputs in /login
+   and /activate now use that structure: <div.lh-input><input/><button.lh-eye/></div>.
+   No further overrides needed for the password show/hide pattern.
+
+   We do nudge the eye-button colour to be a touch more visible than the
+   default text-muted-2, and give it a hover background for affordance. */
+.lh-eye {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 8px;
+  margin-right: 4px;
+  color: var(--text-muted-3);
+  flex-shrink: 0;  /* never let the eye button collapse to make room for input text */
+  white-space: nowrap;
+}
+.lh-eye:hover { background: var(--primary-50); color: var(--primary); }
+/* Make the input field truncate with ellipsis if its content is wider than
+   available space, so the eye button stays anchored on the right. */
+.lh-input input { text-overflow: ellipsis; }
+
+/* Forgot-password link styled inside the form */
+.lh-link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-family: var(--font-poppins);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.lh-link-btn:hover { color: var(--primary-deep); text-decoration: underline; }
+
+/* OTP input — wider tracking + center align */
+.lh-input-otp {
+  letter-spacing: 0.5em;
+  text-align: center;
+  font-family: var(--font-geist-mono);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Placeholder slot for the Turnstile widget (rendered when CAPTCHA gates) */
+.lh-captcha-placeholder {
+  padding: 14px;
+  margin: 4px 0 8px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--primary-50);
+  color: var(--text-muted-3);
+}
+.lh-captcha-placeholder small { font-size: 12px; line-height: 1.5; }
+
+/* Modal overlay for the Lupa kunci? sheet */
+.lh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 29, 66, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  animation: lhFadeIn 0.12s ease-out;
+}
+.lh-modal {
+  position: relative;
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 28px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 24px 48px -12px rgba(17, 29, 66, 0.25);
+  animation: lhSlideUp 0.18s ease-out;
+}
+.lh-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--primary-50);
+  color: var(--text-muted-3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lh-modal-close:hover { background: var(--primary-100); color: var(--foreground); }
+.lh-modal-title {
+  font-family: var(--font-poppins);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--primary-900);
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.lh-modal-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--text-muted-3);
+  line-height: 1.55;
+}
+@keyframes lhFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lhSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Numbered step list — used on /belum-aktif */
+.lh-steps {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lh-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--primary-50);
+  border-radius: 12px;
+}
+.lh-steps .lh-step-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--primary-200);
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.lh-steps .lh-step-title {
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--primary-900);
+  letter-spacing: -0.005em;
+  margin-bottom: 4px;
+}
+.lh-steps .lh-step-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted-3);
+  line-height: 1.5;
+}
