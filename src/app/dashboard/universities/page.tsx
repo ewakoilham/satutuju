@@ -7,6 +7,7 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
+import { enrichUniversity } from "@/data/university-enrichment";
 
 // ISO 3166-1 alpha-2 codes mapped to country names used in the data
 const COUNTRY_CODES: Record<string, string> = {
@@ -30,7 +31,11 @@ function FlagIcon({ code, className = "w-5 h-auto rounded-sm" }: { code: string;
   return <Flag className={className} />;
 }
 
-function UniFlag({ country }: { country: string }) {
+function UniFlag({ country, logo, name }: { country: string; logo?: string; name?: string }) {
+  if (logo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <span className="uni-flag"><img src={logo} alt={name || country} /></span>;
+  }
   const code = COUNTRY_CODES[country];
   return <span className="uni-flag">{code ? <FlagIcon code={code} /> : <span>🌍</span>}</span>;
 }
@@ -454,13 +459,17 @@ export default function UniversitiesPage() {
               const isExpanded = expandedId === u.id;
               const pendingLevel = editingLevel[u.id] ?? u.degreeLevel;
               const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
+              const enr = enrichUniversity(u.name);
               return (
                 <div key={u.id} className={`uni-card ${isSel ? "featured" : ""}`}>
                   <div className="uni-top">
-                    <UniFlag country={u.country} />
+                    <UniFlag country={u.country} logo={enr?.logo} name={u.name} />
                     <div className="uni-info" style={{ cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : u.id)}>
                       <h3 className="uni-name">{u.name}</h3>
-                      <div className="uni-place">{u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</div>
+                      <div className="uni-place">
+                        {enr?.location || u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
+                        {enr?.qsRank ? ` · QS #${enr.qsRank}` : ""}
+                      </div>
                     </div>
                     <div className="uni-actions">
                       <button
@@ -520,6 +529,7 @@ export default function UniversitiesPage() {
                   </div>
 
                   <div className="uni-tags">
+                    {enr?.qsRank && <span className="db-pill static accent">QS #{enr.qsRank}</span>}
                     <span className="db-pill static">{DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</span>
                     {isSaved && <span className="db-pill static accent">★ Tersimpan</span>}
                     {isAdmin && u.agency && <span className="db-pill static">{u.agency}</span>}
@@ -659,6 +669,7 @@ export default function UniversitiesPage() {
                 { lbl: "Negara", get: (u: University) => u.country },
                 { lbl: "Jenjang", get: (u: University) => DEGREE_LABELS[u.degreeLevel] || u.degreeLevel },
                 { lbl: "Program", get: (u: University) => u.programs || "—" },
+                { lbl: "QS Rank 2025", get: (u: University) => { const e = enrichUniversity(u.name); return e?.qsRank ? `#${e.qsRank}` : "—"; } },
                 { lbl: "Website", get: (u: University) => (u.website ? "Tersedia" : "—") },
                 ...(isAdmin ? [{ lbl: "Agency", get: (u: University) => u.agency || "—" }] : []),
               ].map((row) => (
