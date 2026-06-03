@@ -4676,6 +4676,13 @@
 /* Kampus — estimate markers (* = country/level ballpark, not per-university) */
 .dashboard-shell .est-star { color: var(--warning, #f59e0b); font-weight: 700; }
 .dashboard-shell .est-legend {
-  margin: 12px 2px 0; font-size: 12px; line-height: 1.5;
-  color: var(--text-muted-2); font-family: var(--font-mono);
+  margin: 14px 0 4px;
+  font-size: 13px; line-height: 1.55;
+  color: var(--text-muted-3);
+  font-family: var(--font-sans);
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: 12px;
+  padding: 11px 16px;
 }
+.dashboard-shell .est-legend .est-star { font-size: 15px; }
