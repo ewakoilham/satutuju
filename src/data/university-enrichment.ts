@@ -97,23 +97,26 @@ interface CountryEstimate {
   ug: string;
   ielts: string;
   intake: string;
+  /** Approx PG lower-bound tuition in USD — for the "cheapest" sort only
+   *  (lets us order across currencies). Rough; not shown to users. */
+  minUsd: number;
 }
 
 const COUNTRY_ESTIMATES: Record<string, CountryEstimate> = {
-  Australia:     { pg: "A$ 32–55k",  ug: "A$ 28–45k",  ielts: "6.5", intake: "Feb · Jul" },
-  "New Zealand": { pg: "NZ$ 30–45k", ug: "NZ$ 26–40k", ielts: "6.5", intake: "Feb · Jul" },
-  UK:            { pg: "£ 18–30k",   ug: "£ 15–28k",   ielts: "6.5", intake: "Sep · Jan" },
-  USA:           { pg: "US$ 25–55k", ug: "US$ 25–55k", ielts: "6.5–7.0", intake: "Aug · Jan" },
-  Canada:        { pg: "C$ 20–40k",  ug: "C$ 18–35k",  ielts: "6.5", intake: "Sep · Jan" },
-  Ireland:       { pg: "€ 12–25k",   ug: "€ 10–22k",   ielts: "6.5", intake: "Sep" },
-  Germany:       { pg: "€ 0–20k",    ug: "€ 0–15k",    ielts: "6.5", intake: "Okt · Apr" },
-  Netherlands:   { pg: "€ 15–20k",   ug: "€ 10–15k",   ielts: "6.5", intake: "Sep · Feb" },
-  France:        { pg: "€ 4–20k",    ug: "€ 3–15k",    ielts: "6.5", intake: "Sep · Jan" },
-  Singapore:     { pg: "S$ 30–55k",  ug: "S$ 30–50k",  ielts: "6.5", intake: "Aug · Jan" },
-  "Hong Kong":   { pg: "HK$ 140–210k", ug: "HK$ 140–190k", ielts: "6.5", intake: "Sep · Jan" },
-  Japan:         { pg: "¥ 0.5–1.5jt", ug: "¥ 0.5–1.2jt", ielts: "6.0–6.5", intake: "Apr · Sep" },
-  "South Korea": { pg: "₩ 6–12jt",   ug: "₩ 5–10jt",   ielts: "6.0–6.5", intake: "Mar · Sep" },
-  Switzerland:   { pg: "CHF 1.5–25k", ug: "CHF 1.5–20k", ielts: "6.5", intake: "Sep · Feb" },
+  Australia:     { pg: "A$ 32–55k",  ug: "A$ 28–45k",  ielts: "6.5", intake: "Feb · Jul", minUsd: 20800 },
+  "New Zealand": { pg: "NZ$ 30–45k", ug: "NZ$ 26–40k", ielts: "6.5", intake: "Feb · Jul", minUsd: 18000 },
+  UK:            { pg: "£ 18–30k",   ug: "£ 15–28k",   ielts: "6.5", intake: "Sep · Jan", minUsd: 22900 },
+  USA:           { pg: "US$ 25–55k", ug: "US$ 25–55k", ielts: "6.5–7.0", intake: "Aug · Jan", minUsd: 25000 },
+  Canada:        { pg: "C$ 20–40k",  ug: "C$ 18–35k",  ielts: "6.5", intake: "Sep · Jan", minUsd: 14600 },
+  Ireland:       { pg: "€ 12–25k",   ug: "€ 10–22k",   ielts: "6.5", intake: "Sep", minUsd: 13000 },
+  Germany:       { pg: "€ 0–20k",    ug: "€ 0–15k",    ielts: "6.5", intake: "Okt · Apr", minUsd: 300 },
+  Netherlands:   { pg: "€ 15–20k",   ug: "€ 10–15k",   ielts: "6.5", intake: "Sep · Feb", minUsd: 16200 },
+  France:        { pg: "€ 4–20k",    ug: "€ 3–15k",    ielts: "6.5", intake: "Sep · Jan", minUsd: 4300 },
+  Singapore:     { pg: "S$ 30–55k",  ug: "S$ 30–50k",  ielts: "6.5", intake: "Aug · Jan", minUsd: 22200 },
+  "Hong Kong":   { pg: "HK$ 140–210k", ug: "HK$ 140–190k", ielts: "6.5", intake: "Sep · Jan", minUsd: 17900 },
+  Japan:         { pg: "¥ 0.5–1.5jt", ug: "¥ 0.5–1.2jt", ielts: "6.0–6.5", intake: "Apr · Sep", minUsd: 3350 },
+  "South Korea": { pg: "₩ 6–12jt",   ug: "₩ 5–10jt",   ielts: "6.0–6.5", intake: "Mar · Sep", minUsd: 4400 },
+  Switzerland:   { pg: "CHF 1.5–25k", ug: "CHF 1.5–20k", ielts: "6.5", intake: "Sep · Feb", minUsd: 1650 },
 };
 
 export interface UniEstimate {
@@ -132,6 +135,13 @@ export function estimateUniStats(country: string, degreeLevel: string): UniEstim
   if (isShort) return { tuition: null, ielts: c.ielts, intake: c.intake };
   const tuition = degreeLevel === "Undergraduate" ? c.ug : c.pg;
   return { tuition, ielts: c.ielts, intake: c.intake };
+}
+
+/** Approx lower-bound annual tuition in USD for the "cheapest" sort, or null
+ *  when we have no estimate for the country (those sort last). Ordering aid
+ *  only — never displayed. */
+export function estimateMinUsd(country: string): number | null {
+  return COUNTRY_ESTIMATES[country]?.minUsd ?? null;
 }
 
 /* ════════════════════════════════════════════════════════════════════

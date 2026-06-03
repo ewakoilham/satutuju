@@ -7,7 +7,7 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
-import { enrichUniversity, estimateUniStats, cleanUniName } from "@/data/university-enrichment";
+import { enrichUniversity, estimateUniStats, estimateMinUsd, cleanUniName } from "@/data/university-enrichment";
 import uniExtraRaw from "@/data/university-extra.json";
 
 interface UniExtra { qs?: string; website?: string }
@@ -305,9 +305,20 @@ export default function UniversitiesPage() {
   // Client-side sort over the server-filtered set.
   const sorted = useMemo(() => {
     const arr = [...universities];
-    arr.sort((a, b) =>
-      sort === "za" ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name),
-    );
+    const qsNum = (u: University) => {
+      const v = UNI_EXTRA[String(u.id)]?.qs;
+      if (!v) return Number.POSITIVE_INFINITY; // unranked → last
+      const n = parseInt(String(v).replace(/[^0-9].*$/, ""), 10);
+      return isNaN(n) ? Number.POSITIVE_INFINITY : n;
+    };
+    const costNum = (u: University) => estimateMinUsd(u.country) ?? Number.POSITIVE_INFINITY;
+    if (sort === "qs") {
+      arr.sort((a, b) => qsNum(a) - qsNum(b) || a.name.localeCompare(b.name));
+    } else if (sort === "cheap") {
+      arr.sort((a, b) => costNum(a) - costNum(b) || a.name.localeCompare(b.name));
+    } else {
+      arr.sort((a, b) => (sort === "za" ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+    }
     return arr;
   }, [universities, sort]);
 
@@ -447,7 +458,12 @@ export default function UniversitiesPage() {
           <Select
             value={sort}
             onChange={(v) => setSort(v)}
-            options={[{ value: "az", label: "Alfabet A–Z" }, { value: "za", label: "Alfabet Z–A" }]}
+            options={[
+              { value: "qs", label: "Peringkat QS" },
+              { value: "cheap", label: "Termurah (estimasi)" },
+              { value: "az", label: "Alfabet A–Z" },
+              { value: "za", label: "Alfabet Z–A" },
+            ]}
             className="w-auto"
           />
         </div>
