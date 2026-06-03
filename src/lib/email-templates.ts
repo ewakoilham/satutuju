@@ -16,7 +16,11 @@ const FROM_DEFAULT = "Satu Tuju <noreply@satutuju.id>";
 const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://www.satutuju.id/logo-main.png";
 
 function appUrl(): string {
-  return process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3100";
+  // Canonical site origin for email links. Use the public var (set to
+  // https://www.satutuju.id); do NOT fall back to the old APP_URL, which
+  // pointed at a domain that no longer resolves. Trailing slash stripped so
+  // `${base}/path` stays clean.
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://www.satutuju.id").replace(/\/+$/, "");
 }
 
 function fromAddress(): string {
