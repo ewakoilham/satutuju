@@ -4672,3 +4672,10 @@
 .dashboard-shell .recurring-row .toggle.on::after { transform: translateX(16px); }
 .dashboard-shell .sb-actions { display: flex; gap: 8px; padding-top: 16px; border-top: 1px solid #ecf1f5; margin-top: 18px; }
 .dashboard-shell .sb-actions button { flex: 1; }
+
+/* Kampus — estimate markers (* = country/level ballpark, not per-university) */
+.dashboard-shell .est-star { color: var(--warning, #f59e0b); font-weight: 700; }
+.dashboard-shell .est-legend {
+  margin: 12px 2px 0; font-size: 12px; line-height: 1.5;
+  color: var(--text-muted-2); font-family: var(--font-mono);
+}
