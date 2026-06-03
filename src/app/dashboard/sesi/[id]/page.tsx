@@ -128,6 +128,11 @@ const MOODS: Array<{ value: number; face: string; label: string }> = [
   { value: 5, face: "🔥", label: "On fire" },
 ];
 
+/** AI report-draft (Gemini) is deferred — /api/sessions/[id]/aigen is a stub.
+ *  Hide the AI entry points until the feature is wired up. Flip to true (and
+ *  restore src/lib/gemini.ts + the real aigen route) to re-enable. */
+const AI_ENABLED: boolean = false;
+
 const PHASE_LABELS: Record<string, string> = {
   discovery: "Discovery",
   planning: "Planning",
@@ -825,17 +830,21 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       <div className="se-rf-field">
         <div className="se-rf-label">Ringkasan sesi</div>
         <textarea className="se-rf-textarea" placeholder="Apa yang dibahas? Kesimpulan kamu sebagai mentor?" value={draft.summaryNotes} onChange={(e) => update("summaryNotes", e.target.value)} />
-        <div className="se-ai-box">
-          <div>
-            <b>✨ Bantuan AI</b> — kalau kamu pakai Gemini Note di Google Meet, ringkasan otomatis bisa ditarik ke sini.
-            <div className="se-ai-actions">
-              <button type="button" className="se-ai-gen" disabled={aiBusy} onClick={() => openAi("text")}>Hasilkan draf laporan</button>
-              <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("drive")}>Link Drive</button>
-              <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("file")}>Upload catatan</button>
+        {AI_ENABLED && (
+          <>
+            <div className="se-ai-box">
+              <div>
+                <b>✨ Bantuan AI</b> — kalau kamu pakai Gemini Note di Google Meet, ringkasan otomatis bisa ditarik ke sini.
+                <div className="se-ai-actions">
+                  <button type="button" className="se-ai-gen" disabled={aiBusy} onClick={() => openAi("text")}>Hasilkan draf laporan</button>
+                  <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("drive")}>Link Drive</button>
+                  <button type="button" className="se-ai-gen ghost" disabled={aiBusy} onClick={() => openAi("file")}>Upload catatan</button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <input ref={aiFileRef} type="file" accept=".txt,.md,.csv,.rtf,.vtt,text/plain" style={{ display: "none" }} onChange={handleAiFile} />
+            <input ref={aiFileRef} type="file" accept=".txt,.md,.csv,.rtf,.vtt,text/plain" style={{ display: "none" }} onChange={handleAiFile} />
+          </>
+        )}
       </div>
 
       <div className="se-rf-field">
