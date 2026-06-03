@@ -190,6 +190,18 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
       return rows.filter((r) => r.id !== id);
     });
   }
+  /** Move a row one step up (dir=-1) or down (dir=+1) — easier than drag. */
+  function moveRow(id: string, dir: -1 | 1) {
+    mutate((rows) => {
+      const idx = rows.findIndex((r) => r.id === id);
+      const to = idx + dir;
+      if (idx === -1 || to < 0 || to >= rows.length) return rows;
+      const out = [...rows];
+      const [m] = out.splice(idx, 1);
+      out.splice(to, 0, m);
+      return out;
+    });
+  }
   function addRow() {
     mutate((rows) => {
       if (rows.length >= PLAN_MAX_SESSIONS) return rows;
@@ -356,7 +368,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
               <div className="rs-nudge-body">
                 <strong>Cara menyusun rencana sesi</strong>
                 <ul>
-                  <li><b>Tarik</b> ikon titik-titik (⠿) untuk mengurutkan ulang sesi.</li>
+                  <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang sesi.</li>
                   <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
                   <li><b>Klik pil fase atau durasi</b> untuk menyesuaikan.</li>
                   <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
@@ -428,6 +440,32 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                   </div>
                 </div>
                 <div className="rs-actions">
+                  <div className="rs-move">
+                    <button
+                      type="button"
+                      className="rs-iconbtn rs-movebtn"
+                      title="Naikkan sesi"
+                      aria-label="Naikkan sesi"
+                      onClick={() => moveRow(row.id, -1)}
+                      disabled={isFinalized || i === 0}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="18 15 12 9 6 15" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="rs-iconbtn rs-movebtn"
+                      title="Turunkan sesi"
+                      aria-label="Turunkan sesi"
+                      onClick={() => moveRow(row.id, 1)}
+                      disabled={isFinalized || i === plan.rows.length - 1}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  </div>
                   <button
                     type="button"
                     className={`rs-iconbtn rs-detailbtn${openDetailId === row.id ? " is-open" : ""}`}

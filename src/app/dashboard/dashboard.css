@@ -4113,3 +4113,8 @@
 .dashboard-shell .rs-detail-cols ul { margin: 0; padding-left: 16px; }
 .dashboard-shell .rs-detail-cols li { font-size: 12.5px; line-height: 1.55; color: var(--text-muted-3, #475569); }
 .dashboard-shell .rs-detail-empty { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text-muted, #64748b); }
+
+/* ── Rencana Sesi: up/down reorder buttons (Canva-style) ───────────────── */
+.dashboard-shell .rs-move { display: inline-flex; flex-direction: column; gap: 2px; margin-right: 4px; }
+.dashboard-shell .rs-movebtn { width: 26px; height: 18px; padding: 0; }
+.dashboard-shell .rs-movebtn:disabled { opacity: .3; cursor: not-allowed; }
