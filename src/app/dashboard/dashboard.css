@@ -4181,3 +4181,12 @@
 }
 .dashboard-shell .rs-accept-bar .db-btn { white-space: nowrap; }
 .dashboard-shell .rs-accept-done { font-size: 13.5px; font-weight: 600; color: var(--success, #10b981); }
+
+/* Read-only (finalized / mentee) — static phase + duration, no interactive affordance */
+.dashboard-shell .rs-phase-static,
+.dashboard-shell .rs-dur-static {
+  cursor: default;
+}
+.dashboard-shell .rs-phase-static:hover,
+.dashboard-shell .rs-dur-static:hover { filter: none; transform: none; }
+.dashboard-shell .rs-dur-static { color: var(--text-muted); }

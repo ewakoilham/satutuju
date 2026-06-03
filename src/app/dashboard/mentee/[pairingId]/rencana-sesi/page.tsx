@@ -336,6 +336,10 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const totalHoursLabel = `${(totalMin / 60).toFixed(1).replace(".0", "")} jam`;
   const monthsLabel = `~${Math.max(1, Math.round(total / 4))} bulan`;
   const isFinalized = plan.status !== "draft";
+  const isAcknowledged = plan.status === "acknowledged";
+  // Editing is allowed only for the mentor on a still-draft plan. A finalized
+  // plan (mentor or mentee) is read-only.
+  const readOnly = isFinalized || isMentee;
   const canDelete = total > PLAN_MIN_SESSIONS;
   const canAdd = total < PLAN_MAX_SESSIONS;
 
@@ -359,6 +363,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           <h1 className="sesi-title">
             {isMentee ? (
               <>Rencana sesi kamu <span className="lede">— bareng {pairing.mentor.name.split(/\s+/)[0]}.</span></>
+            ) : isFinalized ? (
+              <>Rencana sesi <span className="lede">— bareng {pairing.mentee.name.split(/\s+/)[0]}.</span></>
             ) : (
               <>Susun rencana sesi <span className="lede">— bareng {pairing.mentee.name.split(/\s+/)[0]}.</span></>
             )}
@@ -366,7 +372,11 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           <p className="sesi-sub">
             {isMentee
               ? "Ini rencana sesi yang sudah disusun mentor kamu. Klik ikon ⓘ di tiap sesi untuk lihat tujuan, output, dan dokumen yang perlu disiapkan."
-              : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi setelah ${pairing.mentee.name.split(/\s+/)[0]} setuju.`}
+              : isFinalized
+                ? (isAcknowledged
+                    ? `${pairing.mentee.name.split(/\s+/)[0]} sudah menerima rencana ini — sesi siap dijalankan.`
+                    : `Sudah difinalisasi — menunggu ${pairing.mentee.name.split(/\s+/)[0]} menerima. Rencana terkunci (read-only).`)
+                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi setelah ${pairing.mentee.name.split(/\s+/)[0]} setuju.`}
           </p>
         </div>
       </div>
@@ -467,22 +477,24 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
               <div
                 key={row.id}
                 className="rs-row"
-                draggable={!isFinalized}
+                draggable={!readOnly}
                 onDragStart={(e) => onDragStart(e, i)}
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, i)}
               >
-                <span className="rs-grip" title="Tarik untuk atur ulang" aria-hidden="true">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                    <circle cx="9" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="18" r="1" />
-                    <circle cx="15" cy="6" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="18" r="1" />
-                  </svg>
+                <span className="rs-grip" title={readOnly ? undefined : "Tarik untuk atur ulang"} aria-hidden="true">
+                  {!readOnly && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                      <circle cx="9" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="18" r="1" />
+                      <circle cx="15" cy="6" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="18" r="1" />
+                    </svg>
+                  )}
                 </span>
                 <span className="rs-num">{row.order}</span>
                 <div className="rs-info">
                   <h3
                     className="rs-title"
-                    contentEditable={!isFinalized}
+                    contentEditable={!readOnly}
                     suppressContentEditableWarning
                     spellCheck={false}
                     onBlur={(e) => renameRow(row.id, e.currentTarget.textContent || "")}
@@ -496,70 +508,79 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                     {row.title}
                   </h3>
                   <div className="rs-meta">
-                    <span className="rs-phase-wrap">
-                      <select
-                        className="rs-phase"
-                        data-phase={row.phase}
-                        value={row.phase}
-                        disabled={isFinalized}
-                        aria-label="Fase sesi"
-                        title={isFinalized ? "Fase tidak bisa diubah setelah finalisasi" : "Pilih fase"}
-                        onChange={(e) => setPhase(row.id, e.target.value as SessionPlanRow["phase"])}
-                      >
-                        {PLAN_PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      <span className="rs-phase-caret" aria-hidden="true">▾</span>
-                    </span>
-                    <span className="rs-dur" title={isFinalized ? "Durasi tidak bisa diubah setelah finalisasi" : "Ketik durasi dalam menit"}>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        className="rs-dur-input"
-                        defaultValue={row.durationMinutes}
-                        min={PLAN_MIN_DURATION}
-                        max={PLAN_MAX_DURATION}
-                        step={5}
-                        disabled={isFinalized}
-                        aria-label="Durasi sesi (menit)"
-                        onBlur={(e) => {
-                          const raw = parseInt(e.currentTarget.value, 10);
-                          const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, isNaN(raw) ? row.durationMinutes : raw));
-                          e.currentTarget.value = String(n);
-                          if (n !== row.durationMinutes) setDuration(row.id, n);
-                        }}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
-                      />
-                      <span className="rs-dur-unit">mnt</span>
-                    </span>
+                    {readOnly ? (
+                      <>
+                        <span className="rs-phase rs-phase-static" data-phase={row.phase}>{row.phase}</span>
+                        <span className="rs-dur rs-dur-static">{row.durationMinutes} mnt</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="rs-phase-wrap">
+                          <select
+                            className="rs-phase"
+                            data-phase={row.phase}
+                            value={row.phase}
+                            aria-label="Fase sesi"
+                            title="Pilih fase"
+                            onChange={(e) => setPhase(row.id, e.target.value as SessionPlanRow["phase"])}
+                          >
+                            {PLAN_PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                          <span className="rs-phase-caret" aria-hidden="true">▾</span>
+                        </span>
+                        <span className="rs-dur" title="Ketik durasi dalam menit">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            className="rs-dur-input"
+                            defaultValue={row.durationMinutes}
+                            min={PLAN_MIN_DURATION}
+                            max={PLAN_MAX_DURATION}
+                            step={5}
+                            aria-label="Durasi sesi (menit)"
+                            onBlur={(e) => {
+                              const raw = parseInt(e.currentTarget.value, 10);
+                              const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, isNaN(raw) ? row.durationMinutes : raw));
+                              e.currentTarget.value = String(n);
+                              if (n !== row.durationMinutes) setDuration(row.id, n);
+                            }}
+                            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                          />
+                          <span className="rs-dur-unit">mnt</span>
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="rs-actions">
-                  <div className="rs-move">
-                    <button
-                      type="button"
-                      className="rs-iconbtn rs-movebtn"
-                      title="Naikkan sesi"
-                      aria-label="Naikkan sesi"
-                      onClick={() => moveRow(row.id, -1)}
-                      disabled={isFinalized || i === 0}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="18 15 12 9 6 15" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="rs-iconbtn rs-movebtn"
-                      title="Turunkan sesi"
-                      aria-label="Turunkan sesi"
-                      onClick={() => moveRow(row.id, 1)}
-                      disabled={isFinalized || i === plan.rows.length - 1}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="rs-move">
+                      <button
+                        type="button"
+                        className="rs-iconbtn rs-movebtn"
+                        title="Naikkan sesi"
+                        aria-label="Naikkan sesi"
+                        onClick={() => moveRow(row.id, -1)}
+                        disabled={i === 0}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="18 15 12 9 6 15" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="rs-iconbtn rs-movebtn"
+                        title="Turunkan sesi"
+                        aria-label="Turunkan sesi"
+                        onClick={() => moveRow(row.id, 1)}
+                        disabled={i === plan.rows.length - 1}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                   <button
                     type="button"
                     className={`rs-iconbtn rs-detailbtn${openDetailId === row.id ? " is-open" : ""}`}
@@ -571,31 +592,35 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
                     </svg>
                   </button>
-                  <button
-                    type="button"
-                    className="rs-iconbtn"
-                    title="Duplikat"
-                    onClick={() => duplicateRow(row.id)}
-                    disabled={isFinalized || !canAdd}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="rs-iconbtn rs-iconbtn-danger"
-                    title="Hapus"
-                    onClick={() => deleteRow(row.id)}
-                    disabled={isFinalized || !canDelete}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6" /><path d="M14 11v6" />
-                    </svg>
-                  </button>
+                  {!readOnly && (
+                    <>
+                      <button
+                        type="button"
+                        className="rs-iconbtn"
+                        title="Duplikat"
+                        onClick={() => duplicateRow(row.id)}
+                        disabled={!canAdd}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="rs-iconbtn rs-iconbtn-danger"
+                        title="Hapus"
+                        onClick={() => deleteRow(row.id)}
+                        disabled={!canDelete}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6" /><path d="M14 11v6" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {openDetailId === row.id && (() => {
