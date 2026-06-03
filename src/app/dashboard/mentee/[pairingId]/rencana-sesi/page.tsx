@@ -77,6 +77,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     try { localStorage.setItem("rencana-nudge-dismissed", "1"); } catch { /* ignore */ }
   }
 
+  // Which session row has its detail panel expanded (one at a time).
+  const [openDetailId, setOpenDetailId] = useState<string | null>(null);
+
   // Drag state — index of the row being dragged.
   const dragIdx = useRef<number | null>(null);
 
@@ -357,6 +360,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                   <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
                   <li><b>Klik pil fase atau durasi</b> untuk menyesuaikan.</li>
                   <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
+                  <li>Klik ikon <b>ⓘ</b> di kanan untuk lihat detail tiap sesi (tujuan &amp; persiapan).</li>
                   <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
                 </ul>
               </div>
@@ -426,6 +430,17 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                 <div className="rs-actions">
                   <button
                     type="button"
+                    className={`rs-iconbtn rs-detailbtn${openDetailId === row.id ? " is-open" : ""}`}
+                    title="Detail sesi — apa yang dibahas & disiapkan"
+                    aria-expanded={openDetailId === row.id}
+                    onClick={() => setOpenDetailId((cur) => (cur === row.id ? null : row.id))}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
                     className="rs-iconbtn"
                     title="Duplikat"
                     onClick={() => duplicateRow(row.id)}
@@ -450,6 +465,44 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                     </svg>
                   </button>
                 </div>
+
+                {openDetailId === row.id && (
+                  <div className="rs-detail-panel">
+                    {row.objective ? (
+                      <>
+                        <div className="rs-detail-obj">
+                          <span className="rs-detail-label">Tujuan sesi</span>
+                          <p>{row.objective}</p>
+                        </div>
+                        <div className="rs-detail-cols">
+                          {row.deliverables?.length ? (
+                            <div>
+                              <span className="rs-detail-label">Hasil / output</span>
+                              <ul>{row.deliverables.map((d, k) => <li key={k}>{d}</li>)}</ul>
+                            </div>
+                          ) : null}
+                          {row.menteePrep?.length ? (
+                            <div>
+                              <span className="rs-detail-label">Disiapkan mentee</span>
+                              <ul>{row.menteePrep.map((d, k) => <li key={k}>{d}</li>)}</ul>
+                            </div>
+                          ) : null}
+                          {row.mentorPrep?.length ? (
+                            <div>
+                              <span className="rs-detail-label">Disiapkan mentor</span>
+                              <ul>{row.mentorPrep.map((d, k) => <li key={k}>{d}</li>)}</ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="rs-detail-empty">
+                        Sesi kustom — belum ada detail kurikulum. Tujuan & persiapan bisa kamu
+                        sampaikan langsung ke mentee saat sesi.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

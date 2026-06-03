@@ -4092,3 +4092,24 @@
 .dashboard-shell .rs-title[contenteditable="true"]:focus {
   background: #fff; outline: none; box-shadow: 0 0 0 2px var(--primary-200, #b9c9eb);
 }
+
+/* ── Rencana Sesi: per-session detail expander ─────────────────────────── */
+.dashboard-shell .rs-row { flex-wrap: wrap; }
+.dashboard-shell .rs-detailbtn.is-open { background: var(--primary-50, #edf1fa); color: var(--primary, #3958b3); }
+.dashboard-shell .rs-detail-panel {
+  flex-basis: 100%; width: 100%;
+  margin-top: 12px; padding-top: 14px;
+  border-top: 1px dashed var(--border, #dfe5eb);
+}
+.dashboard-shell .rs-detail-label {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted-2, #94a3b8); margin-bottom: 4px;
+}
+.dashboard-shell .rs-detail-obj { margin-bottom: 12px; }
+.dashboard-shell .rs-detail-obj p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--foreground, #1a1a2e); }
+.dashboard-shell .rs-detail-cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;
+}
+.dashboard-shell .rs-detail-cols ul { margin: 0; padding-left: 16px; }
+.dashboard-shell .rs-detail-cols li { font-size: 12.5px; line-height: 1.55; color: var(--text-muted-3, #475569); }
+.dashboard-shell .rs-detail-empty { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text-muted, #64748b); }

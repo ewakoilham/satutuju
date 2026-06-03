@@ -24,6 +24,13 @@ export interface SessionPlanRow {
   title: string;
   phase: PlanPhase;
   durationMinutes: number;
+  /** Curriculum detail (so mentor & mentee understand what each session is).
+   *  Seeded from the default curriculum; carried through finalize. Optional —
+   *  custom/added sessions may have none. */
+  objective?: string;
+  deliverables?: string[];
+  menteePrep?: string[];
+  mentorPrep?: string[];
 }
 
 export const PLAN_MIN_SESSIONS = 5;
@@ -50,6 +57,10 @@ export function buildDefaultPlan(): SessionPlanRow[] {
     title: s.topic,
     phase: PHASE_LABEL[s.phase] || "Writing",
     durationMinutes: 75,
+    objective: s.objective,
+    deliverables: s.deliverables,
+    menteePrep: s.menteePrep,
+    mentorPrep: s.mentorPrep,
   }));
 }
 
