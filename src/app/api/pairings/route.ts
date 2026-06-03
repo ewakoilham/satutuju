@@ -84,17 +84,18 @@ export async function GET() {
 
   // Fetch mentee profiles for live program data
   const menteeIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.menteeId as string))];
-  const menteeProfiles: Record<string, { intendedStudyProgram?: string; preferredDestinations?: string }> = {};
+  const menteeProfiles: Record<string, { intendedStudyProgram?: string; preferredDestinations?: string; phoneNumber?: string }> = {};
   if (menteeIds.length > 0) {
     const { data: profiles } = await supabase
       .from("MenteeProfile")
-      .select("userId, intendedStudyProgram, preferredDestinations")
+      .select("userId, intendedStudyProgram, preferredDestinations, phoneNumber")
       .in("userId", menteeIds);
     if (profiles) {
       for (const mp of profiles) {
         menteeProfiles[mp.userId] = {
           intendedStudyProgram: mp.intendedStudyProgram,
           preferredDestinations: mp.preferredDestinations,
+          phoneNumber: mp.phoneNumber,
         };
       }
     }
