@@ -52,8 +52,8 @@ export default function BelumAktifPage() {
             </h1>
             <p className="lh-sub">
               Login Satu Tuju hanya untuk mentor &amp; mentee yang sudah lewat seleksi.
-              Kalau kamu rasa ini salah, hubungi tim di{" "}
-              <a href="mailto:hi@satutuju.id">hi@satutuju.id</a>.
+              Untuk jadi <b>mentee</b>, ikuti langkah di bawah. Untuk jadi <b>mentor</b>,
+              hubungi admin di <a href="mailto:hello@satutuju.id">hello@satutuju.id</a>.
             </p>
 
             <ol className="lh-steps">

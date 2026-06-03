@@ -150,14 +150,20 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-6">
-            Akses hanya lewat undangan. Butuh bantuan?{" "}
+          <p className="text-center text-sm text-gray-400 mt-6 leading-relaxed">
+            Belum punya akun? Akses hanya lewat undangan.<br />
+            Untuk jadi <span className="font-medium text-gray-500">mentee</span>, daftar dulu lewat{" "}
+            <Link href="/" className="text-primary font-semibold hover:underline">
+              program mentorship
+            </Link>
+            . Untuk jadi <span className="font-medium text-gray-500">mentor</span>,{" "}
             <a
               href="mailto:hello@satutuju.id"
               className="text-primary font-semibold hover:underline"
             >
-              Hubungi tim
+              hubungi admin Satu Tuju
             </a>
+            .
           </p>
         </div>
       </div>
