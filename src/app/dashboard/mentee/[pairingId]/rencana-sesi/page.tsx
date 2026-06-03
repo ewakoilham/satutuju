@@ -64,6 +64,19 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
 
+  // First-time "how to use the planner" nudge. Read from localStorage in an
+  // effect (not at init) to avoid an SSR/hydration mismatch.
+  const [showNudge, setShowNudge] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("rencana-nudge-dismissed") !== "1") setShowNudge(true);
+    } catch { /* ignore */ }
+  }, []);
+  function dismissNudge() {
+    setShowNudge(false);
+    try { localStorage.setItem("rencana-nudge-dismissed", "1"); } catch { /* ignore */ }
+  }
+
   // Drag state — index of the row being dragged.
   const dragIdx = useRef<number | null>(null);
 
@@ -333,6 +346,23 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
             <h2>Rencana sesi</h2>
             <span className="rs-source-tag">★ Saran Satu Tuju</span>
           </div>
+
+          {showNudge && !isFinalized && (
+            <div className="rs-nudge" role="note">
+              <span className="rs-nudge-icon" aria-hidden="true">💡</span>
+              <div className="rs-nudge-body">
+                <strong>Cara menyusun rencana sesi</strong>
+                <ul>
+                  <li><b>Tarik</b> ikon titik-titik (⠿) untuk mengurutkan ulang sesi.</li>
+                  <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
+                  <li><b>Klik pil fase atau durasi</b> untuk menyesuaikan.</li>
+                  <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
+                  <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
+                </ul>
+              </div>
+              <button type="button" className="rs-nudge-close" onClick={dismissNudge} aria-label="Tutup tips">✕</button>
+            </div>
+          )}
 
           {err && (
             <div className="rs-error">{err}</div>
