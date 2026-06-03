@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/leads-auto-outreach",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/materialize-slots",
+      "schedule": "0 18 * * *"
     }
   ]
 }

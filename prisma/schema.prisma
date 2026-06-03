@@ -163,11 +163,35 @@ model ScheduleSlot {
   endTime   String   // "HH:MM"
   notes     String?
   status    String   @default("available") // "available" | "pending" | "booked"
+  source    String   @default("manual") // "manual" | "rule" — origin of this slot
+  ruleId    String? // AvailabilityRule that generated it, when source="rule"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   mentor   User              @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
   bookings ScheduleBooking[]
+
+  @@index([mentorId, date])
+  @@index([ruleId])
+}
+
+/// Mentor's recurring weekly availability. The materialize-slots cron (and the
+/// availability API on every edit) turns these into concrete ScheduleSlot rows
+/// for the next 8 weeks — idempotent, keyed on mentor + date + startTime.
+model AvailabilityRule {
+  id         String   @id @default(cuid())
+  mentorId   String
+  dayOfWeek  Int // 0=Sunday .. 6=Saturday
+  startTime  String // "HH:MM"
+  endTime    String // "HH:MM"
+  recurMode  String // "unlimited" | "fixed"
+  weeksAhead Int? // when recurMode="fixed", limit materialization to N weeks
+  active     Boolean  @default(true)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([mentorId, active])
 }
 
 model ScheduleBooking {

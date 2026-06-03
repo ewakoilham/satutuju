@@ -8,6 +8,7 @@ export { default as EditSlotModal } from "./EditSlotModal";
 export { default as BookingModal } from "./BookingModal";
 export { default as SlotPopover } from "./SlotPopover";
 export { default as WeekToolbar } from "./WeekToolbar";
+export { default as RecurringRulesCard } from "./RecurringRulesCard";
 export { default as Legend } from "./Legend";
 export { useScheduleReducer } from "./use-schedule-reducer";
 export { useScheduleData } from "./use-schedule-data";

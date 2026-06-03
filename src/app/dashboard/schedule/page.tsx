@@ -18,6 +18,7 @@ import {
   SlotPopover,
   WeekToolbar,
   Legend,
+  RecurringRulesCard,
   // helpers
   addDays,
   toDateStr,
@@ -122,7 +123,7 @@ export default function SchedulePage() {
   function handleCellClick(e: React.MouseEvent<HTMLDivElement>, dateStr: string) {
     if (!isMentor) return;
     // After a drag, skip the synthetic click
-    if (drag.skipNextClick.current) { drag.skipNextClick.current = false; return; }
+    if (drag.consumeSkipNextClick()) return;
     // If already in a mode, dismiss first
     if (mode.type !== "idle") { dispatch({ type: "DISMISS" }); return; }
 
@@ -216,6 +217,9 @@ export default function SchedulePage() {
 
       {/* Legend */}
       <Legend role={user.role} mentors={mentors} mentorColorMap={mentorColorMap} />
+
+      {/* Recurring availability (mentor only) */}
+      {isMentor && <RecurringRulesCard onChanged={refresh} />}
 
       {/* No pairing (mentee) */}
       {isMentee && !hasPairing && (

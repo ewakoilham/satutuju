@@ -146,5 +146,14 @@ export function useDragToCreate(
     [mode, dispatch],
   );
 
-  return { handlePointerDown, handlePointerMove, handlePointerUp, skipNextClick };
+  /** Read-and-reset the "swallow the click that ends a drag" flag. Returns
+   *  true if the next click should be ignored. Keeping the mutation inside the
+   *  hook avoids callers writing to a hook-owned ref. */
+  const consumeSkipNextClick = useCallback(() => {
+    if (!skipNextClick.current) return false;
+    skipNextClick.current = false;
+    return true;
+  }, []);
+
+  return { handlePointerDown, handlePointerMove, handlePointerUp, consumeSkipNextClick };
 }
