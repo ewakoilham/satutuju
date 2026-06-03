@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
+import "./dashboard.css";
 
 // Profile & Settings are removed from main nav — they live in the avatar dropdown.
 // `NavGroup` collapses two or more sibling tabs under a single dropdown so the
@@ -160,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dashboard-shell min-h-screen bg-background">
       {/* ── Top Nav ──────────────────────────────────────────────────────── */}
       <header className="bg-surface/90 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-[var(--shadow-xs)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
