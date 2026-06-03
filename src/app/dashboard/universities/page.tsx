@@ -8,6 +8,11 @@ import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
 import { enrichUniversity, estimateUniStats } from "@/data/university-enrichment";
+import uniExtraRaw from "@/data/university-extra.json";
+
+interface UniExtra { the?: number; intlPct?: number; studentStaff?: number; website?: string }
+const UNI_EXTRA = uniExtraRaw as Record<string, UniExtra>;
+const RANKED_COUNT = Object.values(UNI_EXTRA).filter((x) => x.the).length;
 
 // ISO 3166-1 alpha-2 codes mapped to country names used in the data
 const COUNTRY_CODES: Record<string, string> = {
@@ -348,8 +353,8 @@ export default function UniversitiesPage() {
         <div className="kampus-stat">
           <div className="ico"><Icon name="book" size={18} /></div>
           <div>
-            <div className="lbl">Jenjang</div>
-            <div className="val">{DEGREE_OPTIONS.length}</div>
+            <div className="lbl">Diperingkat THE</div>
+            <div className="val">{RANKED_COUNT.toLocaleString("id-ID")}</div>
           </div>
         </div>
         <div className="kampus-stat">
@@ -441,7 +446,7 @@ export default function UniversitiesPage() {
       </div>
 
       <p className="est-legend">
-        <span className="est-star">*</span> Estimasi biaya, IELTS &amp; intake berdasarkan negara &amp; jenjang — selalu cek situs resmi kampus untuk angka pasti. QS rank &amp; logo bersifat aktual.
+        <span className="est-star">*</span> Estimasi biaya, IELTS &amp; intake berdasarkan negara &amp; jenjang — selalu cek situs resmi kampus untuk angka pasti. Peringkat THE, % mahasiswa internasional, rasio mahasiswa:dosen, &amp; logo bersifat aktual (sumber: Times Higher Education).
       </p>
 
       {/* ── Split layout ─────────────────────────────────────────── */}
@@ -465,6 +470,18 @@ export default function UniversitiesPage() {
               const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
               const enr = enrichUniversity(u.name);
               const est = estimateUniStats(u.country, u.degreeLevel);
+              const x = UNI_EXTRA[String(u.id)];
+              const site = u.website || x?.website || "";
+              // Build up to 4 meta cells: real THE-derived facts first (no star),
+              // then country/level estimates (starred) to fill the row.
+              const metaCells: { lbl: React.ReactNode; val: string }[] = [];
+              if (x?.intlPct) metaCells.push({ lbl: "Mahasiswa intl", val: `${x.intlPct}%` });
+              if (x?.studentStaff) metaCells.push({ lbl: "Rasio mhs : dosen", val: `${x.studentStaff}` });
+              if (est.tuition) metaCells.push({ lbl: <>Estimasi biaya/th <span className="est-star">*</span></>, val: est.tuition });
+              if (est.ielts) metaCells.push({ lbl: <>IELTS <span className="est-star">*</span></>, val: est.ielts });
+              if (est.intake) metaCells.push({ lbl: <>Intake <span className="est-star">*</span></>, val: est.intake });
+              metaCells.push({ lbl: "Jenjang", val: DEGREE_LABELS[u.degreeLevel] || u.degreeLevel });
+              const cells = metaCells.slice(0, 4);
               return (
                 <div key={u.id} className={`uni-card ${isSel ? "featured" : ""}`}>
                   <div className="uni-top">
@@ -473,7 +490,7 @@ export default function UniversitiesPage() {
                       <h3 className="uni-name">{u.name}</h3>
                       <div className="uni-place">
                         {enr?.location || u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
-                        {enr?.qsRank ? ` · QS #${enr.qsRank}` : ""}
+                        {x?.the ? ` · THE #${x.the}` : ""}
                       </div>
                     </div>
                     <div className="uni-actions">
@@ -498,11 +515,11 @@ export default function UniversitiesPage() {
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
                       </button>
-                      {u.website && (
+                      {site && (
                         <a
                           className="iconbtn-sm"
                           title="Website kampus"
-                          href={u.website.startsWith("http") ? u.website : `https://${u.website}`}
+                          href={site.startsWith("http") ? site : `https://${site}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -513,26 +530,16 @@ export default function UniversitiesPage() {
                   </div>
 
                   <div className="uni-meta">
-                    <div className="cell">
-                      <div className="lbl">Estimasi biaya/th <span className="est-star">*</span></div>
-                      <div className="val">{est.tuition || "—"}</div>
-                    </div>
-                    <div className="cell">
-                      <div className="lbl">IELTS <span className="est-star">*</span></div>
-                      <div className="val">{est.ielts || "—"}</div>
-                    </div>
-                    <div className="cell">
-                      <div className="lbl">Intake <span className="est-star">*</span></div>
-                      <div className="val">{est.intake || "—"}</div>
-                    </div>
-                    <div className="cell">
-                      <div className="lbl">Jenjang</div>
-                      <div className="val">{DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</div>
-                    </div>
+                    {cells.map((c, ci) => (
+                      <div className="cell" key={ci}>
+                        <div className="lbl">{c.lbl}</div>
+                        <div className="val">{c.val}</div>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="uni-tags">
-                    {enr?.qsRank && <span className="db-pill static accent">QS #{enr.qsRank}</span>}
+                    {x?.the && <span className="db-pill static accent">THE #{x.the}</span>}
                     <span className="db-pill static">{DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</span>
                     {isSaved && <span className="db-pill static accent">★ Tersimpan</span>}
                     {isAdmin && u.agency && <span className="db-pill static">{u.agency}</span>}
@@ -541,10 +548,10 @@ export default function UniversitiesPage() {
                   {/* Expanded detail (website + admin commission/edit) */}
                   {isExpanded && (
                     <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px dashed var(--border)", display: "flex", flexDirection: "column", gap: 12 }}>
-                      {u.website && (
+                      {site && (
                         <div>
                           <div className="lbl" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted-2)", marginBottom: 3 }}>Admission website</div>
-                          <a href={u.website.startsWith("http") ? u.website : `https://${u.website}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--primary)", wordBreak: "break-all" }}>{u.website}</a>
+                          <a href={site.startsWith("http") ? site : `https://${site}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--primary)", wordBreak: "break-all" }}>{site}</a>
                         </div>
                       )}
                       {isAdmin && (
@@ -672,11 +679,13 @@ export default function UniversitiesPage() {
                 { lbl: "Negara", get: (u: University) => u.country },
                 { lbl: "Jenjang", get: (u: University) => DEGREE_LABELS[u.degreeLevel] || u.degreeLevel },
                 { lbl: "Program", get: (u: University) => u.programs || "—" },
-                { lbl: "QS Rank 2025", get: (u: University) => { const e = enrichUniversity(u.name); return e?.qsRank ? `#${e.qsRank}` : "—"; } },
+                { lbl: "Peringkat THE", get: (u: University) => { const e = UNI_EXTRA[String(u.id)]; return e?.the ? `#${e.the}` : "—"; } },
+                { lbl: "Mahasiswa intl", get: (u: University) => { const e = UNI_EXTRA[String(u.id)]; return e?.intlPct ? `${e.intlPct}%` : "—"; } },
+                { lbl: "Rasio mhs : dosen", get: (u: University) => { const e = UNI_EXTRA[String(u.id)]; return e?.studentStaff ? `${e.studentStaff}` : "—"; } },
                 { lbl: "Estimasi biaya/th *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).tuition || "—" },
                 { lbl: "IELTS *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).ielts || "—" },
                 { lbl: "Intake *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).intake || "—" },
-                { lbl: "Website", get: (u: University) => (u.website ? "Tersedia" : "—") },
+                { lbl: "Website", get: (u: University) => ((u.website || UNI_EXTRA[String(u.id)]?.website) ? "Tersedia" : "—") },
                 ...(isAdmin ? [{ lbl: "Agency", get: (u: University) => u.agency || "—" }] : []),
               ].map((row) => (
                 <tr key={row.lbl} style={{ borderTop: "1px solid var(--border)" }}>
