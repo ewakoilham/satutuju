@@ -4136,3 +4136,19 @@
 }
 .dashboard-shell .rs-dur-input:disabled { background: var(--disabled-background, #fafafa); color: var(--text-muted-2, #94a3b8); }
 .dashboard-shell .rs-dur-unit { font-size: 11.5px; color: var(--text-muted-2, #94a3b8); }
+
+/* ── FIX: detail panel must span the full rs-row grid (4 cols), not land in
+   the 26px first track ─────────────────────────────────────────────────── */
+.dashboard-shell .rs-detail-panel { grid-column: 1 / -1; }
+
+/* ── Rencana Sesi: phase as a dropdown (keeps the per-phase pill color) ─── */
+.dashboard-shell .rs-phase-wrap { position: relative; display: inline-flex; align-items: center; }
+.dashboard-shell select.rs-phase {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  padding-right: 20px; cursor: pointer;
+}
+.dashboard-shell select.rs-phase:disabled { cursor: not-allowed; opacity: .7; }
+.dashboard-shell .rs-phase-caret {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; font-size: 9px; line-height: 1; color: currentColor; opacity: .75;
+}

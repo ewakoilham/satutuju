@@ -30,6 +30,7 @@ import {
   type SessionPlanRow,
   planTotalMinutes,
 } from "@/lib/session-plan-defaults";
+import { CURRICULUM } from "@/lib/curriculum";
 
 interface PairingInfo {
   id: string;
@@ -80,6 +81,25 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
 
   // Which session row has its detail panel expanded (one at a time).
   const [openDetailId, setOpenDetailId] = useState<string | null>(null);
+
+  // Curriculum lookup by topic — so a session shows its detail (objective,
+  // deliverables, docs to upload, prep) even for plans saved before detail
+  // was stored on the row.
+  const curriculumByTitle = useMemo(() => {
+    const m = new Map<string, (typeof CURRICULUM)[number]>();
+    for (const s of CURRICULUM) m.set(s.topic.toLowerCase().trim(), s);
+    return m;
+  }, []);
+  function detailFor(row: SessionPlanRow) {
+    const tpl = curriculumByTitle.get(row.title.toLowerCase().trim());
+    return {
+      objective: row.objective ?? tpl?.objective,
+      deliverables: row.deliverables ?? tpl?.deliverables,
+      menteePrep: row.menteePrep ?? tpl?.menteePrep,
+      mentorPrep: row.mentorPrep ?? tpl?.mentorPrep,
+      docChecklist: row.docChecklist ?? tpl?.docChecklist,
+    };
+  }
 
   // Drag state — index of the row being dragged.
   const dragIdx = useRef<number | null>(null);
@@ -151,14 +171,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   function renameRow(id: string, title: string) {
     mutate((rows) => rows.map((r) => (r.id === id ? { ...r, title: title.trim() || "Sesi tanpa nama" } : r)));
   }
-  function cyclePhase(id: string) {
-    mutate((rows) =>
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        const i = PLAN_PHASES.indexOf(r.phase);
-        return { ...r, phase: PLAN_PHASES[(i + 1) % PLAN_PHASES.length] };
-      }),
-    );
+  function setPhase(id: string, phase: SessionPlanRow["phase"]) {
+    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, phase } : r)));
   }
   /** Free-entry duration (minutes), clamped to the allowed range. */
   function setDuration(id: string, minutes: number) {
@@ -415,16 +429,20 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                     {row.title}
                   </h3>
                   <div className="rs-meta">
-                    <button
-                      type="button"
-                      className="rs-phase"
-                      data-phase={row.phase}
-                      onClick={() => !isFinalized && cyclePhase(row.id)}
-                      disabled={isFinalized}
-                      title={isFinalized ? "Fase tidak bisa diubah setelah finalisasi" : "Klik untuk ganti fase"}
-                    >
-                      {row.phase}
-                    </button>
+                    <span className="rs-phase-wrap">
+                      <select
+                        className="rs-phase"
+                        data-phase={row.phase}
+                        value={row.phase}
+                        disabled={isFinalized}
+                        aria-label="Fase sesi"
+                        title={isFinalized ? "Fase tidak bisa diubah setelah finalisasi" : "Pilih fase"}
+                        onChange={(e) => setPhase(row.id, e.target.value as SessionPlanRow["phase"])}
+                      >
+                        {PLAN_PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <span className="rs-phase-caret" aria-hidden="true">▾</span>
+                    </span>
                     <span className="rs-dur" title={isFinalized ? "Durasi tidak bisa diubah setelah finalisasi" : "Ketik durasi dalam menit"}>
                       <input
                         type="number"
@@ -513,43 +531,55 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                   </button>
                 </div>
 
-                {openDetailId === row.id && (
-                  <div className="rs-detail-panel">
-                    {row.objective ? (
-                      <>
-                        <div className="rs-detail-obj">
-                          <span className="rs-detail-label">Tujuan sesi</span>
-                          <p>{row.objective}</p>
-                        </div>
-                        <div className="rs-detail-cols">
-                          {row.deliverables?.length ? (
-                            <div>
-                              <span className="rs-detail-label">Hasil / output</span>
-                              <ul>{row.deliverables.map((d, k) => <li key={k}>{d}</li>)}</ul>
+                {openDetailId === row.id && (() => {
+                  const d = detailFor(row);
+                  const hasDetail = d.objective || d.deliverables?.length || d.docChecklist?.length || d.menteePrep?.length || d.mentorPrep?.length;
+                  return (
+                    <div className="rs-detail-panel">
+                      {hasDetail ? (
+                        <>
+                          {d.objective && (
+                            <div className="rs-detail-obj">
+                              <span className="rs-detail-label">Tujuan sesi — apa yang dipelajari</span>
+                              <p>{d.objective}</p>
                             </div>
-                          ) : null}
-                          {row.menteePrep?.length ? (
-                            <div>
-                              <span className="rs-detail-label">Disiapkan mentee</span>
-                              <ul>{row.menteePrep.map((d, k) => <li key={k}>{d}</li>)}</ul>
-                            </div>
-                          ) : null}
-                          {row.mentorPrep?.length ? (
-                            <div>
-                              <span className="rs-detail-label">Disiapkan mentor</span>
-                              <ul>{row.mentorPrep.map((d, k) => <li key={k}>{d}</li>)}</ul>
-                            </div>
-                          ) : null}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="rs-detail-empty">
-                        Sesi kustom — belum ada detail kurikulum. Tujuan & persiapan bisa kamu
-                        sampaikan langsung ke mentee saat sesi.
-                      </p>
-                    )}
-                  </div>
-                )}
+                          )}
+                          <div className="rs-detail-cols">
+                            {d.deliverables?.length ? (
+                              <div>
+                                <span className="rs-detail-label">Hasil / output</span>
+                                <ul>{d.deliverables.map((x, k) => <li key={k}>{x}</li>)}</ul>
+                              </div>
+                            ) : null}
+                            {d.docChecklist?.length ? (
+                              <div>
+                                <span className="rs-detail-label">Dokumen untuk diunggah</span>
+                                <ul>{d.docChecklist.map((x, k) => <li key={k}>{x}</li>)}</ul>
+                              </div>
+                            ) : null}
+                            {d.menteePrep?.length ? (
+                              <div>
+                                <span className="rs-detail-label">Disiapkan mentee</span>
+                                <ul>{d.menteePrep.map((x, k) => <li key={k}>{x}</li>)}</ul>
+                              </div>
+                            ) : null}
+                            {d.mentorPrep?.length ? (
+                              <div>
+                                <span className="rs-detail-label">Disiapkan mentor</span>
+                                <ul>{d.mentorPrep.map((x, k) => <li key={k}>{x}</li>)}</ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="rs-detail-empty">
+                          Sesi kustom — belum ada detail kurikulum. Tujuan &amp; persiapan bisa kamu
+                          sampaikan langsung ke mentee saat sesi.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

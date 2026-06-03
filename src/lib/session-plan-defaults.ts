@@ -31,6 +31,8 @@ export interface SessionPlanRow {
   deliverables?: string[];
   menteePrep?: string[];
   mentorPrep?: string[];
+  /** Documents the mentee should upload/prepare for this session. */
+  docChecklist?: string[];
 }
 
 export const PLAN_MIN_SESSIONS = 5;
@@ -65,6 +67,7 @@ export function buildDefaultPlan(): SessionPlanRow[] {
     deliverables: s.deliverables,
     menteePrep: s.menteePrep,
     mentorPrep: s.mentorPrep,
+    docChecklist: s.docChecklist,
   }));
 }
 
