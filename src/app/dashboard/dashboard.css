@@ -4052,3 +4052,141 @@
   .dashboard-shell .pov-footer { padding-left: 20px; padding-right: 20px; }
   .dashboard-shell .agenda-slot { width: 78px; }
 }
+
+/* ── Rencana Sesi: first-time how-to nudge + edit affordances ───────────── */
+.dashboard-shell .rs-nudge {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--brand-yellow, #fefaef);
+  border: 1px solid var(--warning-light, #fef3c7);
+  border-radius: var(--radius-xl, 1rem);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.dashboard-shell .rs-nudge-icon { font-size: 18px; line-height: 1.5; }
+.dashboard-shell .rs-nudge-body { flex: 1; min-width: 0; }
+.dashboard-shell .rs-nudge-body strong {
+  display: block; font-size: 13px; font-weight: 700;
+  color: #92400e; margin-bottom: 6px;
+}
+.dashboard-shell .rs-nudge-body ul { margin: 0; padding-left: 18px; }
+.dashboard-shell .rs-nudge-body li {
+  font-size: 12.5px; line-height: 1.6; color: var(--text-muted-3, #475569);
+}
+.dashboard-shell .rs-nudge-body b { color: var(--foreground, #1a1a2e); font-weight: 600; }
+.dashboard-shell .rs-nudge-close {
+  flex-shrink: 0; background: transparent; border: 0; cursor: pointer;
+  color: var(--text-muted-2, #94a3b8); font-size: 13px; padding: 2px 4px; line-height: 1;
+}
+.dashboard-shell .rs-nudge-close:hover { color: var(--foreground, #1a1a2e); }
+
+/* make the affordances obvious */
+.dashboard-shell .rs-grip { cursor: grab; }
+.dashboard-shell .rs-row[draggable="true"]:active .rs-grip { cursor: grabbing; }
+.dashboard-shell .rs-title[contenteditable="true"] {
+  cursor: text; border-radius: 6px; padding: 1px 5px; margin: -1px -5px;
+  transition: background .15s, box-shadow .15s;
+}
+.dashboard-shell .rs-title[contenteditable="true"]:hover { background: var(--primary-50, #edf1fa); }
+.dashboard-shell .rs-title[contenteditable="true"]:focus {
+  background: #fff; outline: none; box-shadow: 0 0 0 2px var(--primary-200, #b9c9eb);
+}
+
+/* ── Rencana Sesi: per-session detail expander ─────────────────────────── */
+.dashboard-shell .rs-row { flex-wrap: wrap; }
+.dashboard-shell .rs-detailbtn.is-open { background: var(--primary-50, #edf1fa); color: var(--primary, #3958b3); }
+.dashboard-shell .rs-detail-panel {
+  flex-basis: 100%; width: 100%;
+  margin-top: 12px; padding-top: 14px;
+  border-top: 1px dashed var(--border, #dfe5eb);
+}
+.dashboard-shell .rs-detail-label {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted-2, #94a3b8); margin-bottom: 4px;
+}
+.dashboard-shell .rs-detail-obj { margin-bottom: 12px; }
+.dashboard-shell .rs-detail-obj p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--foreground, #1a1a2e); }
+.dashboard-shell .rs-detail-cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;
+}
+.dashboard-shell .rs-detail-cols ul { margin: 0; padding-left: 16px; }
+.dashboard-shell .rs-detail-cols li { font-size: 12.5px; line-height: 1.55; color: var(--text-muted-3, #475569); }
+.dashboard-shell .rs-detail-empty { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text-muted, #64748b); }
+
+/* ── Rencana Sesi: up/down reorder buttons (Canva-style) ───────────────── */
+.dashboard-shell .rs-move { display: inline-flex; flex-direction: column; gap: 2px; margin-right: 4px; }
+.dashboard-shell .rs-movebtn { width: 26px; height: 18px; padding: 0; }
+.dashboard-shell .rs-movebtn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ── Rencana Sesi: typeable duration field (replaces click-to-cycle) ───── */
+.dashboard-shell .rs-dur {
+  display: inline-flex; align-items: center; gap: 3px;
+  border: none; background: none; padding: 0; cursor: default;
+}
+.dashboard-shell .rs-dur-input {
+  width: 3.4em; text-align: right; font: inherit; font-size: 12px;
+  color: var(--foreground, #1a1a2e); background: #fff;
+  border: 1px solid var(--border, #dfe5eb); border-radius: var(--radius-sm, .5rem);
+  padding: 2px 5px;
+}
+.dashboard-shell .rs-dur-input:focus {
+  outline: none; border-color: var(--primary, #3958b3);
+  box-shadow: 0 0 0 2px var(--primary-100, #dce4f5);
+}
+.dashboard-shell .rs-dur-input:disabled { background: var(--disabled-background, #fafafa); color: var(--text-muted-2, #94a3b8); }
+.dashboard-shell .rs-dur-unit { font-size: 11.5px; color: var(--text-muted-2, #94a3b8); }
+
+/* ── FIX: detail panel must span the full rs-row grid (4 cols), not land in
+   the 26px first track ─────────────────────────────────────────────────── */
+.dashboard-shell .rs-detail-panel { grid-column: 1 / -1; }
+
+/* ── Rencana Sesi: phase as a dropdown (keeps the per-phase pill color) ─── */
+.dashboard-shell .rs-phase-wrap { position: relative; display: inline-flex; align-items: center; }
+.dashboard-shell select.rs-phase {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  padding-right: 20px; cursor: pointer;
+}
+.dashboard-shell select.rs-phase:disabled { cursor: not-allowed; opacity: .7; }
+.dashboard-shell .rs-phase-caret {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; font-size: 9px; line-height: 1; color: currentColor; opacity: .75;
+}
+
+/* ── Rencana Sesi detail: black bold headings + bulleted lists ─────────── */
+.dashboard-shell .rs-detail-label {
+  color: var(--foreground, #1a1a2e);
+  font-weight: 700;
+}
+.dashboard-shell .rs-detail-cols ul {
+  list-style: disc;
+  padding-left: 18px;
+}
+.dashboard-shell .rs-detail-cols li {
+  list-style: disc;
+}
+.dashboard-shell .rs-detail-cols li::marker { color: var(--primary, #3958b3); }
+
+/* ── Rencana Sesi: mentee accept bar ───────────────────────────────────── */
+.dashboard-shell .rs-accept-bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--brand-blue-soft, #c6ddef);
+  border: 1px solid var(--primary-200, #b9c9eb);
+  border-radius: var(--radius-xl, 1rem);
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.dashboard-shell .rs-accept-text {
+  flex: 1; min-width: 220px; font-size: 13.5px; line-height: 1.5;
+  color: var(--primary-900, #111d42);
+}
+.dashboard-shell .rs-accept-bar .db-btn { white-space: nowrap; }
+.dashboard-shell .rs-accept-done { font-size: 13.5px; font-weight: 600; color: var(--success, #10b981); }
+
+/* Read-only (finalized / mentee) — static phase + duration, no interactive affordance */
+.dashboard-shell .rs-phase-static,
+.dashboard-shell .rs-dur-static {
+  cursor: default;
+}
+.dashboard-shell .rs-phase-static:hover,
+.dashboard-shell .rs-dur-static:hover { filter: none; transform: none; }
+.dashboard-shell .rs-dur-static { color: var(--text-muted); }

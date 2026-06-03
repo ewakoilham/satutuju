@@ -48,6 +48,17 @@ export async function PATCH(
   }
 
   const now = new Date().toISOString();
+
+  // 3-phase lifecycle timestamps (used by the Sesi screen):
+  //   prepCompletedAt   — mentor clicked "Mulai sesi" (Sebelum → Setelah).
+  //   mentorPreviewAt   — mentor opened the Mentee POV preview.
+  //   mentorSubmittedAt — mentor confirmed "Setuju & kirim" (Setelah → Mentee POV).
+  //   menteeViewedAt    — mentee acknowledged the report.
+  // Pass `true` from the client to stamp the current time; pass an ISO string to set explicitly;
+  // anything else leaves the existing value alone.
+  const stampNow = (val: unknown, existing: string | null) =>
+    val === true ? now : typeof val === "string" ? val : existing;
+
   const { data: updated, error: updateError } = await supabase
     .from("Session")
     .update({
@@ -60,6 +71,10 @@ export async function PATCH(
       obstacles: body.obstacles ?? session.obstacles,
       summaryNotes: body.summaryNotes ?? session.summaryNotes,
       menteeFeedback: body.menteeFeedback ?? session.menteeFeedback,
+      prepCompletedAt: stampNow(body.prepCompletedAt, session.prepCompletedAt),
+      mentorPreviewAt: stampNow(body.mentorPreviewAt, session.mentorPreviewAt),
+      mentorSubmittedAt: stampNow(body.mentorSubmittedAt, session.mentorSubmittedAt),
+      menteeViewedAt: stampNow(body.menteeViewedAt, session.menteeViewedAt),
       updatedAt: now,
     })
     .eq("id", session.id)
@@ -109,6 +124,25 @@ export async function PATCH(
         });
       }
     }
+  }
+
+  // Notify mentee when mentor finalises ("Setuju & kirim").
+  if (body.mentorSubmittedAt === true && pairing.mentorId === user.userId) {
+    const { data: mentor } = await supabase
+      .from("User")
+      .select("name")
+      .eq("id", user.userId)
+      .single();
+    await supabase.from("Notification").insert({
+      id: generateId(),
+      userId: pairing.menteeId,
+      title: `Laporan Sesi ${sessionNum} sudah dikirim`,
+      message: `${mentor?.name ?? "Mentor"} mengirim ringkasan Sesi ${sessionNum}. Cek catatan + action items kamu.`,
+      type: "session",
+      read: false,
+      link: `/dashboard/sesi/${session.id}`,
+      createdAt: now,
+    });
   }
 
   // If mentee energy <= 2 for two consecutive sessions, create an alert notification
