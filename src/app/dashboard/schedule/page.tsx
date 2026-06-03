@@ -16,6 +16,7 @@ import {
   EditSlotModal,
   BookingModal,
   SlotPopover,
+  RecurringRulesCard,
   // helpers
   addDays,
   toDateStr,
@@ -177,7 +178,7 @@ export default function SchedulePage() {
 
   function handleCellClick(e: React.MouseEvent<HTMLDivElement>, dateStr: string) {
     if (!isMentor) return;
-    if (drag.skipNextClick.current) { drag.skipNextClick.current = false; return; }
+    if (drag.consumeSkipNextClick()) return;
     if (mode.type !== "idle") { dispatch({ type: "DISMISS" }); return; }
 
     const daySlots = weekSlots.filter((s) => s.date === dateStr);
@@ -498,28 +499,7 @@ export default function SchedulePage() {
         <aside className="jadwal-side">
           {isMentor && (
             <>
-              <div className="jadwal-side-card">
-                <h3>Aturan ketersediaan rutin</h3>
-                <div className="desc">
-                  Jam mingguan yang otomatis aktif. Atur sekali, slot otomatis muncul tiap minggu.
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-muted-3)", padding: "8px 0", lineHeight: 1.5 }}>
-                  Belum ada aturan rutin. Saat ini setiap slot dibuat manual lewat kalender.
-                </div>
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginTop: 6,
-                    fontFamily: "var(--font-poppins)",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    color: "var(--text-muted-2)",
-                  }}
-                  title="Fitur akan tersedia segera"
-                >
-                  + Tambah aturan (segera)
-                </span>
-              </div>
+              <RecurringRulesCard onChanged={refresh} />
 
               <div className="jadwal-side-card">
                 <h3>Tautan booking</h3>

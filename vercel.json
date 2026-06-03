@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/materialize-slots",
+      "schedule": "0 18 * * *"
+    }
+  ]
+}

@@ -163,11 +163,16 @@ model ScheduleSlot {
   endTime   String // "HH:MM"
   notes     String?
   status    String   @default("available") // "available" | "pending" | "booked"
+  source    String   @default("manual") // "manual" | "rule" — origin of this slot
+  ruleId    String? // AvailabilityRule that generated it, when source="rule"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   mentor   User              @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
   bookings ScheduleBooking[]
+
+  @@index([mentorId, date])
+  @@index([ruleId])
 }
 
 model ScheduleBooking {
