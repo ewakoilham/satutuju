@@ -113,6 +113,13 @@ export default function InvitesPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      <button
+        onClick={() => router.push("/dashboard/users")}
+        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-primary transition mb-4"
+      >
+        <Icon name="arrow-left" size={15} />
+        Kembali ke Users
+      </button>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">
           Undangan

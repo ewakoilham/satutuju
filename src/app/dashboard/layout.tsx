@@ -44,7 +44,6 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
   admin: [
     { href: "/dashboard",              label: "Overview", icon: "chart" },
     { href: "/dashboard/users",        label: "Users",    icon: "users" },
-    { href: "/dashboard/admin/invites", label: "Undangan", icon: "user" },
     {
       label: "Mentor", icon: "user",
       children: [
