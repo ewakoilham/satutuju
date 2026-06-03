@@ -62,12 +62,11 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
   ],
   mentor: [
-    { href: "/dashboard",              label: "My Mentees",   icon: "graduation"  },
-    { href: "/dashboard/mentee",       label: "Mentee",       icon: "users", activePrefix: "/dashboard/mentee" },
-    { href: "/dashboard/leads",        label: "Leads",        icon: "users", activePrefix: "/dashboard/leads" },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
-    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
+    { href: "/dashboard",              label: "Beranda", icon: "chart"    },
+    { href: "/dashboard/mentee",       label: "Mentee",  icon: "users", activePrefix: "/dashboard/mentee" },
+    { href: "/dashboard/schedule",     label: "Jadwal",  icon: "calendar" },
+    { href: "/dashboard/resources",    label: "Materi",  icon: "book"     },
+    { href: "/dashboard/universities", label: "Kampus",  icon: "school"   },
   ],
   mentee: [
     { href: "/dashboard",              label: "My Journey",   icon: "map"         },
