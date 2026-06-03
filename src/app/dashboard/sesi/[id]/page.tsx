@@ -381,13 +381,12 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   }
 
   // "▶ Mulai sesi" — call /start, which:
-  //   1. creates a Google Calendar event with a Meet link on the mentor's
-  //      personal calendar (or reuses one if the booking already has it),
-  //   2. saves the meet URL on the ScheduleBooking,
-  //   3. stamps prepCompletedAt + flips status to in_progress.
+  //   1. stamps prepCompletedAt + flips status to in_progress, and
+  //   2. returns the Meet link that was created on the platform calendar when
+  //      the booking was accepted (see /api/schedule/[id]/book).
   //
-  // On 412 "needsConnect", redirect the mentor to /api/auth/google?mode=connect
-  // to grant the calendar.events scope.
+  // If no link exists yet, the session still starts and the response carries a
+  // `warning` we surface to the mentor.
   async function handleStartSession() {
     if (!found || startBusy) return;
     setStartBusy(true);
@@ -395,12 +394,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     try {
       const res = await fetch(`/api/sessions/${id}/start`, { method: "POST" });
       const data = await res.json();
-      if (res.status === 412 && data.needsConnect && data.connectUrl) {
-        // Redirect to the OAuth flow. After consent, Google sends user back
-        // to the Sesi page and they can press "Mulai sesi" again.
-        window.location.href = data.connectUrl;
-        return;
-      }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
       // Optimistically reflect the new stamp locally.
@@ -415,7 +408,12 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       setActivePhase("setelah");
 
       // Pop the Meet open in a new tab so the mentor doesn't have to hunt.
-      if (data.meetLink) window.open(data.meetLink, "_blank", "noopener,noreferrer");
+      if (data.meetLink) {
+        window.open(data.meetLink, "_blank", "noopener,noreferrer");
+      } else if (data.warning) {
+        // Session started, but no Meet link exists yet — tell the mentor why.
+        setStartError(data.warning);
+      }
     } catch (e) {
       setStartError(e instanceof Error ? e.message : String(e));
     } finally {
