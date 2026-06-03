@@ -76,20 +76,29 @@ export default function UsersPage() {
             All registered users on the platform
           </p>
         </div>
-        <div className="bg-surface-elevated rounded-xl p-1 flex flex-wrap gap-0.5">
-          {["", "mentor", "mentee", "admin"].map((r) => (
-            <button
-              key={r}
-              onClick={() => setFilter(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                filter === r
-                  ? "bg-brand-blue-soft text-primary"
-                  : "text-text-muted-3 hover:text-foreground"
-              }`}
-            >
-              {r || "All"}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/dashboard/admin/invites")}
+            className="btn-primary text-sm px-4 py-2 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <Icon name="user" size={15} />
+            Kirim undangan
+          </button>
+          <div className="bg-surface-elevated rounded-xl p-1 flex flex-wrap gap-0.5">
+            {["", "mentor", "mentee", "admin"].map((r) => (
+              <button
+                key={r}
+                onClick={() => setFilter(r)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  filter === r
+                    ? "bg-brand-blue-soft text-primary"
+                    : "text-text-muted-3 hover:text-foreground"
+                }`}
+              >
+                {r || "All"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
