@@ -344,9 +344,10 @@ export default function MentorContractPage() {
                   `@[Npx]:` prefixes against IT, not the viewport.
                     - < 680px: single column, preview only
                     - ≥ 680px: 2-col (TOC + preview)
-                    - ≥ 1024px: 3-col (TOC + preview + takeaways) */}
+                    - ≥ 820px: 3-col (TOC + preview + takeaways) — fits inside
+                      the max-w-4xl (896px) reader card */}
               <div className="@container lg:-mx-8 lg:px-2">
-                <div className="grid gap-3 items-start @[680px]:grid-cols-[170px_minmax(0,1fr)] @[1024px]:grid-cols-[170px_minmax(0,1fr)_240px] @[1024px]:gap-4">
+                <div className="grid gap-3 items-start @[680px]:grid-cols-[170px_minmax(0,1fr)] @[820px]:grid-cols-[170px_minmax(0,1fr)_240px] @[820px]:gap-4">
                   <aside className="hidden @[680px]:block">
                     <div className="sticky top-4 max-h-[60vh] overflow-y-auto pr-2">
                       <ContractTOC
@@ -360,9 +361,9 @@ export default function MentorContractPage() {
                     ref={setPreviewScrollEl}
                     html={data.previewHtml}
                     onScrolledToEnd={() => setScrolledToEnd(true)}
-                    className="contract-prose max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 @[680px]:p-5 @[1024px]:p-6"
+                    className="contract-prose max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 @[680px]:p-5 @[820px]:p-6"
                   />
-                  <aside className="hidden @[1024px]:block">
+                  <aside className="hidden @[820px]:block">
                     <div className="sticky top-4 max-h-[60vh] overflow-y-auto">
                       <ContractTakeaways
                         entries={data.previewToc}
