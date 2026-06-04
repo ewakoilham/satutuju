@@ -165,6 +165,8 @@ for (const g of groups.values()) {
     /\boieg\b/i.test(g.name) ||
     (!looksUni(g.name) && /all campuses|following universities|^the following/i.test(g.name)) ||
     (!looksUni(g.name) && PROVIDER.test(g.name)) || // pure provider rows e.g. "Shorelight Education"
+    (!looksUni(g.name) && /^(usa|uk|united states|united kingdom|singapore|malaysia|china|ireland|australia|canada|new zealand|nepal)$/i.test(g.name.trim())) || // bare-country residue ("USA")
+    /applications must be submitted/i.test(g.name) || // application-note text
     uniTokens >= 3 ||
     g.name.length > 90;
   if (isJunk) continue;
