@@ -23,9 +23,9 @@ const DIR = require(path.join(__dirname, "../src/data/universities.json"));
 const HIPO = require("/tmp/hipo.json");
 
 /* ---- name cleaning (mirrors cleanUniName in university-enrichment.ts) ---- */
-const PROVIDER = /\b(kaplan|kic|into|navitas|oieg|oxford international|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+const PROVIDER = /\b(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+const NOTE = /\b(students?|only|direct entry|under qs|all campuses?)\b/i;
 const NOISE = /\b(international pathway college|international study centre|pathway college)\b/gi;
-const looksUni = (p) => /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
 function cleanUniName(raw) {
   let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   s = s.replace(/^\([^)]*\)\s*/, (m) => (PROVIDER.test(m) ? "" : m));
@@ -38,13 +38,21 @@ function cleanUniName(raw) {
   }
   if (/\s[-–—]\s/.test(s)) {
     const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
-    const sc = (p) => { let x = 0; if (looksUni(p)) x += 3; if (PROVIDER.test(p)) x -= 4; if (/\bacademy\b/i.test(p)) x -= 1; return x; };
-    segs.sort((a, b) => sc(b) - sc(a));
-    s = segs[0];
+    const drop = (p) => PROVIDER.test(p) || /\bacademy\b/i.test(p) || NOTE.test(p);
+    const kept = segs.filter((p) => !drop(p));
+    s = kept.length ? kept.join(" - ") : segs[0];
   }
   s = s.replace(NOISE, "");
+  s = s.replace(/\([^)]*\)/g, (m) =>
+    PROVIDER.test(m) || /\b(under qs|all campuses?|only|students?|direct entry)\b/i.test(m) ? " " : m,
+  );
+  s = s.replace(/[-–—]\s*(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|up education|times education|global education|laurus education|adelaide education group|imperial education group)\b.*$/i, " ");
+  if ((s.match(/,/g) || []).length >= 2) {
+    const head = s.slice(0, s.indexOf(","));
+    if (/(universit|college|institute|school|polytechnic)/i.test(head)) s = head;
+  }
   s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, ""); // drop trailing acronym nickname e.g. (USYD)
-  s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—-]+|[\s/,–—-]+$/g, "").trim();
+  s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—()-]+|[\s/,–—()-]+$/g, "").trim();
   return s.length < 3 ? String(raw).trim() : s;
 }
 
@@ -147,10 +155,19 @@ for (const u of DIR) {
 
 const canonical = [];
 for (const g of groups.values()) {
-  // Drop agency meta-rows that aren't real institutions (e.g. "OIEG (Oxford
-  // International Education Group)" or a row listing many colleges). No real
-  // university name contains "OIEG".
-  if (/\boieg\b/i.test(g.name)) continue;
+  // Drop agency meta-rows that aren't real institutions:
+  //  - the OIEG group entity,
+  //  - generic placeholders ("All campuses except Australia") with no uni word,
+  //  - garbled rows listing many universities at once (3+ "university/college").
+  const looksUni = (p) => /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
+  const uniTokens = (g.name.match(/\b(universit\w*|college)\b/gi) || []).length;
+  const isJunk =
+    /\boieg\b/i.test(g.name) ||
+    (!looksUni(g.name) && /all campuses|following universities|^the following/i.test(g.name)) ||
+    (!looksUni(g.name) && PROVIDER.test(g.name)) || // pure provider rows e.g. "Shorelight Education"
+    uniTokens >= 3 ||
+    g.name.length > 90;
+  if (isJunk) continue;
   const levels = [...g.levels];
   const degreeLevel = levels.length === 1 ? levels[0] : "All";
   // representative id: prefer the smallest (stable); QS/site are already merged.

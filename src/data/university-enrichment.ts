@@ -156,7 +156,8 @@ export function estimateMinUsd(country: string): number | null {
    ════════════════════════════════════════════════════════════════════ */
 
 const NAME_PROVIDER =
-  /\b(kaplan|kic|into|navitas|oieg|oxford international|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+  /\b(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+const NAME_NOTE = /\b(students?|only|direct entry|under qs|all campuses?)\b/i;
 const NAME_NOISE =
   /\b(international pathway college|international study centre|pathway college)\b/gi;
 const looksLikeUni = (p: string) =>
@@ -179,24 +180,31 @@ export function cleanUniName(raw: string): string {
     }
   }
 
-  // 2) spaced dash split (-, –, —) → keep the institution side, drop the provider.
+  // 2) spaced dash split (-, –, —) → keep only the real parts, drop provider/
+  //    agency/note segments (so "X - Kaplan"/"X - Shorelight" lose the tag but
+  //    a real campus qualifier like "X - Dubai" is preserved).
   if (/\s[-–—]\s/.test(s)) {
     const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
-    const score = (p: string) => {
-      let sc = 0;
-      if (looksLikeUni(p)) sc += 3;
-      if (NAME_PROVIDER.test(p)) sc -= 4;
-      if (/\bacademy\b/i.test(p)) sc -= 1;
-      return sc;
-    };
-    segs.sort((a, b) => score(b) - score(a));
-    s = segs[0];
+    const drop = (p: string) => NAME_PROVIDER.test(p) || /\bacademy\b/i.test(p) || NAME_NOTE.test(p);
+    const kept = segs.filter((p) => !drop(p));
+    s = kept.length ? kept.join(" - ") : segs[0];
   }
 
-  // 3) Drop pathway-noise phrases + trailing acronym nicknames; tidy.
+  // 3) Drop pathway-noise, provider/note parentheticals, trailing provider
+  //    clauses (any dash spacing), trailing location clauses + acronyms; tidy.
   s = s.replace(NAME_NOISE, "");
+  s = s.replace(/\([^)]*\)/g, (m) =>
+    NAME_PROVIDER.test(m) || /\b(under qs|all campuses?|only|students?|direct entry)\b/i.test(m) ? " " : m,
+  );
+  s = s.replace(/[-–—]\s*(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|up education|times education|global education|laurus education|adelaide education group|imperial education group)\b.*$/i, " ");
+  // trailing ", City, State/Country" location (2+ comma-clauses) → drop, but
+  // keep single-comma campus names like "University of California, Berkeley".
+  if ((s.match(/,/g) || []).length >= 2) {
+    const head = s.slice(0, s.indexOf(","));
+    if (/(universit|college|institute|school|polytechnic)/i.test(head)) s = head;
+  }
   s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, ""); // e.g. "(USYD)", "(ECAE)"
-  s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—-]+|[\s/,–—-]+$/g, "").trim();
+  s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—()-]+|[\s/,–—()-]+$/g, "").trim();
 
   return !s || s.length < 3 ? orig : s;
 }
