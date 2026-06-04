@@ -7,7 +7,7 @@ import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import * as AllFlags from "country-flag-icons/react/3x2";
-import { enrichUniversity, estimateUniStats, estimateMinUsd, cleanUniName } from "@/data/university-enrichment";
+import { estimateUniStats, estimateMinUsd, cleanUniName } from "@/data/university-enrichment";
 import uniExtraRaw from "@/data/university-extra.json";
 
 interface UniExtra { qs?: string; website?: string }
@@ -493,7 +493,6 @@ export default function UniversitiesPage() {
               const isExpanded = expandedId === u.id;
               const pendingLevel = editingLevel[u.id] ?? u.degreeLevel;
               const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
-              const enr = enrichUniversity(u.name);
               const est = estimateUniStats(u.country, u.degreeLevel);
               const x = UNI_EXTRA[String(u.id)];
               const qsRank = u.qs ?? x?.qs;
@@ -509,11 +508,11 @@ export default function UniversitiesPage() {
               return (
                 <div key={u.id} className={`uni-card ${isSel ? "featured" : ""}`}>
                   <div className="uni-top">
-                    <UniFlag country={u.country} logo={enr?.logo} name={cleanUniName(u.name)} />
+                    <UniFlag country={u.country} name={cleanUniName(u.name)} />
                     <div className="uni-info" style={{ cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : u.id)}>
                       <h3 className="uni-name">{cleanUniName(u.name)}</h3>
                       <div className="uni-place">
-                        {enr?.location || u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
+                        {u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
                         {qsRank ? ` · QS #${qsRank}` : ""}
                       </div>
                     </div>
