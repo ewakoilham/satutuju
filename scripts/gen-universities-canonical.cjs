@@ -23,12 +23,12 @@ const DIR = require(path.join(__dirname, "../src/data/universities.json"));
 const HIPO = require("/tmp/hipo.json");
 
 /* ---- name cleaning (mirrors cleanUniName in university-enrichment.ts) ---- */
-const PROVIDER = /\b(kaplan|kic|into|navitas|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+const PROVIDER = /\b(kaplan|kic|into|navitas|oieg|oxford international|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
 const NOISE = /\b(international pathway college|international study centre|pathway college)\b/gi;
 const looksUni = (p) => /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
 function cleanUniName(raw) {
   let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
-  s = s.replace(/^\((?:kaplan|kic|navitas|into|study group|oncampus)\)\s*/i, "");
+  s = s.replace(/^\([^)]*\)\s*/, (m) => (PROVIDER.test(m) ? "" : m));
   if (s.includes("/")) {
     const parts = s.split("/").map((p) => p.trim()).filter(Boolean);
     if (parts.length >= 2) {
@@ -36,8 +36,8 @@ function cleanUniName(raw) {
       if (PROVIDER.test(left) || /\bkic\b/i.test(left)) s = parts[parts.length - 1];
     }
   }
-  if (s.includes(" - ")) {
-    const segs = s.split(" - ").map((p) => p.trim()).filter(Boolean);
+  if (/\s[-–—]\s/.test(s)) {
+    const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
     const sc = (p) => { let x = 0; if (looksUni(p)) x += 3; if (PROVIDER.test(p)) x -= 4; if (/\bacademy\b/i.test(p)) x -= 1; return x; };
     segs.sort((a, b) => sc(b) - sc(a));
     s = segs[0];
@@ -147,6 +147,10 @@ for (const u of DIR) {
 
 const canonical = [];
 for (const g of groups.values()) {
+  // Drop agency meta-rows that aren't real institutions (e.g. "OIEG (Oxford
+  // International Education Group)" or a row listing many colleges). No real
+  // university name contains "OIEG".
+  if (/\boieg\b/i.test(g.name)) continue;
   const levels = [...g.levels];
   const degreeLevel = levels.length === 1 ? levels[0] : "All";
   // representative id: prefer the smallest (stable); QS/site are already merged.
