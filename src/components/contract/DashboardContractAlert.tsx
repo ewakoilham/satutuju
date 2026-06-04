@@ -38,6 +38,15 @@ export default function DashboardContractAlert({ role }: Props) {
 
   useEffect(() => {
     if (role !== "mentor") return;
+    // Re-fetch on every dashboard navigation — NOT just once on mount. This
+    // banner lives in the dashboard layout, which the App Router keeps mounted
+    // across client-side route changes, so a mount-only fetch goes stale: a
+    // mentor who signs on /dashboard/contract and navigates back would keep
+    // seeing "belum menandatangani" until a hard reload. Skip the fetch while
+    // on the contract page (the banner is hidden there anyway) so we refresh
+    // exactly when they leave it after signing.
+    if (pathname === "/dashboard/contract") return;
+    let cancelled = false;
     // Summary mode: skip the markdown → HTML → TOC pipeline server-side
     // since the alert only consumes status + needsResign.
     fetch("/api/mentor-contract?summary=1", {
@@ -45,9 +54,10 @@ export default function DashboardContractAlert({ role }: Props) {
       cache: "no-store",
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: ContractStateAPI | null) => setState(d))
+      .then((d: ContractStateAPI | null) => { if (!cancelled) setState(d); })
       .catch(() => null);
-  }, [role]);
+    return () => { cancelled = true; };
+  }, [role, pathname]);
 
   // Don't double up on the contract page itself.
   if (pathname === "/dashboard/contract") return null;
