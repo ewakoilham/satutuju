@@ -17,20 +17,29 @@ export const toRomanMonth = (m: number): string => ROMAN_MONTHS[m - 1] ?? "";
  * on Jan 1 (= 19:00 UTC on Dec 31) gets a January-year-N+1 number, not
  * a December-year-N one.
  *
- * Sequence is global across all years (not reset annually). The
- * `@unique` constraint on `MentorContract.contractNumber` guarantees no
- * duplicates land — if two mentors race the same sequence, the second
- * insert fails the unique check and the caller surfaces the error.
+ * Sequence is global across all years (not reset annually) and is derived
+ * from the HIGHEST existing sequence + 1 — never the row count. Counting
+ * breaks the moment any row is deleted/voided (or the series doesn't start
+ * at 001): a gap makes `count + 1` land on a number that already exists, and
+ * the `@unique` constraint on `MentorContract.contractNumber` then rejects
+ * the insert ("Gagal menyimpan kontrak"). max+1 stays monotonic across gaps.
+ * (A true concurrent race could still collide on the same max+1; the unique
+ * check rejects the loser and the mentor retries — vanishingly rare here.)
  */
 export async function nextContractNumber(now: Date = new Date()): Promise<string> {
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from("MentorContract")
-    .select("id", { count: "exact", head: true });
+    .select("contractNumber");
 
   if (error) {
-    throw new Error(`Failed to count MentorContract rows: ${error.message}`);
+    throw new Error(`Failed to read MentorContract rows: ${error.message}`);
   }
-  const seq = String((count ?? 0) + 1).padStart(3, "0");
+  // Leading "NNN" before the first "/" is the global sequence.
+  const maxSeq = (data ?? []).reduce((max, row) => {
+    const n = parseInt(String(row.contractNumber ?? "").split("/")[0], 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  const seq = String(maxSeq + 1).padStart(3, "0");
   const { month, year } = getJakartaParts(now);
   return `${seq}/ST-MTR/${toRomanMonth(month)}/${year}`;
 }
