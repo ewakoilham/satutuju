@@ -26,9 +26,25 @@ const HIPO = require("/tmp/hipo.json");
 const PROVIDER = /\b(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
 const NOTE = /\b(students?|only|direct entry|under qs|all campuses?)\b/i;
 const NOISE = /\b(international pathway college|international study centre|pathway college)\b/gi;
+// commission/agency notes baked into names — cut the name at the first trigger.
+const NOTE_TRIGGER = /\b(commission|sub-?agents?|agent code|agent id|po number|cricos|supplier id|w\.?e\.?f|direct tie|tie ?up|no commission|deposit|formerly|previously known|previously called|in partnership with|applications?\s+(are|not|accepted|from|should|to)|students?\s+(from|who|except)|except\s+students|agreement will be signed|comprising of|following institutions|in the following|memorandum of)\b/i;
+const NOTE_PAREN = /\b(formerly|previously known|previously called|po number|cricos|agent|through|w\.?e\.?f|commission|sub-?agent|except|intake|applications|supplier|deposit|tie ?up|agent code|under qs|all campuses?|only|students?|direct entry)\b/i;
+const looksUniTop = (p) => /(universit|college|institute|institut|school|academy of|polytechnic|conservatory|conservatoire)/i.test(p);
 function cleanUniName(raw) {
   let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  const orig = s;
+  // 1) leading provider tag + note/provider parentheticals (before dash-splitting)
   s = s.replace(/^\([^)]*\)\s*/, (m) => (PROVIDER.test(m) ? "" : m));
+  s = s.replace(/\([^)]*\)/g, (m) => (PROVIDER.test(m) || NOTE_PAREN.test(m) ? " " : m));
+  // 2) cut a trailing commission/agency note (keep the real-name head)
+  {
+    const mt = s.match(NOTE_TRIGGER);
+    if (mt && mt.index > 0) {
+      const head = s.slice(0, mt.index).replace(/[\s,\-–—(]+$/, "").trim();
+      if (looksUniTop(head)) s = head;
+    }
+  }
+  // 3) provider prefix before a slash
   if (s.includes("/")) {
     const parts = s.split("/").map((p) => p.trim()).filter(Boolean);
     if (parts.length >= 2) {
@@ -36,24 +52,25 @@ function cleanUniName(raw) {
       if (PROVIDER.test(left) || /\bkic\b/i.test(left)) s = parts[parts.length - 1];
     }
   }
+  // 4) dash split — drop only pure provider/agency/note segments (keep real-uni segments)
   if (/\s[-–—]\s/.test(s)) {
     const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
-    const drop = (p) => PROVIDER.test(p) || /\bacademy\b/i.test(p) || NOTE.test(p);
+    const drop = (p) => !looksUniTop(p) && (PROVIDER.test(p) || /\bacademy\b/i.test(p) || NOTE.test(p) || NOTE_TRIGGER.test(p));
     const kept = segs.filter((p) => !drop(p));
     s = kept.length ? kept.join(" - ") : segs[0];
   }
   s = s.replace(NOISE, "");
-  s = s.replace(/\([^)]*\)/g, (m) =>
-    PROVIDER.test(m) || /\b(under qs|all campuses?|only|students?|direct entry)\b/i.test(m) ? " " : m,
-  );
   s = s.replace(/[-–—]\s*(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|up education|times education|global education|laurus education|adelaide education group|imperial education group)\b.*$/i, " ");
+  // 5) trailing ", City, State/Country" location
   if ((s.match(/,/g) || []).length >= 2) {
     const head = s.slice(0, s.indexOf(","));
     if (/(universit|college|institute|school|polytechnic)/i.test(head)) s = head;
   }
-  s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, ""); // drop trailing acronym nickname e.g. (USYD)
+  s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, "");
   s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—()-]+|[\s/,–—()-]+$/g, "").trim();
-  return s.length < 3 ? String(raw).trim() : s;
+  // safety net: never turn a real university into a non-university name
+  if (looksUniTop(orig) && !looksUniTop(s)) return orig;
+  return s.length < 3 ? orig : s;
 }
 
 /* ---- normalization for matching/grouping ---- */

@@ -160,18 +160,30 @@ const NAME_PROVIDER =
 const NAME_NOTE = /\b(students?|only|direct entry|under qs|all campuses?)\b/i;
 const NAME_NOISE =
   /\b(international pathway college|international study centre|pathway college)\b/gi;
+// commission/agency notes baked into names — cut the name at the first trigger.
+const NAME_NOTE_TRIGGER = /\b(commission|sub-?agents?|agent code|agent id|po number|cricos|supplier id|w\.?e\.?f|direct tie|tie ?up|no commission|deposit|formerly|previously known|previously called|in partnership with|applications?\s+(are|not|accepted|from|should|to)|students?\s+(from|who|except)|except\s+students|agreement will be signed|comprising of|following institutions|in the following|memorandum of)\b/i;
+const NAME_NOTE_PAREN = /\b(formerly|previously known|previously called|po number|cricos|agent|through|w\.?e\.?f|commission|sub-?agent|except|intake|applications|supplier|deposit|tie ?up|agent code|under qs|all campuses?|only|students?|direct entry)\b/i;
 const looksLikeUni = (p: string) =>
-  /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
+  /(universit|college|institute|institut|school|academy of|polytechnic|conservatory|conservatoire)/i.test(p);
 
 export function cleanUniName(raw: string): string {
   let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   const orig = s;
 
-  // 0) Leading parenthetical provider tag → drop it: "(KAPLAN) Glasgow",
-  //    "(OIEG Group) University of Kent ..." → strip the leading "(...)".
+  // 1) Leading provider tag + note/provider parentheticals (before dash-splitting).
   s = s.replace(/^\([^)]*\)\s*/, (m) => (NAME_PROVIDER.test(m) ? "" : m));
+  s = s.replace(/\([^)]*\)/g, (m) => (NAME_PROVIDER.test(m) || NAME_NOTE_PAREN.test(m) ? " " : m));
 
-  // 1) Provider prefix before a slash → keep the part after it.
+  // 2) Cut a trailing commission/agency note clause (keep the real-name head).
+  {
+    const mt = s.match(NAME_NOTE_TRIGGER);
+    if (mt && mt.index !== undefined && mt.index > 0) {
+      const head = s.slice(0, mt.index).replace(/[\s,\-–—(]+$/, "").trim();
+      if (looksLikeUni(head)) s = head;
+    }
+  }
+
+  // 3) Provider prefix before a slash → keep the part after it.
   if (s.includes("/")) {
     const parts = s.split("/").map((p) => p.trim()).filter(Boolean);
     if (parts.length >= 2) {
@@ -180,25 +192,20 @@ export function cleanUniName(raw: string): string {
     }
   }
 
-  // 2) spaced dash split (-, –, —) → keep only the real parts, drop provider/
-  //    agency/note segments (so "X - Kaplan"/"X - Shorelight" lose the tag but
-  //    a real campus qualifier like "X - Dubai" is preserved).
+  // 4) Spaced dash split → drop only pure provider/agency/note segments
+  //    (segments that are themselves a real university are kept, so
+  //    "X - Dubai" survives but "X - Kaplan"/"X - Commission…" loses the tag).
   if (/\s[-–—]\s/.test(s)) {
     const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
-    const drop = (p: string) => NAME_PROVIDER.test(p) || /\bacademy\b/i.test(p) || NAME_NOTE.test(p);
+    const drop = (p: string) =>
+      !looksLikeUni(p) && (NAME_PROVIDER.test(p) || /\bacademy\b/i.test(p) || NAME_NOTE.test(p) || NAME_NOTE_TRIGGER.test(p));
     const kept = segs.filter((p) => !drop(p));
     s = kept.length ? kept.join(" - ") : segs[0];
   }
 
-  // 3) Drop pathway-noise, provider/note parentheticals, trailing provider
-  //    clauses (any dash spacing), trailing location clauses + acronyms; tidy.
+  // 5) noise, trailing dash-provider, trailing location, acronym; tidy.
   s = s.replace(NAME_NOISE, "");
-  s = s.replace(/\([^)]*\)/g, (m) =>
-    NAME_PROVIDER.test(m) || /\b(under qs|all campuses?|only|students?|direct entry)\b/i.test(m) ? " " : m,
-  );
   s = s.replace(/[-–—]\s*(kaplan|kic|into|navitas|oieg|oxford international|shorelight|study group|up education|times education|global education|laurus education|adelaide education group|imperial education group)\b.*$/i, " ");
-  // trailing ", City, State/Country" location (2+ comma-clauses) → drop, but
-  // keep single-comma campus names like "University of California, Berkeley".
   if ((s.match(/,/g) || []).length >= 2) {
     const head = s.slice(0, s.indexOf(","));
     if (/(universit|college|institute|school|polytechnic)/i.test(head)) s = head;
@@ -206,5 +213,7 @@ export function cleanUniName(raw: string): string {
   s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, ""); // e.g. "(USYD)", "(ECAE)"
   s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—()-]+|[\s/,–—()-]+$/g, "").trim();
 
+  // Safety: never turn a real university into a non-university name.
+  if (looksLikeUni(orig) && !looksLikeUni(s)) return orig;
   return !s || s.length < 3 ? orig : s;
 }
