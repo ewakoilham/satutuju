@@ -360,7 +360,7 @@ export default function MenteePage() {
 
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 8 }}>
+      <div className="page-head" style={{ marginBottom: 8 }} data-tour-screen="mentee">
         <div>
           <div className="sesi-crumb">Mentor</div>
           <h1 className="sesi-title">

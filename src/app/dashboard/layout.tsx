@@ -11,6 +11,7 @@ import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
 import MentorTour from "@/components/dashboards/MentorTour";
+import MentorScreenCoachmarks from "@/components/dashboards/MentorScreenCoachmarks";
 import "./dashboard.css";
 
 // Profile & Settings are removed from main nav — they live in the avatar dropdown.
@@ -536,6 +537,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* First-run guided tour for brand-new mentors (no-op once seen) */}
       <MentorTour role={user.role} />
+      {/* Per-screen contextual coachmarks, shown once per screen (v2) */}
+      <MentorScreenCoachmarks role={user.role} />
 
       {/* ── Main content ───────────────────────────────────────────────────
           The contract route drops the max-width cap entirely so its

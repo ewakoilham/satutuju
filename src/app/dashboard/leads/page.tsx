@@ -223,7 +223,7 @@ export default function MentorLeadsPage() {
   return (
     <div className="space-y-4">
       {/* Page header */}
-      <div className="flex items-end justify-between gap-3 flex-wrap">
+      <div className="flex items-end justify-between gap-3 flex-wrap" data-tour-screen="leads">
         <div>
           <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)] tracking-tight">
             Leads
