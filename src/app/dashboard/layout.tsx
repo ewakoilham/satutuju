@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
+import MentorTour from "@/components/dashboards/MentorTour";
 import "./dashboard.css";
 
 // Profile & Settings are removed from main nav — they live in the avatar dropdown.
@@ -71,14 +72,13 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
   ],
   // Mentee top-nav matches the mentee design handoff order + Indonesian
   // labels: Beranda · Jadwal · Sesi · Materi · Kampus · Dokumen.
-  // "Dokumen" is intentionally omitted until its dedicated screen ships
-  // (adding it now would be a dead link) — wire it in with that redesign.
   mentee: [
     { href: "/dashboard",              label: "Beranda", icon: "map"             },
     { href: "/dashboard/schedule",     label: "Jadwal",  icon: "calendar"        },
     { href: "/dashboard/sesi",         label: "Sesi",    icon: "clipboard-check", activePrefix: "/dashboard/sesi" },
     { href: "/dashboard/resources",    label: "Materi",  icon: "book"            },
     { href: "/dashboard/universities", label: "Kampus",  icon: "school"          },
+    { href: "/dashboard/dokumen",      label: "Dokumen", icon: "document"        },
   ],
 };
 
@@ -269,6 +269,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   const isSchedule = item.href === "/dashboard/schedule";
                   return (
                     <Link key={item.href} href={item.href}
+                      data-tour={item.href}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive
                           ? "bg-brand-blue-soft text-primary"
@@ -532,6 +533,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Global contract alert (mentor-only, hides on /dashboard/contract) ─ */}
       <DashboardContractAlert role={user.role} />
+
+      {/* First-run guided tour for brand-new mentors (no-op once seen) */}
+      <MentorTour role={user.role} />
 
       {/* ── Main content ───────────────────────────────────────────────────
           The contract route drops the max-width cap entirely so its

@@ -19,6 +19,7 @@
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "country-flag-icons": "^1.6.15",
+    "driver.js": "^1.4.0",
     "googleapis": "^171.4.0",
     "jose": "^6.2.2",
     "jsonwebtoken": "^9.0.3",

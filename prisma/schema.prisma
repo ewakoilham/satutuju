@@ -85,6 +85,10 @@ model MentorProfile {
   legalAddress       String?  // alamat resmi sesuai KTP/paspor
   phoneNumber        String?
 
+  // First-run dashboard tour: null = not seen yet (brand-new mentor → tour
+  // runs). Backfilled to now() for existing mentors so only new ones get it.
+  tourSeenAt         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
