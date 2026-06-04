@@ -47,7 +47,15 @@ export async function DELETE(
   await supabase.from("Pairing").delete().eq("mentorId", id);
   await supabase.from("Pairing").delete().eq("menteeId", id);
 
-  // Delete the user (notifications cascade automatically)
+  // Clear references that DON'T cascade, otherwise the User delete fails with a
+  // foreign-key violation (LeadNote/MentorLeadFlag) or leaves orphans
+  // (AvailabilityRule has no FK). Most User-linked tables — profiles, contract,
+  // GoogleConnection, Notification, ScheduleSlot, ScheduleBooking — cascade.
+  await supabase.from("LeadNote").delete().eq("authorId", id);
+  await supabase.from("MentorLeadFlag").delete().eq("mentorId", id);
+  await supabase.from("AvailabilityRule").delete().eq("mentorId", id);
+
+  // Delete the user (cascading tables go automatically).
   const { error: deleteErr } = await supabase.from("User").delete().eq("id", id);
 
   if (deleteErr) {
