@@ -671,16 +671,6 @@ export default function MenteePage() {
               );
             })
           )}
-
-          <button type="button" className="add-mentee">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" />
-            </svg>
-            <div style={{ marginTop: 4 }}>
-              Tambah mentee baru ·{" "}
-              <span style={{ color: "var(--primary)", fontWeight: 600 }}>tim akan match-kan untuk kamu</span>
-            </div>
-          </button>
         </div>
 
         {/* Side rail */}

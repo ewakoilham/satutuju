@@ -731,7 +731,7 @@ export default function SchedulePage() {
                   <div className="sb-field">
                     <label className="sb-label">Durasi</label>
                     <div className="duration-row">
-                      {[60, 90, 120].map((d) => {
+                      {[60, 90].map((d) => {
                         const cur = toMins(mode.endTime) - toMins(mode.startTime);
                         return (
                           <span

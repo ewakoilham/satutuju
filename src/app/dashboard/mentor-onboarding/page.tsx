@@ -2,19 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/ui/Icon";
+import Logo from "@/components/ui/Logo";
 
 // ── Question definitions ──────────────────────────────────────
 type QType =
   | "text"
   | "select"
   | "select-other"   // select with free-text "Other" option
-  | "multiselect"    // checkboxes, optional maxSelect
-  | "scale";         // 5-point named scale
+  | "multiselect";   // checkboxes, optional maxSelect
 
 interface Question {
   id: string;
   field: string;
-  otherField?: string;   // companion field when "Other" is chosen
+  otherField?: string;   // companion field when "Lainnya" is chosen
   question: string;
   subtitle?: string;
   type: QType;
@@ -25,63 +26,70 @@ interface Question {
 }
 
 const QUESTIONS: Question[] = [
-  // ── Study Experience ──────────────────────────────────────────
+  // ── Pengalaman Studi ──────────────────────────────────────────
   {
-    id: "m1", field: "fullName", section: "Study Experience",
-    question: "What is your full name?",
-    subtitle: "As it appears on your ID",
+    id: "m1", field: "fullName", section: "Pengalaman Studi",
+    question: "Siapa nama lengkap kamu?",
+    subtitle: "Sesuai yang tertera di kartu identitas kamu",
     type: "text",
   },
   {
-    id: "m2", field: "city", section: "Study Experience",
-    question: "What city do you live in?",
-    subtitle: "Your current city or district",
+    id: "m2", field: "city", section: "Pengalaman Studi",
+    question: "Kamu tinggal di kota mana?",
+    subtitle: "Kota atau domisili kamu saat ini",
+    type: "text",
+  },
+  // S1 dipisah jadi 3: Studi · Kampus · Gelar
+  {
+    id: "m3", field: "undergradMajor", section: "Pengalaman Studi",
+    question: "Studi S1 Kamu",
+    subtitle: "Program atau bidang studi sarjana — misalnya Teknik Kimia",
     type: "text",
   },
   {
-    id: "m3", field: "undergradMajor", section: "Study Experience",
-    question: "What was your undergraduate major and degree?",
-    subtitle: "e.g. Chemical Engineering, Bachelor's",
+    id: "m4", field: "undergradUniversity", section: "Pengalaman Studi",
+    question: "Kampus S1 Kamu",
+    subtitle: "Nama kampus dan negara — misalnya Universitas Indonesia, Indonesia",
     type: "text",
   },
   {
-    id: "m4", field: "undergradUniversity", section: "Study Experience",
-    question: "Where did you complete your undergraduate degree?",
-    subtitle: "University name and country — e.g. Universitas Indonesia, Indonesia",
+    id: "m3d", field: "undergradDegree", section: "Pengalaman Studi",
+    question: "Gelar S1 Kamu",
+    subtitle: "Gelar yang kamu peroleh — misalnya Sarjana Teknik (S.T.)",
     type: "text",
   },
   {
-    id: "m5", field: "postgradMajor", section: "Study Experience",
-    question: "What was your postgraduate major and degree?",
-    subtitle: "e.g. Master's in Public Policy",
+    id: "m5", field: "postgradMajor", section: "Pengalaman Studi",
+    question: "Apa jurusan dan gelar S2 kamu?",
+    subtitle: "misalnya Master of Public Policy",
     type: "text",
   },
   {
-    id: "m6", field: "postgradUniversity", section: "Study Experience",
-    question: "Where did you complete your postgraduate degree?",
-    subtitle: "University name and country — e.g. University of Melbourne, Australia",
+    id: "m6", field: "postgradUniversity", section: "Pengalaman Studi",
+    question: "Di mana kamu menempuh studi S2?",
+    subtitle: "Nama kampus dan negara — misalnya University of Melbourne, Australia",
     type: "text",
   },
   {
-    id: "m7", field: "fundingScheme", otherField: "fundingOther", section: "Study Experience",
-    question: "How was your postgraduate study funded?",
+    id: "m7", field: "fundingScheme", otherField: "fundingOther", section: "Pengalaman Studi",
+    question: "Bagaimana studi S2 kamu didanai?",
     type: "select-other",
-    options: ["LPDP Scholarship", "Self-funded", "Other"],
+    options: ["Beasiswa LPDP", "Biaya sendiri", "Lainnya"],
     optionValues: ["lpdp", "self-funded", "other"],
   },
   {
-    id: "m8", field: "currentField", otherField: "currentFieldOther", section: "Study Experience",
-    question: "What field do you currently work in?",
+    id: "m8", field: "currentField", otherField: "currentFieldOther", section: "Pengalaman Studi",
+    question: "Kamu saat ini bekerja di bidang apa?",
     type: "select-other",
     options: [
-      "Technology & Engineering",
-      "Business & Management",
-      "Finance & Banking",
-      "Consulting",
-      "Health & Medicine",
-      "Education & Research",
-      "Government & Public Policy",
-      "Other",
+      "Teknologi & Rekayasa",
+      "Bisnis & Manajemen",
+      "Keuangan & Perbankan",
+      "Konsultan",
+      "Kesehatan & Kedokteran",
+      "Pendidikan & Riset",
+      "Pemerintahan & Kebijakan Publik",
+      "Lainnya",
     ],
     optionValues: [
       "technology", "business", "finance", "consulting",
@@ -89,40 +97,40 @@ const QUESTIONS: Question[] = [
     ],
   },
 
-  // ── Mentoring Preference ──────────────────────────────────────
+  // ── Preferensi Mentoring ──────────────────────────────────────
   {
-    id: "m12", field: "mentorStyle", section: "Mentoring Preference",
-    question: "What's your mentoring style?",
+    id: "m12", field: "mentorStyle", section: "Preferensi Mentoring",
+    question: "Bagaimana gaya mentoring kamu?",
     type: "select",
-    options: ["Gentle", "Somewhat gentle", "No preference", "Somewhat direct", "Direct"],
+    options: ["Lembut", "Cenderung lembut", "Tidak ada preferensi", "Cenderung tegas", "Tegas"],
     optionValues: ["gentle", "somewhat-gentle", "no-preference", "somewhat-direct", "direct"],
   },
   {
-    id: "m13", field: "workStyle", section: "Mentoring Preference",
-    question: "What's your working style in sessions?",
+    id: "m13", field: "workStyle", section: "Preferensi Mentoring",
+    question: "Bagaimana gaya kerja kamu saat sesi?",
     type: "select",
-    options: ["Structured", "Somewhat structured", "No preference", "Somewhat flexible", "Flexible"],
+    options: ["Terstruktur", "Cenderung terstruktur", "Tidak ada preferensi", "Cenderung fleksibel", "Fleksibel"],
     optionValues: ["structured", "somewhat-structured", "no-preference", "somewhat-flexible", "flexible"],
   },
   {
-    id: "m14", field: "communicationStyle", section: "Mentoring Preference",
-    question: "What's your preferred communication style?",
+    id: "m14", field: "communicationStyle", section: "Preferensi Mentoring",
+    question: "Gaya komunikasi apa yang kamu sukai?",
     type: "select",
-    options: ["Formal", "Somewhat formal", "No preference", "Somewhat casual", "Casual"],
+    options: ["Formal", "Cenderung formal", "Tidak ada preferensi", "Cenderung santai", "Santai"],
     optionValues: ["formal", "somewhat-formal", "no-preference", "somewhat-casual", "casual"],
   },
   {
-    id: "m15", field: "primaryRoles", section: "Mentoring Preference",
-    question: "What is your primary mentoring approach?",
-    subtitle: "Choose up to 2",
+    id: "m15", field: "primaryRoles", section: "Preferensi Mentoring",
+    question: "Apa pendekatan mentoring utama kamu?",
+    subtitle: "Pilih maksimal 2",
     type: "multiselect",
     maxSelect: 2,
     options: [
-      "Listener — give the mentee space to reflect",
-      "Problem solver — help find concrete solutions",
-      "Challenger — push the mentee out of their comfort zone",
-      "Motivator — keep their energy and confidence up",
-      "Advisor — share personal experience and perspective",
+      "Pendengar — beri mentee ruang untuk berefleksi",
+      "Pemecah masalah — bantu temukan solusi konkret",
+      "Penantang — dorong mentee keluar dari zona nyaman",
+      "Motivator — jaga semangat dan rasa percaya dirinya",
+      "Penasihat — bagikan pengalaman dan perspektif pribadi",
     ],
     optionValues: ["listener", "problem-solver", "challenger", "motivator", "advisor"],
   },
@@ -228,7 +236,7 @@ export default function MentorOnboardingPage() {
 
   const handleComplete = async () => {
     if (!currentAnswered) {
-      setError("Please answer this question before completing your profile.");
+      setError("Mohon jawab pertanyaan ini sebelum menyelesaikan profil kamu.");
       return;
     }
     setSaving(true);
@@ -241,13 +249,13 @@ export default function MentorOnboardingPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to save profile");
+        setError(data.error || "Gagal menyimpan profil");
         setSaving(false);
         return;
       }
       router.push("/dashboard");
     } catch {
-      setError("Network error. Please try again.");
+      setError("Koneksi bermasalah. Coba lagi ya.");
       setSaving(false);
     }
   };
@@ -267,6 +275,11 @@ export default function MentorOnboardingPage() {
   }, [handleKeyDown]);
 
   const sections = [...new Set(QUESTIONS.map((q) => q.section))];
+  const currentSection = q.section;
+
+  // Section is "passed" once we've moved beyond it — used to show a check.
+  const isSectionPassed = (section: string): boolean =>
+    sections.indexOf(section) < sections.indexOf(currentSection);
 
   const toggleMultiselect = (value: string) => {
     const current_val = profile[q.field] ? JSON.parse(profile[q.field] || "[]") : [];
@@ -291,19 +304,19 @@ export default function MentorOnboardingPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center px-6">
         <div className="max-w-md text-center space-y-6">
-          <span className="text-sm font-semibold text-[var(--primary)] tracking-wide">SATU TUJU</span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-            Welcome, Mentor!
+          <Logo variant="main" size="lg" className="mx-auto" />
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight font-[family-name:var(--font-heading)]">
+            Selamat datang, Mentor!
           </h1>
           <p className="text-text-muted text-base sm:text-lg leading-relaxed">
-            Before you start, let&apos;s set up your mentor profile so mentees and the admin team can get to know you better.
+            Sebelum mulai, yuk lengkapi profil mentor kamu agar mentee dan tim admin bisa lebih mengenal kamu.
           </p>
-          <p className="text-sm text-text-muted-2">This will only take a few minutes.</p>
+          <p className="text-sm text-text-muted-2">Hanya butuh beberapa menit kok.</p>
           <button
             onClick={() => setShowIntro(false)}
-            className="bg-[var(--primary)] text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
+            className="bg-primary text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
           >
-            Let&apos;s Go
+            Mulai
           </button>
         </div>
       </div>
@@ -315,20 +328,36 @@ export default function MentorOnboardingPage() {
       {/* Top bar */}
       <div className="px-4 sm:px-8 pt-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--primary)]">SATU TUJU</span>
+          <Logo variant="main" size="sm" />
           <span className="text-xs text-text-muted-2">{current + 1} / {total}</span>
         </div>
+        {/* Progress bar */}
         <div className="max-w-2xl mx-auto mt-3">
-          <div className="w-full h-1 bg-surface-elevated rounded-full overflow-hidden">
-            <div className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+          <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary-deep rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
+        {/* Section pills */}
         <div className="max-w-2xl mx-auto mt-3 flex gap-2 flex-wrap">
-          {sections.map((s) => (
-            <span key={s} className={`text-xs px-2.5 py-1 rounded-full transition-all ${
-              s === q.section ? "bg-[var(--primary)] text-white font-medium" : "bg-surface text-text-muted-2 border border-border"
-            }`}>{s}</span>
-          ))}
+          {sections.map((s) => {
+            const passed = isSectionPassed(s);
+            return (
+              <span
+                key={s}
+                className={`text-xs px-2.5 py-1 rounded-full transition-all inline-flex items-center gap-1 ${
+                  s === currentSection
+                    ? "bg-brand-blue-soft text-primary font-medium"
+                    : "bg-surface text-text-muted-2 border border-border"
+                }`}
+              >
+                {passed && <Icon name="check" size={12} className="text-primary" />}
+                {s}
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -338,8 +367,8 @@ export default function MentorOnboardingPage() {
           <div className={`transition-all duration-200 ease-out ${
             animating ? (direction === "next" ? "opacity-0 translate-x-8" : "opacity-0 -translate-x-8") : "opacity-100 translate-x-0"
           }`}>
-            <p className="text-xs text-[var(--primary)] font-semibold mb-2 tracking-wide">QUESTION {current + 1}</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight mb-1">{q.question}</h2>
+            <p className="text-xs text-primary font-semibold mb-2 tracking-wide">PERTANYAAN {current + 1}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight mb-1 font-[family-name:var(--font-heading)]">{q.question}</h2>
             {q.subtitle ? (
               <p className="text-sm text-text-muted-2 mb-6">{q.subtitle}</p>
             ) : (
@@ -353,23 +382,25 @@ export default function MentorOnboardingPage() {
                 type="text"
                 value={profile[q.field] || ""}
                 onChange={(e) => setProfile((p) => ({ ...p, [q.field]: e.target.value }))}
-                className="w-full text-xl sm:text-2xl bg-transparent border-0 border-b-2 border-gray-300 focus:border-[var(--primary)] outline-none py-3 text-foreground placeholder-gray-300 transition-colors"
-                placeholder="Type your answer..."
+                className="input-field"
+                placeholder="Ketik jawaban kamu..."
               />
             )}
 
             {/* ── select ── */}
             {q.type === "select" && (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                 {(q.options || []).map((opt, i) => {
                   const val = q.optionValues?.[i] ?? opt;
+                  const selected = profile[q.field] === val;
                   return (
                     <button key={opt} onClick={() => setProfile((p) => ({ ...p, [q.field]: val }))}
-                      className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
-                        profile[q.field] === val
-                          ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-border bg-surface text-foreground hover:border-gray-300"
+                      className={`text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        selected
+                          ? "border-primary bg-primary text-white scale-[1.02]"
+                          : "border-border bg-surface text-foreground hover:border-gray-300 hover:bg-surface-elevated"
                       }`}>
+                      {selected && <Icon name="check" size={14} className="inline mr-2" />}
                       {opt}
                     </button>
                   );
@@ -379,18 +410,20 @@ export default function MentorOnboardingPage() {
 
             {/* ── select-other ── */}
             {q.type === "select-other" && (
-              <div className="space-y-3">
+              <div className="space-y-2 mt-2">
                 {(q.options || []).map((opt, i) => {
                   const val = q.optionValues?.[i] ?? opt.toLowerCase();
                   const isOther = val === "other";
+                  const selected = profile[q.field] === val;
                   return (
                     <div key={opt}>
                       <button onClick={() => setProfile((p) => ({ ...p, [q.field]: val }))}
-                        className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium ${
-                          profile[q.field] === val
-                            ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                            : "border-border bg-surface text-foreground hover:border-gray-300"
+                        className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          selected
+                            ? "border-primary bg-primary text-white scale-[1.02]"
+                            : "border-border bg-surface text-foreground hover:border-gray-300 hover:bg-surface-elevated"
                         }`}>
+                        {selected && <Icon name="check" size={14} className="inline mr-2" />}
                         {opt}
                       </button>
                       {isOther && profile[q.field] === "other" && q.otherField && (
@@ -398,8 +431,8 @@ export default function MentorOnboardingPage() {
                           type="text"
                           value={profile[q.otherField] || ""}
                           onChange={(e) => setProfile((p) => ({ ...p, [q.otherField!]: e.target.value }))}
-                          placeholder="Please specify..."
-                          className="mt-2 w-full px-4 py-3 border-2 border-[var(--primary)] rounded-xl outline-none text-base"
+                          placeholder="Sebutkan..."
+                          className="input-field mt-2"
                           autoFocus
                         />
                       )}
@@ -411,21 +444,21 @@ export default function MentorOnboardingPage() {
 
             {/* ── multiselect ── */}
             {q.type === "multiselect" && (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-2 mt-2">
                 {(q.options || []).map((opt, i) => {
                   const val = q.optionValues?.[i] ?? opt;
                   const selected = getMultiselectValues().includes(val);
                   return (
                     <button key={opt} onClick={() => toggleMultiselect(val)}
-                      className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all text-base font-medium flex items-center gap-3 ${
+                      className={`text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-3 ${
                         selected
-                          ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
-                          : "border-border bg-surface text-foreground hover:border-gray-300"
+                          ? "border-primary bg-primary text-white scale-[1.02]"
+                          : "border-border bg-surface text-foreground hover:border-gray-300 hover:bg-surface-elevated"
                       }`}>
                       <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
-                        selected ? "bg-[var(--primary)] border-[var(--primary)]" : "border-gray-300"
+                        selected ? "bg-white border-white" : "border-gray-300"
                       }`}>
-                        {selected && <span className="text-white text-xs font-bold">✓</span>}
+                        {selected && <Icon name="check" size={12} className="text-primary" />}
                       </span>
                       {opt}
                     </button>
@@ -433,61 +466,60 @@ export default function MentorOnboardingPage() {
                 })}
                 {q.maxSelect && (
                   <p className="text-xs text-text-muted-2 mt-1">
-                    {getMultiselectValues().length}/{q.maxSelect} selected
+                    {getMultiselectValues().length}/{q.maxSelect} dipilih
                   </p>
                 )}
               </div>
             )}
 
-            {/* ── scale ── */}
-            {q.type === "scale" && (
-              <div className="space-y-3">
-                <div className="flex gap-2 sm:gap-3">
-                  {(q.options || []).map((opt, i) => {
-                    const val = q.optionValues?.[i] ?? opt;
-                    const selected = profile[q.field] === val;
-                    return (
-                      <button key={opt} onClick={() => setProfile((p) => ({ ...p, [q.field]: val }))}
-                        className={`flex-1 py-3 px-1 rounded-xl border-2 transition-all text-xs sm:text-sm font-medium text-center ${
-                          selected
-                            ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                            : "border-border bg-surface text-text-muted-3 hover:border-gray-300"
-                        }`}>
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-                {q.options && (
-                  <div className="flex justify-between text-[10px] text-text-muted-2 px-1">
-                    <span>{q.options[0]}</span>
-                    <span>{q.options[q.options.length - 1]}</span>
-                  </div>
-                )}
-              </div>
+            {/* Hint */}
+            {q.type === "text" && (
+              <p className="text-xs text-text-muted-2 mt-4">
+                Tekan <span className="font-medium text-text-muted-2">Enter ↵</span> untuk lanjut
+              </p>
             )}
 
-            {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+            {error && (
+              <div className="mt-6 bg-red-50 text-danger text-sm px-4 py-3 rounded-xl">{error}</div>
+            )}
           </div>
+        </div>
+      </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-10">
-            <button onClick={handleBack} disabled={current === 0}
-              className="px-5 py-2.5 text-sm text-text-muted hover:text-foreground disabled:opacity-30 transition rounded-lg hover:bg-surface-elevated">
-              ← Back
+      {/* Bottom nav */}
+      <div className="px-4 sm:px-8 pb-8">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          {current > 0 ? (
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-sm text-text-muted-2 hover:text-foreground px-4 py-2.5 rounded-lg hover:bg-surface transition"
+            >
+              <Icon name="chevron-left" size={16} />
+              Kembali
             </button>
-            {isLast ? (
-              <button onClick={handleComplete} disabled={saving || !currentAnswered}
-                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
-                {saving ? "Saving..." : "Complete Profile →"}
-              </button>
-            ) : (
-              <button onClick={handleNext} disabled={!currentAnswered}
-                className="px-8 py-3 bg-[var(--primary)] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
-                Continue →
-              </button>
-            )}
-          </div>
+          ) : (
+            <div />
+          )}
+
+          {isLast ? (
+            <button
+              onClick={handleComplete}
+              disabled={saving || !currentAnswered}
+              className="flex items-center gap-2 text-sm text-white bg-primary hover:opacity-90 px-6 py-2.5 rounded-lg transition font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {saving ? "Menyimpan..." : "Selesaikan Profil"}
+              {!saving && <Icon name="check" size={16} />}
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              disabled={!currentAnswered}
+              className="flex items-center gap-1 text-sm text-white bg-primary hover:opacity-90 px-5 py-2.5 rounded-lg transition font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Lanjut
+              <Icon name="chevron-right" size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>

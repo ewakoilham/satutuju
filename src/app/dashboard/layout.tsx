@@ -69,11 +69,16 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { href: "/dashboard/resources",    label: "Materi",  icon: "book"     },
     { href: "/dashboard/universities", label: "Kampus",  icon: "school"   },
   ],
+  // Mentee top-nav matches the mentee design handoff order + Indonesian
+  // labels: Beranda · Jadwal · Sesi · Materi · Kampus · Dokumen.
+  // "Dokumen" is intentionally omitted until its dedicated screen ships
+  // (adding it now would be a dead link) — wire it in with that redesign.
   mentee: [
-    { href: "/dashboard",              label: "My Journey",   icon: "map"         },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"    },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"        },
-    { href: "/dashboard/universities", label: "Universities", icon: "school"      },
+    { href: "/dashboard",              label: "Beranda", icon: "map"             },
+    { href: "/dashboard/schedule",     label: "Jadwal",  icon: "calendar"        },
+    { href: "/dashboard/sesi",         label: "Sesi",    icon: "clipboard-check", activePrefix: "/dashboard/sesi" },
+    { href: "/dashboard/resources",    label: "Materi",  icon: "book"            },
+    { href: "/dashboard/universities", label: "Kampus",  icon: "school"          },
   ],
 };
 
@@ -154,6 +159,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+
+  // Onboarding flows are dedicated full-screen experiences — render them
+  // without the dashboard chrome (sticky nav + contract banner). Otherwise
+  // that chrome + the onboarding's own min-h-screen stack up and push the
+  // bottom nav (the Finish button) below the fold, stranding the user on the
+  // last question. Applies to both mentor and mentee onboarding.
+  if (pathname === "/dashboard/onboarding" || pathname === "/dashboard/mentor-onboarding") {
+    return <>{children}</>;
+  }
 
   const navItems      = NAV_ITEMS[user.role]      || NAV_ITEMS.mentee;
   const userMenuItems = USER_MENU_ITEMS[user.role] || [];

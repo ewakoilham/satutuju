@@ -182,16 +182,7 @@ export default function RecurringRulesCard({ onChanged }: { onChanged?: () => vo
           setEditing(null);
           setEditorOpen(true);
         }}
-        style={{
-          marginTop: 10,
-          fontFamily: "var(--font-poppins)",
-          fontWeight: 600,
-          fontSize: 13,
-          color: "var(--accent, #2563eb)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
+        className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary py-2 text-sm font-semibold text-primary transition hover:bg-brand-blue-soft font-[family-name:var(--font-heading)]"
       >
         <Icon name="plus" size={14} /> Tambah aturan
       </button>
