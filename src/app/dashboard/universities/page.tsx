@@ -12,7 +12,6 @@ import uniExtraRaw from "@/data/university-extra.json";
 
 interface UniExtra { qs?: string; website?: string }
 const UNI_EXTRA = uniExtraRaw as Record<string, UniExtra>;
-const RANKED_COUNT = Object.values(UNI_EXTRA).filter((x) => x.qs).length;
 
 // ISO 3166-1 alpha-2 codes mapped to country names used in the data
 const COUNTRY_CODES: Record<string, string> = {
@@ -55,6 +54,7 @@ interface University {
   commissionFee?: string;
   agency?: string;
   programs?: string;
+  qs?: string; // QS rank baked into canonical rows (mentor/mentee view)
 }
 
 interface MenteeLite {
@@ -306,7 +306,7 @@ export default function UniversitiesPage() {
   const sorted = useMemo(() => {
     const arr = [...universities];
     const qsNum = (u: University) => {
-      const v = UNI_EXTRA[String(u.id)]?.qs;
+      const v = u.qs ?? UNI_EXTRA[String(u.id)]?.qs;
       if (!v) return Number.POSITIVE_INFINITY; // unranked → last
       const n = parseInt(String(v).replace(/[^0-9].*$/, ""), 10);
       return isNaN(n) ? Number.POSITIVE_INFINITY : n;
@@ -325,6 +325,7 @@ export default function UniversitiesPage() {
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const hasFilters = !!(search || region || country || level);
+  const rankedCount = universities.filter((u) => u.qs ?? UNI_EXTRA[String(u.id)]?.qs).length;
   const regionLabel = REGION_TABS.find((t) => t.key === region)?.label;
 
   const selectedUnis = selected
@@ -373,7 +374,7 @@ export default function UniversitiesPage() {
           <div className="ico"><Icon name="book" size={18} /></div>
           <div>
             <div className="lbl">Peringkat QS</div>
-            <div className="val">{RANKED_COUNT.toLocaleString("id-ID")}</div>
+            <div className="val">{rankedCount.toLocaleString("id-ID")}</div>
           </div>
         </div>
         <div className="kampus-stat">
@@ -495,6 +496,7 @@ export default function UniversitiesPage() {
               const enr = enrichUniversity(u.name);
               const est = estimateUniStats(u.country, u.degreeLevel);
               const x = UNI_EXTRA[String(u.id)];
+              const qsRank = u.qs ?? x?.qs;
               const site = u.website || x?.website || "";
               // Meta cells: country/level estimates (starred). Rank shows as a
               // pill + in the place line, not here.
@@ -512,7 +514,7 @@ export default function UniversitiesPage() {
                       <h3 className="uni-name">{cleanUniName(u.name)}</h3>
                       <div className="uni-place">
                         {enr?.location || u.country} · {DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}
-                        {x?.qs ? ` · QS #${x.qs}` : ""}
+                        {qsRank ? ` · QS #${qsRank}` : ""}
                       </div>
                     </div>
                     <div className="uni-actions">
@@ -561,7 +563,7 @@ export default function UniversitiesPage() {
                   </div>
 
                   <div className="uni-tags">
-                    {x?.qs && <span className="db-pill static accent">QS #{x.qs}</span>}
+                    {qsRank && <span className="db-pill static accent">QS #{qsRank}</span>}
                     <span className="db-pill static">{DEGREE_LABELS[u.degreeLevel] || u.degreeLevel}</span>
                     {isSaved && <span className="db-pill static accent">★ Tersimpan</span>}
                     {isAdmin && u.agency && <span className="db-pill static">{u.agency}</span>}
@@ -701,7 +703,7 @@ export default function UniversitiesPage() {
                 { lbl: "Negara", get: (u: University) => u.country },
                 { lbl: "Jenjang", get: (u: University) => DEGREE_LABELS[u.degreeLevel] || u.degreeLevel },
                 { lbl: "Program", get: (u: University) => u.programs || "—" },
-                { lbl: "Peringkat QS 2026", get: (u: University) => { const e = UNI_EXTRA[String(u.id)]; return e?.qs ? `#${e.qs}` : "—"; } },
+                { lbl: "Peringkat QS 2026", get: (u: University) => { const r = u.qs ?? UNI_EXTRA[String(u.id)]?.qs; return r ? `#${r}` : "—"; } },
                 { lbl: "Estimasi biaya/th *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).tuition || "—" },
                 { lbl: "IELTS *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).ielts || "—" },
                 { lbl: "Intake *", get: (u: University) => estimateUniStats(u.country, u.degreeLevel).intake || "—" },
