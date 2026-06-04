@@ -13,32 +13,39 @@ const JWT_SECRET = new TextEncoder().encode(rawJwtSecret);
 const SUPABASE_URL   = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Check Supabase directly via REST — works on Edge runtime (no Node.js required)
-async function mentorProfileFilled(userId: string): Promise<boolean> {
+// Three-state so the caller can tell a genuine "filled" apart from a
+// "we couldn't check" (network/Supabase error). We still fail OPEN on
+// "unknown" — never lock a user out — but we must NOT cache that result,
+// or one transient hiccup would let a half-onboarded user skip onboarding
+// for the full cookie lifetime. Check Supabase directly via REST so this
+// works on the Edge runtime.
+type ProfileStatus = "filled" | "empty" | "unknown";
+
+async function mentorProfileStatus(userId: string): Promise<ProfileStatus> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/MentorProfile?userId=eq.${encodeURIComponent(userId)}&select=fullName,mentorStyle&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, cache: "no-store" }
     );
-    if (!res.ok) return true; // On error, let through rather than lock out
+    if (!res.ok) return "unknown";
     const rows: Array<{ fullName?: string; mentorStyle?: string }> = await res.json();
-    return rows.length > 0 && !!rows[0].fullName && !!rows[0].mentorStyle;
+    return rows.length > 0 && !!rows[0].fullName && !!rows[0].mentorStyle ? "filled" : "empty";
   } catch {
-    return true;
+    return "unknown";
   }
 }
 
-async function menteeProfileFilled(userId: string): Promise<boolean> {
+async function menteeProfileStatus(userId: string): Promise<ProfileStatus> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/MenteeProfile?userId=eq.${encodeURIComponent(userId)}&select=fullLegalName&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, cache: "no-store" }
     );
-    if (!res.ok) return true;
+    if (!res.ok) return "unknown";
     const rows: Array<{ fullLegalName?: string }> = await res.json();
-    return rows.length > 0 && !!rows[0].fullLegalName;
+    return rows.length > 0 && !!rows[0].fullLegalName ? "filled" : "empty";
   } catch {
-    return true;
+    return "unknown";
   }
 }
 
@@ -89,30 +96,38 @@ export async function middleware(req: NextRequest) {
   if (role === "admin") return NextResponse.next();
 
   // ── Mentor gate ────────────────────────────────────────────────────────────
+  // Cookie name is suffixed `_v2`: bumping it invalidates every stale bypass
+  // cookie left over from the old (buggy) gate that cached fail-open passes,
+  // so anyone with an incomplete profile is correctly re-sent to onboarding.
   if (role === "mentor") {
-    // Fast path: cookie from a previous successful check
-    if (req.cookies.get("mentor_onboarded")?.value === "1") return NextResponse.next();
+    // Fast path: cookie from a previous GENUINE "filled" check
+    if (req.cookies.get("mentor_onboarded_v2")?.value === "1") return NextResponse.next();
 
-    const filled = await mentorProfileFilled(userId);
-    if (!filled) {
+    const status = await mentorProfileStatus(userId);
+    if (status === "empty") {
       return NextResponse.redirect(new URL("/dashboard/mentor-onboarding", req.url));
     }
-    // Cache the result for 7 days so we don't hit Supabase on every request
     const res = NextResponse.next();
-    res.cookies.set("mentor_onboarded", "1", { path: "/", maxAge: 7 * 24 * 60 * 60, sameSite: "strict" });
+    // Only cache a genuine "filled" — never the fail-open "unknown", so a
+    // transient Supabase error doesn't skip onboarding for the cookie's life.
+    if (status === "filled") {
+      res.cookies.set("mentor_onboarded_v2", "1", { path: "/", maxAge: 7 * 24 * 60 * 60, sameSite: "strict" });
+    }
     return res;
   }
 
   // ── Mentee gate ────────────────────────────────────────────────────────────
   if (role === "mentee") {
-    if (req.cookies.get("mentee_onboarded")?.value === "1") return NextResponse.next();
+    if (req.cookies.get("mentee_onboarded_v2")?.value === "1") return NextResponse.next();
 
-    const filled = await menteeProfileFilled(userId);
-    if (!filled) {
+    const status = await menteeProfileStatus(userId);
+    if (status === "empty") {
       return NextResponse.redirect(new URL("/dashboard/onboarding", req.url));
     }
     const res = NextResponse.next();
-    res.cookies.set("mentee_onboarded", "1", { path: "/", maxAge: 7 * 24 * 60 * 60, sameSite: "strict" });
+    if (status === "filled") {
+      res.cookies.set("mentee_onboarded_v2", "1", { path: "/", maxAge: 7 * 24 * 60 * 60, sameSite: "strict" });
+    }
     return res;
   }
 
