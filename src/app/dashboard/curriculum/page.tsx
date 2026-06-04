@@ -86,10 +86,10 @@ function SessionCard({
             <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${c.badge} ${c.badgeText}`}>
               {session.phaseEmoji} {session.phaseLabel}
             </span>
-            <span className="text-xs text-text-muted-2">{session.duration} min</span>
+            <span className="text-xs text-text-muted-2">{session.duration} mnt</span>
           </div>
           <p className={`text-sm font-semibold mt-0.5 ${expanded ? c.text : "text-foreground"}`}>
-            Session {session.sessionNum}: {session.topic}
+            Sesi {session.sessionNum}: {session.topic}
           </p>
         </div>
 
@@ -104,20 +104,20 @@ function SessionCard({
       {expanded && (
         <div className="px-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-in-up">
 
-          {/* Objective */}
+          {/* Tujuan */}
           <div className="md:col-span-2 space-y-1">
             <div className={`flex items-center gap-1.5 ${c.text}`}>
               <Icon name="lightbulb" size={13} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Objective</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider">Tujuan</span>
             </div>
             <p className="text-sm text-foreground">{session.objective}</p>
           </div>
 
-          {/* Deliverables */}
+          {/* Hasil */}
           <div className="space-y-2">
             <div className={`flex items-center gap-1.5 ${c.text}`}>
               <Icon name="clipboard-check" size={13} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Deliverables</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider">Hasil</span>
             </div>
             <ul className="space-y-1.5">
               {session.deliverables.map((d, i) => (
@@ -129,11 +129,11 @@ function SessionCard({
             </ul>
           </div>
 
-          {/* Mentee Prep */}
+          {/* Persiapan Mentee */}
           <div className="space-y-2">
             <div className={`flex items-center gap-1.5 ${c.text}`}>
               <Icon name="user" size={13} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Mentee Preparation</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider">Persiapan Mentee</span>
             </div>
             <ul className="space-y-1.5">
               {session.menteePrep.map((p, i) => (
@@ -145,12 +145,12 @@ function SessionCard({
             </ul>
           </div>
 
-          {/* Mentor Prep — only for mentor/admin */}
+          {/* Persiapan Mentor — only for mentor/admin */}
           {showMentorPrep && session.mentorPrep.length > 0 && (
             <div className="space-y-2">
               <div className={`flex items-center gap-1.5 ${c.text}`}>
                 <Icon name="graduation" size={13} />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Mentor Preparation</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider">Persiapan Mentor</span>
               </div>
               <ul className="space-y-1.5">
                 {session.mentorPrep.map((p, i) => (
@@ -163,12 +163,12 @@ function SessionCard({
             </div>
           )}
 
-          {/* Document Checklist */}
+          {/* Dokumen Dibutuhkan */}
           {session.docChecklist.length > 0 && (
             <div className="space-y-2">
               <div className={`flex items-center gap-1.5 ${c.text}`}>
                 <Icon name="document" size={13} />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Documents Needed</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider">Dokumen Dibutuhkan</span>
               </div>
               <ul className="space-y-1.5">
                 {session.docChecklist.map((doc, i) => (
@@ -211,21 +211,19 @@ export default function CurriculumPage() {
   return (
     <div className="space-y-6 max-w-4xl">
 
-      {/* Page header */}
-      <div>
-        <Link
-          href="/dashboard/resources"
-          className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-foreground transition mb-3"
-        >
-          <Icon name="arrow-left" size={14} />
-          Resources
-        </Link>
-        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">
-          Curriculum Guide
-        </h1>
-        <p className="text-text-muted text-sm mt-1">
-          10 mentoring sessions across 5 phases — from discovery to closing
-        </p>
+      {/* Page header — matches the redesigned page-head / sesi-title hero */}
+      <div className="page-head" style={{ marginBottom: 8 }}>
+        <div>
+          <div className="sesi-crumb">
+            <Link href="/dashboard/resources">← Materi</Link>
+          </div>
+          <h1 className="sesi-title">
+            Panduan Kurikulum <span className="lede">10 sesi, 5 fase.</span>
+          </h1>
+          <p className="sesi-sub">
+            10 sesi mentoring dalam 5 fase — dari awal sampai akhir perjalanan mentee.
+          </p>
+        </div>
       </div>
 
       {/* Phase overview cards */}
@@ -252,7 +250,7 @@ export default function CurriculumPage() {
                 {label}
               </p>
               <p className={`text-xs mt-0.5 ${isActive ? c.text : "text-text-muted"}`}>
-                {ps.length} sessions · {totalDocs} docs
+                {ps.length} sesi · {totalDocs} dok
               </p>
             </button>
           );
@@ -265,13 +263,13 @@ export default function CurriculumPage() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               view === v
                 ? "bg-surface text-foreground shadow-[var(--shadow-xs)]"
                 : "text-text-muted hover:text-foreground"
             }`}
           >
-            {v === "sessions" ? "Sessions" : "Documents"}
+            {v === "sessions" ? "Sesi" : "Dokumen"}
           </button>
         ))}
       </div>
@@ -282,14 +280,14 @@ export default function CurriculumPage() {
           {selectedPhase !== "all" && (
             <div className={`rounded-xl border px-4 py-3 flex items-center justify-between ${PHASE_COLORS[selectedPhase].bg} ${PHASE_COLORS[selectedPhase].border}`}>
               <span className={`text-sm font-medium ${PHASE_COLORS[selectedPhase].text}`}>
-                Showing {PHASES[selectedPhase as keyof typeof PHASES].label} phase
-                · {filteredSessions.length} sessions
+                Menampilkan fase {PHASES[selectedPhase as keyof typeof PHASES].label}
+                · {filteredSessions.length} sesi
               </span>
               <button
                 onClick={() => { setSelectedPhase("all"); setExpandedSession(null); }}
                 className={`text-xs underline ${PHASE_COLORS[selectedPhase].text}`}
               >
-                Show all
+                Tampilkan semua
               </button>
             </div>
           )}
@@ -314,7 +312,7 @@ export default function CurriculumPage() {
       {view === "documents" && (
         <div className="space-y-4">
           <p className="text-sm text-text-muted">
-            Complete list of all documents a mentee needs to prepare throughout the program.
+            Daftar lengkap dokumen yang perlu disiapkan mentee sepanjang program.
           </p>
 
           {/* By phase */}
@@ -328,9 +326,9 @@ export default function CurriculumPage() {
               <div key={phaseKey} className={`rounded-2xl border ${c.border} ${c.bg}`}>
                 <div className="px-5 py-3 border-b border-inherit flex items-center gap-2">
                   <span className="text-base">{p.emoji}</span>
-                  <span className={`text-sm font-semibold ${c.text}`}>{p.label} Phase</span>
+                  <span className={`text-sm font-semibold ${c.text}`}>Fase {p.label}</span>
                   <span className={`text-xs ml-auto ${c.text} opacity-70`}>
-                    Sessions {phaseSessions[0].sessionNum}–{phaseSessions[phaseSessions.length - 1].sessionNum}
+                    Sesi {phaseSessions[0].sessionNum}–{phaseSessions[phaseSessions.length - 1].sessionNum}
                   </span>
                 </div>
                 <div className="px-5 py-4 space-y-3">
@@ -338,7 +336,7 @@ export default function CurriculumPage() {
                     session.docChecklist.length > 0 && (
                       <div key={session.sessionNum}>
                         <p className="text-xs text-text-muted mb-1.5">
-                          Session {session.sessionNum}: {session.topic}
+                          Sesi {session.sessionNum}: {session.topic}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {session.docChecklist.map((doc, i) => (
@@ -363,7 +361,7 @@ export default function CurriculumPage() {
           <div className="card rounded-2xl">
             <div className="flex items-center gap-2 mb-3">
               <Icon name="clipboard-check" size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold">Total: {ALL_DOCS.length} unique documents</h3>
+              <h3 className="text-sm font-semibold">Total: {ALL_DOCS.length} dokumen unik</h3>
             </div>
             <div className="flex flex-wrap gap-2">
               {DOCUMENT_CATEGORIES.map((cat) => (

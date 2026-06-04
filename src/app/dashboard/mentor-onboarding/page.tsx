@@ -388,8 +388,11 @@ export default function MentorOnboardingPage() {
             )}
 
             {/* ── select ── */}
+            {/* Ordered spectrum (e.g. Tegas … Lembut) — render vertically and
+                in order so the scale reads top-to-bottom, not jumbled across
+                two columns. */}
             {q.type === "select" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <div className="grid grid-cols-1 gap-2 mt-2">
                 {(q.options || []).map((opt, i) => {
                   const val = q.optionValues?.[i] ?? opt;
                   const selected = profile[q.field] === val;
