@@ -158,13 +158,16 @@ export function estimateMinUsd(country: string): number | null {
 const NAME_PROVIDER =
   /\b(kaplan|kic|into|navitas|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
 const NAME_NOISE =
-  /\b(international pathway college|international study centre|international college|pathway college)\b/gi;
+  /\b(international pathway college|international study centre|pathway college)\b/gi;
 const looksLikeUni = (p: string) =>
   /(universit|college|institute|institut|school|academy of|polytechnic|conservatory)/i.test(p);
 
 export function cleanUniName(raw: string): string {
-  let s = String(raw || "").trim();
+  let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   const orig = s;
+
+  // 0) Leading parenthetical provider tag → drop it: "(KAPLAN) Glasgow" → "Glasgow".
+  s = s.replace(/^\((?:kaplan|kic|navitas|into|study group|oncampus)\)\s*/i, "");
 
   // 1) Provider prefix before a slash → keep the part after it.
   if (s.includes("/")) {
@@ -189,8 +192,9 @@ export function cleanUniName(raw: string): string {
     s = segs[0];
   }
 
-  // 3) Drop pathway-noise phrases; tidy (parens preserved).
+  // 3) Drop pathway-noise phrases + trailing acronym nicknames; tidy.
   s = s.replace(NAME_NOISE, "");
+  s = s.replace(/\s*\([A-Za-z]{2,6}\)\s*$/, ""); // e.g. "(USYD)", "(ECAE)"
   s = s.replace(/\s{2,}/g, " ").replace(/^[\s/,–—-]+|[\s/,–—-]+$/g, "").trim();
 
   return !s || s.length < 3 ? orig : s;

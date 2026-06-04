@@ -2,20 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import rawData from "@/data/universities.json";
+import canonicalData from "@/data/universities-canonical.json";
 
 interface University {
   id: number;
   name: string;
   country: string;
-  programs: string;
-  agency: string;
-  commissionNote: string;
-  commissionFee: string;
+  programs?: string;
+  agency?: string;
+  commissionNote?: string;
+  commissionFee?: string;
   degreeLevel: string;
   website: string;
+  qs?: string;
 }
 
 const ALL_UNIVERSITIES = rawData as University[];
+// Deduplicated, name-cleaned, correct-website list for mentor/mentee.
+const CANONICAL = canonicalData as University[];
 
 const REGION_COUNTRIES: Record<string, string[]> = {
   "au-nz": ["Australia", "New Zealand"],
@@ -59,8 +63,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Admin sees the raw commission directory; everyone else sees the
+  // deduplicated, name-cleaned, correct-website canonical list.
+  const isAdmin = user.role === "admin";
+  const base = isAdmin ? ALL_UNIVERSITIES : CANONICAL;
+
   // Merge overrides into base data
-  let results = ALL_UNIVERSITIES.map((u) => ({
+  let results = base.map((u) => ({
     ...u,
     degreeLevel: overrideMap[u.id] ?? u.degreeLevel,
   }));
@@ -98,8 +107,6 @@ export async function GET(req: NextRequest) {
       return false;
     });
   }
-
-  const isAdmin = user.role === "admin";
 
   const sanitized = results.map(
     ({ commissionNote, commissionFee, agency, programs, ...rest }) => ({
