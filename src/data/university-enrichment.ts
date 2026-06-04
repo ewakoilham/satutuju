@@ -156,7 +156,7 @@ export function estimateMinUsd(country: string): number | null {
    ════════════════════════════════════════════════════════════════════ */
 
 const NAME_PROVIDER =
-  /\b(kaplan|kic|into|navitas|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
+  /\b(kaplan|kic|into|navitas|oieg|oxford international|study group|oncampus|on campus|up education|education group|times education|global education|laurus education|adelaide education group|imperial education group)\b/i;
 const NAME_NOISE =
   /\b(international pathway college|international study centre|pathway college)\b/gi;
 const looksLikeUni = (p: string) =>
@@ -166,8 +166,9 @@ export function cleanUniName(raw: string): string {
   let s = String(raw || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
   const orig = s;
 
-  // 0) Leading parenthetical provider tag → drop it: "(KAPLAN) Glasgow" → "Glasgow".
-  s = s.replace(/^\((?:kaplan|kic|navitas|into|study group|oncampus)\)\s*/i, "");
+  // 0) Leading parenthetical provider tag → drop it: "(KAPLAN) Glasgow",
+  //    "(OIEG Group) University of Kent ..." → strip the leading "(...)".
+  s = s.replace(/^\([^)]*\)\s*/, (m) => (NAME_PROVIDER.test(m) ? "" : m));
 
   // 1) Provider prefix before a slash → keep the part after it.
   if (s.includes("/")) {
@@ -178,9 +179,9 @@ export function cleanUniName(raw: string): string {
     }
   }
 
-  // 2) " - " split → keep the institution side, drop the provider/agency side.
-  if (s.includes(" - ")) {
-    const segs = s.split(" - ").map((p) => p.trim()).filter(Boolean);
+  // 2) spaced dash split (-, –, —) → keep the institution side, drop the provider.
+  if (/\s[-–—]\s/.test(s)) {
+    const segs = s.split(/\s[-–—]\s/).map((p) => p.trim()).filter(Boolean);
     const score = (p: string) => {
       let sc = 0;
       if (looksLikeUni(p)) sc += 3;
