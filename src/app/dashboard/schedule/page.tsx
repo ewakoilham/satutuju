@@ -55,6 +55,12 @@ function isCurrentWeek(weekStart: Date, now: Date): boolean {
   return now >= ws && now < we;
 }
 
+/** Minutes → hours label, exact (no rounding to whole hours). 90 → "1.5". */
+function fmtHours(mins: number): string {
+  const h = mins / 60;
+  return h % 1 === 0 ? String(h) : h.toFixed(1);
+}
+
 export default function SchedulePage() {
   const { user } = useUser();
   const [state, dispatch] = useScheduleReducer();
@@ -77,6 +83,22 @@ export default function SchedulePage() {
   const today = toDateStr(new Date());
   const weekDateStrs = useMemo(() => weekDays.map(toDateStr), [weekDays]);
   const weekSlots = useMemo(() => slots.filter((s) => weekDateStrs.includes(s.date)), [slots, weekDateStrs]);
+
+  // Slots scoped to whatever period the calendar is currently showing, so the
+  // summary stats follow the view (week / month / day) instead of always
+  // counting the visible week. Month view anchors on the shown day's month.
+  const periodSlots = useMemo(() => {
+    if (view === "bulan") {
+      const ref = parseDay(dayDate ?? today);
+      const y = ref.getFullYear(), m = ref.getMonth();
+      return slots.filter((s) => {
+        const d = parseDay(s.date);
+        return d.getFullYear() === y && d.getMonth() === m;
+      });
+    }
+    if (view === "hari") return slots.filter((s) => s.date === (dayDate ?? today));
+    return weekSlots; // minggu + agenda
+  }, [view, dayDate, today, slots, weekSlots]);
   const mentorColorMap = useMemo(() => buildMentorColorMap(slots), [slots]);
 
   const pendingCount = useMemo(
@@ -90,7 +112,7 @@ export default function SchedulePage() {
     let bookedCount = 0;
     let pendingThisWeek = 0;
     let completedThisWeek = 0;
-    for (const s of weekSlots) {
+    for (const s of periodSlots) {
       const slotMins = toMins(s.endTime) - toMins(s.startTime);
       const bookings = s.bookings || [];
       const hasBooking = bookings.some((b) => b.status === "accepted" || b.status === "pending");
@@ -107,12 +129,15 @@ export default function SchedulePage() {
       }
     }
     return {
-      availableHours: Math.round(availableMins / 60),
+      availableMins, // exact — formatted with fmtHours so 90min shows "1.5 jam"
       bookedCount,
       pendingThisWeek,
       completedThisWeek,
     };
-  }, [weekSlots, today]);
+  }, [periodSlots, today]);
+
+  // Which period the summary reflects — drives the stat-card suffix label.
+  const periodWord = view === "bulan" ? "bulan ini" : view === "hari" ? "hari ini" : "minggu ini";
 
   const isMentor = user?.role === "mentor";
   const isMentee = user?.role === "mentee";
@@ -524,7 +549,7 @@ export default function SchedulePage() {
           </div>
           <div>
             <div className="lbl">Slot tersedia</div>
-            <div className="val">{stats.availableHours} <span className="unit">jam</span></div>
+            <div className="val">{fmtHours(stats.availableMins)} <span className="unit">jam</span></div>
           </div>
         </div>
         <div className="quick-stat t-good">
@@ -557,7 +582,7 @@ export default function SchedulePage() {
             </svg>
           </div>
           <div>
-            <div className="lbl">Selesai · minggu ini</div>
+            <div className="lbl">Selesai · {periodWord}</div>
             <div className="val">{String(stats.completedThisWeek).padStart(2, "0")}</div>
           </div>
         </div>
