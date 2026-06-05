@@ -374,8 +374,8 @@ export default function MentorProfilePage() {
           onUploaded={updateAvatar}
         />
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-[family-name:var(--font-heading)]">My Profile</h1>
-          <p className="text-sm text-text-muted mt-0.5">Your mentor profile visible to the admin team and mentees.</p>
+          <h1 className="sesi-title">Profil Kamu</h1>
+          <p className="sesi-sub">Profil mentor kamu yang dilihat tim admin dan mentee.</p>
         </div>
       </div>
 

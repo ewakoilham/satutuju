@@ -280,10 +280,10 @@ export default function MenteeJourneyPage() {
           href="/dashboard/resources"
           className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-foreground"
         >
-          ← Kembali ke Resources
+          ← Kembali ke Materi
         </Link>
-        <h1 className="mt-3 text-2xl md:text-3xl font-bold font-[family-name:var(--font-heading)] text-foreground">
-          Mentee Registration Journey
+        <h1 className="sesi-title mt-3">
+          Perjalanan Pendaftaran Mentee
         </h1>
         <p className="mt-2 text-sm text-text-muted max-w-3xl">
           Peta proses pendaftaran mentee dari pertama kenal Satu Tuju sampai
