@@ -23,7 +23,21 @@ import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { cleanUniName } from "@/data/university-enrichment";
+import { CURRICULUM } from "@/lib/curriculum";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
+
+/** Map a curriculum doc-checklist label to a Document category. */
+function docChecklistCategory(item: string): string {
+  const t = item.toLowerCase();
+  if (/\bcv\b|resume/.test(t)) return "cv";
+  if (/transcript|transkrip|ijazah/.test(t)) return "transcript";
+  if (/language|ielts|toefl|bahasa/.test(t)) return "ielts";
+  if (/motivation|narrative|\bml\b|\bps\b/.test(t)) return "motivation_letter";
+  if (/lpdp|essay|esai/.test(t)) return "essay_lpdp";
+  if (/recommendation|rekomendasi/.test(t)) return "recommendation";
+  if (/certificate|sertifikat/.test(t)) return "certificate";
+  return "other";
+}
 
 /* ─── Data shapes ─────────────────────────────────────────────────── */
 
@@ -272,6 +286,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const [taskBusy, setTaskBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const docFileRef = useRef<HTMLInputElement | null>(null);
+  // When set, the next docFileRef upload uses this name/category (mentee's
+  // curriculum checklist) instead of the file name + "other".
+  const pendingDocCtx = useRef<{ name: string; category: string; label: string } | null>(null);
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
 
   // Tick once every 30s so the countdown + "tersimpan otomatis" labels stay fresh.
   useEffect(() => {
@@ -657,11 +675,12 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     const file = e.target.files?.[0];
     if (!file || !found || uploadBusy) return;
     setUploadBusy(true);
+    const ctx = pendingDocCtx.current;
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("name", file.name.replace(/\.[^.]+$/, ""));
-      fd.append("category", "other");
+      fd.append("name", ctx?.name || file.name.replace(/\.[^.]+$/, ""));
+      fd.append("category", ctx?.category || "other");
       fd.append("sessionNum", String(found.session.sessionNum));
       const res = await fetch(`/api/pairings/${found.pairing.id}/documents`, { method: "POST", body: fd });
       const data = await res.json();
@@ -670,8 +689,18 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       console.warn("[sesi] doc upload failed", err);
     } finally {
       setUploadBusy(false);
+      setUploadingItem(null);
+      pendingDocCtx.current = null;
       if (docFileRef.current) docFileRef.current.value = "";
     }
+  }
+
+  /** Mentee clicks "Unggah" on a curriculum doc item → set the context and
+   *  open the (shared) file picker. */
+  function startCurriculumUpload(label: string, category: string) {
+    pendingDocCtx.current = { name: label, category, label };
+    setUploadingItem(label);
+    docFileRef.current?.click();
   }
 
   /* ── Loading & error ─────────────────────────────────────────── */
@@ -906,6 +935,47 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               </section>
             </>
           )}
+
+          {/* Dokumen yang diperlukan — the session's curriculum deliverables,
+              with upload. Hidden on locked/upcoming sessions. */}
+          {vs !== "upcoming" && (() => {
+            const checklist = CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist || [];
+            if (checklist.length === 0) return null;
+            const doneN = checklist.filter((item) => allDocs.some((d) => d.category === docChecklistCategory(item) || d.name.toLowerCase() === item.toLowerCase())).length;
+            return (
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Dokumen yang diperlukan</h2>
+                  <span className="stamp">{doneN} / {checklist.length} terunggah</span>
+                </div>
+                <div className="se-list">
+                  {checklist.map((item, i) => {
+                    const cat = docChecklistCategory(item);
+                    const doc = allDocs.find((d) => d.category === cat || d.name.toLowerCase() === item.toLowerCase());
+                    const uploaded = !!doc;
+                    return (
+                      <div key={i} className="se-prep-row">
+                        <span className={`se-prep-ic ${uploaded ? "ok" : "todo"}`}>{uploaded ? <IcCheck /> : ""}</span>
+                        <div className="se-prep-body">
+                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{item}</div>
+                          {uploaded && <div className="se-prep-sub">terunggah · {doc!.fileName}</div>}
+                        </div>
+                        {uploaded ? (
+                          <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
+                        ) : (
+                          <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
+                            {uploadingItem === item ? "Mengunggah…" : "Unggah"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
+          <input ref={docFileRef} type="file" accept=".pdf,.doc,.docx,.txt,image/*" style={{ display: "none" }} onChange={handleDocFile} />
         </div>
 
         {/* RIGHT — journey rail + materi */}
