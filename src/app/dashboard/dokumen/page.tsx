@@ -16,6 +16,7 @@ import Modal from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import { useUser } from "@/lib/hooks";
+import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing } from "@/lib/mentee-pairing-cache";
 
 interface DocRow {
   id: string;
@@ -122,8 +123,12 @@ const PENDING = new Set(["pending", "in_progress", "overdue"]);
 
 export default function DokumenPage() {
   const { user } = useUser();
-  const [pairing, setPairing] = useState<Pairing | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Seed from the shared cache for instant revisit; revalidated on mount.
+  const cachedPairing = getCachedMenteePairing();
+  const [pairing, setPairing] = useState<Pairing | null>(
+    cachedPairing !== undefined ? (cachedPairing as Pairing | null) : null,
+  );
+  const [loading, setLoading] = useState(cachedPairing === undefined);
   const [filter, setFilter] = useState("all");
   const [openDoc, setOpenDoc] = useState<DocRow | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null); // task id or "doc:<name>"
@@ -163,11 +168,12 @@ export default function DokumenPage() {
     }
   }
 
-  async function load() {
+  async function load(force = false) {
     try {
-      // Single call — pairing id resolved server-side (no list→detail waterfall).
-      const data = await fetch("/api/pairings/me").then((r) => r.json()).catch(() => ({ pairing: null }));
-      setPairing((data.pairing as Pairing) || null);
+      // `force` after a mutation (upload) so we never show stale docs.
+      if (force) invalidateMenteePairing();
+      const p = await refreshMenteePairing();
+      setPairing((p as Pairing) || null);
     } finally {
       setLoading(false);
     }
@@ -212,7 +218,7 @@ export default function DokumenPage() {
       fd.append("category", ctx.category);
       if (ctx.sessionNum != null) fd.append("sessionNum", String(ctx.sessionNum));
       const res = await fetch(`/api/pairings/${pairing.id}/documents`, { method: "POST", body: fd });
-      if (res.ok) await load();
+      if (res.ok) await load(true);
     } finally {
       setUploadingFor(null);
       pendingUpload.current = null;

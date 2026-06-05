@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@/lib/hooks";
+import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing } from "@/lib/mentee-pairing-cache";
 import { CURRICULUM, PHASES } from "@/lib/curriculum";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
@@ -112,9 +113,14 @@ const PENDING_TASK = new Set(["pending", "in_progress", "overdue"]);
 
 export default function MenteeDashboard() {
   const { user } = useUser();
-  const [pairing, setPairing] = useState<Pairing | null>(null);
+  // Seed from the shared cache so revisiting Beranda renders instantly; a
+  // background refetch below keeps it fresh.
+  const cachedPairing = getCachedMenteePairing();
+  const [pairing, setPairing] = useState<Pairing | null>(
+    cachedPairing !== undefined ? (cachedPairing as Pairing | null) : null,
+  );
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedPairing === undefined);
 
   // Local task overrides so checkbox toggles feel instant; key → status.
   const [taskOverride, setTaskOverride] = useState<Record<string, string>>({});
@@ -128,13 +134,10 @@ export default function MenteeDashboard() {
   }, []);
 
   useEffect(() => {
+    // Always revalidate in the background (stale-while-revalidate), even when
+    // we rendered from cache — so any staleness self-corrects.
     Promise.all([
-      // Single call — resolves the mentee's active pairing + full detail
-      // server-side (no list→detail waterfall).
-      fetch("/api/pairings/me")
-        .then((r) => r.json())
-        .then((d) => (d.pairing as Pairing) || null)
-        .catch(() => null),
+      refreshMenteePairing().then((p) => (p as Pairing) || null).catch(() => null),
       fetch("/api/profile")
         .then((r) => r.json())
         .then((d) => d.profile || null)
@@ -216,6 +219,8 @@ export default function MenteeDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
+      // Mutation: drop the shared cache so other tabs (e.g. Dokumen) refetch.
+      invalidateMenteePairing();
     } catch {
       // Revert on failure.
       setTaskOverride((prev) => ({ ...prev, [t.id]: t.status }));
