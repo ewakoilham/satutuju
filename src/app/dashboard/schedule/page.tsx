@@ -5,6 +5,7 @@ import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
 import { ConfirmModal } from "@/components/ui/Modal";
+import { invalidate } from "@/lib/swr-lite";
 import {
   useScheduleReducer,
   useScheduleData,
@@ -67,6 +68,13 @@ export default function SchedulePage() {
   const { slots, sessions, hasPairing, loading, weekStart, mentorFilter, mentors, mode } = state;
 
   const refresh = useScheduleData(user?.role, mentorFilter, dispatch);
+
+  // Refresh this page's data AND drop the shared cache so the mentor Beranda +
+  // Mentee list refetch fresh after any schedule change (no stale flash).
+  const refreshShared = useCallback(async () => {
+    invalidate("/api/pairings", "/api/schedule");
+    await refresh();
+  }, [refresh]);
 
   // Calendar view: Hari (day) / Minggu (week) / Bulan (month) / Agenda (list).
   const [view, setView] = useState<"hari" | "minggu" | "bulan" | "agenda">("minggu");
@@ -195,14 +203,14 @@ export default function SchedulePage() {
     });
     if (!res.ok) throw new Error((await res.json()).error || "Failed to save");
     dispatch({ type: "DISMISS" });
-    await refresh();
+    await refreshShared();
   }
 
   async function handleDelete() {
     if (mode.type !== "deleting") return;
     await fetch(`/api/schedule/${mode.slot.id}`, { method: "DELETE" });
     dispatch({ type: "DISMISS" });
-    await refresh();
+    await refreshShared();
   }
 
   async function handleBook(
@@ -214,7 +222,7 @@ export default function SchedulePage() {
     });
     if (!res.ok) throw new Error((await res.json()).error || "Failed to request");
     dispatch({ type: "DISMISS" });
-    await refresh();
+    await refreshShared();
   }
 
   async function handleBookingAction(slotId: string, bookingId: string, action: "accept" | "reject", reason?: string) {
@@ -223,7 +231,7 @@ export default function SchedulePage() {
       body: JSON.stringify({ bookingId, action, ...(reason ? { rejectionReason: reason } : {}) }),
     });
     dispatch({ type: "DISMISS" });
-    await refresh();
+    await refreshShared();
   }
 
   async function handleDismissRejection(slotId: string, bookingId: string) {
@@ -232,7 +240,7 @@ export default function SchedulePage() {
       body: JSON.stringify({ bookingId }),
     });
     dispatch({ type: "DISMISS" });
-    await refresh();
+    await refreshShared();
   }
 
   // ── Click handlers ──────────────────────────────────────────────────────
@@ -334,7 +342,7 @@ export default function SchedulePage() {
         if (!res.ok) throw new Error((await res.json()).error || "Gagal menyimpan slot");
       }
       dispatch({ type: "DISMISS" });
-      await refresh();
+      await refreshShared();
     } catch (e) {
       setSbErr(e instanceof Error ? e.message : "Gagal menyimpan");
     } finally {
