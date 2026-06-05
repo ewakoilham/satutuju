@@ -37,6 +37,9 @@ model User {
   // Mentee relations
   menteePairings Pairing[] @relation("MenteePairings")
 
+  // Document feedback authored by this user
+  documentComments DocumentComment[]
+
   // Notifications
   notifications Notification[]
 
@@ -88,6 +91,9 @@ model MentorProfile {
   // First-run dashboard tour: null = not seen yet (brand-new mentor → tour
   // runs). Backfilled to now() for existing mentors so only new ones get it.
   tourSeenAt         DateTime?
+  // Per-screen coachmarks (v2): JSON array of screen keys already shown, e.g.
+  // ["schedule","mentee"]. Existing mentors backfilled to the full set.
+  tourScreensSeen    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,12 +303,30 @@ model Document {
   status      String   @default("uploaded") // "uploaded" | "under_review" | "needs_revision" | "approved"
   version     Int      @default(1)
   uploadedBy  String   // userId
-  feedback    String?  // Mentor feedback on this document
+  feedback    String?  // Legacy single mentor note (superseded by the comments thread)
+  wordCount   Int?     // Current word count (text drafts: ML, essays)
+  targetWords Int?     // Target word count, e.g. 700 for a Motivation Letter
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  pairing Pairing @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+  pairing  Pairing           @relation(fields: [pairingId], references: [id], onDelete: Cascade)
+  comments DocumentComment[]
+}
+
+// Threaded feedback on a Document — mentor & mentee can both add notes.
+model DocumentComment {
+  id             String   @id @default(cuid())
+  documentId     String
+  authorId       String   // userId of the author
+  body           String
+  suggestedQuote String?  // Optional "try this wording" pull-quote
+  createdAt      DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
 }
 
 // ──────────────────────────────────────────────

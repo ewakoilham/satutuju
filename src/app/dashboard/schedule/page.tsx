@@ -121,6 +121,43 @@ export default function SchedulePage() {
   // Drag-to-create hook (mentor only)
   const drag = useDragToCreate(user?.role, state.mode, weekSlots, dispatch);
 
+  // ── Mentee side-rail data (handoff: "Sesi mendatang" + "Ketersediaan
+  //    rutin mentor"), derived from the same real slots/bookings. ──────────
+  const FULL_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const mentorName = useMemo(() => slots.find((s) => s.mentor?.name)?.mentor?.name || "", [slots]);
+
+  const menteeUpcoming = useMemo(() => {
+    if (!isMentee) return [];
+    const now = Date.now();
+    const out: { id: string; start: Date; end: string; status: string; sessionNum: number | null; topic: string | null }[] = [];
+    for (const s of slots) {
+      for (const b of s.bookings || []) {
+        if (b.status !== "accepted" && b.status !== "pending") continue;
+        const start = new Date(`${s.date}T${b.requestedStart || s.startTime}`);
+        if (isNaN(start.getTime()) || start.getTime() < now - 3_600_000) continue;
+        out.push({
+          id: b.id, start, end: b.requestedEnd || s.endTime, status: b.status,
+          sessionNum: b.session?.sessionNum ?? null, topic: b.session?.topic ?? null,
+        });
+      }
+    }
+    return out.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 5);
+  }, [isMentee, slots]);
+
+  const mentorAvailability = useMemo(() => {
+    if (!isMentee) return [];
+    const map = new Map<string, { day: number; start: string; end: string }>();
+    for (const s of slots) {
+      const taken = (s.bookings || []).some((b) => b.status === "accepted" || b.status === "pending");
+      if (taken) continue;
+      const d = new Date(`${s.date}T${s.startTime}`);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getDay()}-${s.startTime}-${s.endTime}`;
+      if (!map.has(key)) map.set(key, { day: d.getDay(), start: s.startTime, end: s.endTime });
+    }
+    return [...map.values()].sort((a, b) => a.day - b.day || a.start.localeCompare(b.start)).slice(0, 6);
+  }, [isMentee, slots]);
+
   // Active day for the Hari view.
   const activeDay = dayDate ?? today;
 
@@ -447,7 +484,7 @@ export default function SchedulePage() {
   return (
     <>
       {/* ── Page head ──────────────────────────────────────────────── */}
-      <div className="page-head" style={{ marginBottom: 8 }}>
+      <div className="page-head" style={{ marginBottom: 8 }} data-tour-screen="schedule">
         <div>
           <div className="sesi-crumb">
             {isMentor ? "Mentor" : isMentee ? "Mentee" : "Admin"}
@@ -782,12 +819,56 @@ export default function SchedulePage() {
           )}
 
           {isMentee && hasPairing && (
-            <div className="jadwal-side-card">
-              <h3>Cara request sesi</h3>
-              <div className="desc">
-                Klik slot yang tersedia (warna biru pucat dengan border putus-putus). Kamu bisa pilih durasi 60 atau 90 menit di pop-up booking.
+            <>
+              <div className="jadwal-side-card">
+                <h3>Sesi mendatang</h3>
+                {menteeUpcoming.length === 0 ? (
+                  <div className="desc">Belum ada sesi terjadwal. Klik slot tersedia di kalender untuk ajukan sesi.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", marginTop: 4 }}>
+                    {menteeUpcoming.map((u) => (
+                      <div key={u.id} className="dok-st-row" style={{ borderTop: "1px solid var(--border)", padding: "10px 0" }}>
+                        <span className="sw" style={{ background: u.status === "accepted" ? "var(--success)" : "var(--warning)" }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontFamily: "var(--font-poppins)", fontWeight: 600, fontSize: 13, color: "var(--primary-900)" }}>
+                            {u.sessionNum ? `Sesi ${u.sessionNum}` : "Sesi mentoring"}{u.topic ? ` · ${u.topic}` : ""}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 1 }}>
+                            {FULL_DAYS[u.start.getDay()]} {u.start.getDate()} {ID_MONTHS[u.start.getMonth()]} · {u.start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                          </div>
+                        </div>
+                        <span className="n" style={{ color: u.status === "accepted" ? "var(--text-green)" : "var(--text-amber)" }}>
+                          {u.status === "accepted" ? "Konfirmasi" : "Menunggu"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+
+              <div className="jadwal-side-card">
+                <h3>Ketersediaan rutin {mentorName ? mentorName.split(/\s+/)[0] : "mentor"}</h3>
+                {mentorAvailability.length === 0 ? (
+                  <div className="desc">Mentor belum membuka slot rutin minggu ini. Cek lagi nanti atau minta lewat chat.</div>
+                ) : (
+                  <div style={{ marginTop: 4 }}>
+                    {mentorAvailability.map((a, i) => (
+                      <div key={i} className="dok-st-row" style={{ borderTop: i ? "1px solid var(--border)" : "none", padding: "9px 0" }}>
+                        <span style={{ fontFamily: "var(--font-poppins)", fontWeight: 600, fontSize: 13, color: "var(--primary-900)" }}>{FULL_DAYS[a.day]}</span>
+                        <span className="n" style={{ fontFamily: "var(--font-geist-mono)" }}>{a.start} — {a.end}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="jadwal-side-card">
+                <h3>Cara request sesi</h3>
+                <div className="desc">
+                  Klik slot yang tersedia (warna biru pucat dengan border putus-putus). Kamu bisa pilih durasi 60 atau 90 menit di pop-up booking.
+                </div>
+              </div>
+            </>
           )}
 
           {isAdmin && (

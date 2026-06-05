@@ -22,7 +22,23 @@
 import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { cleanUniName } from "@/data/university-enrichment";
+import { CURRICULUM } from "@/lib/curriculum";
+import { MATERIALS } from "@/data/materials";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
+
+/** Map a curriculum doc-checklist label to a Document category. */
+function docChecklistCategory(item: string): string {
+  const t = item.toLowerCase();
+  if (/\bcv\b|resume/.test(t)) return "cv";
+  if (/transcript|transkrip|ijazah/.test(t)) return "transcript";
+  if (/language|ielts|toefl|bahasa/.test(t)) return "ielts";
+  if (/motivation|narrative|\bml\b|\bps\b/.test(t)) return "motivation_letter";
+  if (/lpdp|essay|esai/.test(t)) return "essay_lpdp";
+  if (/recommendation|rekomendasi/.test(t)) return "recommendation";
+  if (/certificate|sertifikat/.test(t)) return "certificate";
+  return "other";
+}
 
 /* ─── Data shapes ─────────────────────────────────────────────────── */
 
@@ -56,6 +72,7 @@ interface SessionRow {
 interface Pairing {
   id: string;
   targetProgram?: string | null;
+  priorityUnis?: string | null; // JSON array of university names — the mentee's Kampus shortlist
   mentor: User;
   mentee: User;
   sessions: SessionRow[];
@@ -82,6 +99,7 @@ interface DocRow {
   filePath: string;
   fileSize: number;
   category: string;
+  uploadedBy?: string | null;
   createdAt?: string | null;
 }
 
@@ -270,6 +288,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const [taskBusy, setTaskBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const docFileRef = useRef<HTMLInputElement | null>(null);
+  // When set, the next docFileRef upload uses this name/category (mentee's
+  // curriculum checklist) instead of the file name + "other".
+  const pendingDocCtx = useRef<{ name: string; category: string; label: string } | null>(null);
+  const [uploadingItem, setUploadingItem] = useState<string | null>(null);
 
   // Tick once every 30s so the countdown + "tersimpan otomatis" labels stay fresh.
   useEffect(() => {
@@ -655,11 +677,12 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
     const file = e.target.files?.[0];
     if (!file || !found || uploadBusy) return;
     setUploadBusy(true);
+    const ctx = pendingDocCtx.current;
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("name", file.name.replace(/\.[^.]+$/, ""));
-      fd.append("category", "other");
+      fd.append("name", ctx?.name || file.name.replace(/\.[^.]+$/, ""));
+      fd.append("category", ctx?.category || "other");
       fd.append("sessionNum", String(found.session.sessionNum));
       const res = await fetch(`/api/pairings/${found.pairing.id}/documents`, { method: "POST", body: fd });
       const data = await res.json();
@@ -668,8 +691,18 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       console.warn("[sesi] doc upload failed", err);
     } finally {
       setUploadBusy(false);
+      setUploadingItem(null);
+      pendingDocCtx.current = null;
       if (docFileRef.current) docFileRef.current.value = "";
     }
+  }
+
+  /** Mentee clicks "Unggah" on a curriculum doc item → set the context and
+   *  open the (shared) file picker. */
+  function startCurriculumUpload(label: string, category: string) {
+    pendingDocCtx.current = { name: label, category, label };
+    setUploadingItem(label);
+    docFileRef.current?.click();
   }
 
   /* ── Loading & error ─────────────────────────────────────────── */
@@ -734,6 +767,309 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   // Action items + attachments scoped to this session.
   const sessionTasks = allTasks.filter((t) => t.sessionNum === session.sessionNum);
   const sessionDocs = allDocs.filter((d) => d.sessionNum === session.sessionNum);
+
+  // ════════════════════════════════════════════════════════════════
+  //  MENTEE VIEW — self-contained early return (ported from the mentee
+  //  design handoff "Sesi Mentee.html"). Reuses the existing se-* CSS +
+  //  toggleTask; the mentor render below is untouched. Mentee sees a
+  //  status-aware detail panel (done / next / upcoming) + the journey
+  //  rail + "Materi untuk sesi ini" — all from real pairing data.
+  // ════════════════════════════════════════════════════════════════
+  if (isMenteeRole) {
+    const vs = viewStatus; // "done" | "current" | "upcoming"
+    const myTasks = sessionTasks;
+    const prepDone = myTasks.filter((t) => t.status === "completed").length;
+    const heroStatusM =
+      vs === "done"
+        ? session.completedAt ? `Selesai · ${fmtDayShort(new Date(session.completedAt))}` : "Selesai"
+        : vs === "current"
+          ? countdown ? `⏰ ${countdown.label}` : "Sesi berikutnya"
+          : scheduledDate ? `Dijadwalkan · ${fmtDayShort(scheduledDate)}` : "Belum dijadwalkan";
+    const summaryShown = vs === "done" && session.mentorSubmittedAt && summaryParas.length > 0;
+
+    return (
+      <main className="se-wrap">
+        <div className="se-crumb">
+          <Link href="/dashboard" className="back" title="Kembali ke Beranda">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          </Link>
+          <Link href="/dashboard">Beranda</Link>
+          <span className="sep">›</span>
+          <Link href="/dashboard/sesi">Sesi</Link>
+          <span className="sep">›</span>
+          <span className="cur">Sesi {session.sessionNum}</span>
+        </div>
+
+        {/* LEFT — detail panel */}
+        <div className="se-main">
+          <section className={`se-hero ${vs}`}>
+            <div className="se-hero-top">
+              <div className="se-pills">
+                <span className="se-pill-sesi" data-status={vs}>Sesi {num}</span>
+                <span className="se-pill-phase" data-phase={phaseLabel}>{phaseLabel}</span>
+              </div>
+              <span className="se-hero-status">{heroStatusM}</span>
+            </div>
+            <h1>{session.topic || "Sesi mentoring"}</h1>
+            <p className="se-hero-sub">
+              Bersama <b>{pairing.mentor.name}</b> · mentormu{target ? ` · ${target}` : ""}
+            </p>
+            <div className="se-hero-actions">
+              {vs === "current" && (
+                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Pindah jadwal</Link>
+              )}
+              {vs === "upcoming" && (
+                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Ajukan jadwal</Link>
+              )}
+              <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
+                <IcChat />Tanya {mentorFirst}
+              </a>
+            </div>
+          </section>
+
+          {vs === "done" ? (
+            <>
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Ringkasan dari {mentorFirst}</h2>
+                  <span className="stamp">Sesi {session.sessionNum}</span>
+                </div>
+                <div className="se-card-body">
+                  {summaryShown
+                    ? summaryParas.map((p, i) => <p key={i}>{p}</p>)
+                    : <p className="muted">Ringkasan dari {mentorFirst} belum tersedia untuk sesi ini.</p>}
+                </div>
+              </section>
+
+              {myTasks.length > 0 && (
+                <section className="se-card">
+                  <div className="se-card-head">
+                    <h2>Yang harus kamu kerjakan</h2>
+                    <span className="stamp">{prepDone} / {myTasks.length} selesai</span>
+                  </div>
+                  <div className="se-list">
+                    {myTasks.map((t) => {
+                      const done = t.status === "completed";
+                      return (
+                        <div key={t.id} className={`se-ai-row ${done ? "done" : ""}`}>
+                          <button type="button" className={`se-prep-ic ${done ? "ok" : "todo"}`} onClick={() => toggleTask(t)} title={done ? "Tandai belum selesai" : "Tandai selesai"} aria-label={t.title}>
+                            {done ? <IcCheck /> : ""}
+                          </button>
+                          <span className="se-ai-text">{t.title}</span>
+                          <span className="se-ai-tag">Untuk kamu</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+            </>
+          ) : vs === "current" ? (
+            <>
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Persiapan kamu</h2>
+                  <span className="stamp">{prepDone} / {myTasks.length} siap</span>
+                </div>
+                <div className="se-list">
+                  {myTasks.length === 0 ? (
+                    <div className="muted" style={{ padding: 4 }}>Belum ada persiapan khusus. {mentorFirst} akan menambahkan kalau ada.</div>
+                  ) : (
+                    myTasks.map((t) => {
+                      const done = t.status === "completed";
+                      const due = parseTs(t.dueDate);
+                      return (
+                        <div key={t.id} className="se-prep-row" style={{ cursor: "pointer" }} onClick={() => toggleTask(t)}>
+                          <span className={`se-prep-ic ${done ? "ok" : "todo"}`}>{done ? <IcCheck /> : ""}</span>
+                          <div className="se-prep-body">
+                            <div className="se-prep-title" style={done ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{t.title}</div>
+                            {due && <div className="se-prep-sub">jatuh tempo · {fmtDayShort(due)}</div>}
+                          </div>
+                          <span className="se-ai-tag">Untuk kamu</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              <section className="se-card">
+                <div className="se-card-head"><h2>Agenda sesi</h2><span className="stamp">disusun {mentorFirst}</span></div>
+                <div className="se-list">
+                  {agendaRows.map((row, i) => (
+                    <div key={i} className="se-prep-row">
+                      <span className="se-agenda-time">{row.slot}</span>
+                      <div className="se-prep-body"><div className="se-prep-title soft">{row.topic}</div></div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="se-card">
+                <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
+                <div className="se-card-body">
+                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & persiapannya kebuka setelah kamu menyelesaikan sesi sebelumnya.</p>
+                </div>
+              </section>
+              <section className="se-card" style={{ textAlign: "center" }}>
+                <div className="se-card-body">
+                  <p className="muted" style={{ marginBottom: 14 }}>Pengen mulai lebih awal? Ajukan jadwal ke {mentorFirst}.</p>
+                  <Link className="se-hero-btn" href="/dashboard/schedule" style={{ display: "inline-flex" }}><IcCal />Ajukan jadwal lebih awal</Link>
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* Dokumen yang diperlukan — the session's curriculum deliverables,
+              with upload. Hidden on locked/upcoming sessions. */}
+          {vs !== "upcoming" && (() => {
+            const checklist = CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist || [];
+            if (checklist.length === 0) return null;
+            // Match a checklist item to an uploaded doc. Match by category ONLY
+            // when it's specific (not the "other" catch-all, which would let any
+            // misc doc satisfy any generic item), else by name.
+            const docForItem = (item: string) => {
+              const cat = docChecklistCategory(item);
+              const q = item.toLowerCase();
+              return allDocs.find((d) =>
+                (cat !== "other" && d.category === cat) ||
+                d.name.toLowerCase() === q ||
+                d.name.toLowerCase().includes(q)
+              ) || null;
+            };
+            const doneN = checklist.filter((item) => !!docForItem(item)).length;
+            return (
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Dokumen yang diperlukan</h2>
+                  <span className="stamp">{doneN} / {checklist.length} terunggah</span>
+                </div>
+                <div className="se-list">
+                  {checklist.map((item, i) => {
+                    const cat = docChecklistCategory(item);
+                    const doc = docForItem(item);
+                    const uploaded = !!doc;
+                    return (
+                      <div key={i} className="se-prep-row">
+                        <span className={`se-prep-ic ${uploaded ? "ok" : "todo"}`}>{uploaded ? <IcCheck /> : ""}</span>
+                        <div className="se-prep-body">
+                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{item}</div>
+                          {uploaded && <div className="se-prep-sub">terunggah · {doc!.fileName}</div>}
+                        </div>
+                        {uploaded ? (
+                          <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
+                        ) : (
+                          <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
+                            {uploadingItem === item ? "Mengunggah…" : "Unggah"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* Lampiran dari mentor — files the mentor shared for this session
+              (download). Shows on every session, including upcoming. */}
+          {(() => {
+            const mentorDocs = sessionDocs.filter((d) => !d.uploadedBy || d.uploadedBy === pairing.mentor.id);
+            return (
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Lampiran dari {mentorFirst}</h2>
+                  <span className="stamp">untuk diunduh</span>
+                </div>
+                {mentorDocs.length === 0 ? (
+                  <div className="se-card-body">
+                    <p className="muted" style={{ margin: 0 }}>Belum ada lampiran dari {mentorFirst} untuk sesi ini. Template umum ada di tab Materi.</p>
+                  </div>
+                ) : (
+                  <div className="se-list">
+                    {mentorDocs.map((d) => (
+                      <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-prep-row" style={{ textDecoration: "none" }}>
+                        <span className="se-prep-ic" style={{ background: "var(--primary-50)", color: "var(--primary)", borderColor: "var(--primary-100)" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg>
+                        </span>
+                        <div className="se-prep-body">
+                          <div className="se-prep-title">{d.name}</div>
+                          <div className="se-prep-sub">{d.category} · {d.fileName}</div>
+                        </div>
+                        <span className="se-prep-link">Unduh</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
+
+          <input ref={docFileRef} type="file" accept=".pdf,.doc,.docx,.txt,image/*" style={{ display: "none" }} onChange={handleDocFile} />
+        </div>
+
+        {/* RIGHT — journey rail + materi */}
+        <aside className="se-rail">
+          <div className="se-rail-head">
+            <h3>Semua sesi</h3>
+            <span className="count">{doneCount} / {journey.length}</span>
+          </div>
+          <div className="se-rail-list">
+            {journey.map((s) => {
+              const st = statusOf(s);
+              const active = s.id === session.id;
+              return (
+                <Link key={s.id} href={`/dashboard/sesi/${s.id}`} className={`se-rail-row ${active ? "active" : ""}`}>
+                  <span className={`se-rail-dot ${st}`}>{st === "done" ? <IcCheck /> : s.sessionNum}</span>
+                  <div className="se-rail-info">
+                    <div className="se-rail-title">{s.sessionNum}. {s.topic || PHASE_LABELS[s.phase] || "Sesi"}</div>
+                    <div className="se-rail-meta">
+                      {PHASE_LABELS[s.phase] || s.phase}
+                      {s.completedAt ? ` · ${fmtDayShort(new Date(s.completedAt))}` : s.scheduledAt ? ` · ${fmtDayShort(new Date(s.scheduledAt))}` : ""}
+                    </div>
+                  </div>
+                  <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="se-rail-head" style={{ marginTop: 20 }}>
+            <h3>Template & materi</h3>
+          </div>
+          <div className="se-rail-list">
+            {(() => {
+              const tpl = MATERIALS.filter((m) => (m.roles === null || m.roles.includes("mentee")) && m.sessionN === session.sessionNum);
+              return (
+                <>
+                  {tpl.map((m) => (
+                    m.href && !m.locked ? (
+                      <a key={m.id} href={m.href} className="se-rail-row" style={{ textDecoration: "none" }}>
+                        <div className="se-rail-info"><div className="se-rail-title">{m.title}</div><div className="se-rail-meta">{m.label}</div></div>
+                      </a>
+                    ) : (
+                      <div key={m.id} className="se-rail-row" style={{ opacity: 0.7 }}>
+                        <div className="se-rail-info"><div className="se-rail-title">{m.title}</div><div className="se-rail-meta">{m.locked ? "segera" : m.label}</div></div>
+                      </div>
+                    )
+                  ))}
+                  <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "6px 2px" }}>
+                    {tpl.length === 0 ? "Belum ada template khusus sesi ini. " : ""}
+                    <Link href="/dashboard/resources" style={{ color: "var(--primary)" }}>Buka tab Materi →</Link>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </aside>
+      </main>
+    );
+  }
 
   // ── Hero status line + action buttons (status-aware) ─────────
   const heroStatus =
@@ -1213,6 +1549,33 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {/* ── Mentee-wide overview: all documents + action items ──── */}
           {!isMenteeRole && (
             <>
+              {(() => {
+                let shortlist: string[] = [];
+                try {
+                  const v = JSON.parse(pairing.priorityUnis || "[]");
+                  if (Array.isArray(v)) shortlist = v.filter((x): x is string => typeof x === "string");
+                } catch { /* ignore */ }
+                if (shortlist.length === 0) return null;
+                return (
+                  <>
+                    <div className="se-rail-head" style={{ marginTop: 20 }}>
+                      <h3>Shortlist kampus</h3>
+                      <span className="count">{shortlist.length}</span>
+                    </div>
+                    <div className="se-rail-list">
+                      {shortlist.map((name, i) => (
+                        <div key={i} className="se-rail-row" style={{ cursor: "default" }}>
+                          <div className="se-rail-info">
+                            <div className="se-rail-title">{cleanUniName(name)}</div>
+                            <div className="se-rail-meta">favorit {menteeFirst}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+
               <div className="se-rail-head" style={{ marginTop: 20 }}>
                 <h3>Dokumen mentee</h3>
                 <span className="count">{allDocs.length}</span>

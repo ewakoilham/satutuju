@@ -4694,3 +4694,277 @@
   padding: 11px 16px;
 }
 .dashboard-shell .est-legend .est-star { font-size: 15px; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Mentee Beranda — ported from the mentee design handoff
+   (design_handoff_mentee_dashboard/Beranda Mentee.html). Scoped under
+   .dashboard-shell and built entirely on design tokens, so dark mode
+   flips automatically. Reuses the existing .today / .week-row / .tip /
+   .stat / .av-grad primitives; only the mentee-specific pieces below
+   are new.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Stat extras: "/ N" suffix, progress track, warn delta */
+.dashboard-shell .stat .val .of {
+  font-family: var(--font-geist-mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted-2);
+  margin-left: 6px;
+}
+.dashboard-shell .stat .track {
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--primary-100);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.dashboard-shell .stat .track > i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 9999px;
+}
+.dashboard-shell .stat .delta.warn { color: var(--text-amber); }
+
+/* Tugas dari mentor — action-item checklist */
+.dashboard-shell .tasks {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 14px);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.dashboard-shell .tasks-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.dashboard-shell .tasks-head h3 {
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary-900);
+  margin: 0;
+}
+.dashboard-shell .tasks-head .from { font-size: 12px; color: var(--text-muted); }
+.dashboard-shell .tasks-head .count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted-3);
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+.dashboard-shell .task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+}
+.dashboard-shell .task:last-child { border-bottom: none; }
+.dashboard-shell .task:hover { background: var(--primary-50); }
+.dashboard-shell .task .ck {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 2px solid var(--primary-300);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--surface);
+  transition: all 0.15s ease;
+}
+.dashboard-shell .task .ck svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.15s ease;
+}
+.dashboard-shell .task.done .ck { background: var(--success); border-color: var(--success); }
+.dashboard-shell .task.done .ck svg { opacity: 1; transform: scale(1); }
+.dashboard-shell .task .body { flex: 1; min-width: 0; }
+.dashboard-shell .task .t-title {
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--primary-900);
+}
+.dashboard-shell .task.done .t-title {
+  color: var(--text-muted-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-muted-2);
+}
+.dashboard-shell .task .t-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dashboard-shell .task .t-meta .due { font-weight: 500; }
+.dashboard-shell .task .t-meta .due.soon { color: var(--text-amber); }
+.dashboard-shell .task .t-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted-2); }
+.dashboard-shell .task .cta {
+  align-self: center;
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--primary);
+  border: 1px solid var(--primary-200);
+  background: var(--surface);
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+.dashboard-shell .task .cta:hover { border-color: var(--primary-300); box-shadow: var(--shadow-sm); }
+.dashboard-shell .task.done .cta { visibility: hidden; }
+
+/* Community/group badge variant */
+.dashboard-shell .db-badge.lavender { background: var(--surface-purple); color: var(--text-purple); }
+
+/* Mentor card (side rail) */
+.dashboard-shell .mentor-card { padding: 22px; position: relative; overflow: hidden; }
+.dashboard-shell .mentor-blob {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  background: var(--brand-blue-soft);
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dashboard-shell .mentor-card .inner { position: relative; z-index: 1; }
+.dashboard-shell .mentor-top { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.dashboard-shell .mentor-top .nm { font-family: var(--font-poppins); font-weight: 700; font-size: 17px; color: var(--primary-900); }
+.dashboard-shell .mentor-top .ro {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dashboard-shell .mentor-stats {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.dashboard-shell .mentor-stats > div { flex: 1; }
+.dashboard-shell .mentor-stats .n { font-family: var(--font-geist-mono); font-weight: 500; font-size: 22px; color: var(--primary); }
+.dashboard-shell .mentor-stats .l { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.dashboard-shell .mentor-actions { display: flex; gap: 8px; }
+.dashboard-shell .chip-outline {
+  color: var(--primary);
+  border-color: var(--primary-200);
+  background: var(--surface);
+}
+.dashboard-shell .chip-outline:hover { border-color: var(--primary-300); background: var(--primary-50); }
+.dashboard-shell .chip.grow { flex: 1; justify-content: center; }
+.dashboard-shell a.chip { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Kurikulum progress card */
+.dashboard-shell .prog-card { padding: 20px; }
+.dashboard-shell .prog-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; }
+.dashboard-shell .prog-head .m {
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary-900);
+  margin-top: 4px;
+  letter-spacing: -0.005em;
+}
+.dashboard-shell .seg { display: flex; gap: 5px; margin-bottom: 16px; }
+.dashboard-shell .seg > i { flex: 1; height: 7px; border-radius: 9999px; background: var(--primary-100); }
+.dashboard-shell .seg > i.done { background: var(--primary); }
+.dashboard-shell .seg > i.now { background: var(--primary-300); }
+.dashboard-shell .prog-card p { font-size: 13px; color: var(--text-muted-3); line-height: 1.55; margin: 0 0 16px; }
+.dashboard-shell .prog-card p b { color: var(--primary-900); font-weight: 600; }
+
+/* ════════════════════════════════════════════════════════════════════
+   Mentee Dokumen — ported from the mentee design handoff
+   (Dokumen Mentee.html). Token-based; reuses .today / .today-warn / .tip /
+   .side-card for the featured + nudge + sidebar shells.
+   ════════════════════════════════════════════════════════════════════ */
+.dashboard-shell .dok-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; }
+@media (max-width: 1080px) { .dashboard-shell .dok-grid { grid-template-columns: 1fr; } }
+
+.dashboard-shell .dok-list { display: flex; flex-direction: column; gap: 12px; }
+.dashboard-shell .dok-doc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 14px);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  gap: 16px;
+  transition: all 0.14s ease;
+  cursor: pointer;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+}
+.dashboard-shell .dok-doc:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); }
+.dashboard-shell .dok-tile { width: 48px; height: 48px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dashboard-shell .tl-blue { background: var(--brand-blue-soft); color: var(--primary); }
+.dashboard-shell .tl-primary { background: var(--primary-100); color: var(--primary-700); }
+.dashboard-shell .tl-green { background: var(--success-light); color: var(--text-green); }
+.dashboard-shell .tl-amber { background: var(--warning-light); color: var(--text-amber); }
+.dashboard-shell .tl-muted { background: var(--background); color: var(--text-muted-2); border: 1px solid var(--border); }
+.dashboard-shell .dok-doc .d-body { flex: 1; min-width: 0; }
+.dashboard-shell .dok-doc .d-title { font-family: var(--font-poppins); font-weight: 700; font-size: 15.5px; color: var(--primary-900); margin: 0; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.dashboard-shell .dok-doc .d-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.dashboard-shell .dok-badge { font-family: var(--font-poppins); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+.dashboard-shell .dok-badge.draft { background: var(--warning-light); color: var(--text-amber); }
+.dashboard-shell .dok-badge.review { background: var(--primary-100); color: var(--primary-700); }
+.dashboard-shell .dok-badge.feedback { background: var(--surface-purple); color: var(--text-purple); }
+.dashboard-shell .dok-badge.done { background: var(--success-light); color: var(--text-green); }
+.dashboard-shell .dok-badge.req { background: var(--danger-light); color: var(--text-red); }
+.dashboard-shell .dok-badge.none { background: var(--background); color: var(--text-muted-2); border: 1px solid var(--border); }
+
+.dashboard-shell .dok-fb { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12.5px; color: var(--text-purple); font-weight: 500; }
+.dashboard-shell .dok-doc .d-action { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.dashboard-shell .dok-doc .d-when { font-family: var(--font-geist-mono); font-size: 10.5px; color: var(--text-muted-2); text-align: right; }
+
+/* sidebar — kesiapan */
+.dashboard-shell .dok-prog-num { font-family: var(--font-poppins); font-weight: 800; font-size: 32px; color: var(--primary-900); letter-spacing: -0.02em; }
+.dashboard-shell .dok-prog-num .of { font-family: var(--font-geist-mono); font-size: 16px; font-weight: 500; color: var(--text-muted-2); }
+.dashboard-shell .dok-track-lg { height: 6px; border-radius: 9999px; background: var(--primary-100); overflow: hidden; margin: 14px 0 16px; }
+.dashboard-shell .dok-track-lg > i { display: block; height: 100%; background: var(--primary); border-radius: 9999px; transition: width 0.3s ease; }
+.dashboard-shell .dok-st-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-muted-3); padding: 6px 0; }
+.dashboard-shell .dok-st-row .sw { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dashboard-shell .dok-st-row .n { margin-left: auto; font-family: var(--font-geist-mono); font-size: 11px; color: var(--text-muted-2); }
+
+.dashboard-shell .dok-req-item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.dashboard-shell .dok-req-item:first-of-type { border-top: none; }
+.dashboard-shell .dok-req-item .ri-tile { width: 32px; height: 32px; border-radius: 9px; background: var(--danger-light); color: var(--text-red); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dashboard-shell .dok-req-item .ri-name { font-size: 13px; font-weight: 600; color: var(--primary-900); }
+.dashboard-shell .dok-req-item .ri-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.dashboard-shell .dok-req-item .ri-up { margin-left: auto; font-family: var(--font-poppins); font-weight: 600; font-size: 12px; color: var(--primary); border: 1px solid var(--primary-200); background: var(--surface); padding: 5px 11px; border-radius: 8px; cursor: pointer; }
+.dashboard-shell .dok-req-item .ri-up:hover { background: var(--primary-50); }
