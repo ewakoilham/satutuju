@@ -721,9 +721,11 @@ export default function SchedulePage() {
                           className="relative border-b border-border/50 last:border-b-0">
                           <span style={{
                             position: "absolute",
-                            top: -10,
-                            right: 8,
+                            top: -7,
+                            right: 6,
                             fontSize: 10,
+                            lineHeight: 1,
+                            whiteSpace: "nowrap",
                             fontFamily: "var(--font-geist-mono)",
                             color: "var(--text-muted-2)",
                             userSelect: "none",
