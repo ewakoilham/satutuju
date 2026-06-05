@@ -137,7 +137,9 @@ export default function PairingDetailPage() {
   // redesigned Sesi page (its "Semua sesi" rail already covers the whole
   // session list). Admins keep this page for pairing management.
   useEffect(() => {
-    if (loading || !pairing || user?.role !== "mentor") return;
+    // Both mentor AND mentee get the redesigned Sesi page (its "Semua sesi"
+    // rail covers the whole list). Only admins stay on this management view.
+    if (loading || !pairing || !user || user.role === "admin") return;
     const list = [...pairing.sessions].sort((a, b) => a.sessionNum - b.sessionNum);
     const target = list.find((s) => s.status !== "completed") ?? list[0];
     if (target) router.replace(`/dashboard/sesi/${target.id}`);
@@ -147,8 +149,8 @@ export default function PairingDetailPage() {
     return <SkeletonDashboard />;
   }
 
-  // While the mentor redirect above is in flight, don't flash the old list.
-  if (user.role === "mentor" && pairing.sessions.length > 0) {
+  // While the redirect above is in flight (mentor/mentee), don't flash the old list.
+  if (user.role !== "admin" && pairing.sessions.length > 0) {
     return <SkeletonDashboard />;
   }
 
