@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { cleanUniName } from "@/data/university-enrichment";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
 
 /* ─── Data shapes ─────────────────────────────────────────────────── */
@@ -56,6 +57,7 @@ interface SessionRow {
 interface Pairing {
   id: string;
   targetProgram?: string | null;
+  priorityUnis?: string | null; // JSON array of university names — the mentee's Kampus shortlist
   mentor: User;
   mentee: User;
   sessions: SessionRow[];
@@ -735,6 +737,229 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const sessionTasks = allTasks.filter((t) => t.sessionNum === session.sessionNum);
   const sessionDocs = allDocs.filter((d) => d.sessionNum === session.sessionNum);
 
+  // ════════════════════════════════════════════════════════════════
+  //  MENTEE VIEW — self-contained early return (ported from the mentee
+  //  design handoff "Sesi Mentee.html"). Reuses the existing se-* CSS +
+  //  toggleTask; the mentor render below is untouched. Mentee sees a
+  //  status-aware detail panel (done / next / upcoming) + the journey
+  //  rail + "Materi untuk sesi ini" — all from real pairing data.
+  // ════════════════════════════════════════════════════════════════
+  if (isMenteeRole) {
+    const vs = viewStatus; // "done" | "current" | "upcoming"
+    const myTasks = sessionTasks;
+    const prepDone = myTasks.filter((t) => t.status === "completed").length;
+    const heroStatusM =
+      vs === "done"
+        ? session.completedAt ? `Selesai · ${fmtDayShort(new Date(session.completedAt))}` : "Selesai"
+        : vs === "current"
+          ? countdown ? `⏰ ${countdown.label}` : "Sesi berikutnya"
+          : scheduledDate ? `Dijadwalkan · ${fmtDayShort(scheduledDate)}` : "Belum dijadwalkan";
+    const summaryShown = vs === "done" && session.mentorSubmittedAt && summaryParas.length > 0;
+
+    return (
+      <main className="se-wrap">
+        <div className="se-crumb">
+          <Link href="/dashboard" className="back" title="Kembali ke Beranda">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          </Link>
+          <Link href="/dashboard">Beranda</Link>
+          <span className="sep">›</span>
+          <Link href="/dashboard/sesi">Sesi</Link>
+          <span className="sep">›</span>
+          <span className="cur">Sesi {session.sessionNum}</span>
+        </div>
+
+        {/* LEFT — detail panel */}
+        <div className="se-main">
+          <section className={`se-hero ${vs}`}>
+            <div className="se-hero-top">
+              <div className="se-pills">
+                <span className="se-pill-sesi" data-status={vs}>Sesi {num}</span>
+                <span className="se-pill-phase" data-phase={phaseLabel}>{phaseLabel}</span>
+              </div>
+              <span className="se-hero-status">{heroStatusM}</span>
+            </div>
+            <h1>{session.topic || "Sesi mentoring"}</h1>
+            <p className="se-hero-sub">
+              Bersama <b>{pairing.mentor.name}</b> · mentormu{target ? ` · ${target}` : ""}
+            </p>
+            <div className="se-hero-actions">
+              {vs === "current" && (
+                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Pindah jadwal</Link>
+              )}
+              {vs === "upcoming" && (
+                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Ajukan jadwal</Link>
+              )}
+              <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
+                <IcChat />Tanya {mentorFirst}
+              </a>
+            </div>
+          </section>
+
+          {vs === "done" ? (
+            <>
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Ringkasan dari {mentorFirst}</h2>
+                  <span className="stamp">Sesi {session.sessionNum}</span>
+                </div>
+                <div className="se-card-body">
+                  {summaryShown
+                    ? summaryParas.map((p, i) => <p key={i}>{p}</p>)
+                    : <p className="muted">Ringkasan dari {mentorFirst} belum tersedia untuk sesi ini.</p>}
+                </div>
+              </section>
+
+              {myTasks.length > 0 && (
+                <section className="se-card">
+                  <div className="se-card-head">
+                    <h2>Yang harus kamu kerjakan</h2>
+                    <span className="stamp">{prepDone} / {myTasks.length} selesai</span>
+                  </div>
+                  <div className="se-list">
+                    {myTasks.map((t) => {
+                      const done = t.status === "completed";
+                      return (
+                        <div key={t.id} className={`se-ai-row ${done ? "done" : ""}`}>
+                          <button type="button" className={`se-prep-ic ${done ? "ok" : "todo"}`} onClick={() => toggleTask(t)} title={done ? "Tandai belum selesai" : "Tandai selesai"} aria-label={t.title}>
+                            {done ? <IcCheck /> : ""}
+                          </button>
+                          <span className="se-ai-text">{t.title}</span>
+                          <span className="se-ai-tag">Untuk kamu</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {sessionDocs.length > 0 && (
+                <section className="se-card">
+                  <div className="se-card-head"><h2>Lampiran</h2></div>
+                  <div className="se-list">
+                    {sessionDocs.map((d) => (
+                      <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
+                        <div className="se-rail-info">
+                          <div className="se-rail-title">{d.name}</div>
+                          <div className="se-rail-meta">{d.category}</div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          ) : vs === "current" ? (
+            <>
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Persiapan kamu</h2>
+                  <span className="stamp">{prepDone} / {myTasks.length} siap</span>
+                </div>
+                <div className="se-list">
+                  {myTasks.length === 0 ? (
+                    <div className="muted" style={{ padding: 4 }}>Belum ada persiapan khusus. {mentorFirst} akan menambahkan kalau ada.</div>
+                  ) : (
+                    myTasks.map((t) => {
+                      const done = t.status === "completed";
+                      const due = parseTs(t.dueDate);
+                      return (
+                        <div key={t.id} className="se-prep-row" style={{ cursor: "pointer" }} onClick={() => toggleTask(t)}>
+                          <span className={`se-prep-ic ${done ? "ok" : "todo"}`}>{done ? <IcCheck /> : ""}</span>
+                          <div className="se-prep-body">
+                            <div className="se-prep-title" style={done ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{t.title}</div>
+                            {due && <div className="se-prep-sub">jatuh tempo · {fmtDayShort(due)}</div>}
+                          </div>
+                          <span className="se-ai-tag">Untuk kamu</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              <section className="se-card">
+                <div className="se-card-head"><h2>Agenda sesi</h2><span className="stamp">disusun {mentorFirst}</span></div>
+                <div className="se-list">
+                  {agendaRows.map((row, i) => (
+                    <div key={i} className="se-prep-row">
+                      <span className="se-agenda-time">{row.slot}</span>
+                      <div className="se-prep-body"><div className="se-prep-title soft">{row.topic}</div></div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="se-card">
+                <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
+                <div className="se-card-body">
+                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & persiapannya kebuka setelah kamu menyelesaikan sesi sebelumnya.</p>
+                </div>
+              </section>
+              <section className="se-card" style={{ textAlign: "center" }}>
+                <div className="se-card-body">
+                  <p className="muted" style={{ marginBottom: 14 }}>Pengen mulai lebih awal? Ajukan jadwal ke {mentorFirst}.</p>
+                  <Link className="se-hero-btn" href="/dashboard/schedule" style={{ display: "inline-flex" }}><IcCal />Ajukan jadwal lebih awal</Link>
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+
+        {/* RIGHT — journey rail + materi */}
+        <aside className="se-rail">
+          <div className="se-rail-head">
+            <h3>Semua sesi</h3>
+            <span className="count">{doneCount} / {journey.length}</span>
+          </div>
+          <div className="se-rail-list">
+            {journey.map((s) => {
+              const st = statusOf(s);
+              const active = s.id === session.id;
+              return (
+                <Link key={s.id} href={`/dashboard/sesi/${s.id}`} className={`se-rail-row ${active ? "active" : ""}`}>
+                  <span className={`se-rail-dot ${st}`}>{st === "done" ? <IcCheck /> : s.sessionNum}</span>
+                  <div className="se-rail-info">
+                    <div className="se-rail-title">{s.sessionNum}. {s.topic || PHASE_LABELS[s.phase] || "Sesi"}</div>
+                    <div className="se-rail-meta">
+                      {PHASE_LABELS[s.phase] || s.phase}
+                      {s.completedAt ? ` · ${fmtDayShort(new Date(s.completedAt))}` : s.scheduledAt ? ` · ${fmtDayShort(new Date(s.scheduledAt))}` : ""}
+                    </div>
+                  </div>
+                  <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="se-rail-head" style={{ marginTop: 20 }}>
+            <h3>Materi untuk sesi ini</h3>
+          </div>
+          <div className="se-rail-list">
+            {sessionDocs.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "4px 2px" }}>
+                Belum ada materi khusus. <Link href="/dashboard/resources" style={{ color: "var(--primary)" }}>Buka tab Materi →</Link>
+              </div>
+            ) : (
+              sessionDocs.map((d) => (
+                <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
+                  <div className="se-rail-info">
+                    <div className="se-rail-title">{d.name}</div>
+                    <div className="se-rail-meta">{d.category}</div>
+                  </div>
+                </a>
+              ))
+            )}
+          </div>
+        </aside>
+      </main>
+    );
+  }
+
   // ── Hero status line + action buttons (status-aware) ─────────
   const heroStatus =
     isMenteeRole
@@ -1213,6 +1438,33 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {/* ── Mentee-wide overview: all documents + action items ──── */}
           {!isMenteeRole && (
             <>
+              {(() => {
+                let shortlist: string[] = [];
+                try {
+                  const v = JSON.parse(pairing.priorityUnis || "[]");
+                  if (Array.isArray(v)) shortlist = v.filter((x): x is string => typeof x === "string");
+                } catch { /* ignore */ }
+                if (shortlist.length === 0) return null;
+                return (
+                  <>
+                    <div className="se-rail-head" style={{ marginTop: 20 }}>
+                      <h3>Shortlist kampus</h3>
+                      <span className="count">{shortlist.length}</span>
+                    </div>
+                    <div className="se-rail-list">
+                      {shortlist.map((name, i) => (
+                        <div key={i} className="se-rail-row" style={{ cursor: "default" }}>
+                          <div className="se-rail-info">
+                            <div className="se-rail-title">{cleanUniName(name)}</div>
+                            <div className="se-rail-meta">favorit {menteeFirst}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+
               <div className="se-rail-head" style={{ marginTop: 20 }}>
                 <h3>Dokumen mentee</h3>
                 <span className="count">{allDocs.length}</span>

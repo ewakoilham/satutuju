@@ -1,593 +1,575 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { PHASES, CURRICULUM } from "@/lib/curriculum";
-import Icon from "@/components/ui/Icon";
-import Avatar from "@/components/ui/Avatar";
-import Badge from "@/components/ui/Badge";
-import ProgressBar from "@/components/ui/ProgressBar";
-import EmptyState from "@/components/ui/EmptyState";
+import { useUser } from "@/lib/hooks";
+import { CURRICULUM, PHASES } from "@/lib/curriculum";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import EmptyState from "@/components/ui/EmptyState";
+import {
+  currentWibHour,
+  phaseFromHour,
+  todConfig,
+  TodIcon,
+  type TodPhase,
+} from "@/lib/time-of-day";
 
-interface Session {
-  sessionNum: number;
-  phase: string;
-  topic: string;
-  status: string;
-  scheduledAt?: string;
-}
+/* ─── Data shapes (mentee POV — from /api/pairings/[id]) ───────────── */
 
-interface Task {
-  id: string;
-  title: string;
-  status: string;
-  dueDate?: string;
-  sessionNum?: number;
-}
-
-interface Document {
+interface Mentor {
   id: string;
   name: string;
-  category: string;
-  status: string;
+  email: string;
+  avatar?: string | null;
 }
-
+interface SessionRow {
+  id: string;
+  sessionNum: number;
+  status: string; // "upcoming" | "scheduled" | "completed" | "skipped"
+  phase: string;
+  topic?: string | null;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+}
+interface TaskRow {
+  id: string;
+  title: string;
+  status: string; // "pending" | "in_progress" | "completed" | "overdue"
+  dueDate?: string | null;
+  sessionNum?: number | null;
+}
+interface DocRow {
+  id: string;
+  name: string;
+  category?: string;
+  status: string; // "uploaded" | "under_review" | "needs_revision" | "approved"
+}
+interface MenteeProfile {
+  intendedStudyProgram?: string | null;
+  preferredDestinations?: string | null;
+}
 interface Pairing {
   id: string;
   status: string;
-  targetProgram?: string;
-  mentor: { id: string; name: string; email: string; avatar?: string | null };
-  sessions: Session[];
-  tasks: Task[];
-  documents: Document[];
+  targetProgram?: string | null;
+  mentor: Mentor;
+  sessions: SessionRow[];
+  tasks: TaskRow[];
+  documents: DocRow[];
+  menteeProfile?: MenteeProfile | null;
 }
 
-interface MenteeProfile {
-  intendedStudyProgram?: string;
-  preferredDestinations?: string;
+/* ─── Helpers (shared idiom with MentorDashboard) ─────────────────── */
+
+const ID_DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const ID_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+function firstName(name?: string | null): string {
+  return (name || "kamu").trim().split(/\s+/)[0] || "kamu";
+}
+function fmtDateEyebrow(d: Date): string {
+  const dayName = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][d.getDay()];
+  return `${dayName}, ${d.getDate()} ${ID_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtDay(d: Date): { day: string; mo: string } {
+  return { day: String(d.getDate()), mo: ID_DAYS[d.getDay()] };
+}
+function fmtTime(d: Date): string {
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+function fmtShortDate(d: Date): string {
+  return `${ID_DAYS[d.getDay()]} ${d.getDate()} ${ID_MONTHS[d.getMonth()]}`;
+}
+function daysFromNow(d: Date, now: Date): number {
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((a - b) / 86_400_000);
+}
+function relDays(d: Date, now: Date): string {
+  const n = daysFromNow(d, now);
+  if (n < 0) return "sudah lewat";
+  if (n === 0) return "hari ini";
+  if (n === 1) return "besok";
+  return `${n} hari lagi`;
+}
+function durationFor(sessionNum: number): number {
+  return CURRICULUM.find((c) => c.sessionNum === sessionNum)?.duration ?? 60;
+}
+function phaseLabel(phase?: string | null): string {
+  if (!phase) return "";
+  return PHASES[phase as keyof typeof PHASES]?.label ?? phase;
 }
 
-// Map checklist keywords to document categories (same as pairing detail page)
-const DOC_CAT_MAP: Record<string, string[]> = {
-  cv: ["cv"], resume: ["cv"], transcript: ["transcript"],
-  "language test": ["ielts"], motivation: ["motivation_letter"],
-  ml: ["motivation_letter"], ps: ["motivation_letter"],
-  lpdp: ["essay_lpdp"], essay: ["essay_lpdp"],
-  certificate: ["certificate"], recommendation: ["recommendation"],
-};
+const PENDING_TASK = new Set(["pending", "in_progress", "overdue"]);
 
-function checklistItemUploaded(item: string, docs: Document[]): boolean {
-  const lower = item.toLowerCase();
-
-  // Exact name match
-  if (docs.some((d) => d.name.toLowerCase() === lower)) return true;
-
-  // Category match
-  for (const [keyword, cats] of Object.entries(DOC_CAT_MAP)) {
-    if (lower.includes(keyword)) {
-      return docs.some((d) => cats.includes(d.category));
-    }
-  }
-
-  // Whole-word AND match (prevents false positives like "university" matching unrelated docs)
-  const words = lower.split(/[\s\/\(\)\-]+/).filter(w => w.length > 3);
-  if (words.length === 0) return false;
-  return docs.some((d) => {
-    const docWords = d.name.toLowerCase().split(/[\s\/\(\)\-]+/);
-    return words.every((w) => docWords.includes(w));
-  });
-}
-
-const PHASE_ICONS: Record<string, string> = {
-  discovery: "search",
-  planning: "map",
-  writing: "edit",
-  execution: "document",
-  closing: "check",
-};
+/* ─── Beranda (mentee home) ───────────────────────────────────────── */
 
 export default function MenteeDashboard() {
-  const [pairings, setPairings] = useState<Pairing[]>([]);
+  const { user } = useUser();
+  const [pairing, setPairing] = useState<Pairing | null>(null);
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+
+  // Local task overrides so checkbox toggles feel instant; key → status.
+  const [taskOverride, setTaskOverride] = useState<Record<string, string>>({});
+
+  const [phaseOverride, setPhaseOverride] = useState<TodPhase | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/pairings")
         .then((r) => r.json())
         .then(async (d) => {
-          const detailed = await Promise.all(
-            (d.pairings || []).map(async (p: { id: string }) => {
-              const res = await fetch(`/api/pairings/${p.id}`);
-              const data = await res.json();
-              return data.pairing;
-            })
-          );
-          setPairings(detailed.filter(Boolean));
-        }),
+          const list: Array<{ id: string; status: string }> = d.pairings || [];
+          // Prefer an active pairing; fall back to the first one.
+          const pick = list.find((p) => p.status === "active") || list[0];
+          if (!pick) return null;
+          const res = await fetch(`/api/pairings/${pick.id}`);
+          const data = await res.json();
+          return (data.pairing as Pairing) || null;
+        })
+        .catch(() => null),
       fetch("/api/profile")
         .then((r) => r.json())
-        .then((d) => setProfile(d.profile || null)),
-    ]).finally(() => setLoading(false));
+        .then((d) => d.profile || null)
+        .catch(() => null),
+    ]).then(([p, prof]) => {
+      setPairing(p);
+      setProfile(prof);
+    }).finally(() => setLoading(false));
   }, []);
 
+  const phase = phaseOverride ?? phaseFromHour(currentWibHour(now));
+  const tod = todConfig(phase);
+
+  /* ── Derived data (memoised) ──────────────────────────────────── */
+  const derived = useMemo(() => {
+    if (!pairing) return null;
+    const sessions = [...pairing.sessions].sort((a, b) => a.sessionNum - b.sessionNum);
+    const tasks = pairing.tasks.map((t) => ({ ...t, status: taskOverride[t.id] ?? t.status }));
+    const docs = pairing.documents;
+
+    const total = sessions.length || CURRICULUM.length;
+    const completed = sessions.filter((s) => s.status === "completed").length;
+    const next =
+      sessions.find((s) => s.status === "scheduled") ||
+      sessions.find((s) => s.status === "upcoming") ||
+      sessions.find((s) => s.status !== "completed") ||
+      null;
+    const nextIdx = next ? sessions.findIndex((s) => s.id === next.id) : completed;
+
+    const underReview = docs.filter((d) => d.status === "under_review").length;
+    const needsRevision = docs.filter((d) => d.status === "needs_revision").length;
+    const docsWaiting = underReview + needsRevision;
+    const docAction = docs.find((d) => d.status === "needs_revision") || docs.find((d) => d.status === "under_review") || null;
+
+    // Upcoming, scheduled sessions for the "Jadwal kamu" list.
+    const upcoming = sessions
+      .filter((s) => s.scheduledAt && new Date(s.scheduledAt).getTime() >= now.getTime() && s.status !== "completed")
+      .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime())
+      .slice(0, 3);
+
+    // Nearest task deadline.
+    const nextDeadline = tasks
+      .filter((t) => PENDING_TASK.has(t.status) && t.dueDate)
+      .map((t) => ({ t, due: new Date(t.dueDate!) }))
+      .filter(({ due }) => !isNaN(due.getTime()))
+      .sort((a, b) => a.due.getTime() - b.due.getTime())[0] || null;
+
+    const pendingTasks = tasks.filter((t) => PENDING_TASK.has(t.status));
+    const doneTasks = tasks.filter((t) => t.status === "completed").length;
+    // Show pending items first, completed (struck-through) after — like the
+    // handoff checklist, so toggling a row gives the satisfying strike instead
+    // of making it disappear. Cap so the card stays compact.
+    const displayTasks = [...tasks]
+      .sort((a, b) => (a.status === "completed" ? 1 : 0) - (b.status === "completed" ? 1 : 0))
+      .slice(0, 6);
+
+    const target =
+      profile?.intendedStudyProgram ||
+      pairing.menteeProfile?.intendedStudyProgram ||
+      pairing.targetProgram ||
+      null;
+    const destinations =
+      profile?.preferredDestinations || pairing.menteeProfile?.preferredDestinations || null;
+
+    return {
+      sessions, tasks, docs, total, completed, next, nextIdx,
+      underReview, needsRevision, docsWaiting, docAction,
+      upcoming, nextDeadline, pendingTasks, displayTasks, doneTasks, target, destinations,
+    };
+  }, [pairing, taskOverride, profile, now]);
+
+  /* ── Task toggle (optimistic + persisted) ─────────────────────── */
+  async function toggleTask(t: TaskRow) {
+    const nextStatus = t.status === "completed" ? "pending" : "completed";
+    setTaskOverride((prev) => ({ ...prev, [t.id]: nextStatus }));
+    try {
+      await fetch(`/api/tasks/${t.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    } catch {
+      // Revert on failure.
+      setTaskOverride((prev) => ({ ...prev, [t.id]: t.status }));
+    }
+  }
+
+  /* ── Render ────────────────────────────────────────────────────── */
   if (loading) return <SkeletonDashboard />;
 
-  if (pairings.length === 0) {
+  if (!pairing || !derived) {
     return (
       <EmptyState
         icon="map"
-        title="Your journey hasn't started yet"
-        description="You'll be paired with a mentor soon. Hang tight!"
+        title="Perjalanan kamu belum dimulai"
+        description="Kamu akan segera dipasangkan dengan seorang mentor. Tunggu sebentar, ya!"
       />
     );
   }
 
-  const pairing = pairings[0];
-  const completed = pairing.sessions.filter((s) => s.status === "completed").length;
-  const nextSession = pairing.sessions.find((s) => s.status === "scheduled" || s.status === "upcoming");
-  const pendingTasks = pairing.tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
-  const docsNeedingRevision = pairing.documents.filter((d) => d.status === "needs_revision");
+  const d = derived;
+  const mentorName = pairing.mentor.name;
+  const mentorFirst = firstName(mentorName);
+  const mentorInitials = initials(mentorName);
+  const pairHref = `/dashboard/pairings/${pairing.id}`;
+  const progressPct = Math.round((d.completed / d.total) * 100);
 
-  // Upcoming deadlines — tasks with due dates, sorted soonest first
-  const upcomingDeadlines = pendingTasks
-    .filter((t) => t.dueDate)
-    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
+  const greetSubBits: React.ReactNode[] = [
+    <><b>{d.completed} dari {d.total}</b> sesi selesai</>,
+    d.docsWaiting > 0 ? <><b>{d.docsWaiting} dokumen</b> ditunggu {mentorFirst}</> : null,
+    d.target ? <>target <b>{d.target}{d.destinations ? ` · ${d.destinations}` : ""}</b></> : null,
+  ].filter(Boolean) as React.ReactNode[];
 
-  // Document checklist progress
-  const allChecklistItems = CURRICULUM.flatMap((s) => s.docChecklist);
-  const uploadedCount = allChecklistItems.filter((item) =>
-    checklistItemUploaded(item, pairing.documents)
-  ).length;
-  const totalChecklist = allChecklistItems.length;
-
-  // Approved docs count
-  const approvedDocs = pairing.documents.filter((d) => d.status === "approved").length;
+  const nextScheduled = d.next?.scheduledAt ? new Date(d.next.scheduledAt) : null;
+  const validNextDate = nextScheduled && !isNaN(nextScheduled.getTime()) ? nextScheduled : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">My Journey</h1>
-        <div className="flex items-center gap-4 mt-3">
-          {pairing.mentor.avatar ? (
-            <img src={pairing.mentor.avatar} alt={pairing.mentor.name}
-              className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20 flex-shrink-0" />
-          ) : (
-            <Avatar name={pairing.mentor.name} size="lg" className="!w-14 !h-14 !text-lg ring-2 ring-primary/20" />
-          )}
-          <div className="min-w-0">
-            <p className="text-xs text-text-muted-2 font-medium uppercase tracking-wide">Your mentor</p>
-            <p className="text-lg font-semibold text-foreground truncate">{pairing.mentor.name}</p>
-            {(() => {
-              const target = profile?.intendedStudyProgram || pairing.targetProgram;
-              const destinations = profile?.preferredDestinations;
-              if (!target) return null;
-              return (
-                <p className="text-sm text-text-muted mt-0.5 truncate">
-                  <span className="text-[var(--primary)] font-medium">{target}</span>
-                  {destinations && (
-                    <span className="text-text-muted-2"> &middot; {destinations}</span>
+    <>
+      <div className="home-grid">
+        {/* ── Main column ─────────────────────────────────────────── */}
+        <div className="col-main">
+          <div className="greet-block">
+            <span className="eyebrow primary">{fmtDateEyebrow(now)}</span>
+            <h1 className="greet">
+              <span className="lede">{tod.greet}, {firstName(user?.name)}.</span>
+              <span className={`tod ${tod.toneClass}`}><TodIcon phase={phase} /></span>
+              <br />
+              {d.next
+                ? `Sesi ${d.next.sessionNum} bareng ${mentorFirst}${validNextDate ? `, ${relDays(validNextDate, now)}` : ""}.`
+                : "Semua sesi sudah selesai — kerja bagus!"}
+            </h1>
+            {greetSubBits.length > 0 && (
+              <div className="greet-sub">
+                {greetSubBits.flatMap((bit, i) =>
+                  i === 0
+                    ? [<span key={`b-${i}`}>{bit}</span>]
+                    : [<span key={`d-${i}`} className="dot" />, <span key={`b-${i}`}>{bit}</span>]
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Quick stats */}
+          <div className="stats">
+            <div className="stat">
+              <div className="lbl">Progress mentorship</div>
+              <div className="val">
+                {String(d.completed).padStart(2, "0")} <span className="of">/ {d.total}</span>
+              </div>
+              <div className="track"><i style={{ width: `${progressPct}%` }} /></div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Dokumen aktif</div>
+              <div className="val">{String(d.docs.length).padStart(2, "0")}</div>
+              <div className={`delta${d.docsWaiting > 0 ? " warn" : ""}`}>
+                {d.docsWaiting > 0
+                  ? [d.underReview > 0 ? `${d.underReview} nunggu review` : null, d.needsRevision > 0 ? `${d.needsRevision} perlu revisi` : null].filter(Boolean).join(" · ")
+                  : d.docs.length > 0 ? "semua terkirim" : "belum ada dokumen"}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Deadline terdekat</div>
+              {d.nextDeadline ? (
+                <>
+                  <div className="val">{Math.max(0, daysFromNow(d.nextDeadline.due, now))}<span className="unit">hari</span></div>
+                  <div className="delta">{d.nextDeadline.t.title} · {fmtShortDate(d.nextDeadline.due)}</div>
+                </>
+              ) : (
+                <>
+                  <div className="val">—</div>
+                  <div className="delta">tidak ada deadline aktif</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Sesi berikutnya */}
+          <section className="section">
+            <div className="section-head">
+              <h2>Sesi berikutnya</h2>
+              {validNextDate && <span className="meta">{relDays(validNextDate, now)}</span>}
+            </div>
+
+            {d.next ? (
+              <div className="today">
+                <div className="today-blob" />
+                <div className="today-content">
+                  <div className="today-head">
+                    <span className="badge-pulse">
+                      <span className="pulse-dot" />
+                      Sesi {d.next.sessionNum}{validNextDate ? ` · ${fmtShortDate(validNextDate)}` : ""}
+                    </span>
+                    {validNextDate ? (
+                      <span className="today-when">
+                        mulai <b>{fmtTime(validNextDate)} WIB</b> · Google Meet · {durationFor(d.next.sessionNum)} menit
+                      </span>
+                    ) : (
+                      <span className="today-when">belum dijadwalkan</span>
+                    )}
+                  </div>
+
+                  <div className="today-row">
+                    <div className="av-grad lg av-c5">{mentorInitials}</div>
+                    <div>
+                      {phaseLabel(d.next.phase) && <span className="eyebrow primary">{phaseLabel(d.next.phase)}</span>}
+                      <h3>{d.next.topic || "Sesi mentoring"}</h3>
+                      <p className="who">Bersama <b>{mentorName}</b> · mentormu</p>
+                    </div>
+                    <div className="actions">
+                      <Link href={`/dashboard/sesi/${d.next.id}`} className="db-btn db-btn-outline sm">Lihat persiapan</Link>
+                      <Link href={`/dashboard/sesi/${d.next.id}`} className="db-btn db-btn-primary">
+                        <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m23 7-7 5 7 5V7Z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                        Gabung sesi
+                      </Link>
+                    </div>
+                  </div>
+
+                  {d.docAction && (
+                    <div className="today-warn">
+                      <span className="ic">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01" /><circle cx="12" cy="12" r="10" /></svg>
+                      </span>
+                      <span>
+                        <b>{mentorFirst} {d.docAction.status === "needs_revision" ? "minta revisi" : "menunggu review"}:</b>{" "}
+                        {d.docAction.name}. Beresin sebelum sesi biar pembahasannya lebih nyambung.
+                      </span>
+                      <Link href={pairHref} className="nudge">
+                        {d.docAction.status === "needs_revision" ? "Perbaiki sekarang" : "Lihat dokumen"}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+                      </Link>
+                    </div>
                   )}
-                </p>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-
-      {/* Top cards row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Next Session */}
-        <Link
-          href={`/dashboard/pairings/${pairing.id}`}
-          className="card card-hover p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-blue-soft flex items-center justify-center">
-              <Icon name="calendar" size={18} className="text-primary" />
-            </div>
-            <p className="text-xs text-text-muted-2 font-medium uppercase">Next Session</p>
-          </div>
-          {nextSession ? (
-            <>
-              <p className="text-sm font-semibold">
-                Session {nextSession.sessionNum}: {nextSession.topic}
-              </p>
-              <p className="text-xs text-text-muted mt-1">
-                {nextSession.scheduledAt
-                  ? new Date(nextSession.scheduledAt).toLocaleDateString("en-GB", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "Not scheduled yet"}
-              </p>
-              <div className="mt-2">
-                <Badge variant={nextSession.status === "scheduled" ? "info" : "neutral"}>
-                  {nextSession.status}
-                </Badge>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-green-600 font-medium">All sessions completed!</p>
-          )}
-        </Link>
-
-        {/* Pending Tasks */}
-        <Link
-          href={`/dashboard/pairings/${pairing.id}`}
-          className="card card-hover p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-yellow flex items-center justify-center">
-              <Icon name="clipboard-check" size={18} className="text-primary" />
-            </div>
-            <p className="text-xs text-text-muted-2 font-medium uppercase">Tasks</p>
-          </div>
-          <p className="text-3xl font-bold">{pendingTasks.length}</p>
-          <p className="text-xs text-text-muted mt-1">
-            {pendingTasks.length === 0 ? "All caught up!" : "pending tasks"}
-          </p>
-          {docsNeedingRevision.length > 0 && (
-            <p className="text-xs text-amber-600 mt-1 font-medium">
-              {docsNeedingRevision.length} doc(s) need revision
-            </p>
-          )}
-        </Link>
-
-        {/* Document Progress */}
-        <Link
-          href={`/dashboard/pairings/${pairing.id}`}
-          className="card card-hover p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-lavender flex items-center justify-center">
-              <Icon name="document" size={18} className="text-primary" />
-            </div>
-            <p className="text-xs text-text-muted-2 font-medium uppercase">Documents</p>
-          </div>
-          <p className="text-3xl font-bold">
-            {uploadedCount}<span className="text-lg text-text-muted-2 font-normal">/{totalChecklist}</span>
-          </p>
-          <p className="text-xs text-text-muted mt-1">checklist items uploaded</p>
-          <p className="text-xs text-green-600 mt-0.5">{approvedDocs} approved</p>
-        </Link>
-      </div>
-
-      {/* Session Progress */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Session Progress</h3>
-          <span className="text-sm text-text-muted">{completed}/10 completed</span>
-        </div>
-        <ProgressBar
-          value={(completed / 10) * 100}
-          size="lg"
-          className="mb-6"
-        />
-
-        {/* Phase timeline — clickable, expands inline */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-          {Object.entries(PHASES).map(([key, phase]) => {
-            const phaseSessions = pairing.sessions.filter((s) => s.phase === key);
-            const phaseCompleted = phaseSessions.every((s) => s.status === "completed");
-            const phaseActive =
-              phaseSessions.some((s) => s.status !== "completed") &&
-              phaseSessions.some(
-                (s) => s.status === "completed" || s === nextSession
-              );
-            const isExpanded = expandedPhase === key;
-            const phaseIconName = PHASE_ICONS[key] || "puzzle";
-
-            return (
-              <button
-                key={key}
-                onClick={() => setExpandedPhase(isExpanded ? null : key)}
-                className={`text-center p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
-                  isExpanded
-                    ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                    : phaseCompleted
-                    ? "bg-success-light border-green-200 hover:border-green-300"
-                    : phaseActive
-                    ? "bg-brand-blue-soft border-[var(--primary)]"
-                    : "bg-surface-elevated border-border hover:border-border"
-                }`}
-              >
-                <div className="flex justify-center">
-                  <Icon name={phaseIconName} size={20} className={isExpanded ? "text-white" : ""} />
                 </div>
-                <p className={`text-xs font-medium mt-1 ${isExpanded ? "text-white" : ""}`}>{phase.label}</p>
-                <p className={`text-[10px] mt-0.5 ${isExpanded ? "text-white/70" : "text-text-muted-2"}`}>
-                  {phaseSessions.filter((s) => s.status === "completed").length}/{phaseSessions.length} sessions
-                </p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Expanded phase detail */}
-        {expandedPhase && (() => {
-          const phaseInfo = PHASES[expandedPhase as keyof typeof PHASES];
-          const phaseIconName = PHASE_ICONS[expandedPhase] || "puzzle";
-          const phaseSessions = pairing.sessions
-            .filter((s) => s.phase === expandedPhase)
-            .sort((a, b) => a.sessionNum - b.sessionNum);
-
-          return (
-            <div className="mt-4 border-t border-border pt-4 space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <Icon name={phaseIconName} size={16} /> {phaseInfo.label} Phase
-                </h4>
-                <Link
-                  href={`/dashboard/pairings/${pairing.id}`}
-                  className="text-xs text-[var(--primary)] hover:underline"
-                >
-                  Open full details &rarr;
-                </Link>
               </div>
-              {phaseSessions.map((session) => {
-                const currItem = CURRICULUM.find((c) => c.sessionNum === session.sessionNum);
-                const isCompleted = session.status === "completed";
-                const isNext = session === nextSession;
+            ) : (
+              <div className="today">
+                <div className="today-blob" />
+                <div className="today-content">
+                  <div className="today-head"><span className="eyebrow primary">Selesai</span></div>
+                  <div className="today-row">
+                    <div className="av-grad lg av-c5">{mentorInitials}</div>
+                    <div>
+                      <h3>Semua sesi sudah kelar 🎉</h3>
+                      <p className="who">Tinjau kembali catatan & dokumen kamu bareng <b>{mentorName}</b>.</p>
+                    </div>
+                    <div className="actions">
+                      <Link href={pairHref} className="db-btn db-btn-outline sm">Lihat perjalanan</Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
 
-                return (
-                  <Link
-                    key={session.sessionNum}
-                    href={`/dashboard/pairings/${pairing.id}`}
-                    className={`block p-4 rounded-lg border transition hover:shadow-md cursor-pointer ${
-                      isCompleted
-                        ? "bg-green-50 border-green-200 hover:border-green-300"
-                        : isNext
-                        ? "bg-blue-50 border-blue-200 hover:border-blue-300"
-                        : "bg-surface-elevated border-border hover:border-border"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${
-                          isCompleted
-                            ? "bg-green-100 text-green-600"
-                            : isNext
-                            ? "bg-blue-100 text-blue-600"
-                            : "bg-surface-elevated text-text-muted-2"
-                        }`}>
-                          {isCompleted ? <Icon name="check" size={16} /> : session.sessionNum}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            Session {session.sessionNum}: {session.topic}
-                          </p>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {currItem?.duration || "75 Min"}
-                          </p>
-                          {session.scheduledAt && (
-                            <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1">
-                              <Icon name="calendar" size={12} />
-                              {new Date(session.scheduledAt).toLocaleDateString("en-GB", {
-                                weekday: "short",
-                                day: "numeric",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          )}
-                          {/* Show deliverables if any */}
-                          {currItem && currItem.docChecklist.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {currItem.docChecklist.map((item, i) => {
-                                const uploaded = checklistItemUploaded(item, pairing.documents);
-                                return (
-                                  <Badge
-                                    key={i}
-                                    variant={uploaded ? "success" : "neutral"}
-                                  >
-                                    {uploaded ? <Icon name="check" size={10} className="inline mr-0.5" /> : "○"} {item}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          )}
+          {/* Tugas dari mentor */}
+          {d.tasks.length > 0 && (
+            <section className="section">
+              <div className="section-head">
+                <h2>Tugas dari {mentorFirst}</h2>
+                <Link href={pairHref}>Lihat semua →</Link>
+              </div>
+
+              <div className="tasks">
+                <div className="tasks-head">
+                  <h3>Yang perlu kamu kerjakan</h3>
+                  <span className="from">diminta {mentorFirst}</span>
+                  <span className="count">{d.doneTasks} / {d.tasks.length} selesai</span>
+                </div>
+
+                {d.displayTasks.map((t) => {
+                  const due = t.dueDate ? new Date(t.dueDate) : null;
+                  const validDue = due && !isNaN(due.getTime()) ? due : null;
+                  const soon = validDue ? daysFromNow(validDue, now) <= 3 : false;
+                  return (
+                    <div
+                      key={t.id}
+                      className={`task${t.status === "completed" ? " done" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleTask(t)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleTask(t); } }}
+                    >
+                      <span className="ck">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11" /></svg>
+                      </span>
+                      <div className="body">
+                        <div className="t-title">{t.title}</div>
+                        <div className="t-meta">
+                          {validDue
+                            ? <span className={`due${soon ? " soon" : ""}`}>jatuh tempo · {fmtShortDate(validDue)}</span>
+                            : <span className="due">tanpa tenggat</span>}
+                          {t.sessionNum != null && <><span className="dot" /><span>Sesi {t.sessionNum}</span></>}
                         </div>
                       </div>
-                      <Badge
-                        variant={
-                          isCompleted
-                            ? "success"
-                            : isNext && session.status === "scheduled"
-                            ? "info"
-                            : "neutral"
-                        }
-                      >
-                        {session.status}
-                      </Badge>
+                      <Link href={pairHref} className="cta" onClick={(e) => e.stopPropagation()}>Buka</Link>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          );
-        })()}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Deadlines & Tasks */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">My Tasks</h3>
-            <span className="text-xs text-text-muted-2">{pendingTasks.length} pending</span>
-          </div>
-
-          {/* Upcoming deadlines */}
-          {upcomingDeadlines.length > 0 && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg">
-              <p className="text-xs font-semibold text-red-700 uppercase mb-2">Upcoming Deadlines</p>
-              {upcomingDeadlines.slice(0, 3).map((task) => {
-                const dueDate = new Date(task.dueDate!);
-                const daysLeft = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                return (
-                  <div key={task.id} className="flex items-center justify-between py-1">
-                    <span className="text-sm text-foreground">{task.title}</span>
-                    <span className={`text-xs font-medium ${
-                      daysLeft <= 1 ? "text-danger" : daysLeft <= 3 ? "text-amber-600" : "text-text-muted"
-                    }`}>
-                      {daysLeft <= 0 ? "Overdue!" : daysLeft === 1 ? "Tomorrow" : `${daysLeft} days`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
-          {pendingTasks.length === 0 ? (
-            <p className="text-sm text-text-muted-2 py-4 text-center">No pending tasks</p>
-          ) : (
-            <div className="space-y-3">
-              {pendingTasks.map((task) => (
-                <TaskItem key={task.id} task={task} />
-              ))}
+          {/* Jadwal kamu */}
+          <section className="section">
+            <div className="section-head">
+              <h2>Jadwal kamu</h2>
+              <Link href="/dashboard/schedule">Lihat semua →</Link>
             </div>
-          )}
+
+            {d.upcoming.length === 0 ? (
+              <div className="week-list" style={{ padding: "32px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                Belum ada sesi terjadwal. Ajukan jadwal baru lewat tab Jadwal.
+              </div>
+            ) : (
+              <div className="week-list">
+                {d.upcoming.map((s) => {
+                  const start = new Date(s.scheduledAt!);
+                  const end = new Date(start.getTime() + durationFor(s.sessionNum) * 60_000);
+                  const { day, mo } = fmtDay(start);
+                  return (
+                    <Link key={s.id} href={`/dashboard/sesi/${s.id}`} className="week-row">
+                      <div className="when"><div className="day">{day}</div><div className="mo">{mo}</div></div>
+                      <div className="av-grad md av-c5">{mentorInitials}</div>
+                      <div className="who">
+                        <div className="who-name">
+                          Sesi {s.sessionNum} dengan {mentorFirst}
+                          {phaseLabel(s.phase) && <span className="db-badge primary">{phaseLabel(s.phase)}</span>}
+                        </div>
+                        <div className="who-sub">{s.topic || "Sesi mentoring"}</div>
+                      </div>
+                      <span className="ttime">{fmtTime(start)} — {fmtTime(end)}</span>
+                      <span className={`db-badge ${s.status === "scheduled" ? "success" : "warning"}`}>
+                        ● {s.status === "scheduled" ? "Konfirmasi" : "Tentatif"}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Document Checklist */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Document Checklist</h3>
-            <Link
-              href={`/dashboard/pairings/${pairing.id}`}
-              className="text-xs text-[var(--primary)] hover:underline"
-            >
-              View all
-            </Link>
-          </div>
-
-          {/* Progress bar */}
-          <div className="flex items-center gap-3 mb-4">
-            <ProgressBar
-              value={totalChecklist > 0 ? (uploadedCount / totalChecklist) * 100 : 0}
-              size="sm"
-              className="flex-1"
-            />
-            <span className="text-xs text-text-muted whitespace-nowrap">
-              {uploadedCount}/{totalChecklist}
-            </span>
-          </div>
-
-          {/* Docs needing revision alert */}
-          {docsNeedingRevision.length > 0 && (
-            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs font-medium text-amber-800">
-                {docsNeedingRevision.length} document(s) need revision
-              </p>
-              <div className="mt-1 space-y-0.5">
-                {docsNeedingRevision.map((d) => (
-                  <p key={d.id} className="text-xs text-amber-700">- {d.name}</p>
-                ))}
+        {/* ── Side rail ───────────────────────────────────────────── */}
+        <aside className="col-side">
+          {/* Mentor card */}
+          <div className="side-card mentor-card">
+            <div className="mentor-blob" />
+            <div className="inner">
+              <span className="eyebrow">Mentor kamu</span>
+              <div className="mentor-top">
+                <div className="av-grad lg av-c5">{mentorInitials}</div>
+                <div>
+                  <div className="nm">{mentorName}</div>
+                  <div className="ro">mentormu di program mentorship</div>
+                </div>
+              </div>
+              <div className="mentor-stats">
+                <div><div className="n">{String(d.total).padStart(2, "0")}</div><div className="l">Sesi total</div></div>
+                <div><div className="n">{String(d.completed).padStart(2, "0")}</div><div className="l">Selesai</div></div>
+                <div><div className="n">{String(Math.max(0, d.total - d.completed)).padStart(2, "0")}</div><div className="l">Tersisa</div></div>
+              </div>
+              <div className="mentor-actions">
+                <Link href={pairHref} className="chip chip-primary grow">
+                  Lihat perjalanan
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+                </Link>
+                <Link href="/dashboard/schedule" className="chip chip-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  Jadwalkan
+                </Link>
               </div>
             </div>
+          </div>
+
+          {/* Kurikulum progress */}
+          {d.next && (
+            <div className="side-card prog-card">
+              <div className="prog-head">
+                <div>
+                  <span className="eyebrow">Kurikulum</span>
+                  <div className="m">Sesi {d.next.sessionNum}: {d.next.topic || phaseLabel(d.next.phase)}</div>
+                </div>
+                <span className="db-badge success">● On track</span>
+              </div>
+              <div className="seg">
+                {Array.from({ length: d.total }).map((_, i) => (
+                  <i key={i} className={i < d.completed ? "done" : i === d.nextIdx ? "now" : ""} />
+                ))}
+              </div>
+              <p>
+                Fokus sekarang: <b>{d.next.topic || phaseLabel(d.next.phase)}</b>.
+                {(() => {
+                  const obj = CURRICULUM.find((c) => c.sessionNum === d.next!.sessionNum)?.objective;
+                  return obj ? ` ${obj}.` : "";
+                })()}
+              </p>
+              <Link href={`/dashboard/sesi/${d.next.id}`} className="db-btn db-btn-outline sm">
+                Lihat checklist
+                <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              </Link>
+            </div>
           )}
 
-          {/* Per-phase checklist */}
-          <div className="space-y-3">
-            {CURRICULUM.map((session) => {
-              if (session.docChecklist.length === 0) return null;
-              const phaseInfo = PHASES[session.phase as keyof typeof PHASES];
-              const phaseIconName = PHASE_ICONS[session.phase] || "puzzle";
-              const sessionDone = pairing.sessions.find(
-                (s) => s.sessionNum === session.sessionNum
-              )?.status === "completed";
-              const itemsUploaded = session.docChecklist.filter((item) =>
-                checklistItemUploaded(item, pairing.documents)
-              ).length;
-
-              return (
-                <div key={session.sessionNum} className="border-b border-border/50 pb-2 last:border-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-text-muted flex items-center gap-1">
-                      <Icon name={phaseIconName} size={12} /> S{session.sessionNum}
-                    </span>
-                    <span className="text-xs text-text-muted-2">
-                      {itemsUploaded}/{session.docChecklist.length}
-                    </span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {session.docChecklist.map((item, i) => {
-                      const uploaded = checklistItemUploaded(item, pairing.documents);
-                      return (
-                        <div key={i} className="flex items-center gap-2">
-                          {uploaded ? (
-                            <Icon name="check" size={12} className="text-green-500" />
-                          ) : (
-                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-text-muted-2">
-                              <circle cx="12" cy="12" r="9" />
-                            </svg>
-                          )}
-                          <span className={`text-xs ${uploaded ? "text-text-muted-3" : "text-text-muted-2"}`}>
-                            {item}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+          {/* Tip card */}
+          <div className="tip">
+            <span className="tag">Tip dari {mentorFirst}</span>
+            <h4>Tulis cerita yang jujur, bukan yang kamu kira juri mau dengar.</h4>
+            <p>
+              Esai terkuat biasanya soal momen kecil yang spesifik.{" "}
+              <em>&ldquo;Apa satu pengalaman yang bikin kamu yakin sama jalan ini?&rdquo;</em> Mulai dari situ.
+            </p>
+            <Link href="/dashboard/resources" className="more">
+              Buka materi
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+            </Link>
           </div>
+        </aside>
+      </div>
+
+      {process.env.NODE_ENV === "development" && (
+        <div className="tod-preview" aria-label="Preview waktu hari">
+          <span className="lbl">preview</span>
+          {(["pagi", "siang", "sore", "malam"] as TodPhase[]).map((p) => (
+            <button key={p} type="button" data-tod={p} className={phase === p ? "on" : ""} onClick={() => setPhaseOverride(p)}>
+              {p}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* View full journey */}
-      <div className="text-center">
-        <Link
-          href={`/dashboard/pairings/${pairing.id}`}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          View Full Journey Details
-          <Icon name="arrow-right" size={16} />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function TaskItem({ task }: { task: Task }) {
-  const [completing, setCompleting] = useState(false);
-
-  async function markComplete() {
-    setCompleting(true);
-    await fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed" }),
-    });
-    window.location.href = `/dashboard`;
-  }
-
-  return (
-    <div className="flex items-center justify-between p-3 card-hover rounded-lg border-l-4 border-l-[var(--primary)]">
-      <div>
-        <p className="text-sm font-medium">{task.title}</p>
-        {task.dueDate && (
-          <p className="text-xs text-text-muted-2 mt-0.5">
-            Due: {new Date(task.dueDate).toLocaleDateString()}
-          </p>
-        )}
-      </div>
-      <button
-        onClick={markComplete}
-        disabled={completing}
-        className="text-xs bg-green-100 text-success px-3 py-1 rounded-full font-medium hover:bg-green-200 transition disabled:opacity-50 inline-flex items-center gap-1"
-      >
-        <Icon name="clipboard-check" size={12} />
-        {completing ? "..." : "Complete"}
-      </button>
-    </div>
+      )}
+    </>
   );
 }

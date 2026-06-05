@@ -12,6 +12,7 @@ import Badge from "@/components/ui/Badge";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { cleanUniName } from "@/data/university-enrichment";
 
 interface Session {
   id: string;
@@ -328,6 +329,39 @@ export default function PairingDetailPage() {
 
       {/* Progress bar */}
       <ProgressBar value={(completed / 10) * 100} size="lg" />
+
+      {/* Shortlist kampus — the mentee's favorited campuses (Pairing.priorityUnis,
+          set by the mentee on /dashboard/universities). Read-only here. */}
+      {(() => {
+        let shortlist: string[] = [];
+        try {
+          const v = JSON.parse(pairing.priorityUnis || "[]");
+          if (Array.isArray(v)) shortlist = v.filter((x): x is string => typeof x === "string");
+        } catch { /* ignore malformed */ }
+        if (shortlist.length === 0) return null;
+        const menteeFirst = pairing.mentee.name.split(/\s+/)[0];
+        return (
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Icon name="school" size={18} className="text-primary" />
+                Shortlist kampus {menteeFirst}
+              </h3>
+              <span className="text-xs text-text-muted-2 whitespace-nowrap">{shortlist.length} kampus</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {shortlist.map((name, i) => (
+                <span key={i} className="text-sm bg-primary-50 text-primary-700 border border-primary-100 rounded-lg px-3 py-1.5">
+                  {cleanUniName(name)}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-text-muted mt-3">
+              Kampus favorit yang {menteeFirst} simpan di tab Kampus. Pakai ini buat arahkan strategi aplikasi.
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Tabs */}
       <div className="bg-surface-elevated p-1 rounded-xl inline-flex">

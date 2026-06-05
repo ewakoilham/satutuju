@@ -128,6 +128,7 @@ const WISHLIST_KEY = "kampus-wishlist";
 export default function UniversitiesPage() {
   const { user } = useUser();
   const isAdmin = user?.role === "admin";
+  const isMentee = user?.role === "mentee";
 
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,8 +142,12 @@ export default function UniversitiesPage() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // Wishlist (localStorage) + compare selection (in-memory) + modals.
+  // Favorites. Mentors/admins use a local wishlist (by numeric id). Mentees
+  // get a REAL, persisted shortlist (by university name) saved to their
+  // pairing.priorityUnis via /api/shortlist — so it survives devices and the
+  // mentor sees the same list.
   const [wishlist, setWishlist] = useState<Set<number>>(new Set());
+  const [shortlist, setShortlist] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<number[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [menteeOpen, setMenteeOpen] = useState(false);
@@ -154,6 +159,7 @@ export default function UniversitiesPage() {
   const [savedId, setSavedId] = useState<number | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shortlistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUniversities = useCallback((q: string, r: string, c: string, l: string) => {
     setLoading(true);
@@ -176,7 +182,7 @@ export default function UniversitiesPage() {
 
   useEffect(() => { fetchUniversities("", "", "", ""); }, [fetchUniversities]);
 
-  // Load wishlist from localStorage.
+  // Load wishlist from localStorage (mentor/admin).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(WISHLIST_KEY);
@@ -185,6 +191,17 @@ export default function UniversitiesPage() {
       /* ignore */
     }
   }, []);
+
+  // Load the mentee's persisted shortlist from the backend.
+  useEffect(() => {
+    if (!isMentee) return;
+    let cancelled = false;
+    fetch("/api/shortlist")
+      .then((r) => (r.ok ? r.json() : { universities: [] }))
+      .then((d) => { if (!cancelled) setShortlist(new Set<string>(d.universities || [])); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isMentee]);
 
   // Load mentees (for "Cocokkan untuk mentee").
   useEffect(() => {
@@ -244,6 +261,38 @@ export default function UniversitiesPage() {
       } catch {
         /* ignore */
       }
+      return next;
+    });
+  }
+
+  // Mentee favorite: toggle by university name (optimistic), then persist the
+  // FULL latest set. Debounced so rapid toggles coalesce into one write and
+  // can't land out of order; on failure we re-sync from the server.
+  function persistShortlist(arr: string[]) {
+    if (shortlistTimer.current) clearTimeout(shortlistTimer.current);
+    shortlistTimer.current = setTimeout(() => {
+      fetch("/api/shortlist", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ universities: arr }),
+      })
+        .then((r) => { if (!r.ok) throw new Error("save failed"); })
+        .catch(() => {
+          // Resync UI to server truth so a failed write doesn't leave us ahead.
+          fetch("/api/shortlist")
+            .then((r) => (r.ok ? r.json() : { universities: [] }))
+            .then((d) => setShortlist(new Set<string>(d.universities || [])))
+            .catch(() => {});
+        });
+    }, 450);
+  }
+
+  function toggleFavorite(name: string) {
+    setShortlist((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      persistShortlist([...next]);
       return next;
     });
   }
@@ -342,14 +391,16 @@ export default function UniversitiesPage() {
 
   return (
     <>
-      <div className="page-head" style={{ marginBottom: 8 }}>
+      <div className="page-head" style={{ marginBottom: 8 }} data-tour-screen="universities">
         <div>
-          <div className="sesi-crumb">Direktori kampus mitra</div>
+          <div className="sesi-crumb">{isMentee ? "Kampus impian kamu" : "Direktori kampus mitra"}</div>
           <h1 className="sesi-title">
             Kampus <span className="lede">— {total.toLocaleString("id-ID")} pintu masuk.</span>
           </h1>
           <p className="sesi-sub">
-            Cari kampus berdasarkan negara, jenjang, atau jurusan — atau cocokkan langsung untuk mentee tertentu. Centang sampai {MAX_COMPARE} kampus untuk dibandingkan.
+            {isMentee
+              ? <>Cari kampus berdasarkan negara, jenjang, atau jurusan, lalu simpan favoritmu ke shortlist. Centang sampai {MAX_COMPARE} kampus untuk dibandingkan — shortlist kamu tersimpan otomatis.</>
+              : <>Cari kampus berdasarkan negara, jenjang, atau jurusan — atau cocokkan langsung untuk mentee tertentu. Centang sampai {MAX_COMPARE} kampus untuk dibandingkan.</>}
           </p>
         </div>
       </div>
@@ -380,8 +431,8 @@ export default function UniversitiesPage() {
         <div className="kampus-stat">
           <div className="ico"><Icon name="star" size={18} /></div>
           <div>
-            <div className="lbl">Tersimpan</div>
-            <div className="val">{wishlist.size}</div>
+            <div className="lbl">{isMentee ? "Shortlist" : "Tersimpan"}</div>
+            <div className="val">{isMentee ? shortlist.size : wishlist.size}</div>
           </div>
         </div>
       </div>
@@ -489,7 +540,7 @@ export default function UniversitiesPage() {
           ) : (
             paginated.map((u) => {
               const isSel = selected.includes(u.id);
-              const isSaved = wishlist.has(u.id);
+              const isSaved = isMentee ? shortlist.has(u.name) : wishlist.has(u.id);
               const isExpanded = expandedId === u.id;
               const pendingLevel = editingLevel[u.id] ?? u.degreeLevel;
               const isDirty = editingLevel[u.id] && editingLevel[u.id] !== u.degreeLevel;
@@ -533,8 +584,8 @@ export default function UniversitiesPage() {
                       <button
                         type="button"
                         className={`iconbtn-sm ${isSaved ? "on" : ""}`}
-                        title={isSaved ? "Tersimpan" : "Simpan ke wishlist"}
-                        onClick={() => toggleWishlist(u.id)}
+                        title={isSaved ? "Tersimpan" : isMentee ? "Simpan ke shortlist" : "Simpan ke wishlist"}
+                        onClick={() => (isMentee ? toggleFavorite(u.name) : toggleWishlist(u.id))}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
                       </button>
@@ -637,20 +688,35 @@ export default function UniversitiesPage() {
 
         {/* Sidebar */}
         <aside className="kampus-side">
-          <div className="kampus-side-card" style={{ background: "var(--surface-elevated, #f6f8fc)" }}>
-            <span className="db-pill static accent" style={{ marginBottom: 10, display: "inline-block" }}>Quick action</span>
-            <h3>Cocokkan untuk mentee</h3>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 14px", lineHeight: 1.5 }}>
-              Pilih mentee — sistem otomatis isi pencarian dari target jurusan & negara tujuan mereka.
-            </p>
-            <button type="button" className="db-btn db-btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMenteeOpen(true)} disabled={mentees.length === 0}>
-              <Icon name="users" size={16} /> {mentees.length === 0 ? "Belum ada mentee" : "Pilih mentee →"}
-            </button>
-          </div>
+          {!isMentee && (
+            <div className="kampus-side-card" style={{ background: "var(--surface-elevated, #f6f8fc)" }}>
+              <span className="db-pill static accent" style={{ marginBottom: 10, display: "inline-block" }}>Quick action</span>
+              <h3>Cocokkan untuk mentee</h3>
+              <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 14px", lineHeight: 1.5 }}>
+                Pilih mentee — sistem otomatis isi pencarian dari target jurusan & negara tujuan mereka.
+              </p>
+              <button type="button" className="db-btn db-btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMenteeOpen(true)} disabled={mentees.length === 0}>
+                <Icon name="users" size={16} /> {mentees.length === 0 ? "Belum ada mentee" : "Pilih mentee →"}
+              </button>
+            </div>
+          )}
 
           <div className="kampus-side-card">
-            <h3>Wishlist kamu</h3>
-            {wishlistUnis.length === 0 ? (
+            <h3>{isMentee ? "Shortlist kamu" : "Wishlist kamu"}</h3>
+            {isMentee ? (
+              shortlist.size === 0 ? (
+                <p style={{ fontSize: 13, color: "var(--text-muted-2)", margin: 0 }}>
+                  Belum ada kampus favorit. Tekan ★ di kartu untuk simpan ke shortlist kamu.
+                </p>
+              ) : (
+                [...shortlist].slice(0, 12).map((name) => (
+                  <div key={name} className="row-mini">
+                    <span className="name">{cleanUniName(name)}</span>
+                    <span className="val" style={{ cursor: "pointer" }} onClick={() => toggleFavorite(name)} title="Hapus dari shortlist">✕</span>
+                  </div>
+                ))
+              )
+            ) : wishlistUnis.length === 0 ? (
               <p style={{ fontSize: 13, color: "var(--text-muted-2)", margin: 0 }}>
                 Belum ada kampus tersimpan. Tekan ☆ di kartu untuk menyimpan.
               </p>

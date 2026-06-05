@@ -20,6 +20,10 @@ export interface Material {
   tone: ToneKey;
   phase: MaterialPhase | "all";
   type: MaterialType;
+  /** Curriculum session this material belongs to (1–10). When set, the mentee
+   *  Materi screen files it under that exact session module; when null it falls
+   *  back to phase-level grouping. Omit for non-session-specific resources. */
+  sessionN?: number | null;
   /** Visibility — `null` = everyone. */
   roles: Array<"mentor" | "mentee" | "admin"> | null;
   /** Reading progress 0–100 (if tracked). Currently illustrative only. */
@@ -88,6 +92,7 @@ export const MATERIALS: Material[] = [
     tone: "tpl",
     phase: "writing",
     type: "template",
+    sessionN: 7,
     roles: null,
     locked: true,
   },
@@ -102,6 +107,7 @@ export const MATERIALS: Material[] = [
     tone: "ess",
     phase: "writing",
     type: "contoh",
+    sessionN: 8,
     roles: null,
     locked: true,
   },
@@ -130,6 +136,7 @@ export const MATERIALS: Material[] = [
     tone: "muted",
     phase: "planning",
     type: "direktori",
+    sessionN: 3,
     roles: null,
     locked: true,
   },
