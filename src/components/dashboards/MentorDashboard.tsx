@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import { getCached, revalidate } from "@/lib/swr-lite";
 import {
   currentWibHour,
   phaseFromHour,
@@ -159,10 +160,14 @@ function daysFromNow(d: Date, now: Date): number {
 /* ─── Beranda component ───────────────────────────────────────────── */
 
 export default function MentorDashboard() {
-  const [pairings, setPairings] = useState<Pairing[]>([]);
-  const [slots, setSlots] = useState<ScheduleSlot[]>([]);
+  // Seed from the shared cache so revisiting Beranda renders instantly; a
+  // background revalidate (below) keeps it fresh. (Profile is NOT cached.)
+  const cachedPairings = getCached<{ pairings: Pairing[] }>("/api/pairings");
+  const cachedSchedule = getCached<{ slots: ScheduleSlot[] }>("/api/schedule");
+  const [pairings, setPairings] = useState<Pairing[]>(cachedPairings?.pairings ?? []);
+  const [slots, setSlots] = useState<ScheduleSlot[]>(cachedSchedule?.slots ?? []);
   const [profile, setProfile] = useState<MentorProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedPairings === undefined);
 
   // Time-of-day phase (override-able via the dev preview chip).
   const [phaseOverride, setPhaseOverride] = useState<TodPhase | null>(null);
@@ -196,13 +201,14 @@ export default function MentorDashboard() {
   }, []);
 
   useEffect(() => {
+    // Always revalidate in the background (cached or not). Profile stays fresh.
     Promise.all([
-      fetch("/api/pairings").then((r) => r.json()).catch(() => ({ pairings: [] })),
-      fetch("/api/schedule").then((r) => r.json()).catch(() => ({ slots: [] })),
+      revalidate<{ pairings: Pairing[] }>("/api/pairings").catch(() => ({ pairings: [] })),
+      revalidate<{ slots: ScheduleSlot[] }>("/api/schedule").catch(() => ({ slots: [] })),
       fetch("/api/mentor-profile").then((r) => r.json()).catch(() => ({ profile: null })),
     ]).then(([p, s, m]) => {
-      setPairings(p.pairings || []);
-      setSlots(s.slots || []);
+      setPairings(p?.pairings || []);
+      setSlots(s?.slots || []);
       setProfile(m.profile || null);
     }).finally(() => setLoading(false));
   }, []);

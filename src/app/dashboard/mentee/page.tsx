@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getCached, revalidate } from "@/lib/swr-lite";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
@@ -118,9 +119,13 @@ type SortKey = "attention" | "soonest" | "progress" | "alpha";
 
 export default function MenteePage() {
   const router = useRouter();
-  const [pairings, setPairings] = useState<Pairing[]>([]);
-  const [slots, setSlots] = useState<ScheduleSlot[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Seed from the shared cache (same keys as mentor Beranda) for instant
+  // revisits; revalidated in the background on mount.
+  const cachedPairings = getCached<{ pairings: Pairing[] }>("/api/pairings");
+  const cachedSchedule = getCached<{ slots: ScheduleSlot[] }>("/api/schedule");
+  const [pairings, setPairings] = useState<Pairing[]>(cachedPairings?.pairings ?? []);
+  const [slots, setSlots] = useState<ScheduleSlot[]>(cachedSchedule?.slots ?? []);
+  const [loading, setLoading] = useState(cachedPairings === undefined);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("attention");
   const now = useMemo(() => new Date(), []);
@@ -169,12 +174,13 @@ export default function MenteePage() {
   }
 
   useEffect(() => {
+    // Always revalidate in the background (stale-while-revalidate).
     Promise.all([
-      fetch("/api/pairings").then((r) => r.json()).catch(() => ({ pairings: [] })),
-      fetch("/api/schedule").then((r) => r.json()).catch(() => ({ slots: [] })),
+      revalidate<{ pairings: Pairing[] }>("/api/pairings").catch(() => ({ pairings: [] })),
+      revalidate<{ slots: ScheduleSlot[] }>("/api/schedule").catch(() => ({ slots: [] })),
     ]).then(([p, s]) => {
-      setPairings(p.pairings || []);
-      setSlots(s.slots || []);
+      setPairings(p?.pairings || []);
+      setSlots(s?.slots || []);
     }).finally(() => setLoading(false));
   }, []);
 
