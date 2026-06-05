@@ -129,17 +129,11 @@ export default function MenteeDashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/pairings")
+      // Single call — resolves the mentee's active pairing + full detail
+      // server-side (no list→detail waterfall).
+      fetch("/api/pairings/me")
         .then((r) => r.json())
-        .then(async (d) => {
-          const list: Array<{ id: string; status: string }> = d.pairings || [];
-          // Prefer an active pairing; fall back to the first one.
-          const pick = list.find((p) => p.status === "active") || list[0];
-          if (!pick) return null;
-          const res = await fetch(`/api/pairings/${pick.id}`);
-          const data = await res.json();
-          return (data.pairing as Pairing) || null;
-        })
+        .then((d) => (d.pairing as Pairing) || null)
         .catch(() => null),
       fetch("/api/profile")
         .then((r) => r.json())

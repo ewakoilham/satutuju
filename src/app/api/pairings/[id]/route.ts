@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { getPairingDetail } from "@/lib/pairing-detail";
 
 export async function GET(
   _req: NextRequest,
@@ -10,18 +11,8 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-
-  const { data: pairing, error } = await supabase
-    .from("Pairing")
-    .select(
-      "*, mentor:User!mentorId(id, name, email, avatar), mentee:User!menteeId(id, name, email, avatar), sessions:Session(*), tasks:Task(*), progressNotes:ProgressNote(*)"
-    )
-    .eq("id", id)
-    .single();
-
-  if (error || !pairing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const pairing = await getPairingDetail(id);
+  if (!pairing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Check access
   if (
@@ -32,68 +23,7 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Fetch documents via direct query (bypasses FK join issues)
-  const { data: directDocs } = await supabase
-    .from("Document")
-    .select("*")
-    .eq("pairingId", id)
-    .order("createdAt", { ascending: false });
-  pairing.documents = directDocs || [];
-
-  // Sort nested arrays
-  if (Array.isArray(pairing.sessions)) {
-    pairing.sessions.sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        (a.sessionNum as number) - (b.sessionNum as number)
-    );
-  }
-  if (Array.isArray(pairing.tasks)) {
-    pairing.tasks.sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
-    );
-  }
-  if (Array.isArray(pairing.progressNotes)) {
-    pairing.progressNotes.sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
-    );
-  }
-
-  // Fetch ALL documents for this mentee across all pairings
-  const { data: allMenteePairings } = await supabase
-    .from("Pairing")
-    .select("id")
-    .eq("menteeId", pairing.menteeId)
-    .neq("id", id);
-
-  if (allMenteePairings && allMenteePairings.length > 0) {
-    const otherPairingIds = allMenteePairings.map((p: { id: string }) => p.id);
-    const { data: otherDocs } = await supabase
-      .from("Document")
-      .select("*")
-      .in("pairingId", otherPairingIds)
-      .order("createdAt", { ascending: false });
-
-    if (otherDocs && otherDocs.length > 0) {
-      pairing.documents = [
-        ...(Array.isArray(pairing.documents) ? pairing.documents : []),
-        ...otherDocs,
-      ].sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
-      );
-    }
-  }
-
-  // Attach live mentee profile data
-  const { data: menteeProfile } = await supabase
-    .from("MenteeProfile")
-    .select("intendedStudyProgram, preferredDestinations")
-    .eq("userId", pairing.menteeId)
-    .single();
-
-  return NextResponse.json({ pairing: { ...pairing, menteeProfile: menteeProfile || null } });
+  return NextResponse.json({ pairing });
 }
 
 function generateId(): string {
