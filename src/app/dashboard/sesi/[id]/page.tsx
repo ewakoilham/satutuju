@@ -24,6 +24,7 @@ import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { cleanUniName } from "@/data/university-enrichment";
 import { CURRICULUM } from "@/lib/curriculum";
+import { MATERIALS } from "@/data/materials";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
 
 /** Map a curriculum doc-checklist label to a Document category. */
@@ -98,6 +99,7 @@ interface DocRow {
   filePath: string;
   fileSize: number;
   category: string;
+  uploadedBy?: string | null;
   createdAt?: string | null;
 }
 
@@ -862,21 +864,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 </section>
               )}
 
-              {sessionDocs.length > 0 && (
-                <section className="se-card">
-                  <div className="se-card-head"><h2>Lampiran</h2></div>
-                  <div className="se-list">
-                    {sessionDocs.map((d) => (
-                      <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
-                        <div className="se-rail-info">
-                          <div className="se-rail-title">{d.name}</div>
-                          <div className="se-rail-meta">{d.category}</div>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </section>
-              )}
             </>
           ) : vs === "current" ? (
             <>
@@ -941,7 +928,19 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {vs !== "upcoming" && (() => {
             const checklist = CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist || [];
             if (checklist.length === 0) return null;
-            const doneN = checklist.filter((item) => allDocs.some((d) => d.category === docChecklistCategory(item) || d.name.toLowerCase() === item.toLowerCase())).length;
+            // Match a checklist item to an uploaded doc. Match by category ONLY
+            // when it's specific (not the "other" catch-all, which would let any
+            // misc doc satisfy any generic item), else by name.
+            const docForItem = (item: string) => {
+              const cat = docChecklistCategory(item);
+              const q = item.toLowerCase();
+              return allDocs.find((d) =>
+                (cat !== "other" && d.category === cat) ||
+                d.name.toLowerCase() === q ||
+                d.name.toLowerCase().includes(q)
+              ) || null;
+            };
+            const doneN = checklist.filter((item) => !!docForItem(item)).length;
             return (
               <section className="se-card">
                 <div className="se-card-head">
@@ -951,7 +950,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 <div className="se-list">
                   {checklist.map((item, i) => {
                     const cat = docChecklistCategory(item);
-                    const doc = allDocs.find((d) => d.category === cat || d.name.toLowerCase() === item.toLowerCase());
+                    const doc = docForItem(item);
                     const uploaded = !!doc;
                     return (
                       <div key={i} className="se-prep-row">
@@ -971,6 +970,40 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     );
                   })}
                 </div>
+              </section>
+            );
+          })()}
+
+          {/* Lampiran dari mentor — files the mentor shared for this session
+              (download). Shows on every session, including upcoming. */}
+          {(() => {
+            const mentorDocs = sessionDocs.filter((d) => !d.uploadedBy || d.uploadedBy === pairing.mentor.id);
+            return (
+              <section className="se-card">
+                <div className="se-card-head">
+                  <h2>Lampiran dari {mentorFirst}</h2>
+                  <span className="stamp">untuk diunduh</span>
+                </div>
+                {mentorDocs.length === 0 ? (
+                  <div className="se-card-body">
+                    <p className="muted" style={{ margin: 0 }}>Belum ada lampiran dari {mentorFirst} untuk sesi ini. Template umum ada di tab Materi.</p>
+                  </div>
+                ) : (
+                  <div className="se-list">
+                    {mentorDocs.map((d) => (
+                      <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-prep-row" style={{ textDecoration: "none" }}>
+                        <span className="se-prep-ic" style={{ background: "var(--primary-50)", color: "var(--primary)", borderColor: "var(--primary-100)" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg>
+                        </span>
+                        <div className="se-prep-body">
+                          <div className="se-prep-title">{d.name}</div>
+                          <div className="se-prep-sub">{d.category} · {d.fileName}</div>
+                        </div>
+                        <span className="se-prep-link">Unduh</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </section>
             );
           })()}
@@ -1007,23 +1040,31 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           </div>
 
           <div className="se-rail-head" style={{ marginTop: 20 }}>
-            <h3>Materi untuk sesi ini</h3>
+            <h3>Template & materi</h3>
           </div>
           <div className="se-rail-list">
-            {sessionDocs.length === 0 ? (
-              <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "4px 2px" }}>
-                Belum ada materi khusus. <Link href="/dashboard/resources" style={{ color: "var(--primary)" }}>Buka tab Materi →</Link>
-              </div>
-            ) : (
-              sessionDocs.map((d) => (
-                <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
-                  <div className="se-rail-info">
-                    <div className="se-rail-title">{d.name}</div>
-                    <div className="se-rail-meta">{d.category}</div>
+            {(() => {
+              const tpl = MATERIALS.filter((m) => (m.roles === null || m.roles.includes("mentee")) && m.sessionN === session.sessionNum);
+              return (
+                <>
+                  {tpl.map((m) => (
+                    m.href && !m.locked ? (
+                      <a key={m.id} href={m.href} className="se-rail-row" style={{ textDecoration: "none" }}>
+                        <div className="se-rail-info"><div className="se-rail-title">{m.title}</div><div className="se-rail-meta">{m.label}</div></div>
+                      </a>
+                    ) : (
+                      <div key={m.id} className="se-rail-row" style={{ opacity: 0.7 }}>
+                        <div className="se-rail-info"><div className="se-rail-title">{m.title}</div><div className="se-rail-meta">{m.locked ? "segera" : m.label}</div></div>
+                      </div>
+                    )
+                  ))}
+                  <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "6px 2px" }}>
+                    {tpl.length === 0 ? "Belum ada template khusus sesi ini. " : ""}
+                    <Link href="/dashboard/resources" style={{ color: "var(--primary)" }}>Buka tab Materi →</Link>
                   </div>
-                </a>
-              ))
-            )}
+                </>
+              );
+            })()}
           </div>
         </aside>
       </main>
