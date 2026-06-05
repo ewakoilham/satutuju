@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Icon from "@/components/ui/Icon";
 import Modal from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
@@ -116,6 +117,7 @@ type SortKey = "attention" | "soonest" | "progress" | "alpha";
 /* ─── Page ────────────────────────────────────────────────────────── */
 
 export default function MenteePage() {
+  const router = useRouter();
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -547,11 +549,18 @@ export default function MenteePage() {
                 );
               }
 
+              const cardHref = `/dashboard/pairings/${pairing.id}`;
               return (
-                <Link
+                <div
                   key={pairing.id}
-                  href={`/dashboard/pairings/${pairing.id}`}
+                  role="link"
+                  tabIndex={0}
                   className={`mentee-card ${flagged ? "flagged" : ""}`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => router.push(cardHref)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(cardHref); }
+                  }}
                 >
                   <div className="mentee-top">
                     <div className={`av-grad md ${avatarColorClass(pairing.mentee.name)}`}>
@@ -667,7 +676,7 @@ export default function MenteePage() {
                       </button>
                     )}
                   </div>
-                </Link>
+                </div>
               );
             })
           )}
