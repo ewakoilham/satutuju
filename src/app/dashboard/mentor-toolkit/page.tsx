@@ -656,8 +656,8 @@ export default function MentorToolkitPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Mentor Toolkit</h1>
-        <p className="text-text-muted text-sm mt-1">Your complete guide to effective mentoring at Satu Tuju</p>
+        <h1 className="sesi-title">Toolkit Mentor <span className="lede">panduan lengkap kamu.</span></h1>
+        <p className="sesi-sub">Panduan lengkap jadi mentor yang efektif di Satu Tuju.</p>
       </div>
 
       {/* Document panel — full width. NO overflow-hidden so sticky works */}
