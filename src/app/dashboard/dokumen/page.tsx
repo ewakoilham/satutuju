@@ -165,10 +165,8 @@ export default function DokumenPage() {
 
   async function load() {
     try {
-      const list = await fetch("/api/pairings").then((r) => r.json()).catch(() => ({ pairings: [] }));
-      const pick = (list.pairings || []).find((p: { status: string }) => p.status === "active") || (list.pairings || [])[0];
-      if (!pick) { setPairing(null); return; }
-      const data = await fetch(`/api/pairings/${pick.id}`).then((r) => r.json());
+      // Single call — pairing id resolved server-side (no list→detail waterfall).
+      const data = await fetch("/api/pairings/me").then((r) => r.json()).catch(() => ({ pairing: null }));
       setPairing((data.pairing as Pairing) || null);
     } finally {
       setLoading(false);
