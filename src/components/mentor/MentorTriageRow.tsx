@@ -66,7 +66,7 @@ export default function MentorTriageRow({ lead, isActive, onClick }: Props) {
             ? "bg-amber-50/40 border-l-amber-300 hover:bg-amber-50/70"
             : "bg-surface hover:bg-surface-elevated/40 border-l-transparent"
       }`}
-      style={{ gridTemplateColumns: "40px 1fr auto 78px" }}
+      style={{ gridTemplateColumns: "40px minmax(0,1fr) auto 104px" }}
     >
       <div className={`w-10 h-10 rounded-full ${tint.bg} ${tint.fg} flex items-center justify-center text-[12px] font-bold flex-shrink-0`}>
         {initials}
