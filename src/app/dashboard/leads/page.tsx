@@ -225,8 +225,8 @@ export default function MentorLeadsPage() {
       {/* Page header */}
       <div className="flex items-end justify-between gap-3 flex-wrap" data-tour-screen="leads">
         <div>
-          <h1 className="text-2xl font-extrabold text-foreground font-[family-name:var(--font-heading)] tracking-tight">
-            Leads
+          <h1 className="sesi-title">
+            Leads <span className="lede">dari pendaftaran.</span>
           </h1>
           <p className="text-sm text-text-muted mt-1 max-w-2xl">
             {data?.total ?? 0} pendaftaran dari landing page. Tandai yang kamu kenal — admin kerjakan sisanya.

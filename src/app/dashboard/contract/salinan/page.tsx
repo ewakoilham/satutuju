@@ -106,7 +106,7 @@ export default function ContractSalinanPage() {
             <Icon name="chevron-left" size={14} />
             Kembali ke kontrak
           </Link>
-          <h1 className="font-[family-name:var(--font-heading)] text-2xl md:text-3xl font-extrabold text-foreground">
+          <h1 className="sesi-title">
             Salinan Perjanjian Kemitraan Mentor
           </h1>
           <p className="text-sm text-text-muted mt-1">
