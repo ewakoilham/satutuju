@@ -5,16 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getCached, revalidate } from "@/lib/swr-lite";
 import Icon from "@/components/ui/Icon";
-import Modal from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { waUrl } from "@/lib/wa-templates";
-
-const ESCALATE_REASONS = [
-  "Tidak bisa dihubungi",
-  "Lewat 2 sesi berturut-turut",
-  "Konflik schedule mentor",
-  "Lainnya",
-];
 
 /* ─── Data shapes ─────────────────────────────────────────────────── */
 
@@ -129,49 +121,6 @@ export default function MenteePage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("attention");
   const now = useMemo(() => new Date(), []);
-
-  // Escalate modal state. `target` is null when the modal is closed.
-  const [escalateTarget, setEscalateTarget] = useState<{ pairingId: string; menteeName: string } | null>(null);
-  const [escalateReason, setEscalateReason] = useState<string>("Lewat 2 sesi berturut-turut");
-  const [escalateContext, setEscalateContext] = useState("");
-  const [escalating, setEscalating] = useState(false);
-  const [escalateResult, setEscalateResult] = useState<{ ok: true; admins: number } | { error: string } | null>(null);
-
-  async function submitEscalate() {
-    if (!escalateTarget) return;
-    setEscalating(true);
-    setEscalateResult(null);
-    try {
-      const res = await fetch("/api/escalations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pairingId: escalateTarget.pairingId,
-          reason: escalateReason,
-          context: escalateContext,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setEscalateResult({ error: data.error || "Gagal mengirim eskalasi." });
-        return;
-      }
-      setEscalateResult({ ok: true, admins: data.notifiedAdmins ?? 0 });
-    } catch (e) {
-      console.error(e);
-      setEscalateResult({ error: "Gagal mengirim eskalasi." });
-    } finally {
-      setEscalating(false);
-    }
-  }
-
-  function closeEscalate() {
-    setEscalateTarget(null);
-    setEscalateReason("Lewat 2 sesi berturut-turut");
-    setEscalateContext("");
-    setEscalateResult(null);
-    setEscalating(false);
-  }
 
   useEffect(() => {
     // Always revalidate in the background (stale-while-revalidate).
@@ -613,14 +562,6 @@ export default function MenteePage() {
                     </button>
                     <span className="spacer" />
                     <Link
-                      href={`/dashboard/schedule?menteeId=${pairing.mentee.id}`}
-                      className="db-btn-ghost sm"
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                    >
-                      Reschedule
-                    </Link>
-                    <Link
                       href={`/dashboard/pairings/${pairing.id}#documents`}
                       className="db-btn-ghost sm"
                       onClick={(e) => e.stopPropagation()}
@@ -628,20 +569,6 @@ export default function MenteePage() {
                     >
                       Lihat dokumen ({pairing._count.documents})
                     </Link>
-                    {flagged && (
-                      <button
-                        type="button"
-                        className="db-btn-ghost sm mentee-escalate-btn"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setEscalateTarget({ pairingId: pairing.id, menteeName: pairing.mentee.name });
-                        }}
-                        title="Minta admin turun tangan"
-                      >
-                        ⚠ Eskalasi
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -702,108 +629,6 @@ export default function MenteePage() {
           </div>
         </aside>
       </div>
-
-      {/* Escalate modal — opens when mentor presses "⚠ Eskalasi" on any
-          flagged card. Pick a reason + optional context, fires off a
-          high-priority notification to all admins. */}
-      <Modal
-        open={!!escalateTarget}
-        onClose={closeEscalate}
-        title={escalateTarget ? `Eskalasi ${escalateTarget.menteeName}` : ""}
-        description="Admin akan kontak langsung mentee dalam 24 jam. Kamu tetap mentor — ini cuma backup channel."
-        size="md"
-        variant="danger"
-        actions={
-          escalateResult && "ok" in escalateResult ? (
-            <button type="button" className="db-btn db-btn-primary" onClick={closeEscalate}>
-              Tutup
-            </button>
-          ) : (
-            <>
-              <button type="button" className="db-btn db-btn-outline" onClick={closeEscalate} disabled={escalating}>
-                Batal
-              </button>
-              <button
-                type="button"
-                className="db-btn db-btn-primary"
-                onClick={submitEscalate}
-                disabled={escalating || !escalateTarget}
-                style={{ background: "var(--danger)", borderColor: "var(--danger)" }}
-              >
-                {escalating ? "Mengirim…" : "Kirim eskalasi →"}
-              </button>
-            </>
-          )
-        }
-      >
-        {escalateResult && "ok" in escalateResult ? (
-          <div style={{ padding: "10px 0" }}>
-            <p style={{ margin: 0, fontSize: 14, color: "var(--success)" }}>
-              ✓ Eskalasi terkirim ke {escalateResult.admins} admin. Mereka akan tindak lanjut dalam 24 jam.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <fieldset style={{ border: 0, padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-              <legend style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-                Alasan
-              </legend>
-              {ESCALATE_REASONS.map((r) => (
-                <label
-                  key={r}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    background: escalateReason === r ? "var(--primary-50)" : "var(--surface)",
-                    border: `1px solid ${escalateReason === r ? "var(--primary-200)" : "var(--border)"}`,
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="escalate-reason"
-                    value={r}
-                    checked={escalateReason === r}
-                    onChange={() => setEscalateReason(r)}
-                  />
-                  <span>{r}</span>
-                </label>
-              ))}
-            </fieldset>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                Konteks tambahan (opsional)
-              </span>
-              <textarea
-                value={escalateContext}
-                onChange={(e) => setEscalateContext(e.target.value)}
-                placeholder="Apa yang sudah kamu coba? Apa yang admin perlu tau?"
-                rows={3}
-                maxLength={500}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                  fontFamily: "inherit",
-                  fontSize: 13,
-                  resize: "vertical",
-                  background: "var(--surface)",
-                  color: "var(--foreground)",
-                }}
-              />
-            </label>
-            {escalateResult && "error" in escalateResult && (
-              <p style={{ margin: 0, fontSize: 13, color: "var(--danger)" }}>
-                {escalateResult.error}
-              </p>
-            )}
-          </div>
-        )}
-      </Modal>
     </>
   );
 }
