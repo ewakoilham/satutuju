@@ -157,7 +157,6 @@ export default function SchedulePage() {
   // ── Mentee side-rail data (handoff: "Sesi mendatang" + "Ketersediaan
   //    rutin mentor"), derived from the same real slots/bookings. ──────────
   const FULL_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  const mentorName = useMemo(() => slots.find((s) => s.mentor?.name)?.mentor?.name || "", [slots]);
 
   const menteeUpcoming = useMemo(() => {
     if (!isMentee) return [];
@@ -177,11 +176,12 @@ export default function SchedulePage() {
     return out.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 5);
   }, [isMentee, slots]);
 
-  // Real upcoming open slots (not yet booked/pending), with concrete dates so
-  // the mentee can see exactly what's bookable and jump straight to it.
+  // Open slots in the CURRENTLY VISIBLE WEEK — same source as the calendar grid
+  // (weekSlots), so the side panel always matches what's actually on screen.
+  // Not yet booked/pending, not in the past. Clickable → jump to that day.
   const mentorOpenSlots = useMemo(() => {
     if (!isMentee) return [];
-    return slots
+    return weekSlots
       .filter((s) => {
         const taken = (s.bookings || []).some((b) => b.status === "accepted" || b.status === "pending");
         return !taken && s.date >= today;
@@ -189,8 +189,8 @@ export default function SchedulePage() {
       .map((s) => ({ id: s.id, date: s.date, start: s.startTime, end: s.endTime, d: new Date(`${s.date}T${s.startTime}`) }))
       .filter((s) => !isNaN(s.d.getTime()))
       .sort((a, b) => (a.date === b.date ? a.start.localeCompare(b.start) : a.date.localeCompare(b.date)))
-      .slice(0, 6);
-  }, [isMentee, slots, today]);
+      .slice(0, 8);
+  }, [isMentee, weekSlots, today]);
 
   // Active day for the Hari view.
   const activeDay = dayDate ?? today;
@@ -886,9 +886,9 @@ export default function SchedulePage() {
               </div>
 
               <div className="jadwal-side-card">
-                <h3>Slot terbuka {mentorName ? mentorName.split(/\s+/)[0] : "mentor"}</h3>
+                <h3>Slot terbuka minggu ini</h3>
                 {mentorOpenSlots.length === 0 ? (
-                  <div className="desc">Mentor belum membuka slot baru. Cek lagi nanti atau minta lewat chat.</div>
+                  <div className="desc">Belum ada slot terbuka di minggu ini. Geser ke minggu berikutnya di kalender buat lihat slot lainnya.</div>
                 ) : (
                   <div style={{ marginTop: 4 }}>
                     {mentorOpenSlots.map((a, i) => (
