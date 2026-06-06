@@ -820,9 +820,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               {vs === "current" && (
                 <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Pindah jadwal</Link>
               )}
-              {vs === "upcoming" && (
-                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Ajukan jadwal</Link>
-              )}
               <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
                 <IcChat />Tanya {mentorFirst}
               </a>
@@ -914,12 +911,6 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
                 <div className="se-card-body">
                   <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & dokumen yang perlu disiapkan ada di bawah dan di tab Materi — boleh kamu lihat & siapkan kapan saja.</p>
-                </div>
-              </section>
-              <section className="se-card" style={{ textAlign: "center" }}>
-                <div className="se-card-body">
-                  <p className="muted" style={{ marginBottom: 14 }}>Pengen mulai lebih awal? Ajukan jadwal ke {mentorFirst}.</p>
-                  <Link className="se-hero-btn" href="/dashboard/schedule" style={{ display: "inline-flex" }}><IcCal />Ajukan jadwal lebih awal</Link>
                 </div>
               </section>
             </>
