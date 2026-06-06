@@ -259,6 +259,10 @@ export default function MenteeDashboard() {
 
   const nextScheduled = d.next?.scheduledAt ? new Date(d.next.scheduledAt) : null;
   const validNextDate = nextScheduled && !isNaN(nextScheduled.getTime()) ? nextScheduled : null;
+  // A non-completed session whose scheduled date already passed isn't "next" —
+  // it's overdue / not yet wrapped up. Keep the card's message to a single
+  // accurate signal instead of "Sesi berikutnya" + "sudah lewat".
+  const nextIsPast = validNextDate ? daysFromNow(validNextDate, now) < 0 : false;
 
   return (
     <>
@@ -272,7 +276,9 @@ export default function MenteeDashboard() {
               <span className={`tod ${tod.toneClass}`}><TodIcon phase={phase} /></span>
               <br />
               {d.next
-                ? `Sesi ${d.next.sessionNum} bareng ${mentorFirst}${validNextDate ? `, ${relDays(validNextDate, now)}` : ""}.`
+                ? nextIsPast
+                  ? `Sesi ${d.next.sessionNum} bareng ${mentorFirst} belum selesai.`
+                  : `Sesi ${d.next.sessionNum} bareng ${mentorFirst}${validNextDate ? `, ${relDays(validNextDate, now)}` : ""}.`
                 : "Semua sesi sudah selesai — kerja bagus!"}
             </h1>
             {greetSubBits.length > 0 && (
@@ -323,8 +329,8 @@ export default function MenteeDashboard() {
           {/* Sesi berikutnya */}
           <section className="section">
             <div className="section-head">
-              <h2>Sesi berikutnya</h2>
-              {validNextDate && <span className="meta">{relDays(validNextDate, now)}</span>}
+              <h2>{nextIsPast ? "Sesi belum selesai" : "Sesi berikutnya"}</h2>
+              {validNextDate && !nextIsPast && <span className="meta">{relDays(validNextDate, now)}</span>}
             </div>
 
             {d.next ? (
