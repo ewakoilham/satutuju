@@ -5368,3 +5368,59 @@ html.dark .dashboard-shell .agenda-evt.pending {
   border-color: var(--surface-amber-border);
   color: var(--text-amber);
 }
+
+/* ── Dark mode sweep 2 — dividers, tint surfaces, tracks, status boxes ── */
+
+/* Hairline dividers (#ecf1f5 / #eef1f6 light gray) → theme border. Setting
+   both top/bottom color is harmless where only one side has a border. */
+html.dark .dashboard-shell .week-row,
+html.dark .dashboard-shell .att-item,
+html.dark .dashboard-shell .journey-row,
+html.dark .dashboard-shell .mentee-actions,
+html.dark .dashboard-shell .mentee-side-row,
+html.dark .dashboard-shell .jadwal-rule-row,
+html.dark .dashboard-shell .materi-card .footer,
+html.dark .dashboard-shell .recent-row,
+html.dark .dashboard-shell .uni-meta,
+html.dark .dashboard-shell .kampus-side-card .row-mini,
+html.dark .dashboard-shell .se-prep-row,
+html.dark .dashboard-shell .se-rf-foot {
+  border-top-color: var(--border);
+  border-bottom-color: var(--border);
+}
+
+/* Pinkish tint surfaces (#efe2eb / #fdf6fb) → purple tinted surface */
+html.dark .dashboard-shell .who-sees.private,
+html.dark .dashboard-shell .ai-box .actions button:hover,
+html.dark .dashboard-shell .ai-modal-pill {
+  background: var(--surface-purple);
+  border-color: var(--surface-purple-border);
+  color: var(--text-purple);
+}
+html.dark .dashboard-shell .ai-box {
+  background: linear-gradient(135deg, var(--surface-purple) 0%, var(--surface) 100%);
+}
+html.dark .dashboard-shell .materi-card.tone-ess .icon {
+  background: var(--surface-purple);
+  color: var(--text-purple);
+}
+
+/* Progress tracks (#ecf1f5 light) → primary tint */
+html.dark .dashboard-shell .hero-progress .track,
+html.dark .dashboard-shell .materi-card .footer .progress-bar {
+  background: var(--primary-100);
+}
+
+/* Status / warning box borders */
+html.dark .dashboard-shell .rs-status-draft,
+html.dark .dashboard-shell .rs-min-warn {
+  border-color: var(--surface-amber-border);
+}
+html.dark .dashboard-shell .rs-error {
+  border-color: var(--surface-red-border);
+}
+
+/* Disabled duration input fallback (#fafafa) */
+html.dark .dashboard-shell .rs-dur-input:disabled {
+  background: var(--surface);
+}
