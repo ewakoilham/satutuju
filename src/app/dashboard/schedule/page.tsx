@@ -176,12 +176,12 @@ export default function SchedulePage() {
     return out.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 5);
   }, [isMentee, slots]);
 
-  // Open slots in the CURRENTLY VISIBLE WEEK — same source as the calendar grid
-  // (weekSlots), so the side panel always matches what's actually on screen.
-  // Not yet booked/pending, not in the past. Clickable → jump to that day.
+  // Real upcoming open slots — SAME source/logic as the Agenda view (all future
+  // untaken slots), so the side panel always matches the actual availability the
+  // mentor has, not a stale weekday pattern. Concrete dates, clickable.
   const mentorOpenSlots = useMemo(() => {
     if (!isMentee) return [];
-    return weekSlots
+    return slots
       .filter((s) => {
         const taken = (s.bookings || []).some((b) => b.status === "accepted" || b.status === "pending");
         return !taken && s.date >= today;
@@ -190,7 +190,7 @@ export default function SchedulePage() {
       .filter((s) => !isNaN(s.d.getTime()))
       .sort((a, b) => (a.date === b.date ? a.start.localeCompare(b.start) : a.date.localeCompare(b.date)))
       .slice(0, 8);
-  }, [isMentee, weekSlots, today]);
+  }, [isMentee, slots, today]);
 
   // Active day for the Hari view.
   const activeDay = dayDate ?? today;
@@ -886,9 +886,9 @@ export default function SchedulePage() {
               </div>
 
               <div className="jadwal-side-card">
-                <h3>Slot terbuka minggu ini</h3>
+                <h3>Slot terbuka mentor</h3>
                 {mentorOpenSlots.length === 0 ? (
-                  <div className="desc">Belum ada slot terbuka di minggu ini. Geser ke minggu berikutnya di kalender buat lihat slot lainnya.</div>
+                  <div className="desc">Mentor belum membuka slot baru. Cek lagi nanti atau minta lewat chat.</div>
                 ) : (
                   <div style={{ marginTop: 4 }}>
                     {mentorOpenSlots.map((a, i) => (
