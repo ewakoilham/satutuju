@@ -257,14 +257,14 @@ export default function MenteePage() {
         !nextBooking &&
         (ageDays !== null && ageDays <= 14);
 
-      // Card state from the session-plan lifecycle:
-      //  propose  → no plan / still draft → "Susun rencana sesi"
-      //  awaiting → mentor finalized, waiting for mentee to accept
-      //  ready    → mentee accepted (or an existing pairing without the plan flow)
+      // Card state from the session-plan lifecycle. There is no mentee accept
+      // step — once the mentor finalizes, the plan is published into the
+      // sessions and the pairing is ready to run.
+      //  propose → no plan / still draft → "Susun rencana sesi"
+      //  ready   → finalized (or an existing pairing without the plan flow)
       const ps = p.sessionPlanStatus;
-      let planState: "propose" | "awaiting" | "ready";
-      if (ps === "acknowledged") planState = "ready";
-      else if (ps === "finalized") planState = "awaiting";
+      let planState: "propose" | "ready";
+      if (ps === "finalized" || ps === "acknowledged") planState = "ready";
       else if (ps === "draft") planState = "propose";
       else planState = isNewMatch ? "propose" : "ready";
 
@@ -511,45 +511,6 @@ export default function MenteePage() {
                       <span className="newmatch-cta">
                         Susun rencana sesi →
                       </span>
-                    </div>
-                  </Link>
-                );
-              }
-
-              // Mentor finalized — waiting for the mentee to accept before sessions unlock.
-              if (planState === "awaiting") {
-                return (
-                  <Link
-                    key={pairing.id}
-                    href={`/dashboard/mentee/${pairing.id}/rencana-sesi`}
-                    className="mentee-card mentee-card-newmatch"
-                  >
-                    <div className="mentee-top">
-                      <div className={`av-grad md ${avatarColorClass(pairing.mentee.name)}`}>
-                        {initials(pairing.mentee.name)}
-                      </div>
-                      <div className="mentee-info">
-                        <h3 className="mentee-name">{pairing.mentee.name}</h3>
-                        <div className="mentee-meta">
-                          {target && <><b>{target}</b><span className="dot" /></>}
-                          {dest && <><span>{dest}</span><span className="dot" /></>}
-                          <span>{pairing.mentee.email}</span>
-                        </div>
-                        <div className="mentee-pills">
-                          <span className="db-pill static accent">⏳ Menunggu persetujuan</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="newmatch-callout">
-                      <div className="newmatch-callout-body">
-                        <strong>Rencana terkirim — menunggu {pairing.mentee.name.split(/\s+/)[0]} menerima.</strong>
-                        <p>
-                          Sesi akan terbuka begitu {pairing.mentee.name.split(/\s+/)[0]} menyetujui rencana.
-                          Kamu masih bisa melihat rencananya.
-                        </p>
-                      </div>
-                      <span className="newmatch-cta">Lihat rencana →</span>
                     </div>
                   </Link>
                 );

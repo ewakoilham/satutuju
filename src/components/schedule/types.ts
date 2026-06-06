@@ -35,6 +35,7 @@ export interface Session {
   topic: string;
   status: string;
   scheduledAt?: string | null;
+  durationMinutes?: number | null; // planned length, published from the session plan
 }
 
 export interface MentorOption {

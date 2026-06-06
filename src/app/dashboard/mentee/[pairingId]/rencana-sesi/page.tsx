@@ -65,7 +65,6 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
-  const [accepting, setAccepting] = useState(false);
 
   // First-time "how to use the planner" nudge. Read from localStorage in an
   // effect (not at init) to avoid an SSR/hydration mismatch.
@@ -287,20 +286,6 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     }
   }
 
-  // Mentee accepts the finalized plan → unlocks sessions on the mentor side.
-  async function handleAccept() {
-    setAccepting(true);
-    setErr(null);
-    try {
-      const res = await fetch(`/api/session-plans/${pairingId}/acknowledge`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error || "Gagal menerima rencana."); return; }
-      setPlan((cur) => (cur ? { ...cur, status: "acknowledged", acknowledgedAt: new Date().toISOString() } : cur));
-    } finally {
-      setAccepting(false);
-    }
-  }
-
   if (loading) return <SkeletonDashboard />;
   if (err && !plan) {
     return (
@@ -336,9 +321,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const totalHoursLabel = `${(totalMin / 60).toFixed(1).replace(".0", "")} jam`;
   const monthsLabel = `~${Math.max(1, Math.round(total / 4))} bulan`;
   const isFinalized = plan.status !== "draft";
-  const isAcknowledged = plan.status === "acknowledged";
-  // Editing is allowed only for the mentor on a still-draft plan. A finalized
-  // plan (mentor or mentee) is read-only.
+  // Editing is allowed only for the mentor on a still-draft plan. Once
+  // finalized, the plan is published into the sessions and is read-only.
   const readOnly = isFinalized || isMentee;
   const canDelete = total > PLAN_MIN_SESSIONS;
   const canAdd = total < PLAN_MAX_SESSIONS;
@@ -373,10 +357,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
             {isMentee
               ? "Ini rencana sesi yang sudah disusun mentor kamu. Klik ikon ⓘ di tiap sesi untuk lihat tujuan, output, dan dokumen yang perlu disiapkan."
               : isFinalized
-                ? (isAcknowledged
-                    ? `${pairing.mentee.name.split(/\s+/)[0]} sudah menerima rencana ini — sesi siap dijalankan.`
-                    : `Sudah difinalisasi — menunggu ${pairing.mentee.name.split(/\s+/)[0]} menerima. Rencana terkunci (read-only).`)
-                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi setelah ${pairing.mentee.name.split(/\s+/)[0]} setuju.`}
+                ? `Sudah difinalisasi & dipublikasikan — semua sesi ${pairing.mentee.name.split(/\s+/)[0]} sekarang mengikuti rencana ini. (read-only)`
+                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi untuk mengunci & memberi tahu ${pairing.mentee.name.split(/\s+/)[0]}.`}
           </p>
         </div>
       </div>
@@ -428,18 +410,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
 
       {isMentee && (
         <div className="rs-accept-bar">
-          {plan.status === "acknowledged" ? (
-            <span className="rs-accept-done">✓ Kamu sudah menerima rencana sesi ini. Mentor bisa mulai menjadwalkan sesi.</span>
-          ) : (
-            <>
-              <span className="rs-accept-text">
-                Kalau rencana sesi ini sudah oke buat kamu, terima — supaya mentor bisa mulai menjadwalkan sesinya.
-              </span>
-              <button type="button" className="db-btn db-btn-primary" onClick={handleAccept} disabled={accepting}>
-                {accepting ? "Memproses…" : "Terima rencana sesi"}
-              </button>
-            </>
-          )}
+          <span className="rs-accept-done">
+            ✓ Ini rencana sesi dari mentor kamu. Sesi sudah mengikuti rencana ini — tinggal pilih jadwalnya di tab Jadwal.
+          </span>
         </div>
       )}
 

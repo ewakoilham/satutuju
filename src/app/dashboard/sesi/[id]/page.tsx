@@ -63,6 +63,8 @@ interface SessionRow {
   obstacles?: string | null;
   summaryNotes?: string | null;
   menteeFeedback?: string | null;
+  durationMinutes?: number | null;
+  docChecklist?: string[] | null; // published from the mentor's session plan
   prepCompletedAt?: string | null;
   mentorPreviewAt?: string | null;
   mentorSubmittedAt?: string | null;
@@ -926,7 +928,9 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {/* Dokumen yang diperlukan — the session's curriculum deliverables,
               with upload. Hidden on locked/upcoming sessions. */}
           {vs !== "upcoming" && (() => {
-            const checklist = CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist || [];
+            const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
+              ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
+              ?? [];
             if (checklist.length === 0) return null;
             // Match a checklist item to an uploaded doc. Match by category ONLY
             // when it's specific (not the "other" catch-all, which would let any

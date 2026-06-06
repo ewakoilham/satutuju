@@ -118,7 +118,7 @@ export default function BookingModal({
                 { value: "", label: "Select a session\u2026" },
                 ...sessions.map(s => ({
                   value: s.id,
-                  label: `Session ${s.sessionNum}: ${s.topic}${s.status === "completed" ? " \u2713" : ""}`,
+                  label: `Sesi ${s.sessionNum}: ${s.topic}${s.durationMinutes ? ` \u00b7 ${s.durationMinutes} mnt` : ""}${s.status === "completed" ? " \u2713" : ""}`,
                 })),
               ]}
               className="w-full text-sm"

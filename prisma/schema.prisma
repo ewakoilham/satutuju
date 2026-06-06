@@ -270,6 +270,15 @@ model Session {
   scheduledAt DateTime?
   completedAt DateTime?
 
+  // Published session-plan content (set when the mentor finalizes the plan;
+  // null on pre-sync rows → readers fall back to the curriculum template).
+  durationMinutes Int?
+  objective       String?
+  deliverables    Json?   // string[]
+  menteePrep      Json?   // string[]
+  mentorPrep      Json?   // string[]
+  docChecklist    Json?   // string[]
+
   // Session tracking
   mentorRating    Int?   // 1-5 (mentee rates the mentor)
   menteeEnergy    Int?   // 1-5 (mentor observes mentee energy)
