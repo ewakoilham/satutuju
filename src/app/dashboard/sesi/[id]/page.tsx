@@ -48,6 +48,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string | null;
+  whatsapp?: string | null; // mentor's WhatsApp number (from onboarding)
 }
 
 interface SessionRow {
@@ -115,13 +116,25 @@ const ID_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep"
 function fmtDayShort(d: Date): string {
   return `${d.getDate()} ${ID_MONTHS[d.getMonth()]}`;
 }
+/** Build a wa.me link from an Indonesian phone number. Strips non-digits and
+ *  normalizes a leading 0 → 62. Returns null if there's nothing usable. */
+function waLink(raw?: string | null): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("0")) digits = "62" + digits.slice(1);
+  else if (digits.startsWith("8")) digits = "62" + digits;
+  return `https://wa.me/${digits}`;
+}
 function fmtAgo(seconds: number): string {
   if (seconds < 5) return "baru saja";
   if (seconds < 60) return `${seconds} dtk lalu`;
   const m = Math.floor(seconds / 60);
   if (m < 60) return `${m} mnt lalu`;
   const h = Math.floor(m / 60);
-  return `${h} jam lalu`;
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
 }
 
 /** Countdown / since label for the current-session hero. */
@@ -131,7 +144,9 @@ function fmtCountdown(targetMs: number, nowMs: number): { label: string; tone: "
   if (diff < 0) {
     if (absMin < 60) return { label: `dimulai ${absMin} mnt lalu`, tone: "past" };
     const h = Math.floor(absMin / 60);
-    return { label: `dimulai ${h} jam lalu`, tone: "past" };
+    if (h < 24) return { label: `dimulai ${h} jam lalu`, tone: "past" };
+    const d = Math.floor(h / 24);
+    return { label: `dimulai ${d} hari lalu`, tone: "past" };
   }
   if (absMin < 60) return { label: `mulai dalam ${absMin} mnt`, tone: "soon" };
   const h = Math.floor(absMin / 60);
@@ -733,6 +748,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
 
   const mentee = pairing.mentee;
   const mentorFirst = pairing.mentor.name.split(/\s+/)[0];
+  const mentorWa = waLink(pairing.mentor.whatsapp);
   const menteeFirst = mentee.name.split(/\s+/)[0];
   const phaseLabel = PHASE_LABELS[session.phase] || session.phase;
   const isMenteeRole = me?.id === mentee.id;
@@ -821,9 +837,15 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               {vs === "current" && (
                 <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Pindah jadwal</Link>
               )}
-              <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
-                <IcChat />Tanya {mentorFirst}
-              </a>
+              {mentorWa ? (
+                <a className="se-hero-btn primary" href={mentorWa} target="_blank" rel="noopener noreferrer">
+                  <IcChat />Tanya {mentorFirst}
+                </a>
+              ) : (
+                <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
+                  <IcChat />Tanya {mentorFirst}
+                </a>
+              )}
             </div>
           </section>
 
@@ -1106,7 +1128,8 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   let heroActions: React.ReactNode;
   if (isMenteeRole) {
     heroActions = (
-      <a className="se-hero-btn" href={`mailto:${pairing.mentor.email}`}>
+      <a className="se-hero-btn" href={mentorWa ?? `mailto:${pairing.mentor.email}`}
+        {...(mentorWa ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
         <IcChat />Hubungi {mentorFirst}
       </a>
     );
