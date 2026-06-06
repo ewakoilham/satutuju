@@ -4390,6 +4390,26 @@
   background: var(--primary-50); border: 0; text-decoration: none;
 }
 .dashboard-shell .se-prep-link:hover { background: var(--primary-100); }
+/* Actions column: an item may show both "Unduh template" + "Unggah". */
+.dashboard-shell .se-prep-actions {
+  flex-shrink: 0; align-self: center;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+/* Document-kind tag next to the checklist title. */
+.dashboard-shell .se-doc-tag {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  font-family: var(--font-heading); font-weight: 700;
+  font-size: 10.5px; letter-spacing: .03em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; line-height: 1.4;
+}
+.dashboard-shell .se-doc-tag.tpl { background: var(--primary-50); color: var(--primary); }
+.dashboard-shell .se-doc-tag.own { background: #fef3c7; color: #92400e; }
+/* Intro hint above the checklist explaining the two kinds. */
+.dashboard-shell .se-list-hint {
+  font-size: 13px; color: var(--text-muted); line-height: 1.5;
+  margin: -2px 0 10px;
+}
+.dashboard-shell .se-list-hint b { color: var(--primary-900); font-weight: 700; }
 .dashboard-shell .se-agenda-time {
   background: var(--primary); color: #fff;
   font-family: var(--font-mono); font-size: 11px; font-weight: 600;

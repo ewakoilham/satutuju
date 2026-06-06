@@ -24,6 +24,7 @@ import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { cleanUniName } from "@/data/university-enrichment";
 import { CURRICULUM } from "@/lib/curriculum";
+import { classifyDoc } from "@/lib/doc-templates";
 import { MATERIALS } from "@/data/materials";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
 
@@ -942,25 +943,45 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                   <h2>Dokumen yang diperlukan</h2>
                   <span className="stamp">{doneN} / {checklist.length} terunggah</span>
                 </div>
+                <p className="se-list-hint">
+                  Dokumen <b>template</b> kami sediakan — unduh, isi, lalu unggah balik ke sesi.
+                  Dokumen <b>punyamu</b> (CV, ijazah, paspor, dll.) kamu unggah sendiri.
+                </p>
                 <div className="se-list">
                   {checklist.map((item, i) => {
                     const cat = docChecklistCategory(item);
                     const doc = docForItem(item);
                     const uploaded = !!doc;
+                    const spec = classifyDoc(item);
+                    const isTemplate = spec.kind === "template";
                     return (
                       <div key={i} className="se-prep-row">
                         <span className={`se-prep-ic ${uploaded ? "ok" : "todo"}`}>{uploaded ? <IcCheck /> : ""}</span>
                         <div className="se-prep-body">
-                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{item}</div>
-                          {uploaded && <div className="se-prep-sub">terunggah · {doc!.fileName}</div>}
+                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>
+                            {item}
+                            <span className={`se-doc-tag ${isTemplate ? "tpl" : "own"}`}>
+                              {isTemplate ? "template" : "punyamu"}
+                            </span>
+                          </div>
+                          {uploaded
+                            ? <div className="se-prep-sub">terunggah · {doc!.fileName}</div>
+                            : isTemplate
+                              ? <div className="se-prep-sub">{spec.templateUrl ? "unduh template, isi, lalu unggah" : "template menyusul · unggah hasilmu di sini"}</div>
+                              : <div className="se-prep-sub">dari kamu · unggah dokumen</div>}
                         </div>
-                        {uploaded ? (
-                          <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
-                        ) : (
-                          <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
-                            {uploadingItem === item ? "Mengunggah…" : "Unggah"}
-                          </button>
-                        )}
+                        <div className="se-prep-actions">
+                          {isTemplate && spec.templateUrl && (
+                            <a className="se-prep-link" href={spec.templateUrl} target="_blank" rel="noopener noreferrer">Unduh template</a>
+                          )}
+                          {uploaded ? (
+                            <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
+                          ) : (
+                            <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
+                              {uploadingItem === item ? "Mengunggah…" : "Unggah"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
