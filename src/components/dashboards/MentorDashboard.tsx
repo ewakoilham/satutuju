@@ -87,6 +87,7 @@ interface MentorProfile {
   workStyle?: string | null;
   communicationStyle?: string | null;
   primaryRoles?: string[] | null;
+  phoneNumber?: string | null; // WhatsApp — mentee contacts the mentor here
 }
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
@@ -168,6 +169,31 @@ export default function MentorDashboard() {
   const [slots, setSlots] = useState<ScheduleSlot[]>(cachedSchedule?.slots ?? []);
   const [profile, setProfile] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(cachedPairings === undefined);
+
+  // One-time WhatsApp backfill for mentors who onboarded before the number was
+  // collected. Shows only when the profile is loaded and has no phoneNumber.
+  const [waInput, setWaInput] = useState("");
+  const [waSaving, setWaSaving] = useState(false);
+  const [waErr, setWaErr] = useState("");
+  async function saveWhatsapp() {
+    const num = waInput.trim();
+    if (num.replace(/\D/g, "").length < 8) { setWaErr("Nomor WhatsApp belum valid."); return; }
+    setWaSaving(true);
+    setWaErr("");
+    try {
+      const res = await fetch("/api/mentor-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: num }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setProfile((p) => (p ? { ...p, phoneNumber: num } : p));
+    } catch {
+      setWaErr("Gagal menyimpan. Coba lagi.");
+    } finally {
+      setWaSaving(false);
+    }
+  }
 
   // Time-of-day phase (override-able via the dev preview chip).
   const [phaseOverride, setPhaseOverride] = useState<TodPhase | null>(null);
@@ -388,6 +414,42 @@ export default function MentorDashboard() {
             </div>
           </div>
         </Link>
+      )}
+
+      {/* WhatsApp backfill — only when profile loaded and number missing. */}
+      {profile && !profile.phoneNumber && (
+        <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 mb-8">
+          <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+            <Icon name="chat" size={18} className="text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-emerald-800">Tambahkan nomor WhatsApp kamu</p>
+            <p className="text-xs text-emerald-700 mt-0.5">
+              Mentee menghubungi kamu lewat WhatsApp ini. Tanpa nomor, tombol &ldquo;Tanya mentor&rdquo; jatuh ke email.
+            </p>
+            <div className="flex items-center gap-2 mt-2.5">
+              <input
+                type="tel"
+                inputMode="tel"
+                value={waInput}
+                onChange={(e) => { setWaInput(e.target.value); setWaErr(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") saveWhatsapp(); }}
+                placeholder="08123456789"
+                className="input-field flex-1 text-sm max-w-[220px]"
+                disabled={waSaving}
+              />
+              <button
+                type="button"
+                onClick={saveWhatsapp}
+                disabled={waSaving || !waInput.trim()}
+                className="db-btn db-btn-primary sm whitespace-nowrap"
+              >
+                {waSaving ? "Menyimpan…" : "Simpan"}
+              </button>
+            </div>
+            {waErr && <p className="text-xs text-red-500 mt-1.5">{waErr}</p>}
+          </div>
+        </div>
       )}
 
       <div className="home-grid">
