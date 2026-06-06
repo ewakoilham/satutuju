@@ -104,7 +104,7 @@ function daysBetween(a: Date, b: Date): number {
 const MOOD_FACE: Record<number, string> = { 1: "😟", 2: "😐", 3: "🙂", 4: "😊", 5: "🔥" };
 const MOOD_LABEL: Record<number, string> = { 1: "Cemas", 2: "Datar", 3: "Stabil", 4: "Antusias", 5: "On fire" };
 
-type FilterKey = "all" | "active" | "paused" | "completed";
+type FilterKey = "all" | "active" | "completed";
 type SortKey = "attention" | "soonest" | "progress" | "alpha";
 
 /* ─── Page ────────────────────────────────────────────────────────── */
@@ -237,7 +237,6 @@ export default function MenteePage() {
   const visible = useMemo(() => {
     let out = [...cards];
     if (filter === "active") out = out.filter((c) => c.pairing.status === "active");
-    if (filter === "paused") out = out.filter((c) => c.pairing.status === "paused");
     if (filter === "completed") out = out.filter((c) => c.completed === c.total);
 
     out.sort((a, b) => {
@@ -386,7 +385,6 @@ export default function MenteePage() {
           [
             { key: "all", label: `Semua · ${cards.length}` },
             { key: "active", label: `Aktif · ${activeCount}` },
-            { key: "paused", label: `Paused · ${cards.filter((c) => c.pairing.status === "paused").length}` },
             { key: "completed", label: `Selesai · ${cards.filter((c) => c.completed === c.total).length}` },
           ] as Array<{ key: FilterKey; label: string }>
         ).map((f) => (
