@@ -55,19 +55,22 @@ export function minsToTime(mins: number): string {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
-/** All 90-min windows within a time range at 30-min steps */
+/** All `windowMins`-long windows within a time range at 30-min steps.
+ *  windowMins follows the chosen session length (60 / 90). If the window is
+ *  longer than the slot it returns a single window clamped to the slot end. */
 export function getTimeFrameOptions(
   startTime: string,
-  endTime: string
+  endTime: string,
+  windowMins = 90,
 ): Array<{ startTime: string; endTime: string }> {
   const start = toMins(startTime);
   const end   = toMins(endTime);
-  if (end - start <= 90) {
-    return [{ startTime, endTime: minsToTime(Math.min(start + 90, end)) }];
+  if (end - start <= windowMins) {
+    return [{ startTime, endTime: minsToTime(Math.min(start + windowMins, end)) }];
   }
   const opts: Array<{ startTime: string; endTime: string }> = [];
-  for (let s = start; s + 90 <= end; s += 30) {
-    opts.push({ startTime: minsToTime(s), endTime: minsToTime(s + 90) });
+  for (let s = start; s + windowMins <= end; s += 30) {
+    opts.push({ startTime: minsToTime(s), endTime: minsToTime(s + windowMins) });
   }
   return opts;
 }
