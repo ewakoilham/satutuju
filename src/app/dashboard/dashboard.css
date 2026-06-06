@@ -4136,6 +4136,17 @@
 }
 .dashboard-shell .rs-dur-input:disabled { background: var(--disabled-background, #fafafa); color: var(--text-muted-2, #94a3b8); }
 .dashboard-shell .rs-dur-unit { font-size: 11.5px; color: var(--text-muted-2, #94a3b8); }
+/* 60 / 90 duration toggle — fixed options that match the bookable slot lengths */
+.dashboard-shell .rs-dur-opt {
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  color: var(--text-muted, #64748b); background: #fff;
+  border: 1px solid var(--border, #dfe5eb); padding: 2px 8px;
+  border-radius: var(--radius-sm, .5rem); transition: all .12s ease;
+}
+.dashboard-shell .rs-dur-opt:hover { border-color: var(--primary-300, #aab9e6); }
+.dashboard-shell .rs-dur-opt.on {
+  background: var(--primary, #3958b3); border-color: var(--primary, #3958b3); color: #fff;
+}
 
 /* ── FIX: detail panel must span the full rs-row grid (4 cols), not land in
    the 26px first track ─────────────────────────────────────────────────── */

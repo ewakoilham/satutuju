@@ -913,7 +913,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               <section className="se-card">
                 <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
                 <div className="se-card-body">
-                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & persiapannya kebuka setelah kamu menyelesaikan sesi sebelumnya.</p>
+                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & dokumen yang perlu disiapkan ada di bawah dan di tab Materi — boleh kamu lihat & siapkan kapan saja.</p>
                 </div>
               </section>
               <section className="se-card" style={{ textAlign: "center" }}>
@@ -925,9 +925,9 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
             </>
           )}
 
-          {/* Dokumen yang diperlukan — the session's curriculum deliverables,
-              with upload. Hidden on locked/upcoming sessions. */}
-          {vs !== "upcoming" && (() => {
+          {/* Dokumen yang diperlukan — the session's deliverables, with upload.
+              Open on every session (no sequential lock). */}
+          {(() => {
             const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
               ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
               ?? [];
@@ -1036,7 +1036,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                   </div>
                   <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
-                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Akan datang"}
                   </span>
                 </Link>
               );
@@ -1543,7 +1543,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                   </div>
                   <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
-                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Akan datang"}
                   </span>
                 </Link>
               );

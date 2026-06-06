@@ -24,8 +24,8 @@ import Modal from "@/components/ui/Modal";
 import {
   PLAN_MAX_SESSIONS,
   PLAN_MIN_SESSIONS,
-  PLAN_MIN_DURATION,
-  PLAN_MAX_DURATION,
+  PLAN_DEFAULT_DURATION,
+  PLAN_DURATION_OPTIONS,
   PLAN_PHASES,
   type SessionPlanRow,
   planTotalMinutes,
@@ -180,10 +180,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   function setPhase(id: string, phase: SessionPlanRow["phase"]) {
     mutate((rows) => rows.map((r) => (r.id === id ? { ...r, phase } : r)));
   }
-  /** Free-entry duration (minutes), clamped to the allowed range. */
+  /** Session length is one of the bookable slot lengths (60 / 90 min). */
   function setDuration(id: string, minutes: number) {
-    const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, Math.round(minutes)));
-    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: n } : r)));
+    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: minutes } : r)));
   }
   function duplicateRow(id: string) {
     mutate((rows) => {
@@ -229,7 +228,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           order: rows.length + 1,
           title: "Sesi baru",
           phase: "Writing",
-          durationMinutes: 75,
+          durationMinutes: PLAN_DEFAULT_DURATION,
         },
       ];
     });
@@ -431,7 +430,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                 <ul>
                   <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang sesi.</li>
                   <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
-                  <li><b>Klik pil fase</b> untuk ganti fase, dan <b>ketik angka durasi</b> (menit).</li>
+                  <li><b>Klik pil fase</b> untuk ganti fase, dan pilih <b>durasi 60 / 90 menit</b> (selaras dengan slot kalender).</li>
                   <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
                   <li>Klik ikon <b>ⓘ</b> di kanan untuk lihat detail tiap sesi (tujuan &amp; persiapan).</li>
                   <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
@@ -501,25 +500,18 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                           </select>
                           <span className="rs-phase-caret" aria-hidden="true">▾</span>
                         </span>
-                        <span className="rs-dur" title="Ketik durasi dalam menit">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            className="rs-dur-input"
-                            defaultValue={row.durationMinutes}
-                            min={PLAN_MIN_DURATION}
-                            max={PLAN_MAX_DURATION}
-                            step={5}
-                            aria-label="Durasi sesi (menit)"
-                            onBlur={(e) => {
-                              const raw = parseInt(e.currentTarget.value, 10);
-                              const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, isNaN(raw) ? row.durationMinutes : raw));
-                              e.currentTarget.value = String(n);
-                              if (n !== row.durationMinutes) setDuration(row.id, n);
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
-                          />
-                          <span className="rs-dur-unit">mnt</span>
+                        <span className="rs-dur" role="group" aria-label="Durasi sesi" title="Durasi sesi (selaras dengan slot kalender)">
+                          {PLAN_DURATION_OPTIONS.map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              className={`rs-dur-opt${row.durationMinutes === opt ? " on" : ""}`}
+                              aria-pressed={row.durationMinutes === opt}
+                              onClick={() => setDuration(row.id, opt)}
+                            >
+                              {opt} mnt
+                            </button>
+                          ))}
                         </span>
                       </>
                     )}
