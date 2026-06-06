@@ -163,12 +163,16 @@ export default function ResourcesPage() {
     MATERIALS.find((m) => m.id === "curriculum");
 
   // Recently opened — real history from localStorage, mapped back to materials.
+  // Respect role visibility so mentor-only materials never leak into a mentee's
+  // history (e.g. Mentor Toolkit, Mentee Registration Journey).
   const recentRows = useMemo(
     () =>
       recent
         .map((r) => ({ at: r.at, m: MATERIALS.find((x) => x.id === r.id) }))
-        .filter((x): x is { at: number; m: Material } => !!x.m && !!x.m.href),
-    [recent],
+        .filter((x): x is { at: number; m: Material } =>
+          !!x.m && !!x.m.href &&
+          (x.m.roles === null || x.m.roles.includes(role as "mentor" | "mentee" | "admin"))),
+    [recent, role],
   );
 
   // "Untuk kamu" — mentor's nearest upcoming/active session across mentees.
@@ -223,15 +227,6 @@ export default function ResourcesPage() {
             <span className="db-pill">Lanjutkan baca</span>
             <h2>{featured.title}.</h2>
             <p>{featured.description}</p>
-            <div className="hero-progress">
-              <div className="track">
-                <div className="fill" style={{ width: `${featured.progress ?? 0}%` }} />
-              </div>
-              <div className="lbl">
-                <span>{featured.progressLabel ?? `${featured.progress ?? 0}%`}</span>
-                <span>{featured.progress && featured.progress > 0 ? "lanjutkan" : "mulai dari awal"}</span>
-              </div>
-            </div>
             <div className="actions">
               {featured.href ? (
                 <Link href={featured.href} className="db-btn db-btn-primary" onClick={() => recordOpen(featured.id)}>

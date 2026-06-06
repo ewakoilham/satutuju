@@ -700,16 +700,6 @@ export default function MenteePage() {
               ))
             )}
           </div>
-
-          <div className="mentee-side-card">
-            <h3>Lulus dari kamu</h3>
-            <div className="desc">
-              Mentee yang sudah menyelesaikan program. Alumni tracking akan tersedia segera.
-            </div>
-            <div style={{ fontSize: 13, color: "var(--text-muted-3)", padding: "8px 0" }}>
-              Belum ada alumni tercatat.
-            </div>
-          </div>
         </aside>
       </div>
 

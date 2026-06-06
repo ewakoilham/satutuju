@@ -204,12 +204,6 @@ export default function CurriculumPage() {
             Pakai apa adanya, atau sesuaikan jumlah sesi per mentee.
           </p>
         </div>
-        <div className="actions">
-          <Link href="/dashboard/mentee" className="kc-btn kc-btn-primary">
-            <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            Pakai untuk mentee baru
-          </Link>
-        </div>
       </div>
 
       {/* Route map */}

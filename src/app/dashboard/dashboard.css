@@ -5291,3 +5291,80 @@
 @media (max-width: 720px) {
   .dashboard-shell .kc-page .det-grid { grid-template-columns: 1fr; gap: 16px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE OVERRIDES
+   dashboard.css was authored light-only with many hardcoded light hex
+   surfaces (#fff, light gradients) that don't respond to the theme. In
+   dark mode those rendered as washed-out / near-invisible (light text on
+   light cards). Remap the surfaces to the theme tokens so dark mode reads
+   cleanly. Text/pill colors already come from variables.
+   ════════════════════════════════════════════════════════════════════ */
+/* Greet / hero gradients (warm cream band → subtle elevated band) */
+html.dark .dashboard-shell .sesi-hero,
+html.dark .dashboard-shell .hero-shelf {
+  background: linear-gradient(180deg, var(--surface-elevated) 0%, var(--surface) 70%);
+}
+
+/* Sesi detail hero */
+html.dark .dashboard-shell .se-hero {
+  background: linear-gradient(160deg, var(--primary-50) 0%, var(--surface) 70%);
+  border-color: var(--border);
+}
+html.dark .dashboard-shell .se-hero.done {
+  background: linear-gradient(160deg, var(--surface-green) 0%, var(--surface) 70%);
+  border-color: var(--surface-green-border);
+}
+
+/* White card / button / input surfaces → elevated surface */
+html.dark .dashboard-shell .se-hero-btn,
+html.dark .dashboard-shell .se-prep-ic,
+html.dark .dashboard-shell .se-rf-textarea,
+html.dark .dashboard-shell .se-rf-mood button,
+html.dark .dashboard-shell .se-file-ico,
+html.dark .dashboard-shell .se-file-dl,
+html.dark .dashboard-shell .se-rail-dot.upcoming,
+html.dark .dashboard-shell .db-btn-outline:hover {
+  background: var(--surface-elevated);
+}
+
+/* Light tint states → primary tint */
+html.dark .dashboard-shell .se-rail-row.active { background: var(--primary-100); }
+html.dark .dashboard-shell .se-rail-badge.nanti { background: var(--primary-100); color: var(--text-muted); }
+html.dark .dashboard-shell .se-rf-label .priv { background: var(--primary-100); }
+
+/* AI box (pinkish) → purple tinted surface */
+html.dark .dashboard-shell .se-ai-box,
+html.dark .dashboard-shell .se-ai-gen {
+  background: var(--surface-purple);
+  border-color: var(--surface-purple-border);
+  color: var(--text-purple);
+}
+html.dark .dashboard-shell .se-ai-gen.ghost {
+  background: var(--surface-elevated);
+  color: var(--text-purple);
+  border-color: var(--surface-purple-border);
+}
+
+/* Semantic error box + warn hero button */
+html.dark .dashboard-shell .se-error,
+html.dark .dashboard-shell .se-hero-btn.warn {
+  background: var(--surface-red);
+  border-color: var(--surface-red-border);
+  color: var(--text-red);
+}
+
+/* Request-slot modal inputs */
+html.dark .dashboard-shell .rs-title[contenteditable="true"]:focus,
+html.dark .dashboard-shell .rs-dur-input,
+html.dark .dashboard-shell .rs-dur-opt {
+  background: var(--surface-elevated);
+}
+
+/* Calendar event chips (pending/amber light bg) → amber tinted surface */
+html.dark .dashboard-shell .dayv-evt.pending,
+html.dark .dashboard-shell .agenda-evt.pending {
+  background: var(--surface-amber);
+  border-color: var(--surface-amber-border);
+  color: var(--text-amber);
+}
