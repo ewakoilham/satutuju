@@ -50,11 +50,15 @@ const PERSONAL_PATTERNS: RegExp[] = [
  *  Populated as the program publishes each template. Anything not listed has
  *  no download button yet. */
 const TEMPLATE_URLS: Record<string, string> = {
-  // "Application tracker": "https://…",
-  // "Deadline calendar": "https://…",
-  // "University shortlist document": "https://…",
-  // "Narrative core document": "https://…",
-  // "ML/PS outline": "https://…",
+  "University wish list": "/templates/university-wish-list.xlsx",
+  "Financial overview": "/templates/financial-overview.xlsx",
+  "University shortlist document": "/templates/university-shortlist.xlsx",
+  "Application tracker": "/templates/application-tracker.xlsx",
+  "Deadline calendar": "/templates/deadline-calendar.xlsx",
+  "Narrative core document": "/templates/narrative-core.docx",
+  "ML/PS outline": "/templates/ml-ps-outline.docx",
+  "Interview prep notes": "/templates/interview-prep-notes.docx",
+  "Post-submission plan": "/templates/post-submission-plan.docx",
 };
 
 /** Classify a checklist label into a document kind + optional template URL. */
