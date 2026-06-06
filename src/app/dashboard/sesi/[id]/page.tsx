@@ -1615,6 +1615,46 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 );
               })()}
 
+              {/* Template sesi — program templates the mentee downloads, fills,
+                  and uploads. Download-only for the mentor (no upload); personal
+                  docs (CV/ijazah/etc.) are excluded since those come from the mentee. */}
+              {(() => {
+                const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
+                  ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
+                  ?? [];
+                const templates = checklist
+                  .map((item) => ({ item, spec: classifyDoc(item) }))
+                  .filter((x) => x.spec.kind === "template");
+                if (templates.length === 0) return null;
+                return (
+                  <>
+                    <div className="se-rail-head" style={{ marginTop: 20 }}>
+                      <h3>Template sesi</h3>
+                      <span className="count">{templates.length}</span>
+                    </div>
+                    <div className="se-rail-list">
+                      {templates.map(({ item, spec }, i) =>
+                        spec.templateUrl ? (
+                          <a key={i} href={spec.templateUrl} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
+                            <div className="se-rail-info">
+                              <div className="se-rail-title">{item}</div>
+                              <div className="se-rail-meta">Unduh template</div>
+                            </div>
+                          </a>
+                        ) : (
+                          <div key={i} className="se-rail-row" style={{ cursor: "default" }}>
+                            <div className="se-rail-info">
+                              <div className="se-rail-title">{item}</div>
+                              <div className="se-rail-meta">template menyusul</div>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+
               <div className="se-rail-head" style={{ marginTop: 20 }}>
                 <h3>Dokumen mentee</h3>
                 <span className="count">{allDocs.length}</span>
