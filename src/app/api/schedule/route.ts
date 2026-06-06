@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       )
     )] as string[];
     const { data: sessionData } = sessionIds.length > 0
-      ? await supabase.from("Session").select("id, sessionNum, topic, phase").in("id", sessionIds)
+      ? await supabase.from("Session").select("id, sessionNum, topic, phase, durationMinutes").in("id", sessionIds)
       : { data: [] };
     const sessionMap = new Map((sessionData || []).map((s: { id: string }) => [s.id, s]));
 
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       )
     )] as string[];
     const { data: sessionData } = sessionIds.length > 0
-      ? await supabase.from("Session").select("id, sessionNum, topic, phase").in("id", sessionIds)
+      ? await supabase.from("Session").select("id, sessionNum, topic, phase, durationMinutes").in("id", sessionIds)
       : { data: [] };
     const sessionMap = new Map((sessionData || []).map((s: { id: string }) => [s.id, s]));
 

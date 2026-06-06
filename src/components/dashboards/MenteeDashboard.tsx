@@ -31,6 +31,8 @@ interface SessionRow {
   topic?: string | null;
   scheduledAt?: string | null;
   completedAt?: string | null;
+  durationMinutes?: number | null; // published from the mentor's session plan
+  objective?: string | null;
 }
 interface TaskRow {
   id: string;
@@ -99,8 +101,10 @@ function relDays(d: Date, now: Date): string {
   if (n === 1) return "besok";
   return `${n} hari lagi`;
 }
-function durationFor(sessionNum: number): number {
-  return CURRICULUM.find((c) => c.sessionNum === sessionNum)?.duration ?? 60;
+function durationFor(s: { sessionNum: number; durationMinutes?: number | null }): number {
+  // Prefer the duration published from the mentor's plan; fall back to the
+  // curriculum template for sessions not yet (re)finalized.
+  return s.durationMinutes ?? CURRICULUM.find((c) => c.sessionNum === s.sessionNum)?.duration ?? 60;
 }
 function phaseLabel(phase?: string | null): string {
   if (!phase) return "";
@@ -255,6 +259,10 @@ export default function MenteeDashboard() {
 
   const nextScheduled = d.next?.scheduledAt ? new Date(d.next.scheduledAt) : null;
   const validNextDate = nextScheduled && !isNaN(nextScheduled.getTime()) ? nextScheduled : null;
+  // A non-completed session whose scheduled date already passed isn't "next" —
+  // it's overdue / not yet wrapped up. Keep the card's message to a single
+  // accurate signal instead of "Sesi berikutnya" + "sudah lewat".
+  const nextIsPast = validNextDate ? daysFromNow(validNextDate, now) < 0 : false;
 
   return (
     <>
@@ -268,7 +276,9 @@ export default function MenteeDashboard() {
               <span className={`tod ${tod.toneClass}`}><TodIcon phase={phase} /></span>
               <br />
               {d.next
-                ? `Sesi ${d.next.sessionNum} bareng ${mentorFirst}${validNextDate ? `, ${relDays(validNextDate, now)}` : ""}.`
+                ? nextIsPast
+                  ? `Sesi ${d.next.sessionNum} bareng ${mentorFirst} belum selesai.`
+                  : `Sesi ${d.next.sessionNum} bareng ${mentorFirst}${validNextDate ? `, ${relDays(validNextDate, now)}` : ""}.`
                 : "Semua sesi sudah selesai — kerja bagus!"}
             </h1>
             {greetSubBits.length > 0 && (
@@ -319,8 +329,8 @@ export default function MenteeDashboard() {
           {/* Sesi berikutnya */}
           <section className="section">
             <div className="section-head">
-              <h2>Sesi berikutnya</h2>
-              {validNextDate && <span className="meta">{relDays(validNextDate, now)}</span>}
+              <h2>{nextIsPast ? "Sesi belum selesai" : "Sesi berikutnya"}</h2>
+              {validNextDate && !nextIsPast && <span className="meta">{relDays(validNextDate, now)}</span>}
             </div>
 
             {d.next ? (
@@ -334,7 +344,7 @@ export default function MenteeDashboard() {
                     </span>
                     {validNextDate ? (
                       <span className="today-when">
-                        mulai <b>{fmtTime(validNextDate)} WIB</b> · Google Meet · {durationFor(d.next.sessionNum)} menit
+                        mulai <b>{fmtTime(validNextDate)} WIB</b> · Google Meet · {durationFor(d.next)} menit
                       </span>
                     ) : (
                       <span className="today-when">belum dijadwalkan</span>
@@ -457,7 +467,7 @@ export default function MenteeDashboard() {
               <div className="week-list">
                 {d.upcoming.map((s) => {
                   const start = new Date(s.scheduledAt!);
-                  const end = new Date(start.getTime() + durationFor(s.sessionNum) * 60_000);
+                  const end = new Date(start.getTime() + durationFor(s) * 60_000);
                   const { day, mo } = fmtDay(start);
                   return (
                     <Link key={s.id} href={`/dashboard/sesi/${s.id}`} className="week-row">
@@ -508,7 +518,7 @@ export default function MenteeDashboard() {
                 </Link>
                 <Link href="/dashboard/schedule" className="chip chip-outline">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                  Jadwalkan
+                  Book sesi
                 </Link>
               </div>
             </div>
@@ -532,13 +542,17 @@ export default function MenteeDashboard() {
               <p>
                 Fokus sekarang: <b>{d.next.topic || phaseLabel(d.next.phase)}</b>.
                 {(() => {
-                  const obj = CURRICULUM.find((c) => c.sessionNum === d.next!.sessionNum)?.objective;
+                  const obj = d.next!.objective ?? CURRICULUM.find((c) => c.sessionNum === d.next!.sessionNum)?.objective;
                   return obj ? ` ${obj}.` : "";
                 })()}
               </p>
               <Link href={`/dashboard/sesi/${d.next.id}`} className="db-btn db-btn-outline sm">
                 Lihat checklist
                 <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              </Link>
+              <Link href={`/dashboard/mentee/${pairing.id}/rencana-sesi`} className="more" style={{ marginTop: 10, display: "inline-flex" }}>
+                Lihat rencana sesi lengkap
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
               </Link>
             </div>
           )}

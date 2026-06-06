@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
-import { fmtDate, getTimeFrameOptions } from "./helpers";
+import { fmtDate, getTimeFrameOptions, toMins } from "./helpers";
 import type { Slot, Session } from "./types";
 
 interface BookingModalProps {
@@ -33,29 +33,49 @@ export default function BookingModal({
   const [saving, setSaving]       = useState(false);
   const [err, setErr]             = useState("");
 
+  // Booking window length follows the chosen session (60 / 90 min); defaults
+  // to 90 until a session is picked. If the session is longer than the slot,
+  // booking is blocked (pick a longer slot).
+  const selectedSession = useMemo(() => sessions.find((s) => s.id === sessionId) ?? null, [sessions, sessionId]);
+  const windowMins = selectedSession?.durationMinutes ?? 90;
+  const slotMins = slot ? toMins(slot.endTime) - toMins(slot.startTime) : 0;
+  const tooLong = !!selectedSession?.durationMinutes && selectedSession.durationMinutes > slotMins;
+
   const timeFrameOptions = useMemo(
-    () => slot ? getTimeFrameOptions(slot.startTime, slot.endTime) : [],
-    [slot]
+    () => slot ? getTimeFrameOptions(slot.startTime, slot.endTime, windowMins) : [],
+    [slot, windowMins]
   );
 
-  // Reset form when modal opens for a new slot
+  // Reset form when modal opens for a new slot.
   useEffect(() => {
     if (open && slot) {
       setSessionId("");
       setMsg("");
       setErr("");
-      const opts = getTimeFrameOptions(slot.startTime, slot.endTime);
+      const opts = getTimeFrameOptions(slot.startTime, slot.endTime, 90);
       const match = initialWindow
         ? (opts.find(o => o.startTime === initialWindow.startTime) ?? opts[0])
         : opts[0];
       if (match) {
-        const key = `${match.startTime}|${match.endTime}`;
-        setTimeFrame(key);
+        setTimeFrame(`${match.startTime}|${match.endTime}`);
         onPreviewChange(match.startTime, match.endTime);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, slot?.id]);
+
+  // When the picked session changes the window length, snap the requested
+  // window to the first slot-fitting window of that length + update the ghost.
+  useEffect(() => {
+    if (!open || !slot || !sessionId || tooLong) return;
+    const opts = getTimeFrameOptions(slot.startTime, slot.endTime, windowMins);
+    const first = opts[0];
+    if (first) {
+      setTimeFrame(`${first.startTime}|${first.endTime}`);
+      onPreviewChange(first.startTime, first.endTime);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   function handleTimeFrameChange(v: string) {
     setTimeFrame(v);
@@ -118,18 +138,25 @@ export default function BookingModal({
                 { value: "", label: "Select a session\u2026" },
                 ...sessions.map(s => ({
                   value: s.id,
-                  label: `Session ${s.sessionNum}: ${s.topic}${s.status === "completed" ? " \u2713" : ""}`,
+                  label: `Sesi ${s.sessionNum}: ${s.topic}${s.durationMinutes ? ` \u00b7 ${s.durationMinutes} mnt` : ""}${s.status === "completed" ? " \u2713" : ""}`,
                 })),
               ]}
               className="w-full text-sm"
             />
           </div>
 
-          {/* Time-frame selector (only when slot > 90 min) */}
-          {timeFrameOptions.length > 1 && (
+          {/* Doesn't fit — session longer than the slot. */}
+          {tooLong && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Sesi ini {windowMins} mnt, tapi slot cuma {slotMins} mnt. Pilih slot yang lebih panjang.
+            </p>
+          )}
+
+          {/* Time-frame selector — windows match the session length (60/90) */}
+          {!tooLong && timeFrameOptions.length > 1 && (
             <div>
               <label className="text-xs text-text-muted font-medium block mb-1">
-                90-min window
+                Jendela {windowMins} mnt
               </label>
               <Select
                 value={timeFrame}
@@ -156,7 +183,7 @@ export default function BookingModal({
 
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="btn-ghost flex-1 text-sm py-2">Cancel</button>
-          <button onClick={book} disabled={saving || !sessionId}
+          <button onClick={book} disabled={saving || !sessionId || tooLong}
             className="btn-primary flex-1 text-sm py-2">
             {saving ? "Sending\u2026" : "Send Request"}
           </button>

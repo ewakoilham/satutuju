@@ -157,7 +157,6 @@ export default function SchedulePage() {
   // ── Mentee side-rail data (handoff: "Sesi mendatang" + "Ketersediaan
   //    rutin mentor"), derived from the same real slots/bookings. ──────────
   const FULL_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  const mentorName = useMemo(() => slots.find((s) => s.mentor?.name)?.mentor?.name || "", [slots]);
 
   const menteeUpcoming = useMemo(() => {
     if (!isMentee) return [];
@@ -177,19 +176,21 @@ export default function SchedulePage() {
     return out.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 5);
   }, [isMentee, slots]);
 
-  const mentorAvailability = useMemo(() => {
+  // Real upcoming open slots — SAME source/logic as the Agenda view (all future
+  // untaken slots), so the side panel always matches the actual availability the
+  // mentor has, not a stale weekday pattern. Concrete dates, clickable.
+  const mentorOpenSlots = useMemo(() => {
     if (!isMentee) return [];
-    const map = new Map<string, { day: number; start: string; end: string }>();
-    for (const s of slots) {
-      const taken = (s.bookings || []).some((b) => b.status === "accepted" || b.status === "pending");
-      if (taken) continue;
-      const d = new Date(`${s.date}T${s.startTime}`);
-      if (isNaN(d.getTime())) continue;
-      const key = `${d.getDay()}-${s.startTime}-${s.endTime}`;
-      if (!map.has(key)) map.set(key, { day: d.getDay(), start: s.startTime, end: s.endTime });
-    }
-    return [...map.values()].sort((a, b) => a.day - b.day || a.start.localeCompare(b.start)).slice(0, 6);
-  }, [isMentee, slots]);
+    return slots
+      .filter((s) => {
+        const taken = (s.bookings || []).some((b) => b.status === "accepted" || b.status === "pending");
+        return !taken && s.date >= today;
+      })
+      .map((s) => ({ id: s.id, date: s.date, start: s.startTime, end: s.endTime, d: new Date(`${s.date}T${s.startTime}`) }))
+      .filter((s) => !isNaN(s.d.getTime()))
+      .sort((a, b) => (a.date === b.date ? a.start.localeCompare(b.start) : a.date.localeCompare(b.date)))
+      .slice(0, 8);
+  }, [isMentee, slots, today]);
 
   // Active day for the Hari view.
   const activeDay = dayDate ?? today;
@@ -316,7 +317,10 @@ export default function SchedulePage() {
     }
     return { name: "Tersedia", sub: s.notes || `${dur(s)} menit` };
   }
-  const parseDay = (ds: string) => new Date(ds + "T00:00:00");
+  // Function declaration (hoisted) — the periodSlots useMemo above references
+  // parseDay in its "bulan" branch, which runs earlier in the component body.
+  // A const arrow here would be in the TDZ and crash the month view.
+  function parseDay(ds: string) { return new Date(ds + "T00:00:00"); }
 
   async function handleSaveSlotBaru() {
     if (mode.type !== "creating") return;
@@ -882,16 +886,25 @@ export default function SchedulePage() {
               </div>
 
               <div className="jadwal-side-card">
-                <h3>Ketersediaan rutin {mentorName ? mentorName.split(/\s+/)[0] : "mentor"}</h3>
-                {mentorAvailability.length === 0 ? (
-                  <div className="desc">Mentor belum membuka slot rutin minggu ini. Cek lagi nanti atau minta lewat chat.</div>
+                <h3>Slot terbuka mentor</h3>
+                {mentorOpenSlots.length === 0 ? (
+                  <div className="desc">Mentor belum membuka slot baru. Cek lagi nanti atau minta lewat chat.</div>
                 ) : (
                   <div style={{ marginTop: 4 }}>
-                    {mentorAvailability.map((a, i) => (
-                      <div key={i} className="dok-st-row" style={{ borderTop: i ? "1px solid var(--border)" : "none", padding: "9px 0" }}>
-                        <span style={{ fontFamily: "var(--font-poppins)", fontWeight: 600, fontSize: 13, color: "var(--primary-900)" }}>{FULL_DAYS[a.day]}</span>
+                    {mentorOpenSlots.map((a, i) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className="dok-st-row"
+                        style={{ width: "100%", border: "none", background: "none", borderTop: i ? "1px solid var(--border)" : "none", padding: "9px 0", cursor: "pointer", textAlign: "left" }}
+                        onClick={() => { setDayDate(a.date); setView("hari"); }}
+                        title="Lihat slot ini di kalender"
+                      >
+                        <span style={{ fontFamily: "var(--font-poppins)", fontWeight: 600, fontSize: 13, color: "var(--primary-900)" }}>
+                          {FULL_DAYS[a.d.getDay()]} {a.d.getDate()} {ID_MONTHS[a.d.getMonth()]}
+                        </span>
                         <span className="n" style={{ fontFamily: "var(--font-geist-mono)" }}>{a.start} — {a.end}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}

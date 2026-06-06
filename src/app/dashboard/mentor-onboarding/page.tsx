@@ -39,6 +39,12 @@ const QUESTIONS: Question[] = [
     subtitle: "Kota atau domisili kamu saat ini",
     type: "text",
   },
+  {
+    id: "m2w", field: "phoneNumber", section: "Pengalaman Studi",
+    question: "Nomor WhatsApp kamu?",
+    subtitle: "Mentee menghubungi kamu lewat WhatsApp ini — misalnya 0812 3456 7890",
+    type: "text",
+  },
   // S1 dipisah jadi 3: Studi · Kampus · Gelar
   {
     id: "m3", field: "undergradMajor", section: "Pengalaman Studi",

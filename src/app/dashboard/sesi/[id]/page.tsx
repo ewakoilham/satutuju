@@ -24,6 +24,7 @@ import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import { cleanUniName } from "@/data/university-enrichment";
 import { CURRICULUM } from "@/lib/curriculum";
+import { classifyDoc } from "@/lib/doc-templates";
 import { MATERIALS } from "@/data/materials";
 import type { PrepItem } from "@/app/api/sessions/[id]/prep/route";
 
@@ -47,6 +48,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string | null;
+  whatsapp?: string | null; // mentor's WhatsApp number (from onboarding)
 }
 
 interface SessionRow {
@@ -63,6 +65,8 @@ interface SessionRow {
   obstacles?: string | null;
   summaryNotes?: string | null;
   menteeFeedback?: string | null;
+  durationMinutes?: number | null;
+  docChecklist?: string[] | null; // published from the mentor's session plan
   prepCompletedAt?: string | null;
   mentorPreviewAt?: string | null;
   mentorSubmittedAt?: string | null;
@@ -112,13 +116,25 @@ const ID_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep"
 function fmtDayShort(d: Date): string {
   return `${d.getDate()} ${ID_MONTHS[d.getMonth()]}`;
 }
+/** Build a wa.me link from an Indonesian phone number. Strips non-digits and
+ *  normalizes a leading 0 → 62. Returns null if there's nothing usable. */
+function waLink(raw?: string | null): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("0")) digits = "62" + digits.slice(1);
+  else if (digits.startsWith("8")) digits = "62" + digits;
+  return `https://wa.me/${digits}`;
+}
 function fmtAgo(seconds: number): string {
   if (seconds < 5) return "baru saja";
   if (seconds < 60) return `${seconds} dtk lalu`;
   const m = Math.floor(seconds / 60);
   if (m < 60) return `${m} mnt lalu`;
   const h = Math.floor(m / 60);
-  return `${h} jam lalu`;
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
 }
 
 /** Countdown / since label for the current-session hero. */
@@ -128,7 +144,9 @@ function fmtCountdown(targetMs: number, nowMs: number): { label: string; tone: "
   if (diff < 0) {
     if (absMin < 60) return { label: `dimulai ${absMin} mnt lalu`, tone: "past" };
     const h = Math.floor(absMin / 60);
-    return { label: `dimulai ${h} jam lalu`, tone: "past" };
+    if (h < 24) return { label: `dimulai ${h} jam lalu`, tone: "past" };
+    const d = Math.floor(h / 24);
+    return { label: `dimulai ${d} hari lalu`, tone: "past" };
   }
   if (absMin < 60) return { label: `mulai dalam ${absMin} mnt`, tone: "soon" };
   const h = Math.floor(absMin / 60);
@@ -730,6 +748,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
 
   const mentee = pairing.mentee;
   const mentorFirst = pairing.mentor.name.split(/\s+/)[0];
+  const mentorWa = waLink(pairing.mentor.whatsapp);
   const menteeFirst = mentee.name.split(/\s+/)[0];
   const phaseLabel = PHASE_LABELS[session.phase] || session.phase;
   const isMenteeRole = me?.id === mentee.id;
@@ -818,12 +837,15 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               {vs === "current" && (
                 <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Pindah jadwal</Link>
               )}
-              {vs === "upcoming" && (
-                <Link className="se-hero-btn" href="/dashboard/schedule"><IcCal />Ajukan jadwal</Link>
+              {mentorWa ? (
+                <a className="se-hero-btn primary" href={mentorWa} target="_blank" rel="noopener noreferrer">
+                  <IcChat />Tanya {mentorFirst}
+                </a>
+              ) : (
+                <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
+                  <IcChat />Tanya {mentorFirst}
+                </a>
               )}
-              <a className="se-hero-btn primary" href={`mailto:${pairing.mentor.email}`}>
-                <IcChat />Tanya {mentorFirst}
-              </a>
             </div>
           </section>
 
@@ -911,22 +933,18 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               <section className="se-card">
                 <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
                 <div className="se-card-body">
-                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & persiapannya kebuka setelah kamu menyelesaikan sesi sebelumnya.</p>
-                </div>
-              </section>
-              <section className="se-card" style={{ textAlign: "center" }}>
-                <div className="se-card-body">
-                  <p className="muted" style={{ marginBottom: 14 }}>Pengen mulai lebih awal? Ajukan jadwal ke {mentorFirst}.</p>
-                  <Link className="se-hero-btn" href="/dashboard/schedule" style={{ display: "inline-flex" }}><IcCal />Ajukan jadwal lebih awal</Link>
+                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>. Materi & dokumen yang perlu disiapkan ada di bawah dan di tab Materi — boleh kamu lihat & siapkan kapan saja.</p>
                 </div>
               </section>
             </>
           )}
 
-          {/* Dokumen yang diperlukan — the session's curriculum deliverables,
-              with upload. Hidden on locked/upcoming sessions. */}
-          {vs !== "upcoming" && (() => {
-            const checklist = CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist || [];
+          {/* Dokumen yang diperlukan — the session's deliverables, with upload.
+              Open on every session (no sequential lock). */}
+          {(() => {
+            const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
+              ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
+              ?? [];
             if (checklist.length === 0) return null;
             // Match a checklist item to an uploaded doc. Match by category ONLY
             // when it's specific (not the "other" catch-all, which would let any
@@ -947,25 +965,45 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                   <h2>Dokumen yang diperlukan</h2>
                   <span className="stamp">{doneN} / {checklist.length} terunggah</span>
                 </div>
+                <p className="se-list-hint">
+                  Dokumen <b>template</b> kami sediakan — unduh, isi, lalu unggah balik ke sesi.
+                  Dokumen <b>punyamu</b> (CV, ijazah, paspor, dll.) kamu unggah sendiri.
+                </p>
                 <div className="se-list">
                   {checklist.map((item, i) => {
                     const cat = docChecklistCategory(item);
                     const doc = docForItem(item);
                     const uploaded = !!doc;
+                    const spec = classifyDoc(item);
+                    const isTemplate = spec.kind === "template";
                     return (
                       <div key={i} className="se-prep-row">
                         <span className={`se-prep-ic ${uploaded ? "ok" : "todo"}`}>{uploaded ? <IcCheck /> : ""}</span>
                         <div className="se-prep-body">
-                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>{item}</div>
-                          {uploaded && <div className="se-prep-sub">terunggah · {doc!.fileName}</div>}
+                          <div className="se-prep-title" style={uploaded ? { textDecoration: "line-through", color: "var(--text-muted-2)" } : undefined}>
+                            {item}
+                            <span className={`se-doc-tag ${isTemplate ? "tpl" : "own"}`}>
+                              {isTemplate ? "template" : "punyamu"}
+                            </span>
+                          </div>
+                          {uploaded
+                            ? <div className="se-prep-sub">terunggah · {doc!.fileName}</div>
+                            : isTemplate
+                              ? <div className="se-prep-sub">{spec.templateUrl ? "unduh template, isi, lalu unggah" : "template menyusul · unggah hasilmu di sini"}</div>
+                              : <div className="se-prep-sub">dari kamu · unggah dokumen</div>}
                         </div>
-                        {uploaded ? (
-                          <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
-                        ) : (
-                          <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
-                            {uploadingItem === item ? "Mengunggah…" : "Unggah"}
-                          </button>
-                        )}
+                        <div className="se-prep-actions">
+                          {isTemplate && spec.templateUrl && (
+                            <a className="se-prep-link" href={spec.templateUrl} target="_blank" rel="noopener noreferrer">Unduh template</a>
+                          )}
+                          {uploaded ? (
+                            <a className="se-prep-link" href={doc!.filePath} target="_blank" rel="noopener noreferrer">lihat</a>
+                          ) : (
+                            <button type="button" className="se-prep-link" onClick={() => startCurriculumUpload(item, cat)} disabled={uploadBusy}>
+                              {uploadingItem === item ? "Mengunggah…" : "Unggah"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -1032,7 +1070,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                   </div>
                   <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
-                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Akan datang"}
                   </span>
                 </Link>
               );
@@ -1090,7 +1128,8 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   let heroActions: React.ReactNode;
   if (isMenteeRole) {
     heroActions = (
-      <a className="se-hero-btn" href={`mailto:${pairing.mentor.email}`}>
+      <a className="se-hero-btn" href={mentorWa ?? `mailto:${pairing.mentor.email}`}
+        {...(mentorWa ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
         <IcChat />Hubungi {mentorFirst}
       </a>
     );
@@ -1539,7 +1578,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                   </div>
                   <span className={`se-rail-badge ${st === "done" ? "selesai" : st === "current" ? "berikutnya" : "nanti"}`}>
-                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Nanti"}
+                    {st === "done" ? "Selesai" : st === "current" ? "Berikutnya" : "Akan datang"}
                   </span>
                 </Link>
               );

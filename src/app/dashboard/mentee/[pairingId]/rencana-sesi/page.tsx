@@ -24,8 +24,8 @@ import Modal from "@/components/ui/Modal";
 import {
   PLAN_MAX_SESSIONS,
   PLAN_MIN_SESSIONS,
-  PLAN_MIN_DURATION,
-  PLAN_MAX_DURATION,
+  PLAN_DEFAULT_DURATION,
+  PLAN_DURATION_OPTIONS,
   PLAN_PHASES,
   type SessionPlanRow,
   planTotalMinutes,
@@ -65,7 +65,6 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
-  const [accepting, setAccepting] = useState(false);
 
   // First-time "how to use the planner" nudge. Read from localStorage in an
   // effect (not at init) to avoid an SSR/hydration mismatch.
@@ -181,10 +180,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   function setPhase(id: string, phase: SessionPlanRow["phase"]) {
     mutate((rows) => rows.map((r) => (r.id === id ? { ...r, phase } : r)));
   }
-  /** Free-entry duration (minutes), clamped to the allowed range. */
+  /** Session length is one of the bookable slot lengths (60 / 90 min). */
   function setDuration(id: string, minutes: number) {
-    const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, Math.round(minutes)));
-    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: n } : r)));
+    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: minutes } : r)));
   }
   function duplicateRow(id: string) {
     mutate((rows) => {
@@ -230,7 +228,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           order: rows.length + 1,
           title: "Sesi baru",
           phase: "Writing",
-          durationMinutes: 75,
+          durationMinutes: PLAN_DEFAULT_DURATION,
         },
       ];
     });
@@ -287,20 +285,6 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     }
   }
 
-  // Mentee accepts the finalized plan → unlocks sessions on the mentor side.
-  async function handleAccept() {
-    setAccepting(true);
-    setErr(null);
-    try {
-      const res = await fetch(`/api/session-plans/${pairingId}/acknowledge`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error || "Gagal menerima rencana."); return; }
-      setPlan((cur) => (cur ? { ...cur, status: "acknowledged", acknowledgedAt: new Date().toISOString() } : cur));
-    } finally {
-      setAccepting(false);
-    }
-  }
-
   if (loading) return <SkeletonDashboard />;
   if (err && !plan) {
     return (
@@ -336,9 +320,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   const totalHoursLabel = `${(totalMin / 60).toFixed(1).replace(".0", "")} jam`;
   const monthsLabel = `~${Math.max(1, Math.round(total / 4))} bulan`;
   const isFinalized = plan.status !== "draft";
-  const isAcknowledged = plan.status === "acknowledged";
-  // Editing is allowed only for the mentor on a still-draft plan. A finalized
-  // plan (mentor or mentee) is read-only.
+  // Editing is allowed only for the mentor on a still-draft plan. Once
+  // finalized, the plan is published into the sessions and is read-only.
   const readOnly = isFinalized || isMentee;
   const canDelete = total > PLAN_MIN_SESSIONS;
   const canAdd = total < PLAN_MAX_SESSIONS;
@@ -373,10 +356,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
             {isMentee
               ? "Ini rencana sesi yang sudah disusun mentor kamu. Klik ikon ⓘ di tiap sesi untuk lihat tujuan, output, dan dokumen yang perlu disiapkan."
               : isFinalized
-                ? (isAcknowledged
-                    ? `${pairing.mentee.name.split(/\s+/)[0]} sudah menerima rencana ini — sesi siap dijalankan.`
-                    : `Sudah difinalisasi — menunggu ${pairing.mentee.name.split(/\s+/)[0]} menerima. Rencana terkunci (read-only).`)
-                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi setelah ${pairing.mentee.name.split(/\s+/)[0]} setuju.`}
+                ? `Sudah difinalisasi & dipublikasikan — semua sesi ${pairing.mentee.name.split(/\s+/)[0]} sekarang mengikuti rencana ini. (read-only)`
+                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi untuk mengunci & memberi tahu ${pairing.mentee.name.split(/\s+/)[0]}.`}
           </p>
         </div>
       </div>
@@ -428,18 +409,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
 
       {isMentee && (
         <div className="rs-accept-bar">
-          {plan.status === "acknowledged" ? (
-            <span className="rs-accept-done">✓ Kamu sudah menerima rencana sesi ini. Mentor bisa mulai menjadwalkan sesi.</span>
-          ) : (
-            <>
-              <span className="rs-accept-text">
-                Kalau rencana sesi ini sudah oke buat kamu, terima — supaya mentor bisa mulai menjadwalkan sesinya.
-              </span>
-              <button type="button" className="db-btn db-btn-primary" onClick={handleAccept} disabled={accepting}>
-                {accepting ? "Memproses…" : "Terima rencana sesi"}
-              </button>
-            </>
-          )}
+          <span className="rs-accept-done">
+            ✓ Ini rencana sesi dari mentor kamu. Sesi sudah mengikuti rencana ini — tinggal pilih jadwalnya di tab Jadwal.
+          </span>
         </div>
       )}
 
@@ -458,7 +430,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                 <ul>
                   <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang sesi.</li>
                   <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
-                  <li><b>Klik pil fase</b> untuk ganti fase, dan <b>ketik angka durasi</b> (menit).</li>
+                  <li><b>Klik pil fase</b> untuk ganti fase, dan pilih <b>durasi 60 / 90 menit</b> (selaras dengan slot kalender).</li>
                   <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
                   <li>Klik ikon <b>ⓘ</b> di kanan untuk lihat detail tiap sesi (tujuan &amp; persiapan).</li>
                   <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
@@ -528,25 +500,18 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                           </select>
                           <span className="rs-phase-caret" aria-hidden="true">▾</span>
                         </span>
-                        <span className="rs-dur" title="Ketik durasi dalam menit">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            className="rs-dur-input"
-                            defaultValue={row.durationMinutes}
-                            min={PLAN_MIN_DURATION}
-                            max={PLAN_MAX_DURATION}
-                            step={5}
-                            aria-label="Durasi sesi (menit)"
-                            onBlur={(e) => {
-                              const raw = parseInt(e.currentTarget.value, 10);
-                              const n = Math.max(PLAN_MIN_DURATION, Math.min(PLAN_MAX_DURATION, isNaN(raw) ? row.durationMinutes : raw));
-                              e.currentTarget.value = String(n);
-                              if (n !== row.durationMinutes) setDuration(row.id, n);
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
-                          />
-                          <span className="rs-dur-unit">mnt</span>
+                        <span className="rs-dur" role="group" aria-label="Durasi sesi" title="Durasi sesi (selaras dengan slot kalender)">
+                          {PLAN_DURATION_OPTIONS.map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              className={`rs-dur-opt${row.durationMinutes === opt ? " on" : ""}`}
+                              aria-pressed={row.durationMinutes === opt}
+                              onClick={() => setDuration(row.id, opt)}
+                            >
+                              {opt} mnt
+                            </button>
+                          ))}
                         </span>
                       </>
                     )}

@@ -101,6 +101,19 @@ export async function GET() {
     }
   }
 
+  // Fetch mentor WhatsApp numbers so the mentee can contact them directly.
+  const mentorIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.mentorId as string))];
+  const mentorWhatsapp: Record<string, string> = {};
+  if (mentorIds.length > 0) {
+    const { data: mProfiles } = await supabase
+      .from("MentorProfile")
+      .select("userId, phoneNumber")
+      .in("userId", mentorIds);
+    for (const mp of mProfiles || []) {
+      if (mp.phoneNumber) mentorWhatsapp[mp.userId as string] = mp.phoneNumber as string;
+    }
+  }
+
   // Per-pairing session-plan status — drives the mentor card state
   // (propose → menunggu mentee → unlocked) and the mentee's read/accept view.
   const pairingIds = (pairings || []).map((p: Record<string, unknown>) => p.id as string);
@@ -126,6 +139,11 @@ export async function GET() {
 
     // Remove raw arrays used only for counting, keep mentor/mentee
     const { documents: _docs, tasks: _tasks, ...rest } = p as Record<string, unknown>;
+    // Attach the mentor's WhatsApp onto the mentor object (when provided).
+    const mentorObj = rest.mentor as Record<string, unknown> | null;
+    if (mentorObj) {
+      mentorObj.whatsapp = mentorWhatsapp[p.mentorId as string] || null;
+    }
     return {
       ...rest,
       sessions,

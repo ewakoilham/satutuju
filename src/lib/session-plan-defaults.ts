@@ -37,13 +37,11 @@ export interface SessionPlanRow {
 
 export const PLAN_MIN_SESSIONS = 5;
 export const PLAN_MAX_SESSIONS = 15;
-export const PLAN_DEFAULT_DURATION = 75;
+export const PLAN_DEFAULT_DURATION = 60;
 export const PLAN_PHASES: PlanPhase[] = ["Discovery", "Planning", "Writing", "Execution", "Closing"];
-// Duration is now free-entry (mentor types the minutes); we only bound it to a
-// sane range instead of a fixed set.
-export const PLAN_MIN_DURATION = 15;
-export const PLAN_MAX_DURATION = 240;
-export const PLAN_ALLOWED_DURATIONS = [45, 60, 75, 90, 105, 120];
+// Session length is fixed to the two bookable slot lengths so the plan stays in
+// sync with the calendar (slots are 60 / 90 min). Not free-entry.
+export const PLAN_DURATION_OPTIONS = [60, 90] as const;
 
 const PHASE_LABEL: Record<string, PlanPhase> = {
   discovery: "Discovery",
@@ -62,7 +60,7 @@ export function buildDefaultPlan(): SessionPlanRow[] {
     order: i + 1,
     title: s.topic,
     phase: PHASE_LABEL[s.phase] || "Writing",
-    durationMinutes: 75,
+    durationMinutes: PLAN_DEFAULT_DURATION,
     objective: s.objective,
     deliverables: s.deliverables,
     menteePrep: s.menteePrep,
@@ -93,9 +91,8 @@ export function validatePlan(plan: SessionPlanRow[]): string | null {
   for (const row of plan) {
     if (!row.title.trim()) return "Setiap sesi harus punya judul.";
     if (!PLAN_PHASES.includes(row.phase)) return `Fase tidak valid: ${row.phase}`;
-    if (!Number.isFinite(row.durationMinutes) || !Number.isInteger(row.durationMinutes) ||
-        row.durationMinutes < PLAN_MIN_DURATION || row.durationMinutes > PLAN_MAX_DURATION) {
-      return `Durasi harus ${PLAN_MIN_DURATION}–${PLAN_MAX_DURATION} menit.`;
+    if (!PLAN_DURATION_OPTIONS.includes(row.durationMinutes as 60 | 90)) {
+      return "Durasi sesi harus 60 atau 90 menit.";
     }
   }
   return null;
