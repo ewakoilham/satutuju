@@ -42,11 +42,36 @@ export default function InvitesPage() {
 
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
+  const [draft, setDraft] = useState("");
   const [role, setRole] = useState("mentee");
   const [sending, setSending] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  // Split pasted/typed text on whitespace/comma/semicolon, add unique chips.
+  function addEmails(raw: string) {
+    const parts = raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (parts.length === 0) return;
+    setEmails((prev) => [...new Set([...prev, ...parts])]);
+  }
+  function removeEmail(e: string) {
+    setEmails((prev) => prev.filter((x) => x !== e));
+  }
+  function onEmailKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+      e.preventDefault();
+      if (draft.trim()) { addEmails(draft); setDraft(""); }
+    } else if (e.key === "Backspace" && !draft && emails.length) {
+      setEmails((prev) => prev.slice(0, -1));
+    }
+  }
+  function onEmailPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    if (/[\s,;]/.test(text)) { e.preventDefault(); addEmails(text); }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -70,21 +95,41 @@ export default function InvitesPage() {
 
   async function sendInvite(e: React.FormEvent) {
     e.preventDefault();
+    // Flush any half-typed email into a chip first.
+    const all = [...new Set([...emails, ...draft.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean)])];
+    const valid = all.filter(isValidEmail);
+    const invalid = all.filter((x) => !isValidEmail(x));
+    if (valid.length === 0) {
+      setMsg({ type: "error", text: "Masukkan minimal satu email yang valid." });
+      return;
+    }
     setSending(true);
     setMsg(null);
     try {
       const res = await fetch("/api/invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), role }),
+        body: JSON.stringify({ emails: valid, role }),
       });
       const data = await res.json();
       if (!res.ok) {
         setMsg({ type: "error", text: data.error || "Gagal mengirim undangan." });
         return;
       }
-      setMsg({ type: "success", text: `Undangan terkirim ke ${email.trim()}.` });
-      setEmail("");
+      const results: { email: string; status: string }[] = data.results || [];
+      const sent = results.filter((r) => r.status === "sent").length;
+      const reused = results.filter((r) => r.status === "reused").length;
+      const failed = results.filter((r) => r.status === "error" || r.status === "invalid");
+      const parts = [`${sent} undangan terkirim`];
+      if (reused) parts.push(`${reused} sudah pernah diundang (dikirim ulang)`);
+      if (invalid.length) parts.push(`${invalid.length} email tidak valid dilewati`);
+      if (failed.length) parts.push(`${failed.length} gagal`);
+      setMsg({
+        type: failed.length || invalid.length ? "error" : "success",
+        text: parts.join(" · "),
+      });
+      setEmails(invalid); // keep invalid ones so admin can fix them
+      setDraft("");
       await load();
     } catch {
       setMsg({ type: "error", text: "Gagal mengirim undangan. Coba lagi." });
@@ -133,16 +178,38 @@ export default function InvitesPage() {
       {/* Send invite form */}
       <div className="card p-6 rounded-2xl border border-border mb-8">
         <form onSubmit={sendInvite} className="flex flex-col sm:flex-row gap-3 sm:items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="input-field"
-              placeholder="nama@email.com"
-            />
+          <div className="flex-1 min-w-0">
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+              Email <span className="text-text-muted-2 font-normal">(bisa banyak — pisah dengan koma, spasi, atau Enter)</span>
+            </label>
+            <div className="input-field flex flex-wrap items-center gap-1.5 min-h-[46px] h-auto py-2 cursor-text"
+              onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement | null)?.focus()}>
+              {emails.map((e) => {
+                const ok = isValidEmail(e);
+                return (
+                  <span key={e}
+                    className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium ${
+                      ok ? "bg-primary-50 text-primary" : "bg-danger-light text-danger"
+                    }`}
+                    title={ok ? undefined : "Email tidak valid"}>
+                    {e}
+                    <button type="button" onClick={() => removeEmail(e)} className="hover:opacity-70" aria-label="Hapus">
+                      <Icon name="x" size={11} />
+                    </button>
+                  </span>
+                );
+              })}
+              <input
+                type="text"
+                value={draft}
+                onChange={(ev) => setDraft(ev.target.value)}
+                onKeyDown={onEmailKeyDown}
+                onPaste={onEmailPaste}
+                onBlur={() => { if (draft.trim()) { addEmails(draft); setDraft(""); } }}
+                className="flex-1 min-w-[140px] border-0 outline-none bg-transparent text-sm p-0"
+                placeholder={emails.length ? "" : "nama@email.com, lainnya@email.com"}
+              />
+            </div>
           </div>
           <div className="sm:w-44">
             <label className="block text-sm font-medium text-gray-600 mb-1.5">Peran</label>
@@ -157,7 +224,7 @@ export default function InvitesPage() {
             </select>
           </div>
           <button type="submit" disabled={sending} className="btn-primary py-3 px-6 rounded-xl whitespace-nowrap">
-            {sending ? "Mengirim…" : "Kirim undangan"}
+            {sending ? "Mengirim…" : `Kirim undangan${emails.length > 1 ? ` (${emails.length})` : ""}`}
           </button>
         </form>
 
