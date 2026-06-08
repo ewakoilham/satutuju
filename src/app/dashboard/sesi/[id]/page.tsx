@@ -66,6 +66,8 @@ interface SessionRow {
   summaryNotes?: string | null;
   menteeFeedback?: string | null;
   durationMinutes?: number | null;
+  objective?: string | null;        // published from the mentor's session plan
+  deliverables?: string[] | null;   // published from the mentor's session plan
   docChecklist?: string[] | null; // published from the mentor's session plan
   prepCompletedAt?: string | null;
   mentorPreviewAt?: string | null;
@@ -781,6 +783,13 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const target = pairing.menteeProfile?.intendedStudyProgram || pairing.targetProgram || null;
   const summaryParas = (draft.summaryNotes || "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const agendaRows = AGENDA_BY_PHASE[session.phase] || AGENDA_BY_PHASE.planning;
+  // "Yang akan dibahas" content for the mentee — the session's objective +
+  // deliverables, from the mentor's published plan (or the curriculum default
+  // when the mentor didn't customize it during finalization). The minute-by-
+  // minute agenda above is mentor-facing only.
+  const curr = CURRICULUM.find((c) => c.sessionNum === session.sessionNum);
+  const sessionObjective = session.objective ?? curr?.objective ?? "";
+  const sessionDeliverables = (Array.isArray(session.deliverables) ? session.deliverables : null) ?? curr?.deliverables ?? [];
   const moodInfo = draft.menteeEnergy != null ? MOODS.find((m) => m.value === draft.menteeEnergy) : null;
 
   // Action items + attachments scoped to this session.
@@ -917,15 +926,20 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
               </section>
 
               <section className="se-card">
-                <div className="se-card-head"><h2>Agenda sesi</h2><span className="stamp">disusun {mentorFirst}</span></div>
-                <div className="se-list">
-                  {agendaRows.map((row, i) => (
-                    <div key={i} className="se-prep-row">
-                      <span className="se-agenda-time">{row.slot}</span>
-                      <div className="se-prep-body"><div className="se-prep-title soft">{row.topic}</div></div>
-                    </div>
-                  ))}
+                <div className="se-card-head"><h2>Yang akan dibahas</h2></div>
+                <div className="se-card-body">
+                  <p>Sesi ini fokus pada <b>{session.topic || phaseLabel}</b>.{sessionObjective ? ` ${sessionObjective}` : ""}</p>
                 </div>
+                {sessionDeliverables.length > 0 && (
+                  <div className="se-list">
+                    {sessionDeliverables.map((d, i) => (
+                      <div key={i} className="se-prep-row">
+                        <span className="se-prep-ic num">{i + 1}</span>
+                        <div className="se-prep-body"><div className="se-prep-title soft">{d}</div></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             </>
           ) : (
