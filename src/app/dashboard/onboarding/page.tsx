@@ -166,7 +166,7 @@ export default function OnboardingPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Failed to save profile");
+        setError(data.error || "Gagal menyimpan profil");
         setSaving(false);
         return;
       }
@@ -174,7 +174,7 @@ export default function OnboardingPage() {
       // and load the dashboard fresh.
       window.location.href = "/dashboard";
     } catch {
-      setError("Network error. Please try again.");
+      setError("Koneksi bermasalah. Coba lagi ya.");
       setSaving(false);
     }
   };
@@ -233,20 +233,20 @@ export default function OnboardingPage() {
         <div className="max-w-md text-center space-y-6">
           <Logo variant="main" size="lg" className="mx-auto" />
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight font-[family-name:var(--font-heading)]">
-            Hey there!<br />Welcome to SatuTuju
+            Halo!<br />Selamat datang di SatuTuju
           </h1>
           <p className="text-text-muted text-base sm:text-lg leading-relaxed">
-            Before we start, let&apos;s get to know you a little deeper so we can
-            understand you better and personalise your study-abroad journey.
+            Sebelum mulai, kami mau kenalan dulu sama kamu biar bisa pahami
+            kebutuhanmu dan sesuaikan perjalanan studi lanjutmu.
           </p>
           <p className="text-sm text-text-muted-2">
-            This will only take a few minutes.
+            Cuma butuh beberapa menit kok.
           </p>
           <button
             onClick={() => setShowIntro(false)}
             className="bg-primary text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition text-base"
           >
-            Let&apos;s Go
+            Mulai
           </button>
         </div>
       </div>
@@ -481,7 +481,7 @@ export default function OnboardingPage() {
               className="flex items-center gap-1 text-sm text-text-muted-2 hover:text-foreground px-4 py-2.5 rounded-lg hover:bg-surface transition"
             >
               <Icon name="chevron-left" size={16} />
-              Back
+              Kembali
             </button>
           ) : (
             <div />
@@ -493,7 +493,7 @@ export default function OnboardingPage() {
                 onClick={handleNext}
                 className="text-xs text-text-muted-2 hover:text-foreground px-3 py-2 transition"
               >
-                Skip
+                Lewati
               </button>
             )}
             {isLast ? (
@@ -502,7 +502,7 @@ export default function OnboardingPage() {
                 disabled={saving}
                 className="flex items-center gap-2 text-sm text-white bg-primary hover:opacity-90 px-6 py-2.5 rounded-lg transition font-medium disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Complete Setup"}
+                {saving ? "Menyimpan…" : "Selesaikan"}
                 {!saving && (
                   <Icon name="check" size={16} />
                 )}
@@ -512,7 +512,7 @@ export default function OnboardingPage() {
                 onClick={handleNext}
                 className="flex items-center gap-1 text-sm text-white bg-primary hover:opacity-90 px-5 py-2.5 rounded-lg transition font-medium"
               >
-                Next
+                Lanjut
                 <Icon name="chevron-right" size={16} />
               </button>
             )}
