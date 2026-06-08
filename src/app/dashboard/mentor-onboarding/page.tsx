@@ -254,12 +254,15 @@ export default function MentorOnboardingPage() {
         body: JSON.stringify(profile),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setError(data.error || "Gagal menyimpan profil");
         setSaving(false);
         return;
       }
-      router.push("/dashboard");
+      // Hard navigation: guarantees we leave the chrome-less onboarding route
+      // and the dashboard loads fresh (router.push could leave the button
+      // stuck on "Menyimpan…" without actually navigating).
+      window.location.href = "/dashboard";
     } catch {
       setError("Koneksi bermasalah. Coba lagi ya.");
       setSaving(false);
