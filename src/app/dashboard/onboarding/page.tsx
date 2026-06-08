@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
 import Logo from "@/components/ui/Logo";
@@ -101,7 +100,6 @@ function toggleRole(current: string, role: string, max: number): string {
 
 // ── Component ─────────────────────────────────────────────────
 export default function OnboardingPage() {
-  const router = useRouter();
   const [showIntro, setShowIntro] = useState(true);
   const [current, setCurrent] = useState(0);
   const [profile, setProfile] = useState<ProfileData>(buildEmptyProfile);
@@ -167,12 +165,14 @@ export default function OnboardingPage() {
         body: JSON.stringify(profile),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setError(data.error || "Failed to save profile");
         setSaving(false);
         return;
       }
-      router.push("/dashboard");
+      // Hard navigation so we reliably leave the chrome-less onboarding route
+      // and load the dashboard fresh.
+      window.location.href = "/dashboard";
     } catch {
       setError("Network error. Please try again.");
       setSaving(false);
