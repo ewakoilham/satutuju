@@ -699,14 +699,20 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           </div>
 
           {!isFinalized && (
-            <button type="button" className="rs-add" onClick={addRow} disabled={!canAdd}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="16" />
-                <line x1="8" y1="12" x2="16" y2="12" />
-              </svg>
-              {canAdd ? "Tambah sesi custom" : `Sudah di maksimum (${PLAN_MAX_SESSIONS})`}
-            </button>
+            <>
+              <button type="button" className="rs-add" onClick={addRow} disabled={!canAdd}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                {canAdd ? "Tambah sesi custom" : `Sudah di maksimum (${PLAN_MAX_SESSIONS})`}
+              </button>
+              <p className="rs-add-hint">
+                Butuh sesi di luar 10 kurikulum? Tambah <b>sesi custom</b> sendiri — judul bebas,
+                durasi 60/90 menit. Sesi custom <b>tanpa template dokumen</b> (mentee tetap bisa unggah file bebas).
+              </p>
+            </>
           )}
 
           {total === 0 && !isFinalized && (
