@@ -3447,6 +3447,11 @@
   background: var(--primary-50);
 }
 .dashboard-shell .rs-add:disabled { opacity: 0.5; cursor: not-allowed; }
+.dashboard-shell .rs-add-hint {
+  margin: 8px 4px 0; text-align: center;
+  font-size: 12.5px; line-height: 1.5; color: var(--text-muted);
+}
+.dashboard-shell .rs-add-hint b { color: var(--primary-900); font-weight: 700; }
 
 .dashboard-shell .rs-min-warn {
   margin-top: 14px;
