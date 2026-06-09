@@ -480,11 +480,13 @@ function stripCoverAndSigning(tokens: Tokens.Generic[]): Tokens.Generic[] {
 // ─── Signing block ───────────────────────────────────────────────────────
 
 function SigningBlock({
-  identity,
+  fullName,
   signatureDataUrl,
+  pihakKeduaLabel,
 }: {
-  identity: IdentitySnapshot;
+  fullName: string;
   signatureDataUrl: string;
+  pihakKeduaLabel: string; // "MENTOR" or "MENTEE"
 }) {
   return (
     <View wrap={false} style={{ marginTop: 18 }}>
@@ -510,11 +512,11 @@ function SigningBlock({
         </View>
         <View style={styles.signingCol}>
           <Text style={styles.signingHeader}>PIHAK KEDUA</Text>
-          <Text style={styles.signingHeader}>MENTOR</Text>
+          <Text style={styles.signingHeader}>{pihakKeduaLabel}</Text>
           <Text style={styles.materai}>(e-Materai Rp 10.000)</Text>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image src={signatureDataUrl} style={styles.signatureImg} />
-          <Text style={styles.signatureName}>{identity.fullName}</Text>
+          <Text style={styles.signatureName}>{fullName}</Text>
           <Text style={styles.signatureSubtitle}> </Text>
         </View>
       </View>
@@ -524,12 +526,25 @@ function SigningBlock({
 
 // ─── Public entry point ──────────────────────────────────────────────────
 
+/**
+ * Distinguishes the two contract templates that share this renderer.
+ * Drives the cover header text and the "PIHAK KEDUA" column label.
+ */
+export type ContractKind = "mentor" | "mentee";
+
 export type RenderContractPdfArgs = {
   /** Already-interpolated contract body (markdown). */
   interpolatedBody: string;
-  identity: IdentitySnapshot;
+  identity: IdentitySnapshot | { fullName: string };
   signatureDataUrl: string;
   contractNumber: string;
+  /** Phase 18 — defaults to "mentor" for backward compatibility. */
+  kind?: ContractKind;
+};
+
+const COVER_TITLES: Record<ContractKind, { title: string; pihakKedua: string }> = {
+  mentor: { title: "PERJANJIAN KEMITRAAN MENTOR", pihakKedua: "MENTOR" },
+  mentee: { title: "PERJANJIAN LAYANAN MENTORING", pihakKedua: "MENTEE" },
 };
 
 export async function renderContractPdf(
@@ -537,19 +552,22 @@ export async function renderContractPdf(
 ): Promise<Buffer> {
   const tokens = marked.lexer(args.interpolatedBody) as Tokens.Generic[];
   const trimmed = stripCoverAndSigning(tokens);
+  const kind = args.kind ?? "mentor";
+  const { title, pihakKedua } = COVER_TITLES[kind];
 
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.docTitle}>PERJANJIAN KEMITRAAN MENTOR</Text>
+        <Text style={styles.docTitle}>{title}</Text>
         <Text style={styles.docSubtitle}>SATU TUJU</Text>
         <Text style={styles.docNumber}>Nomor: {args.contractNumber}</Text>
 
         {trimmed.map((tok, i) => renderBlock(tok, `b-${i}`))}
 
         <SigningBlock
-          identity={args.identity}
+          fullName={args.identity.fullName}
           signatureDataUrl={args.signatureDataUrl}
+          pihakKeduaLabel={pihakKedua}
         />
       </Page>
     </Document>

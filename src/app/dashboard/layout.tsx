@@ -92,8 +92,10 @@ const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon:
     { href: "/dashboard/settings",       label: "Settings", icon: "settings" },
   ],
   mentee: [
-    { href: "/dashboard/profile",  label: "Profile",  icon: "user"     },
-    { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+    { href: "/dashboard/profile",         label: "Profile",  icon: "user"     },
+    // Phase 18 — mentee Perjanjian Layanan Mentoring signing flow.
+    { href: "/dashboard/mentee-contract", label: "Kontrak",  icon: "document" },
+    { href: "/dashboard/settings",        label: "Settings", icon: "settings" },
   ],
 };
 
@@ -532,7 +534,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* ── Global contract alert (mentor-only, hides on /dashboard/contract) ─ */}
+      {/* ── Global contract alert ───────────────────────────────────────
+          Phase 18 — now role-aware: mentor sees the mentor banner,
+          mentee sees the mentee banner. Each hides itself on its own
+          contract page (/dashboard/contract and /dashboard/mentee-contract). */}
       <DashboardContractAlert role={user.role} />
 
       {/* First-run guided tour for brand-new mentors (no-op once seen) */}
@@ -547,7 +552,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           that get sparse on very wide screens. */}
       <main
         className={
-          pathname.startsWith("/dashboard/contract")
+          pathname.startsWith("/dashboard/contract") ||
+          pathname.startsWith("/dashboard/mentee-contract")
             ? "mx-auto max-w-none px-3 sm:px-4 lg:px-4 py-8"
             : "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8"
         }

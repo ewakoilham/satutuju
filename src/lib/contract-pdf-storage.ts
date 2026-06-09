@@ -15,9 +15,17 @@ import {
   interpolateContract,
   type IdentitySnapshot,
 } from "@/lib/contract-template";
+import {
+  interpolateMenteeContract,
+  type MenteeIdentitySnapshot,
+} from "@/lib/mentee-contract-template";
 import { getContractBody } from "@/lib/contract-template-server";
+import { getMenteeContractBody } from "@/lib/mentee-contract-template-server";
 import { renderContractPdf } from "@/lib/contract-pdf";
-import { contractPdfPath } from "@/lib/contract-numbering";
+import {
+  contractPdfPath,
+  menteeContractPdfPath,
+} from "@/lib/contract-numbering";
 
 export type RenderAndUploadArgs = {
   userId: string;
@@ -47,9 +55,58 @@ export async function renderAndUploadContractPdf(
       identity: args.identity,
       signatureDataUrl: args.signatureDataUrl,
       contractNumber: args.contractNumber,
+      kind: "mentor",
     });
 
     const path = contractPdfPath(args.userId, args.contractNumber);
+    const upload = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, buffer, { contentType: "application/pdf", upsert: true });
+    if (upload.error) {
+      throw new Error(`Storage upload failed: ${upload.error.message}`);
+    }
+    return { pdfPath: path, error: null };
+  } catch (e) {
+    return {
+      pdfPath: null,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+// ─── Phase 18: mentee variant ────────────────────────────────────────────
+
+export type RenderAndUploadMenteeArgs = {
+  userId: string;
+  identity: MenteeIdentitySnapshot;
+  /** Captured from the User.email column at sign time. The mentee template
+   *  preamble interpolates this — MenteeProfile doesn't store email. */
+  email: string;
+  signatureDataUrl: string;
+  contractNumber: string;
+  signedAt: Date;
+};
+
+export async function renderAndUploadMenteeContractPdf(
+  args: RenderAndUploadMenteeArgs,
+): Promise<RenderAndUploadResult> {
+  try {
+    const body = await getMenteeContractBody();
+    const interpolated = interpolateMenteeContract(body, {
+      identity: args.identity,
+      email: args.email,
+      contractNumber: args.contractNumber,
+      signedAt: args.signedAt,
+    });
+    const buffer = await renderContractPdf({
+      interpolatedBody: interpolated,
+      identity: args.identity,
+      signatureDataUrl: args.signatureDataUrl,
+      contractNumber: args.contractNumber,
+      kind: "mentee",
+    });
+
+    const path = menteeContractPdfPath(args.userId, args.contractNumber);
     const upload = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(path, buffer, { contentType: "application/pdf", upsert: true });

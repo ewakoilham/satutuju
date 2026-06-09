@@ -8,9 +8,14 @@ import Icon from "@/components/ui/Icon";
 import ContractStatusBadge, {
   deriveContractDisplayStatus,
 } from "@/components/contract/ContractStatusBadge";
-import { isContractStale } from "@/lib/contract-template";
+import { isMenteeContractStale } from "@/lib/mentee-contract-template";
 import { formatJakartaDate } from "@/lib/datetime-id";
 import AdminContractsSubNav from "@/components/contract/AdminContractsSubNav";
+
+/**
+ * Phase 18 — admin overview of mentee contract status. Mirror of the
+ * mentor admin contracts page; only the data source + copy differ.
+ */
 
 type ContractStub = {
   contractNumber: string;
@@ -35,7 +40,7 @@ type Row = {
 
 type Filter = "all" | "signed" | "pending" | "void" | "stale";
 
-export default function AdminContractsPage() {
+export default function AdminMenteeContractsPage() {
   const { user, loading: authLoading } = useUser();
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -47,7 +52,7 @@ export default function AdminContractsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    fetch("/api/admin/contracts", { credentials: "include" })
+    fetch("/api/admin/mentee-contracts", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : { rows: [], currentVersion: "" }))
       .then((d: { rows: Row[]; currentVersion: string }) => {
         setRows(d.rows ?? []);
@@ -60,7 +65,7 @@ export default function AdminContractsPage() {
     if (!rows) return [];
     if (filter === "all") return rows;
     if (filter === "stale") {
-      return rows.filter((r) => isContractStale(r.contract, currentVersion));
+      return rows.filter((r) => isMenteeContractStale(r.contract, currentVersion));
     }
     return rows.filter((r) => {
       const s = deriveContractDisplayStatus(r);
@@ -81,7 +86,7 @@ export default function AdminContractsPage() {
       if (s === "SIGNED") signed += 1;
       else if (s === "VOID") voided += 1;
       else pending += 1;
-      if (isContractStale(r.contract, currentVersion)) stale += 1;
+      if (isMenteeContractStale(r.contract, currentVersion)) stale += 1;
     });
     return { all: rows.length, signed, pending, void: voided, stale };
   }, [rows, currentVersion]);
@@ -98,15 +103,16 @@ export default function AdminContractsPage() {
 
   return (
     <div className="space-y-6">
-      <AdminContractsSubNav active="mentor" />
+      <AdminContractsSubNav active="mentee" />
 
       <header>
         <h1 className="font-[family-name:var(--font-heading)] text-2xl md:text-3xl font-extrabold text-foreground">
-          Kontrak Mentor
+          Kontrak Mentee
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          Status penandatanganan Perjanjian Kemitraan Mentor untuk seluruh mentor.
-          Klik nama mentor untuk melihat detail kontrak, jejak audit, dan opsi pembatalan.
+          Status penandatanganan Perjanjian Layanan Mentoring Mentee untuk
+          seluruh mentee. Klik nama mentee untuk melihat detail kontrak,
+          jejak audit, dan opsi pembatalan.
         </p>
         {currentVersion && (
           <p className="mt-1 text-xs text-text-muted-2">
@@ -114,7 +120,7 @@ export default function AdminContractsPage() {
             <span className="font-mono font-semibold text-foreground">
               {currentVersion}
             </span>
-            . Mentor yang menandatangani versi lebih lama akan muncul dengan
+            . Mentee yang menandatangani versi lebih lama akan muncul dengan
             badge <span className="font-semibold text-warning">Versi lama</span>.
           </p>
         )}
@@ -141,7 +147,7 @@ export default function AdminContractsPage() {
         <table className="w-full text-sm">
           <thead className="bg-background/60 text-text-muted-2 text-xs uppercase tracking-wide">
             <tr>
-              <th className="text-left px-4 py-3">Mentor</th>
+              <th className="text-left px-4 py-3">Mentee</th>
               <th className="text-left px-4 py-3">Nomor Kontrak</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Versi</th>
@@ -154,19 +160,19 @@ export default function AdminContractsPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-text-muted-2">
-                  Tidak ada mentor pada filter ini.
+                  Tidak ada mentee pada filter ini.
                 </td>
               </tr>
             )}
             {filtered.map((r) => {
               const status = deriveContractDisplayStatus(r);
-              const stale = isContractStale(r.contract, currentVersion);
+              const stale = isMenteeContractStale(r.contract, currentVersion);
               const latest = r.contract?.updatedAt ?? r.contract?.signedAt ?? null;
               return (
                 <tr key={r.userId} className="border-t border-border">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/dashboard/admin/contracts/${r.userId}`}
+                      href={`/dashboard/admin/mentee-contracts/${r.userId}`}
                       className="font-medium text-foreground hover:text-primary"
                     >
                       {r.name}
@@ -198,14 +204,14 @@ export default function AdminContractsPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Link
-                        href={`/dashboard/admin/contracts/${r.userId}`}
+                        href={`/dashboard/admin/mentee-contracts/${r.userId}`}
                         className="text-primary hover:underline"
                       >
                         Lihat
                       </Link>
                       {status === "SIGNED" && (
                         <a
-                          href={`/api/mentor-contract/pdf?userId=${r.userId}`}
+                          href={`/api/mentee-contract/pdf?userId=${r.userId}`}
                           target="_blank"
                           rel="noopener"
                           className="inline-flex items-center gap-1 text-text-muted hover:text-primary"

@@ -53,6 +53,9 @@ model User {
 
   // Mentor partnership contract
   mentorContract MentorContract?
+
+  // Phase 18 — mentee contract signing (Perjanjian Layanan Mentoring Mentee).
+  menteeContract MenteeContract?
 }
 
 model MentorProfile {
@@ -113,6 +116,11 @@ model MenteeProfile {
 
   // National ID / Identity
   idNumber           String?
+  // Phase 18: KTP vs Paspor selector for the mentee contract identity
+  // form. Mirror of MentorProfile.idType.
+  idType             String?  // "KTP" | "Paspor"
+  // Phase 18: tempat lahir for the contract preamble.
+  placeOfBirth       String?
   nationality        String?
   passportNumber     String?
   currentAddress     String?
@@ -422,6 +430,44 @@ model MentorContract {
   userAgent        String?   @db.Text
 
   pdfPath          String?                  // Supabase storage path
+
+  voidedAt         DateTime?
+  voidReason       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// MENTEE SERVICE CONTRACT (Phase 18)
+// ──────────────────────────────────────────────
+// Mirror of MentorContract for the mentee-side Perjanjian Layanan
+// Mentoring. Same lifecycle (PENDING_SIGNATURE → SIGNED → VOID), same
+// audit shape, separate contract number series (`ST-MTE` prefix).
+// Identity snapshot uses 7 fields (no NPWP unlike mentor).
+
+model MenteeContract {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+
+  contractNumber  String    @unique         // e.g. "001/ST-MTE/V/2026"
+  status          String                    // "PENDING_SIGNATURE" | "SIGNED" | "VOID"
+  templateVersion String                    // pinned at sign time, e.g. "2026.05.30"
+
+  // Frozen at sign time so future MenteeProfile edits don't mutate the
+  // signed record. JSON shape: { fullName, placeOfBirth, dateOfBirth,
+  // idType, idNumber, legalAddress, phoneNumber }.
+  identitySnapshot Json?
+
+  signatureDataUrl String?   @db.Text       // base64 PNG of drawn or uploaded signature
+  signedAt         DateTime?
+  signatureHash    String?                  // sha256(version + snapshot + dataUrl)
+  ipAddress        String?
+  userAgent        String?   @db.Text
+
+  pdfPath          String?                  // Supabase storage path (mentee-contracts/…)
 
   voidedAt         DateTime?
   voidReason       String?

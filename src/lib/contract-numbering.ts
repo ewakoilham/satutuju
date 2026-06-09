@@ -65,3 +65,47 @@ export function archivedContractPdfPath(
 ): string {
   return `contracts/${userId}/history/${templateVersion}_${safeContractNumber(contractNumber)}.pdf`;
 }
+
+// ─── Phase 18: mentee contract numbering + storage paths ──────────────────
+// Mentees get their own sequence (`ST-MTE` prefix) counted independently
+// against `MenteeContract`. Storage path is segregated under
+// `mentee-contracts/` so admin can do a wholesale audit per role without
+// PDF cross-contamination.
+
+/**
+ * Generate the next mentee contract number in the format
+ * `{seq:003}/ST-MTE/{romanMonth}/{year}`, e.g. `001/ST-MTE/V/2026`.
+ *
+ * Sequence counter is independent of MentorContract — mentees start at
+ * 001 even if mentors are already at 040. Same max+1 strategy as the
+ * mentor function so deleted/voided rows don't trip the unique
+ * constraint.
+ */
+export async function nextMenteeContractNumber(now: Date = new Date()): Promise<string> {
+  const { data, error } = await supabase
+    .from("MenteeContract")
+    .select("contractNumber");
+
+  if (error) {
+    throw new Error(`Failed to read MenteeContract rows: ${error.message}`);
+  }
+  const maxSeq = (data ?? []).reduce((max, row) => {
+    const n = parseInt(String(row.contractNumber ?? "").split("/")[0], 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  const seq = String(maxSeq + 1).padStart(3, "0");
+  const { month, year } = getJakartaParts(now);
+  return `${seq}/ST-MTE/${toRomanMonth(month)}/${year}`;
+}
+
+export function menteeContractPdfPath(userId: string, contractNumber: string): string {
+  return `mentee-contracts/${userId}/${safeContractNumber(contractNumber)}.pdf`;
+}
+
+export function archivedMenteeContractPdfPath(
+  userId: string,
+  templateVersion: string,
+  contractNumber: string,
+): string {
+  return `mentee-contracts/${userId}/history/${templateVersion}_${safeContractNumber(contractNumber)}.pdf`;
+}

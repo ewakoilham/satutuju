@@ -17,58 +17,74 @@ interface ContractStateAPI {
 }
 
 interface Props {
-  /** Current logged-in user role; alert renders only for mentors. */
+  /** Current logged-in user role; alert renders for mentor + mentee. */
   role: string | undefined;
 }
 
 /**
- * Layout-level contract alert. Fetches the mentor's contract state once on
- * mount and renders a sticky-ish banner above every dashboard page when the
- * mentor still owes us a signature OR a re-signature. Hides itself on
- * `/dashboard/contract` (where the mentor is already addressing it) and for
- * non-mentor roles.
+ * Layout-level contract alert. Fetches the user's contract state on
+ * every dashboard navigation and renders a sticky-ish banner above every
+ * dashboard page when the user still owes us a signature OR a re-signature.
  *
- * The same `/api/mentor-contract` call also lazily inserts a Notification row
- * server-side when the version is stale, so the bell icon picks up the
- * heads-up regardless of which page the mentor lands on first.
+ * Phase 18 — role-aware:
+ *  - mentor → fetches /api/mentor-contract, links to /dashboard/contract
+ *  - mentee → fetches /api/mentee-contract, links to /dashboard/mentee-contract
+ *  - admin / other → no banner
+ *
+ * Hides itself on the user's own contract page. The same GET also lazily
+ * inserts a Notification row server-side when the version is stale, so
+ * the bell icon picks up the heads-up regardless of where the user lands.
  */
+
+type RoleConfig = {
+  endpoint: string;
+  href: string;
+  contractName: string;       // shown in banner copy
+  hidePath: string;           // route where the banner shouldn't render
+};
+
+const ROLE_CONFIG: Record<string, RoleConfig> = {
+  mentor: {
+    endpoint: "/api/mentor-contract?summary=1",
+    href: "/dashboard/contract",
+    contractName: "Perjanjian Kemitraan Mentor",
+    hidePath: "/dashboard/contract",
+  },
+  mentee: {
+    endpoint: "/api/mentee-contract?summary=1",
+    href: "/dashboard/mentee-contract",
+    contractName: "Perjanjian Layanan Mentoring Mentee",
+    hidePath: "/dashboard/mentee-contract",
+  },
+};
+
 export default function DashboardContractAlert({ role }: Props) {
   const pathname = usePathname();
   const [state, setState] = useState<ContractStateAPI | null>(null);
+  const config = role ? ROLE_CONFIG[role] : undefined;
 
   useEffect(() => {
-    if (role !== "mentor") return;
-    // Re-fetch on every dashboard navigation — NOT just once on mount. This
-    // banner lives in the dashboard layout, which the App Router keeps mounted
-    // across client-side route changes, so a mount-only fetch goes stale: a
-    // mentor who signs on /dashboard/contract and navigates back would keep
-    // seeing "belum menandatangani" until a hard reload. Skip the fetch while
-    // on the contract page (the banner is hidden there anyway) so we refresh
+    if (!config) return;
+    // Re-fetch on every dashboard navigation. Skip while on the user's
+    // own contract page (the banner is hidden there anyway) so we refresh
     // exactly when they leave it after signing.
-    if (pathname === "/dashboard/contract") return;
+    if (pathname === config.hidePath) return;
     let cancelled = false;
-    // Summary mode: skip the markdown → HTML → TOC pipeline server-side
-    // since the alert only consumes status + needsResign.
-    fetch("/api/mentor-contract?summary=1", {
-      credentials: "include",
-      cache: "no-store",
-    })
+    fetch(config.endpoint, { credentials: "include", cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: ContractStateAPI | null) => { if (!cancelled) setState(d); })
       .catch(() => null);
     return () => { cancelled = true; };
-  }, [role, pathname]);
+  }, [config, pathname]);
 
-  // Don't double up on the contract page itself.
-  if (pathname === "/dashboard/contract") return null;
-  if (role !== "mentor") return null;
+  if (!config) return null;
+  if (pathname === config.hidePath) return null;
   if (!state) return null;
 
   const status = state.contract?.status ?? null;
   const isSigned = status === "SIGNED";
   const identityFilled = state.identityCompleteness === state.identityRequired;
 
-  // Decide the messaging based on where the mentor is in the lifecycle.
   let kind: "resign" | "void" | "unsigned" | null = null;
   if (state.needsResign) kind = "resign";
   else if (status === "VOID") kind = "void";
@@ -82,21 +98,20 @@ export default function DashboardContractAlert({ role }: Props) {
         title: `Kontrak diperbarui ke versi ${state.contractVersion} — perlu tanda tangan ulang`,
         body:
           state.contract
-            ? `Tanda tangan Anda di versi ${state.contract.templateVersion} masih sah, namun kontrak ini penting untuk segera ditandatangani versi terbarunya sebelum aktivitas mentoring dilanjutkan.`
+            ? `Tanda tangan Anda di versi ${state.contract.templateVersion} masih sah, namun kontrak ini penting untuk segera ditandatangani versi terbarunya sebelum aktivitas dilanjutkan.`
             : "Mohon tanda tangani versi terbaru sebelum melanjutkan aktivitas.",
       };
     }
     if (kind === "void") {
       return {
         title: "Kontrak Anda dibatalkan oleh admin",
-        body:
-          "Mohon tanda tangan ulang Perjanjian Kemitraan Mentor sebelum melakukan aktivitas mentoring lainnya.",
+        body: `Mohon tanda tangan ulang ${config.contractName} sebelum melakukan aktivitas lainnya.`,
       };
     }
     return {
-      title: "Anda belum menandatangani Perjanjian Kemitraan Mentor",
+      title: `Anda belum menandatangani ${config.contractName}`,
       body: !identityFilled
-        ? "Lengkapi data identitas Anda lalu tanda tangani kontrak. Kontrak ini wajib ditandatangani sebelum aktivitas mentoring dapat dilanjutkan."
+        ? "Lengkapi data identitas Anda lalu tanda tangani kontrak. Kontrak ini wajib ditandatangani sebelum aktivitas dilanjutkan."
         : "Data identitas Anda sudah lengkap — tinggal goreskan tanda tangan untuk menyelesaikan onboarding.",
     };
   })();
@@ -112,7 +127,7 @@ export default function DashboardContractAlert({ role }: Props) {
           <p className="text-xs text-text-muted leading-relaxed">{body}</p>
         </div>
         <Link
-          href="/dashboard/contract"
+          href={config.href}
           className="btn-primary inline-flex items-center justify-center whitespace-nowrap text-sm"
         >
           Buka Kontrak
