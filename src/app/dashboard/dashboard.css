@@ -3292,6 +3292,37 @@
   transition: all 0.15s ease;
 }
 .dashboard-shell .rs-row:hover { border-color: var(--primary-200); }
+/* Disabled (tidak diadakan) core session — dimmed, dashed. */
+.dashboard-shell .rs-row.rs-row-off { opacity: 0.55; border-style: dashed; background: var(--accent); }
+.dashboard-shell .rs-row.rs-row-off .rs-title { text-decoration: line-through; text-decoration-color: var(--text-muted-2); }
+/* Adakan / Tidak toggle */
+.dashboard-shell .rs-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-heading); font-weight: 600; font-size: 11.5px;
+  padding: 4px 10px 4px 5px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  white-space: nowrap; transition: all .14s ease;
+}
+.dashboard-shell .rs-toggle.on { border-color: var(--success); color: var(--text-green); background: var(--surface-green); }
+.dashboard-shell .rs-toggle-track {
+  width: 26px; height: 15px; border-radius: 999px; background: var(--border);
+  position: relative; flex-shrink: 0; transition: background .14s ease;
+}
+.dashboard-shell .rs-toggle.on .rs-toggle-track { background: var(--success); }
+.dashboard-shell .rs-toggle-knob {
+  position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .14s ease;
+}
+.dashboard-shell .rs-toggle.on .rs-toggle-knob { transform: translateX(11px); }
+/* Row tags */
+.dashboard-shell .rs-tag-custom,
+.dashboard-shell .rs-tag-dup {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  font-family: var(--font-heading); font-weight: 700; font-size: 9.5px;
+  letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+}
+.dashboard-shell .rs-tag-custom { background: var(--surface-purple); color: var(--text-purple); }
+.dashboard-shell .rs-tag-dup { background: var(--primary-50); color: var(--primary); }
 .dashboard-shell .rs-grip {
   color: var(--text-muted-2);
   cursor: grab;

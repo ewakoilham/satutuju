@@ -13,8 +13,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
-import { validatePlan, type SessionPlanRow } from "@/lib/session-plan-defaults";
+import { validatePlan, normalizeRows, enabledRows, type SessionPlanRow } from "@/lib/session-plan-defaults";
+import { CURRICULUM } from "@/lib/curriculum";
 import { sendSessionPlanFinalizedEmail } from "@/lib/email-templates";
+
+const CURRICULUM_BY_NUM = new Map(CURRICULUM.map((s) => [s.sessionNum, s]));
 
 /** Publish the plan rows into the pairing's Session table. Content fields are
  *  overwritten from the plan; per-session PROGRESS (status / scheduledAt /
@@ -37,16 +40,21 @@ async function publishToSessions(pairingId: string, rows: SessionPlanRow[], nowI
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const sessionNum = i + 1; // order is the live session number
+    const sessionNum = i + 1; // position among the HELD sessions = live session number
+    // Core sessions (curriculumNum set, incl. duplicates) take their locked
+    // title + documents from the curriculum, so they're always correct
+    // regardless of order/rename. Custom sessions keep their own title and
+    // carry NO template (docChecklist null → upload-only).
+    const tpl = r.curriculumNum != null ? CURRICULUM_BY_NUM.get(r.curriculumNum) : undefined;
     const content = {
-      topic: r.title,
+      topic: tpl?.topic ?? r.title,
       phase: String(r.phase).toLowerCase(), // Session.phase is the lowercase enum
       durationMinutes: r.durationMinutes ?? null,
-      objective: r.objective ?? null,
-      deliverables: r.deliverables ?? null,
-      menteePrep: r.menteePrep ?? null,
-      mentorPrep: r.mentorPrep ?? null,
-      docChecklist: r.docChecklist ?? null,
+      objective: tpl?.objective ?? r.objective ?? null,
+      deliverables: tpl?.deliverables ?? r.deliverables ?? null,
+      menteePrep: tpl?.menteePrep ?? r.menteePrep ?? null,
+      mentorPrep: tpl?.mentorPrep ?? r.mentorPrep ?? null,
+      docChecklist: tpl?.docChecklist ?? r.docChecklist ?? null,
       updatedAt: nowIso,
     };
     if (existing.has(sessionNum)) {
@@ -93,9 +101,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pa
     .maybeSingle();
   if (!plan) return NextResponse.json({ error: "Draft plan not found — open the planner first." }, { status: 404 });
 
-  const rows = plan.rows as SessionPlanRow[];
+  const rows = normalizeRows(plan.rows as SessionPlanRow[]);
   const issue = validatePlan(rows);
   if (issue) return NextResponse.json({ error: issue }, { status: 400 });
+  // Only the held sessions are published, in order.
+  const published = enabledRows(rows);
 
   // First finalize = notify the mentee; re-finalize just republishes silently.
   const isFirstFinalize = plan.status !== "finalized";
@@ -115,7 +125,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pa
   // Publish into Session rows (the per-pairing source of truth). Best-effort:
   // if it fails the plan stays finalized and a re-finalize will retry.
   try {
-    await publishToSessions(pairingId, rows, nowIso);
+    await publishToSessions(pairingId, published, nowIso);
   } catch (err) {
     console.error("[finalize] publish to Session failed", err);
   }
@@ -130,7 +140,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pa
           menteeName: mentee.name || mentee.email.split("@")[0],
           mentorName: mentor?.name || user.name,
           pairingId,
-          totalSessions: rows.length,
+          totalSessions: published.length,
         });
       } catch (err) {
         console.error("[finalize] email send failed", err);
@@ -140,7 +150,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ pa
       id: globalThis.crypto.randomUUID(),
       userId: pairing.menteeId,
       title: "Rencana sesi siap",
-      message: `${mentor?.name || user.name} sudah menyusun ${rows.length} sesi untuk perjalanan mentoring kamu.`,
+      message: `${mentor?.name || user.name} sudah menyusun ${published.length} sesi untuk perjalanan mentoring kamu.`,
       type: "session",
       read: false,
       link: `/dashboard/sesi`,
