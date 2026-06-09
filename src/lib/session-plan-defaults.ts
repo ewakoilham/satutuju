@@ -1,15 +1,18 @@
 /** Default session plan template for newly-paired mentees.
  *
- *  Sourced from src/lib/curriculum.ts (the existing 10-session curriculum)
- *  but expressed in the SessionPlanRow shape that the SessionPlan model
- *  expects. The mentor edits this in /dashboard/mentee/[pairingId]/rencana-sesi
- *  before finalizing.
+ *  Model (locked curriculum):
+ *    - The 10 curriculum sessions are FIXED. Their title/objective/deliverables/
+ *      docs come from CURRICULUM and cannot be renamed. A mentor can only:
+ *        • toggle each on/off ("diadakan" / "tidak diadakan") via `enabled`
+ *        • reorder
+ *        • duplicate (a duplicate keeps the same `curriculumNum`, so it shares
+ *          the same documents — the mentee uploads once, both are satisfied)
+ *    - The mentor may also add CUSTOM sessions (no `curriculumNum`): free title,
+ *      upload-only, no curriculum template.
  *
- *  Constraints (enforced both client-side and in the API):
- *    - minimum 5 sessions
- *    - maximum 15 sessions
- *    - phase must be one of the 5 enum values
- *    - durationMinutes must be one of {45, 60, 75, 90, 105, 120}
+ *  A row is "core" when `curriculumNum` is set, "custom" otherwise.
+ *  Sourced from src/lib/curriculum.ts and expressed in the SessionPlanRow shape
+ *  the SessionPlan model persists.
  */
 
 import { CURRICULUM } from "@/lib/curriculum";
@@ -19,14 +22,22 @@ export type PlanPhase = "Discovery" | "Planning" | "Writing" | "Execution" | "Cl
 export interface SessionPlanRow {
   /** Stable id within the plan — generated client-side, persisted as JSON. */
   id: string;
-  /** 1-based order. Reordering rewrites this. */
+  /** 1-based order across ALL rows (enabled + disabled). Reordering rewrites this. */
   order: number;
   title: string;
   phase: PlanPhase;
   durationMinutes: number;
-  /** Curriculum detail (so mentor & mentee understand what each session is).
-   *  Seeded from the default curriculum; carried through finalize. Optional —
-   *  custom/added sessions may have none. */
+  /** Curriculum session number (1–10) this row maps to. Set for core sessions
+   *  AND their duplicates — drives the locked title + documents/templates.
+   *  Undefined for custom sessions. */
+  curriculumNum?: number;
+  /** Whether this session is held. Core sessions can be toggled off; custom
+   *  sessions are always on. Treat `undefined` as true (legacy + custom). */
+  enabled?: boolean;
+  /** True for a duplicate of a core session (deletable; the canonical core row
+   *  is toggled, not deleted). */
+  dup?: boolean;
+  /** Curriculum detail (carried for display). Optional. */
   objective?: string;
   deliverables?: string[];
   menteePrep?: string[];
@@ -35,8 +46,7 @@ export interface SessionPlanRow {
   docChecklist?: string[];
 }
 
-export const PLAN_MIN_SESSIONS = 5;
-export const PLAN_MAX_SESSIONS = 15;
+export const PLAN_MAX_SESSIONS = 20; // safety cap on total rows (incl. duplicates + custom)
 export const PLAN_DEFAULT_DURATION = 60;
 export const PLAN_PHASES: PlanPhase[] = ["Discovery", "Planning", "Writing", "Execution", "Closing"];
 // Session length is fixed to the two bookable slot lengths so the plan stays in
@@ -51,9 +61,24 @@ const PHASE_LABEL: Record<string, PlanPhase> = {
   closing: "Closing",
 };
 
-/** Build a fresh default plan (10 rows across 5 phases). Always generates
- *  new row ids so the same template can seed multiple pairings without
- *  collision. */
+/** A row is "core" (locked curriculum session) when it maps to a curriculum number. */
+export function isCoreRow(row: SessionPlanRow): boolean {
+  return row.curriculumNum != null;
+}
+
+/** Whether a row counts as held: custom rows always; core rows when not toggled off. */
+export function isEnabled(row: SessionPlanRow): boolean {
+  if (row.curriculumNum == null) return true; // custom — always held
+  return row.enabled !== false;
+}
+
+/** The rows that will actually be published to the mentee, in order. */
+export function enabledRows(rows: SessionPlanRow[]): SessionPlanRow[] {
+  return rows.filter(isEnabled);
+}
+
+/** Build a fresh default plan: 10 core curriculum rows, all enabled. Always
+ *  generates new row ids so the same template can seed multiple pairings. */
 export function buildDefaultPlan(): SessionPlanRow[] {
   return CURRICULUM.map((s, i) => ({
     id: cryptoRandomId(),
@@ -61,6 +86,8 @@ export function buildDefaultPlan(): SessionPlanRow[] {
     title: s.topic,
     phase: PHASE_LABEL[s.phase] || "Writing",
     durationMinutes: PLAN_DEFAULT_DURATION,
+    curriculumNum: s.sessionNum,
+    enabled: true,
     objective: s.objective,
     deliverables: s.deliverables,
     menteePrep: s.menteePrep,
@@ -69,25 +96,55 @@ export function buildDefaultPlan(): SessionPlanRow[] {
   }));
 }
 
-/** Phase distribution shown in the side rail ("kenapa 10 sesi?"). */
+/** Backfill the locked-curriculum fields on legacy rows saved before this model
+ *  (no curriculumNum/enabled). Core rows are matched by title to a curriculum
+ *  session; unmatched rows become custom. Idempotent. */
+export function normalizeRows(rows: SessionPlanRow[]): SessionPlanRow[] {
+  const byTitle = new Map<string, (typeof CURRICULUM)[number]>();
+  for (const s of CURRICULUM) byTitle.set(s.topic.toLowerCase().trim(), s);
+  return rows.map((r) => {
+    if (r.curriculumNum != null) {
+      return { ...r, enabled: r.enabled !== false };
+    }
+    // Strip a trailing "(salinan)" so duplicates still match a curriculum title.
+    const base = r.title.toLowerCase().replace(/\s*\(salinan\)\s*$/i, "").trim();
+    const tpl = byTitle.get(base);
+    if (tpl) {
+      return {
+        ...r,
+        curriculumNum: tpl.sessionNum,
+        enabled: r.enabled !== false,
+        dup: /\(salinan\)/i.test(r.title) || r.dup,
+        objective: r.objective ?? tpl.objective,
+        deliverables: r.deliverables ?? tpl.deliverables,
+        menteePrep: r.menteePrep ?? tpl.menteePrep,
+        mentorPrep: r.mentorPrep ?? tpl.mentorPrep,
+        docChecklist: r.docChecklist ?? tpl.docChecklist,
+      };
+    }
+    return r; // genuine custom session
+  });
+}
+
+/** Phase distribution shown in the side rail (counts enabled rows only). */
 export function planPhaseBreakdown(plan: SessionPlanRow[]): Record<PlanPhase, number> {
   const out: Record<PlanPhase, number> = {
     Discovery: 0, Planning: 0, Writing: 0, Execution: 0, Closing: 0,
   };
-  for (const row of plan) out[row.phase] = (out[row.phase] || 0) + 1;
+  for (const row of enabledRows(plan)) out[row.phase] = (out[row.phase] || 0) + 1;
   return out;
 }
 
-/** Total minutes across all rows. Used in the sticky footer summary. */
+/** Total minutes across the held (enabled) rows. */
 export function planTotalMinutes(plan: SessionPlanRow[]): number {
-  return plan.reduce((acc, r) => acc + r.durationMinutes, 0);
+  return enabledRows(plan).reduce((acc, r) => acc + r.durationMinutes, 0);
 }
 
-/** Validate a plan against the constraints. Returns the first failure
- *  message or null when valid. */
+/** Validate a plan against the constraints. Returns the first failure message
+ *  or null when valid. */
 export function validatePlan(plan: SessionPlanRow[]): string | null {
-  if (plan.length < PLAN_MIN_SESSIONS) return `Minimum ${PLAN_MIN_SESSIONS} sesi.`;
   if (plan.length > PLAN_MAX_SESSIONS) return `Maksimum ${PLAN_MAX_SESSIONS} sesi.`;
+  if (enabledRows(plan).length < 1) return "Minimal 1 sesi harus diadakan.";
   for (const row of plan) {
     if (!row.title.trim()) return "Setiap sesi harus punya judul.";
     if (!PLAN_PHASES.includes(row.phase)) return `Fase tidak valid: ${row.phase}`;

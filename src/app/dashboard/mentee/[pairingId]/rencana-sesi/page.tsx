@@ -23,12 +23,15 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import Modal from "@/components/ui/Modal";
 import {
   PLAN_MAX_SESSIONS,
-  PLAN_MIN_SESSIONS,
   PLAN_DEFAULT_DURATION,
   PLAN_DURATION_OPTIONS,
   PLAN_PHASES,
   type SessionPlanRow,
   planTotalMinutes,
+  isCoreRow,
+  isEnabled,
+  enabledRows,
+  normalizeRows,
 } from "@/lib/session-plan-defaults";
 import { CURRICULUM } from "@/lib/curriculum";
 
@@ -82,16 +85,16 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   // Which session row has its detail panel expanded (one at a time).
   const [openDetailId, setOpenDetailId] = useState<string | null>(null);
 
-  // Curriculum lookup by topic — so a session shows its detail (objective,
-  // deliverables, docs to upload, prep) even for plans saved before detail
-  // was stored on the row.
-  const curriculumByTitle = useMemo(() => {
-    const m = new Map<string, (typeof CURRICULUM)[number]>();
-    for (const s of CURRICULUM) m.set(s.topic.toLowerCase().trim(), s);
+  // Curriculum lookup by session number — core rows carry a stable
+  // curriculumNum, so detail (objective, deliverables, docs, prep) is resolved
+  // from the curriculum regardless of order. Custom rows have no curriculum.
+  const curriculumByNum = useMemo(() => {
+    const m = new Map<number, (typeof CURRICULUM)[number]>();
+    for (const s of CURRICULUM) m.set(s.sessionNum, s);
     return m;
   }, []);
   function detailFor(row: SessionPlanRow) {
-    const tpl = curriculumByTitle.get(row.title.toLowerCase().trim());
+    const tpl = row.curriculumNum != null ? curriculumByNum.get(row.curriculumNum) : undefined;
     return {
       objective: row.objective ?? tpl?.objective,
       deliverables: row.deliverables ?? tpl?.deliverables,
@@ -127,7 +130,14 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           return;
         }
         setPairing(p);
-        setPlan(planResp.plan); // may be null for a mentee whose plan isn't finalized yet
+        // Normalize legacy rows into the locked-curriculum model (backfill
+        // curriculumNum/enabled). May be null for a mentee whose plan isn't
+        // finalized yet.
+        setPlan(
+          planResp.plan
+            ? { ...planResp.plan, rows: normalizeRows(planResp.plan.rows || []) }
+            : planResp.plan,
+        );
       })
       .catch((e) => setErr(String(e)))
       .finally(() => setLoading(false));
@@ -174,8 +184,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     scheduleSave(next);
   }
 
+  /** Only custom sessions can be renamed — core curriculum titles are locked. */
   function renameRow(id: string, title: string) {
-    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, title: title.trim() || "Sesi tanpa nama" } : r)));
+    mutate((rows) => rows.map((r) => (r.id === id && !isCoreRow(r) ? { ...r, title: title.trim() || "Sesi tanpa nama" } : r)));
   }
   function setPhase(id: string, phase: SessionPlanRow["phase"]) {
     mutate((rows) => rows.map((r) => (r.id === id ? { ...r, phase } : r)));
@@ -184,26 +195,40 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   function setDuration(id: string, minutes: number) {
     mutate((rows) => rows.map((r) => (r.id === id ? { ...r, durationMinutes: minutes } : r)));
   }
+  /** Core sessions are toggled on/off (diadakan / tidak), never deleted. */
+  function toggleEnabled(id: string) {
+    mutate((rows) => rows.map((r) => (r.id === id ? { ...r, enabled: !isEnabled(r) } : r)));
+  }
   function duplicateRow(id: string) {
     mutate((rows) => {
       if (rows.length >= PLAN_MAX_SESSIONS) return rows;
       const idx = rows.findIndex((r) => r.id === id);
       if (idx === -1) return rows;
       const src = rows[idx];
+      // A duplicate keeps the same curriculumNum (so it shares documents) and is
+      // marked `dup` (deletable). Always held.
       const clone: SessionPlanRow = {
         ...src,
         id: randomId(),
-        title: `${src.title} (salinan)`,
+        enabled: true,
+        dup: isCoreRow(src) ? true : src.dup,
+        title: isCoreRow(src) ? src.title : `${src.title} (salinan)`,
       };
       const out = [...rows];
       out.splice(idx + 1, 0, clone);
       return out;
     });
   }
+  /** Canonical core rows can't be deleted (toggle them off instead). Duplicates
+   *  and custom sessions can. */
+  function canDeleteRow(r: SessionPlanRow) {
+    return !isCoreRow(r) || !!r.dup;
+  }
   function deleteRow(id: string) {
     mutate((rows) => {
-      if (rows.length <= PLAN_MIN_SESSIONS) return rows;
-      return rows.filter((r) => r.id !== id);
+      const r = rows.find((x) => x.id === id);
+      if (!r || !canDeleteRow(r)) return rows;
+      return rows.filter((x) => x.id !== id);
     });
   }
   /** Move a row one step up (dir=-1) or down (dir=+1) — easier than drag. */
@@ -218,6 +243,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
       return out;
     });
   }
+  /** Add a custom (non-curriculum) session: free title, upload-only, no template. */
   function addRow() {
     mutate((rows) => {
       if (rows.length >= PLAN_MAX_SESSIONS) return rows;
@@ -226,9 +252,10 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
         {
           id: randomId(),
           order: rows.length + 1,
-          title: "Sesi baru",
+          title: "Sesi custom",
           phase: "Writing",
           durationMinutes: PLAN_DEFAULT_DURATION,
+          // no curriculumNum → custom; always enabled
         },
       ];
     });
@@ -315,7 +342,12 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
     );
   }
 
-  const total = plan.rows.length;
+  const held = enabledRows(plan.rows);          // sessions actually published
+  const total = held.length;
+  const totalRows = plan.rows.length;
+  // Sequence number among held rows (disabled rows show no number).
+  const seqById = new Map<string, number>();
+  { let n = 0; for (const r of plan.rows) if (isEnabled(r)) seqById.set(r.id, ++n); }
   const totalMin = planTotalMinutes(plan.rows);
   const totalHoursLabel = `${(totalMin / 60).toFixed(1).replace(".0", "")} jam`;
   const monthsLabel = `~${Math.max(1, Math.round(total / 4))} bulan`;
@@ -323,8 +355,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
   // Editing is allowed only for the mentor on a still-draft plan. Once
   // finalized, the plan is published into the sessions and is read-only.
   const readOnly = isFinalized || isMentee;
-  const canDelete = total > PLAN_MIN_SESSIONS;
-  const canAdd = total < PLAN_MAX_SESSIONS;
+  const canAdd = totalRows < PLAN_MAX_SESSIONS;
 
   return (
     <>
@@ -357,7 +388,7 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
               ? "Ini rencana sesi yang sudah disusun mentor kamu. Klik ikon ⓘ di tiap sesi untuk lihat tujuan, output, dan dokumen yang perlu disiapkan."
               : isFinalized
                 ? `Sudah difinalisasi & dipublikasikan — semua sesi ${pairing.mentee.name.split(/\s+/)[0]} sekarang mengikuti rencana ini. (read-only)`
-                : `Mulai dari saran kurikulum ${PLAN_MIN_SESSIONS}–${PLAN_MAX_SESSIONS} sesi Satu Tuju. Edit judul, atur ulang urutan, hapus atau tambah sesi (minimum ${PLAN_MIN_SESSIONS}). Finalisasi untuk mengunci & memberi tahu ${pairing.mentee.name.split(/\s+/)[0]}.`}
+                : `Kurikulum 10 sesi Satu Tuju. Pilih sesi mana yang diadakan (toggle), atur ulang urutan, duplikat kalau perlu dua kali, atau tambah sesi custom sendiri. Finalisasi untuk mengunci & memberi tahu ${pairing.mentee.name.split(/\s+/)[0]}.`}
           </p>
         </div>
       </div>
@@ -401,9 +432,9 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           </div>
         </div>
         <div className="right">
-          <div className="ttl">total sesi</div>
+          <div className="ttl">sesi diadakan</div>
           <div className="cnt">{total}</div>
-          <div className="min-note">minimal {PLAN_MIN_SESSIONS}</div>
+          <div className="min-note">dari {totalRows} di rencana</div>
         </div>
       </div>
 
@@ -428,11 +459,11 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
               <div className="rs-nudge-body">
                 <strong>Cara menyusun rencana sesi</strong>
                 <ul>
-                  <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang sesi.</li>
-                  <li><b>Klik judul</b> sesi untuk mengganti namanya.</li>
-                  <li><b>Klik pil fase</b> untuk ganti fase, dan pilih <b>durasi 60 / 90 menit</b> (selaras dengan slot kalender).</li>
-                  <li>Pakai ikon <b>salin</b> / <b>hapus</b> di kanan tiap baris (minimal {PLAN_MIN_SESSIONS} sesi).</li>
-                  <li>Klik ikon <b>ⓘ</b> di kanan untuk lihat detail tiap sesi (tujuan &amp; persiapan).</li>
+                  <li><b>10 sesi kurikulum</b> sudah terkunci — pakai toggle <b>Adakan / Tidak</b> untuk pilih mana yang dijalankan.</li>
+                  <li>Pakai tombol <b>↑ / ↓</b> (atau tarik ikon ⠿) untuk mengurutkan ulang.</li>
+                  <li><b>Salin</b> sesi kalau mau dibahas dua kali — dokumennya cukup diunggah sekali.</li>
+                  <li>Atur <b>fase</b> &amp; <b>durasi 60 / 90 menit</b> (selaras dengan slot kalender).</li>
+                  <li><b>Tambah sesi custom</b> di bawah kalau perlu sesi di luar kurikulum (judul bebas, tanpa template).</li>
                   <li>Kalau sudah pas, tekan <b>Finalisasi &amp; kirim</b> — mentee otomatis dapat email.</li>
                 </ul>
               </div>
@@ -445,10 +476,14 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
           )}
 
           <div className="rs-list">
-            {plan.rows.map((row, i) => (
+            {plan.rows.map((row, i) => {
+              const core = isCoreRow(row);
+              const on = isEnabled(row);
+              const seq = seqById.get(row.id);
+              return (
               <div
                 key={row.id}
-                className="rs-row"
+                className={`rs-row${on ? "" : " rs-row-off"}`}
                 draggable={!readOnly}
                 onDragStart={(e) => onDragStart(e, i)}
                 onDragOver={onDragOver}
@@ -462,23 +497,31 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                     </svg>
                   )}
                 </span>
-                <span className="rs-num">{row.order}</span>
+                <span className="rs-num">{seq ?? "—"}</span>
                 <div className="rs-info">
-                  <h3
-                    className="rs-title"
-                    contentEditable={!readOnly}
-                    suppressContentEditableWarning
-                    spellCheck={false}
-                    onBlur={(e) => renameRow(row.id, e.currentTarget.textContent || "")}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.currentTarget as HTMLElement).blur();
-                      }
-                    }}
-                  >
-                    {row.title}
-                  </h3>
+                  {core ? (
+                    <h3 className="rs-title" style={{ cursor: "default" }} title="Judul sesi kurikulum terkunci">
+                      {row.title}
+                      {row.dup && <span className="rs-tag-dup">salinan</span>}
+                    </h3>
+                  ) : (
+                    <h3
+                      className="rs-title"
+                      contentEditable={!readOnly}
+                      suppressContentEditableWarning
+                      spellCheck={false}
+                      onBlur={(e) => renameRow(row.id, e.currentTarget.textContent || "")}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          (e.currentTarget as HTMLElement).blur();
+                        }
+                      }}
+                    >
+                      {row.title}
+                    </h3>
+                  )}
+                  {!core && <span className="rs-tag-custom">Custom</span>}
                   <div className="rs-meta">
                     {readOnly ? (
                       <>
@@ -518,6 +561,18 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                   </div>
                 </div>
                 <div className="rs-actions">
+                  {!readOnly && core && !row.dup && (
+                    <button
+                      type="button"
+                      className={`rs-toggle${on ? " on" : ""}`}
+                      onClick={() => toggleEnabled(row.id)}
+                      title={on ? "Sesi ini diadakan — klik untuk tidak diadakan" : "Sesi ini tidak diadakan — klik untuk adakan"}
+                      aria-pressed={on}
+                    >
+                      <span className="rs-toggle-track"><span className="rs-toggle-knob" /></span>
+                      {on ? "Diadakan" : "Tidak"}
+                    </button>
+                  )}
                   {!readOnly && (
                     <div className="rs-move">
                       <button
@@ -571,19 +626,20 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                       </button>
-                      <button
-                        type="button"
-                        className="rs-iconbtn rs-iconbtn-danger"
-                        title="Hapus"
-                        onClick={() => deleteRow(row.id)}
-                        disabled={!canDelete}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6" /><path d="M14 11v6" />
-                        </svg>
-                      </button>
+                      {canDeleteRow(row) && (
+                        <button
+                          type="button"
+                          className="rs-iconbtn rs-iconbtn-danger"
+                          title="Hapus"
+                          onClick={() => deleteRow(row.id)}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6" /><path d="M14 11v6" />
+                          </svg>
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -638,7 +694,8 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                   );
                 })()}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {!isFinalized && (
@@ -648,28 +705,28 @@ export default function RencanaSesiPage({ params }: { params: Promise<{ pairingI
                 <line x1="12" y1="8" x2="12" y2="16" />
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
-              {canAdd ? "Tambah sesi baru" : `Sudah di maksimum (${PLAN_MAX_SESSIONS})`}
+              {canAdd ? "Tambah sesi custom" : `Sudah di maksimum (${PLAN_MAX_SESSIONS})`}
             </button>
           )}
 
-          {!canDelete && !isFinalized && (
+          {total === 0 && !isFinalized && (
             <div className="rs-min-warn">
-              <strong>Minimum {PLAN_MIN_SESSIONS} sesi.</strong> Saat ini ada {total} sesi —
-              tombol hapus dimatikan. Tambah sesi baru kalau perlu fleksibilitas, atau lanjut finalisasi.
+              <strong>Belum ada sesi yang diadakan.</strong> Aktifkan minimal satu sesi (toggle <b>Adakan</b>)
+              sebelum finalisasi.
             </div>
           )}
 
           {/* Footer summary + finalize */}
           <div className="rs-foot">
             <div className="summary">
-              <b>{total}</b> sesi · estimasi <b>{totalHoursLabel}</b> total · <em>{monthsLabel}</em> kalau weekly
+              <b>{total}</b> sesi diadakan · estimasi <b>{totalHoursLabel}</b> total · <em>{monthsLabel}</em> kalau weekly
             </div>
             {!isFinalized && (
               <>
                 <button type="button" className="db-btn db-btn-outline" onClick={flushSaveNow} disabled={saveState === "saving"}>
                   {saveState === "saving" ? "Menyimpan…" : "Simpan draft"}
                 </button>
-                <button type="button" className="db-btn db-btn-primary" onClick={() => setConfirmFinalize(true)}>
+                <button type="button" className="db-btn db-btn-primary" onClick={() => setConfirmFinalize(true)} disabled={total === 0}>
                   Finalisasi & kirim ke {pairing.mentee.name.split(/\s+/)[0]} →
                 </button>
               </>
