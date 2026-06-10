@@ -93,6 +93,20 @@ export async function PUT(req: NextRequest) {
     patch[column] = trimmed.length === 0 ? null : trimmed;
   }
 
+  // Guard against the common mix-up where the NIK/ID number is typed into the
+  // name field (or name & number entered swapped). A legal name must contain
+  // letters — a bare number is never a valid name.
+  const nameVal = patch["fullLegalName"];
+  if (typeof nameVal === "string" && nameVal.length > 0 && !/\p{L}/u.test(nameVal)) {
+    return NextResponse.json(
+      {
+        error:
+          "Nama Lengkap harus berupa nama, bukan angka/NIK. Isi nama sesuai identitas di kolom Nama Lengkap, dan nomor identitas di kolom Nomor Identitas.",
+      },
+      { status: 400 },
+    );
+  }
+
   const { data: existing } = await supabase
     .from("MenteeProfile")
     .select("id")
