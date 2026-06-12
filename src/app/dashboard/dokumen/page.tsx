@@ -12,7 +12,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
-import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 import Modal from "@/components/ui/Modal";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
@@ -123,15 +122,6 @@ const FILTERS: { id: string; label: string; match: (d: DocRow) => boolean }[] = 
 const PENDING = new Set(["pending", "in_progress", "overdue"]);
 
 export default function DokumenPage() {
-  // Hard gate (Phase 19): mentee needs contract SIGNED + deposit uploaded.
-  return (
-    <MenteePrereqGate>
-      <DokumenPageInner />
-    </MenteePrereqGate>
-  );
-}
-
-function DokumenPageInner() {
   const { user } = useUser();
   // Seed from the shared cache for instant revisit; revalidated on mount.
   const cachedPairing = getCachedMenteePairing();

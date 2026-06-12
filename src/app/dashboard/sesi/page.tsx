@@ -12,7 +12,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/hooks";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
-import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 
 interface SessionRow {
   id: string;
@@ -22,17 +21,6 @@ interface SessionRow {
 }
 
 export default function SesiIndexPage() {
-  // The redirect effect lives in an inner component so the prereq gate can
-  // keep it unmounted (and the /api/pairings fetches unfired) for a mentee
-  // who hasn't signed the contract / uploaded the deposit proof yet.
-  return (
-    <MenteePrereqGate>
-      <SesiIndexRedirect />
-    </MenteePrereqGate>
-  );
-}
-
-function SesiIndexRedirect() {
   const { user, loading } = useUser();
   const router = useRouter();
 

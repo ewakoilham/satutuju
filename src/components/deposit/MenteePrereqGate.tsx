@@ -15,18 +15,25 @@ import {
 import { DEPOSIT_AMOUNT_LABEL } from "@/lib/deposit-terms";
 
 /**
- * Phase 19 — hard gate for the mentee's mentoring surfaces (Jadwal, Sesi,
- * Dokumen). Children are NOT mounted while prerequisites are unmet, so the
- * wrapped page's effects/fetches never run for a blocked mentee.
+ * Phase 19 — hard gate for every mentee dashboard surface (mounted at the
+ * layout level around all page content; the contract + deposit pages are
+ * exempt so a blocked mentee can still reach the escape hatches). Children
+ * are NOT mounted while prerequisites are unmet, so the wrapped page's
+ * effects/fetches never run for a blocked mentee.
  *
  * Pass-through for mentor/admin. Fail-open on network error — the data is
  * also enforced server-side per feature and the dashboard banner keeps
  * nagging, so a flaky connection never locks a paying mentee out.
+ *
+ * Stale-while-revalidate: because this now mounts on every navigation, we
+ * keep showing the last-known prereq state while revalidating in the
+ * background instead of blanking to a skeleton on each nav. The skeleton
+ * only appears on the very first load.
  */
 export default function MenteePrereqGate({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const pathname = usePathname();
-  // undefined = loading; null = fetch failed (fail-open)
+  // undefined = never loaded (skeleton); null = fetch failed (fail-open)
   const [state, setState] = useState<MenteePrereqState | null | undefined>(undefined);
 
   const isMentee = !authLoading && user?.role === "mentee";
@@ -34,9 +41,11 @@ export default function MenteePrereqGate({ children }: { children: ReactNode }) 
   useEffect(() => {
     if (!isMentee) return;
     let cancelled = false;
-    setState(undefined);
     fetchMenteePrereqs().then((s) => {
-      if (!cancelled) setState(s);
+      if (cancelled) return;
+      // On success use the fresh state; on failure keep the last-known
+      // state (or fail-open with null if we never had one).
+      setState((prev) => s ?? prev ?? null);
     });
     return () => {
       cancelled = true;

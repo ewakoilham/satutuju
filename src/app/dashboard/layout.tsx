@@ -10,6 +10,7 @@ import Icon from "@/components/ui/Icon";
 import Avatar from "@/components/ui/Avatar";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
+import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 import MentorTour from "@/components/dashboards/MentorTour";
 import MentorScreenCoachmarks from "@/components/dashboards/MentorScreenCoachmarks";
 import "./dashboard.css";
@@ -176,6 +177,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems      = NAV_ITEMS[user.role]      || NAV_ITEMS.mentee;
   const userMenuItems = USER_MENU_ITEMS[user.role] || [];
+
+  // Phase 19.1 — the mentee hard gate now covers EVERY dashboard surface.
+  // Only the two escape hatches stay reachable so a blocked mentee can
+  // actually complete the prerequisites (otherwise it's a deadlock). The
+  // gate itself passes through mentor/admin.
+  const gateExempt =
+    pathname.startsWith("/dashboard/mentee-contract") ||
+    pathname.startsWith("/dashboard/deposit");
   const scheduleUnread = notifications.filter(
     (n) => n.link === "/dashboard/schedule" && !n.read
   ).length;
@@ -560,7 +569,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             : "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8"
         }
       >
-        {children}
+        {gateExempt ? children : <MenteePrereqGate>{children}</MenteePrereqGate>}
       </main>
     </div>
   );
