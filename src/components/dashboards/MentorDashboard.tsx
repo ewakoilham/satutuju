@@ -168,6 +168,12 @@ export default function MentorDashboard() {
   const [pairings, setPairings] = useState<Pairing[]>(cachedPairings?.pairings ?? []);
   const [slots, setSlots] = useState<ScheduleSlot[]>(cachedSchedule?.slots ?? []);
   const [profile, setProfile] = useState<MentorProfile | null>(null);
+  // The profile is fetched fresh on every mount (never cached), so `profile`
+  // is null until that fetch lands. Track that explicitly — `loading` is
+  // seeded from the *pairings* cache and can be false while the profile is
+  // still unknown, which would otherwise flash the "complete your profile"
+  // banner (computed from a null profile = 0/12) before hiding it.
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [loading, setLoading] = useState(cachedPairings === undefined);
 
   // One-time WhatsApp backfill for mentors who onboarded before the number was
@@ -236,7 +242,10 @@ export default function MentorDashboard() {
       setPairings(p?.pairings || []);
       setSlots(s?.slots || []);
       setProfile(m.profile || null);
-    }).finally(() => setLoading(false));
+    }).finally(() => {
+      setProfileLoaded(true);
+      setLoading(false);
+    });
   }, []);
 
   const phase = phaseOverride ?? phaseFromHour(currentWibHour(now));
@@ -390,7 +399,7 @@ export default function MentorDashboard() {
 
   return (
     <>
-      {profileStatus && !profileStatus.complete && (
+      {profileLoaded && !profileStatus.complete && (
         <Link
           href="/dashboard/mentor-profile"
           className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 hover:bg-amber-100 transition mb-8"
