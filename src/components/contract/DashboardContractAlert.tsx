@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
+import { fetchMenteePrereqs } from "@/lib/mentee-prereq-cache";
 
 interface ContractStateAPI {
   contract: {
@@ -17,51 +18,68 @@ interface ContractStateAPI {
 }
 
 interface Props {
-  /** Current logged-in user role. Only mentors get a banner. */
+  /** Current logged-in user role; mentor + mentee get (different) banners. */
   role: string | undefined;
 }
 
 /**
- * Layout-level contract alert — MENTOR ONLY.
+ * Layout-level contract alert.
  *
- * Mentors still get the sticky banner nudging them to sign / re-sign their
- * Perjanjian Kemitraan. Mentees do NOT: Phase 19.1 hard-gates the entire
- * mentee dashboard (see MenteePrereqGate), which is a stronger and clearer
- * mechanism than a banner — so the mentee banner would just be redundant
- * chrome. The mentee's resign notification still fires server-side from the
- * gate's prereq fetch (GET /api/mentee-contract?summary=1).
+ *  - mentor → full nudge: unsigned / void / resign. Mentors aren't hard-gated,
+ *    so the banner is their only prompt.
+ *  - mentee → RESIGN ONLY. Phase 19.1 hard-gates the whole mentee dashboard
+ *    for the blocking obligations (first-time signature + deposit), so those
+ *    need no banner. But a re-sign (already signed, template version bumped)
+ *    is deliberately NOT gated — the old signature stays valid — so it gets a
+ *    soft banner reminder instead.
+ *  - admin / other → nothing.
  *
- * Hides itself on the mentor's own contract page; the same GET also lazily
+ * Hides itself on the user's own contract page. The same GET also lazily
  * inserts a Notification row when the version is stale.
  */
 
-const MENTOR_CONFIG = {
+const MENTOR = {
   endpoint: "/api/mentor-contract?summary=1",
   href: "/dashboard/contract",
   contractName: "Perjanjian Kemitraan Mentor",
   hidePath: "/dashboard/contract",
 };
 
+const MENTEE = {
+  href: "/dashboard/mentee-contract",
+  contractName: "Perjanjian Layanan Mentoring Mentee",
+  hidePath: "/dashboard/mentee-contract",
+};
+
 export default function DashboardContractAlert({ role }: Props) {
   const pathname = usePathname();
   const [state, setState] = useState<ContractStateAPI | null>(null);
+
   const isMentor = role === "mentor";
+  const isMentee = role === "mentee";
+  const cfg = isMentor ? MENTOR : isMentee ? MENTEE : null;
 
   useEffect(() => {
-    if (!isMentor) return;
-    // Skip while on the contract page (the banner is hidden there anyway)
-    // so we refresh exactly when the mentor leaves it after signing.
-    if (pathname === MENTOR_CONFIG.hidePath) return;
+    if (!cfg) return;
+    // Skip while on the user's own contract page (banner hidden there anyway)
+    // so we refresh exactly when they leave it after signing.
+    if (pathname === cfg.hidePath) return;
     let cancelled = false;
-    fetch(MENTOR_CONFIG.endpoint, { credentials: "include", cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: ContractStateAPI | null) => { if (!cancelled) setState(d); })
+    // Mentor: raw summary fetch. Mentee: shared prereq cache (deduped with
+    // the hard gate that also mounts on every navigation).
+    const load = isMentor
+      ? fetch(MENTOR.endpoint, { credentials: "include", cache: "no-store" }).then((r) =>
+          r.ok ? r.json() : null,
+        )
+      : fetchMenteePrereqs();
+    Promise.resolve(load)
+      .then((d) => { if (!cancelled) setState((d as ContractStateAPI | null) ?? null); })
       .catch(() => null);
     return () => { cancelled = true; };
-  }, [isMentor, pathname]);
+  }, [cfg, isMentor, pathname]);
 
-  if (!isMentor) return null;
-  if (pathname === MENTOR_CONFIG.hidePath) return null;
+  if (!cfg) return null;
+  if (pathname === cfg.hidePath) return null;
   if (!state) return null;
 
   const status = state.contract?.status ?? null;
@@ -69,9 +87,15 @@ export default function DashboardContractAlert({ role }: Props) {
   const identityFilled = state.identityCompleteness === state.identityRequired;
 
   let kind: "resign" | "void" | "unsigned" | null = null;
-  if (state.needsResign) kind = "resign";
-  else if (status === "VOID") kind = "void";
-  else if (!isSigned) kind = "unsigned";
+  if (state.needsResign) {
+    kind = "resign";
+  } else if (isMentor && status === "VOID") {
+    kind = "void";
+  } else if (isMentor && !isSigned) {
+    kind = "unsigned";
+  }
+  // Mentee unsigned / void / no-deposit are all hard-gated, so the mentee
+  // only ever surfaces the resign reminder here.
 
   if (!kind) return null;
 
@@ -88,11 +112,11 @@ export default function DashboardContractAlert({ role }: Props) {
     if (kind === "void") {
       return {
         title: "Kontrak Anda dibatalkan oleh admin",
-        body: `Mohon tanda tangan ulang ${MENTOR_CONFIG.contractName} sebelum melakukan aktivitas lainnya.`,
+        body: `Mohon tanda tangan ulang ${cfg.contractName} sebelum melakukan aktivitas lainnya.`,
       };
     }
     return {
-      title: `Anda belum menandatangani ${MENTOR_CONFIG.contractName}`,
+      title: `Anda belum menandatangani ${cfg.contractName}`,
       body: !identityFilled
         ? "Lengkapi data identitas Anda lalu tanda tangani kontrak. Kontrak ini wajib ditandatangani sebelum aktivitas dilanjutkan."
         : "Data identitas Anda sudah lengkap — tinggal goreskan tanda tangan untuk menyelesaikan onboarding.",
@@ -110,7 +134,7 @@ export default function DashboardContractAlert({ role }: Props) {
           <p className="text-xs text-text-muted leading-relaxed">{body}</p>
         </div>
         <Link
-          href={MENTOR_CONFIG.href}
+          href={cfg.href}
           className="btn-primary inline-flex items-center justify-center whitespace-nowrap text-sm"
         >
           Buka Kontrak
