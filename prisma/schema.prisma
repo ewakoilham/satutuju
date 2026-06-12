@@ -56,6 +56,9 @@ model User {
 
   // Phase 18 — mentee contract signing (Perjanjian Layanan Mentoring Mentee).
   menteeContract MenteeContract?
+
+  // Phase 19 — mentee deposit proof (Pasal 9).
+  menteeDeposit MenteeDeposit?
 }
 
 model MentorProfile {
@@ -476,6 +479,49 @@ model MenteeContract {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// MENTEE DEPOSIT (Phase 19)
+// ──────────────────────────────────────────────
+// Bukti transfer deposit Rp 1.000.000 per Pasal 9 Perjanjian Layanan
+// Mentoring Mentee. No row = NOT_STARTED. The hard gate on Jadwal/Sesi/
+// Dokumen opens at UPLOADED (no admin wait); a REJECTED verdict closes
+// it again until the mentee re-uploads.
+
+model MenteeDeposit {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  status          String    @default("UPLOADED") // "UPLOADED" | "VERIFIED" | "REJECTED"
+  amount          Int       @default(1000000)
+
+  proofPath       String?                        // mentee-deposits/{userId}/proof-{epoch}.{ext}
+  proofUploadedAt DateTime?
+
+  // Frozen consent at upload time:
+  // { amount: true, refund: true, forfeit: true, confirmedAt: ISO }
+  confirmations   Json?
+  transferNote    String?                        // optional: nama pengirim / bank / tanggal transfer
+
+  verifiedAt      DateTime?
+  verifiedBy      String?                        // admin User.id
+  rejectedAt      DateTime?
+  rejectedReason  String?
+  rejectionCount  Int       @default(0)
+
+  // Append-only event log:
+  // [{ action: 'upload'|'verify'|'reject', at, by, proofPath?, reason? }]
+  history         Json?
+
+  ipAddress       String?
+  userAgent       String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }
 
 // ────────────────────────────────────────────────────────────────────────

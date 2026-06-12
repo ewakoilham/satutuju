@@ -147,6 +147,37 @@ async function fetchUserEmail(userId: string): Promise<string> {
   return (data?.email as string) ?? "";
 }
 
+/**
+ * Phase 19 — deposit stub bundled into the prereq summary so the dashboard
+ * banner and the hard gate get contract + deposit state in ONE request.
+ */
+type DepositStub = {
+  status: string;
+  amount: number;
+  proofUploadedAt: string | null;
+  rejectedAt: string | null;
+  rejectedReason: string | null;
+};
+
+async function fetchDeposit(userId: string): Promise<DepositStub | null> {
+  const { data, error } = await supabase
+    .from("MenteeDeposit")
+    .select("status,amount,proofUploadedAt,rejectedAt,rejectedReason")
+    .eq("userId", userId)
+    .maybeSingle();
+  if (error) {
+    if (MISSING_TABLE_CODES.has(error.code)) {
+      console.warn(
+        "[mentee-contract] MenteeDeposit table missing — apply Phase 19 migration. Continuing with no deposit.",
+      );
+      return null;
+    }
+    console.error("MenteeDeposit fetch error:", error);
+    return null; // deposit state is auxiliary here — don't fail the contract GET
+  }
+  return (data as DepositStub | null) ?? null;
+}
+
 // ─── GET /api/mentee-contract ─────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -158,10 +189,11 @@ export async function GET(req: NextRequest) {
   const summaryOnly = req.nextUrl.searchParams.get("summary") === "1";
 
   try {
-    const [contract, identity, email] = await Promise.all([
+    const [contract, identity, email, deposit] = await Promise.all([
       fetchContract(user.userId),
       fetchProfile(user.userId),
       fetchUserEmail(user.userId),
+      fetchDeposit(user.userId),
     ]);
 
     const needsResign = isMenteeContractStale(contract, MENTEE_CONTRACT_VERSION);
@@ -180,6 +212,7 @@ export async function GET(req: NextRequest) {
           identityRequired: MENTEE_IDENTITY_FIELDS.length,
           contractVersion: MENTEE_CONTRACT_VERSION,
           needsResign,
+          deposit,
         },
         { headers: noStore },
       );
@@ -216,6 +249,7 @@ export async function GET(req: NextRequest) {
         identityRequired: MENTEE_IDENTITY_FIELDS.length,
         contractVersion: MENTEE_CONTRACT_VERSION,
         needsResign,
+        deposit,
         changelogSinceSigned,
         previewHtml,
         previewToc,

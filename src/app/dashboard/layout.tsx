@@ -95,6 +95,8 @@ const USER_MENU_ITEMS: Record<string, Array<{ href: string; label: string; icon:
     { href: "/dashboard/profile",         label: "Profile",  icon: "user"     },
     // Phase 18 — mentee Perjanjian Layanan Mentoring signing flow.
     { href: "/dashboard/mentee-contract", label: "Kontrak",  icon: "document" },
+    // Phase 19 — deposit Pasal 9 (bayar + unggah bukti transfer).
+    { href: "/dashboard/deposit",         label: "Deposit",  icon: "wallet"   },
     { href: "/dashboard/settings",        label: "Settings", icon: "settings" },
   ],
 };

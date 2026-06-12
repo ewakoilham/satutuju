@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 import { cleanUniName } from "@/data/university-enrichment";
 import { CURRICULUM } from "@/lib/curriculum";
 import { classifyDoc } from "@/lib/doc-templates";
@@ -262,6 +263,16 @@ const IcCheck = () => (
 /* ─── Page ────────────────────────────────────────────────────────── */
 
 export default function SesiPage({ params }: { params: Promise<{ id: string }> }) {
+  // Hard gate (Phase 19): a mentee must have a SIGNED contract + an uploaded
+  // deposit proof before any session view (incl. deep links) is reachable.
+  return (
+    <MenteePrereqGate>
+      <SesiPageInner params={params} />
+    </MenteePrereqGate>
+  );
+}
+
+function SesiPageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
   const [pairings, setPairings] = useState<Pairing[]>([]);

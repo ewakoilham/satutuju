@@ -3,6 +3,7 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { useUser } from "@/lib/hooks";
 import Icon from "@/components/ui/Icon";
+import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 import Select from "@/components/ui/Select";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { invalidate } from "@/lib/swr-lite";
@@ -63,6 +64,16 @@ function fmtHours(mins: number): string {
 }
 
 export default function SchedulePage() {
+  // Hard gate (Phase 19): mentee needs contract SIGNED + deposit uploaded.
+  // Pass-through for mentor/admin inside the gate.
+  return (
+    <MenteePrereqGate>
+      <SchedulePageInner />
+    </MenteePrereqGate>
+  );
+}
+
+function SchedulePageInner() {
   const { user } = useUser();
   const [state, dispatch] = useScheduleReducer();
   const { slots, sessions, hasPairing, loading, weekStart, mentorFilter, mentors, mode } = state;
