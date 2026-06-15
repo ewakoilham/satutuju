@@ -7,6 +7,7 @@ import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing }
 import { CURRICULUM, PHASES } from "@/lib/curriculum";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import {
   currentWibHour,
   phaseFromHour,
@@ -570,6 +571,8 @@ export default function MenteeDashboard() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
             </Link>
           </div>
+
+          <FeedbackWidget />
         </aside>
       </div>
 

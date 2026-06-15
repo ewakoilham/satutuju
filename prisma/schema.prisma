@@ -42,6 +42,7 @@ model User {
 
   // Notifications
   notifications Notification[]
+  feedback      Feedback[]
 
   // Profiles
   mentorProfile MentorProfile?
@@ -403,6 +404,20 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Mentee → SatuTuju (admin) general feedback. Separate from per-session mentor
+// ratings (Session.mentorRating / menteeFeedback).
+model Feedback {
+  id        String   @id @default(cuid())
+  menteeId  String
+  category  String   // "Saran" | "Kendala" | "Lainnya"
+  message   String
+  anonymous Boolean  @default(false)
+  status    String   @default("new") // "new" | "read"
+  createdAt DateTime @default(now())
+
+  mentee User @relation(fields: [menteeId], references: [id], onDelete: Cascade)
 }
 
 // ──────────────────────────────────────────────

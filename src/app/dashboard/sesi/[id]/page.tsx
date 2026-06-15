@@ -895,6 +895,13 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 </section>
               )}
 
+              <MenteeRatingCard
+                pairingId={pairing.id}
+                sessionNum={session.sessionNum}
+                mentorFirst={mentorFirst}
+                initialRating={session.mentorRating ?? 0}
+                initialFeedback={session.menteeFeedback ?? ""}
+              />
             </>
           ) : vs === "current" ? (
             <>
@@ -1962,5 +1969,93 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
     </>
+  );
+}
+
+/* ─── Mentee → Mentor session rating ──────────────────────────────────────
+   Shown on a completed session. Stars (1–5) + optional comment, saved to the
+   session via PATCH (mentorRating + menteeFeedback) — the same fields the
+   admin feedback summary reads. */
+function MenteeRatingCard({
+  pairingId, sessionNum, mentorFirst, initialRating, initialFeedback,
+}: {
+  pairingId: string;
+  sessionNum: number;
+  mentorFirst: string;
+  initialRating: number;
+  initialFeedback: string;
+}) {
+  const [rating, setRating] = useState(initialRating);
+  const [hover, setHover] = useState(0);
+  const [feedback, setFeedback] = useState(initialFeedback);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(initialRating > 0);
+  const [err, setErr] = useState("");
+
+  async function submit() {
+    if (!rating) { setErr("Pilih bintang dulu ya."); return; }
+    setSaving(true);
+    setErr("");
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}/sessions/${sessionNum}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mentorRating: rating, menteeFeedback: feedback.trim() || null }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setSaved(true);
+    } catch {
+      setErr("Gagal mengirim. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="se-card">
+      <div className="se-card-head">
+        <h2>Nilai sesi & feedback ke {mentorFirst}</h2>
+        {saved && <span className="stamp">tersimpan ✓</span>}
+      </div>
+      <div className="se-card-body" style={{ paddingTop: 4 }}>
+        <p className="muted" style={{ margin: "0 0 12px" }}>
+          Gimana sesi ini menurut kamu? Penilaian membantu {mentorFirst} & SatuTuju jaga kualitas mentoring.
+        </p>
+        <div style={{ display: "flex", gap: 6, marginBottom: 14 }} role="group" aria-label="Beri bintang">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const active = (hover || rating) >= n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => { setRating(n); setSaved(false); setErr(""); }}
+                onMouseEnter={() => setHover(n)}
+                onMouseLeave={() => setHover(0)}
+                aria-label={`${n} bintang`}
+                style={{ background: "none", border: "none", padding: 2, cursor: "pointer", lineHeight: 0 }}
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24"
+                  fill={active ? "#f5b301" : "none"} stroke={active ? "#f5b301" : "var(--text-muted-2)"}
+                  strokeWidth="1.6" strokeLinejoin="round">
+                  <path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.9l-5.8 3.05 1.1-6.45-4.7-4.6 6.5-.95L12 2.5z" />
+                </svg>
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          className="se-rf-textarea sm"
+          placeholder={`Apa yang paling membantu? Ada yang bisa lebih baik? (opsional)`}
+          value={feedback}
+          onChange={(e) => { setFeedback(e.target.value); setSaved(false); }}
+        />
+        {err && <p style={{ color: "var(--danger)", fontSize: 13, margin: "8px 0 0" }}>{err}</p>}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+          <button type="button" className="db-btn db-btn-primary" onClick={submit} disabled={saving}>
+            {saving ? "Mengirim…" : saved ? "Perbarui penilaian" : "Kirim penilaian"}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
