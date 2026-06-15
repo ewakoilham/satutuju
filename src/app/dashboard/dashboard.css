@@ -4471,7 +4471,7 @@
   width: 100%; box-sizing: border-box;
   border: 1.5px solid var(--border); border-radius: 12px;
   padding: 12px 14px; font-family: var(--font-sans); font-size: 15px;
-  color: var(--primary-900); line-height: 1.5; background: #fff;
+  color: var(--primary-900); line-height: 1.5; background: var(--surface-elevated);
   transition: border-color .12s, box-shadow .12s;
 }
 .dashboard-shell .se-rf-input:focus,
