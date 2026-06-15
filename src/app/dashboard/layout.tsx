@@ -60,6 +60,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     // Steps / Email Templates / Auto-Send) lives inside the pipeline
     // pages via <PipelineSubnav />.
     { href: "/dashboard/admin/new-leads", label: "Pipeline", icon: "chart", activePrefix: "/dashboard/admin/new-leads" },
+    { href: "/dashboard/admin/feedback", label: "Masukan", icon: "chat", activePrefix: "/dashboard/admin/feedback" },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
     { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
