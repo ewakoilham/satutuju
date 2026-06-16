@@ -2015,12 +2015,18 @@ function MenteeRatingCard({
     <section className="se-card">
       <div className="se-card-head">
         <h2>Nilai sesi & feedback ke {mentorFirst}</h2>
-        {saved && <span className="stamp">tersimpan ✓</span>}
       </div>
       <div className="se-card-body" style={{ paddingTop: 4 }}>
-        <p className="muted" style={{ margin: "0 0 12px" }}>
-          Gimana sesi ini menurut kamu? Penilaian membantu {mentorFirst} & SatuTuju jaga kualitas mentoring.
-        </p>
+        {saved ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 13px", borderRadius: 10, background: "var(--surface-green)", border: "1px solid var(--surface-green-border)", color: "var(--text-green)", fontSize: 13.5, fontWeight: 600, margin: "0 0 14px" }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+            <span>Penilaian kamu sudah terkirim ke {mentorFirst}. Makasih! Bisa diubah kapan aja.</span>
+          </div>
+        ) : (
+          <p className="muted" style={{ margin: "0 0 12px" }}>
+            Gimana sesi ini menurut kamu? Penilaian membantu {mentorFirst} & SatuTuju jaga kualitas mentoring.
+          </p>
+        )}
         <div style={{ display: "flex", gap: 6, marginBottom: 14 }} role="group" aria-label="Beri bintang">
           {[1, 2, 3, 4, 5].map((n) => {
             const active = (hover || rating) >= n;
