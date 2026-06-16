@@ -5460,3 +5460,23 @@ html.dark .dashboard-shell .rs-error {
 html.dark .dashboard-shell .rs-dur-input:disabled {
   background: var(--surface);
 }
+
+/* ── Floating "Beri masukan ke SatuTuju" button (mentee) ──────────────── */
+.feedback-fab {
+  position: fixed; right: 22px; bottom: 22px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--primary); color: #fff;
+  font-family: var(--font-heading); font-weight: 600; font-size: 14px;
+  box-shadow: 0 12px 30px -8px rgb(57 88 179 / 0.55);
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+}
+.feedback-fab:hover {
+  background: var(--primary-deep); transform: translateY(-2px);
+  box-shadow: 0 16px 38px -8px rgb(57 88 179 / 0.6);
+}
+.feedback-fab svg { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .feedback-fab { right: 16px; bottom: 16px; padding: 13px; }
+  .feedback-fab span { display: none; }
+}
