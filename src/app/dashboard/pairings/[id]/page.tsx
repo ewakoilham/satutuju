@@ -1158,6 +1158,16 @@ function DeliverablesList({
     onRefresh();
   }
 
+  // Mentor / admin review: approve or request a revision.
+  async function setDocStatus(doc: Doc, status: "approved" | "needs_revision") {
+    await fetch(`/api/documents/${doc.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    onRefresh();
+  }
+
   async function handleDelete(doc: Doc) {
     setDeletingDocId(doc.id);
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
@@ -1237,6 +1247,27 @@ function DeliverablesList({
                             <Icon name="trash" size={14} className="text-red-400" />
                           </button>
                         </div>
+                        {/* Mentor / admin review actions */}
+                        {isMentor && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {doc.status !== "approved" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDocStatus(doc, "approved"); }}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-text-green hover:opacity-80 transition"
+                              >
+                                <Icon name="check" size={12} /> Setujui
+                              </button>
+                            )}
+                            {doc.status !== "needs_revision" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDocStatus(doc, "needs_revision"); }}
+                                className="text-[11px] font-medium text-amber-600 hover:opacity-80 transition"
+                              >
+                                Minta revisi
+                              </button>
+                            )}
+                          </div>
+                        )}
                         {doc.status === "needs_revision" && doc.feedback && (
                           <span className="text-[10px] text-amber-600 max-w-[200px] truncate" title={doc.feedback}>
                             Mentor: &ldquo;{doc.feedback}&rdquo;

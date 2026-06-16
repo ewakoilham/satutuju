@@ -47,11 +47,18 @@ interface TaskRow {
   dueDate?: string | null;
   sessionNum?: number | null;
 }
+interface SessionLite {
+  sessionNum: number;
+  topic?: string | null;
+  docChecklist?: string[] | null;
+  enabled?: boolean | null;
+}
 interface Pairing {
   id: string;
   mentor: { id: string; name: string };
   documents: DocRow[];
   tasks: TaskRow[];
+  sessions?: SessionLite[];
 }
 
 /* ─── Status + category mapping (real → handoff vocabulary) ───────── */
@@ -112,11 +119,35 @@ function taskToCategory(title: string): string {
   return "other";
 }
 
-const FILTERS: { id: string; label: string; match: (d: DocRow) => boolean }[] = [
+/** Map a session doc-checklist label → a Document category (mirrors the Sesi page). */
+function docChecklistCategory(item: string): string {
+  const t = item.toLowerCase();
+  if (/\bcv\b|resume/.test(t)) return "cv";
+  if (/transcript|transkrip|ijazah/.test(t)) return "transcript";
+  if (/language|ielts|toefl|bahasa/.test(t)) return "ielts";
+  if (/motivation|narrative|\bml\b|\bps\b/.test(t)) return "motivation_letter";
+  if (/lpdp|essay|esai/.test(t)) return "essay_lpdp";
+  if (/recommendation|rekomendasi/.test(t)) return "recommendation";
+  if (/certificate|sertifikat/.test(t)) return "certificate";
+  return "other";
+}
+
+// One required-document row in the recap (aggregated across all sessions).
+interface RecapRow {
+  name: string;
+  category: string;
+  sessionNums: number[];
+  doc: DocRow | null;
+  status: string; // doc status, or "none" when nothing uploaded yet
+}
+
+// Recap filters operate on the row status (incl. "none" = belum diunggah).
+const RECAP_FILTERS: { id: string; label: string; match: (r: RecapRow) => boolean }[] = [
   { id: "all", label: "Semua", match: () => true },
-  { id: "active", label: "Perlu aksi", match: (d) => d.status === "needs_revision" },
-  { id: "review", label: "Ditinjau", match: (d) => d.status === "under_review" },
-  { id: "done", label: "Selesai", match: (d) => d.status === "approved" },
+  { id: "none", label: "Belum diunggah", match: (r) => r.status === "none" },
+  { id: "review", label: "Ditinjau", match: (r) => r.status === "uploaded" || r.status === "under_review" },
+  { id: "active", label: "Perlu revisi", match: (r) => r.status === "needs_revision" },
+  { id: "done", label: "Disetujui", match: (r) => r.status === "approved" },
 ];
 
 const PENDING = new Set(["pending", "in_progress", "overdue"]);
@@ -201,6 +232,41 @@ export default function DokumenPage() {
     return { docs, requests, approved, needsAction, featured, breakdown };
   }, [pairing]);
 
+  // Recap of every required document across ALL (held) sessions, matched to an
+  // uploaded Document where one exists. Deduped by name.
+  const requiredDocs = useMemo<RecapRow[]>(() => {
+    if (!pairing) return [];
+    const docs = pairing.documents || [];
+    const sessions = (pairing.sessions || []).filter((s) => s.enabled !== false);
+    const map = new Map<string, { name: string; category: string; sessionNums: number[] }>();
+    for (const s of sessions) {
+      const list = Array.isArray(s.docChecklist) ? s.docChecklist : [];
+      for (const raw of list) {
+        const item = String(raw || "").trim();
+        const key = item.toLowerCase();
+        if (!key) continue;
+        const existing = map.get(key);
+        if (existing) {
+          if (s.sessionNum != null && !existing.sessionNums.includes(s.sessionNum)) existing.sessionNums.push(s.sessionNum);
+        } else {
+          map.set(key, { name: item, category: docChecklistCategory(item), sessionNums: s.sessionNum != null ? [s.sessionNum] : [] });
+        }
+      }
+    }
+    const matchDoc = (name: string, cat: string): DocRow | null => {
+      const q = name.toLowerCase();
+      return docs.find((d) =>
+        (cat !== "other" && d.category === cat) ||
+        d.name.toLowerCase() === q ||
+        d.name.toLowerCase().includes(q),
+      ) || null;
+    };
+    return [...map.values()].map((r) => {
+      const doc = matchDoc(r.name, r.category);
+      return { ...r, doc, status: doc ? doc.status : "none" };
+    });
+  }, [pairing]);
+
   function startUpload(name: string, category: string, sessionNum: number | null, key: string) {
     pendingUpload.current = { name, category, sessionNum };
     setUploadingFor(key);
@@ -239,54 +305,55 @@ export default function DokumenPage() {
 
   const d = derived;
   const mentorFirst = firstName(pairing.mentor?.name);
-  const shown = d.docs.filter(FILTERS.find((f) => f.id === filter)!.match);
-  const totalReady = d.docs.length;
+  // Recap-based view: required docs across all sessions, filtered by status.
+  const recapShown = requiredDocs.filter(RECAP_FILTERS.find((f) => f.id === filter)!.match);
+  const totalRequired = requiredDocs.length;
+  const approvedRequired = requiredDocs.filter((r) => r.status === "approved").length;
 
   function badge(doc: DocRow) {
     const s = statusOf(doc.status);
     return <span className={`dok-badge ${s.key}`}>● {s.label}</span>;
   }
 
-  function DocCard({ doc }: { doc: DocRow }) {
-    const v = catVisual(doc.category);
-    const s = statusOf(doc.status);
-    const hasFb = !!(doc.feedback && doc.feedback.trim());
+  function RecapCard({ r }: { r: RecapRow }) {
+    const v = catVisual(r.category);
+    const doc = r.doc;
+    const s = r.status === "none"
+      ? { key: "draft" as StatusKey, label: "Belum diunggah", sw: "var(--text-muted-2)" }
+      : statusOf(r.status);
+    const sesLabel = r.sessionNums.length
+      ? `Sesi ${[...r.sessionNums].sort((a, b) => a - b).join(", ")}`
+      : "Umum";
+    const key = `req:${r.name.toLowerCase()}`;
+    const busy = uploadingFor === key;
     return (
-      <button type="button" className="dok-doc" onClick={() => setOpenDoc(doc)}>
+      <div className="dok-doc" style={{ cursor: "default" }}>
         <span className={`dok-tile ${v.tile}`}><Icon name={v.icon} size={22} /></span>
         <div className="d-body">
-          <h3 className="d-title">{doc.name} {badge(doc)}</h3>
+          <h3 className="d-title">{r.name} <span className={`dok-badge ${s.key}`}>● {s.label}</span></h3>
           <div className="d-meta">
-            {CAT_LABEL[doc.category] || doc.category} · v{doc.version}
-            {doc.updatedAt ? ` · diperbarui ${fmtDate(doc.updatedAt)}` : ""}
+            {sesLabel} · {CAT_LABEL[r.category] || r.category}{doc ? ` · v${doc.version}` : ""}
           </div>
-          {doc.targetWords != null && doc.targetWords > 0 && (
-            <div className="dok-track-lg" style={{ maxWidth: 240, margin: "12px 0 0" }} title={`${doc.wordCount ?? 0} / ${doc.targetWords} kata`}>
-              <i style={{ width: `${Math.min(100, Math.round(((doc.wordCount ?? 0) / doc.targetWords) * 100))}%` }} />
-            </div>
-          )}
-          {doc.targetWords != null && doc.targetWords > 0 && (
-            <div style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11, color: "var(--text-muted-2)", marginTop: 4 }}>
-              {doc.wordCount ?? 0} / {doc.targetWords} kata
-            </div>
-          )}
-          {hasFb && (
-            <div className="dok-fb">
-              <Icon name="document" size={14} /> Ada catatan dari {mentorFirst}{doc.status === "needs_revision" ? " — perlu diterapkan" : ""}
-            </div>
-          )}
         </div>
-        <div className="d-action" onClick={(e) => e.stopPropagation()}>
-          {doc.status === "needs_revision" ? (
-            <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(doc.name, doc.category, doc.sessionNum ?? null, `doc:${doc.id}`)} disabled={uploadingFor === `doc:${doc.id}`}>
-              {uploadingFor === `doc:${doc.id}` ? "Mengunggah…" : "Kirim revisi"}
-            </button>
+        <div className="d-action">
+          {doc ? (
+            <>
+              <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Unduh</a>
+              {r.status === "needs_revision" ? (
+                <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
+                  {busy ? "Mengunggah…" : "Kirim revisi"}
+                </button>
+              ) : (
+                <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Lihat</button>
+              )}
+            </>
           ) : (
-            <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Lihat</button>
+            <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
+              {busy ? "Mengunggah…" : "Unggah"}
+            </button>
           )}
-          <span className="d-when">{fmtDate(doc.updatedAt || doc.createdAt)}</span>
         </div>
-      </button>
+      </div>
     );
   }
 
@@ -308,8 +375,8 @@ export default function DokumenPage() {
         <div>
           {/* Filters */}
           <div className="filter-chips" style={{ marginBottom: 18 }}>
-            {FILTERS.map((f) => {
-              const n = d.docs.filter(f.match).length;
+            {RECAP_FILTERS.map((f) => {
+              const n = requiredDocs.filter(f.match).length;
               return (
                 <button type="button" key={f.id} className={`db-pill ${filter === f.id ? "on" : ""}`} onClick={() => setFilter(f.id)}>
                   {f.label} <span style={{ opacity: 0.6, fontFamily: "var(--font-geist-mono)", fontSize: 11 }}>{n}</span>
@@ -375,14 +442,18 @@ export default function DokumenPage() {
             </div>
           )}
 
-          <div className="section-head" style={{ marginBottom: 12 }}><h2 style={{ fontSize: 17 }}>Semua dokumen</h2><span className="meta">{d.docs.length} dokumen</span></div>
+          <div className="section-head" style={{ marginBottom: 12 }}><h2 style={{ fontSize: 17 }}>Dokumen yang diperlukan</h2><span className="meta">{approvedRequired} / {totalRequired} disetujui</span></div>
           <div className="dok-list">
-            {shown.length === 0 ? (
+            {totalRequired === 0 ? (
               <div className="dok-doc" style={{ justifyContent: "center", color: "var(--text-muted)", cursor: "default" }}>
-                {d.docs.length === 0 ? "Belum ada dokumen. Unggah lewat permintaan di samping atau dari tab Sesi." : "Tidak ada dokumen untuk filter ini."}
+                Belum ada dokumen yang diminta. Daftar muncul begitu rencana sesi kamu difinalisasi.
+              </div>
+            ) : recapShown.length === 0 ? (
+              <div className="dok-doc" style={{ justifyContent: "center", color: "var(--text-muted)", cursor: "default" }}>
+                Tidak ada dokumen untuk filter ini.
               </div>
             ) : (
-              shown.map((doc) => <DocCard key={doc.id} doc={doc} />)
+              recapShown.map((r) => <RecapCard key={r.name} r={r} />)
             )}
           </div>
         </div>
@@ -391,8 +462,8 @@ export default function DokumenPage() {
         <aside>
           <div className="side-card" style={{ padding: 20 }}>
             <span className="eyebrow" style={{ display: "block", marginBottom: 12 }}>Kesiapan dokumen</span>
-            <div className="dok-prog-num">{d.approved} <span className="of">/ {totalReady || 0} disetujui</span></div>
-            <div className="dok-track-lg"><i style={{ width: `${totalReady ? Math.round((d.approved / totalReady) * 100) : 0}%` }} /></div>
+            <div className="dok-prog-num">{approvedRequired} <span className="of">/ {totalRequired || 0} disetujui</span></div>
+            <div className="dok-track-lg"><i style={{ width: `${totalRequired ? Math.round((approvedRequired / totalRequired) * 100) : 0}%` }} /></div>
             {d.breakdown.length === 0 ? (
               <p style={{ fontSize: 12.5, color: "var(--text-muted-2)", margin: 0 }}>Belum ada dokumen yang diunggah.</p>
             ) : (
