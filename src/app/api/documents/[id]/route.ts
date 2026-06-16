@@ -34,6 +34,14 @@ export async function PATCH(
     .eq("id", doc.pairingId)
     .single();
 
+  // Only the pairing's mentor or an admin may review (approve / request
+  // revision / set status / leave the legacy feedback note). The mentee can't
+  // approve their own documents.
+  const canReview = user.role === "admin" || (docPairing && user.userId === docPairing.mentorId);
+  if (!canReview) {
+    return NextResponse.json({ error: "Hanya mentor atau admin yang bisa meninjau dokumen." }, { status: 403 });
+  }
+
   const now = new Date().toISOString();
   const { data: updated, error: updateError } = await supabase
     .from("Document")
@@ -51,8 +59,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  // Notify mentee when mentor reviews
-  if (body.status && docPairing && user.userId === docPairing.mentorId) {
+  // Notify mentee when mentor or admin reviews
+  if (body.status && docPairing) {
     const statusLabel =
       body.status === "approved"
         ? "approved"
