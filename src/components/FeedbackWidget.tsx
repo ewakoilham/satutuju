@@ -53,15 +53,12 @@ export default function FeedbackWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-left transition hover:border-primary-200 hover:bg-surface-elevated"
+        className="feedback-fab"
+        title="Beri masukan ke SatuTuju"
+        aria-label="Beri masukan ke SatuTuju"
       >
-        <span className="flex-shrink-0 w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center text-primary">
-          <Icon name="chat" size={18} />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-foreground">Beri masukan ke SatuTuju</span>
-          <span className="block text-xs text-text-muted-2">Saran, kendala, atau apa pun soal program — bukan ke mentor.</span>
-        </span>
+        <Icon name="chat" size={19} />
+        <span>Masukan</span>
       </button>
 
       <Modal

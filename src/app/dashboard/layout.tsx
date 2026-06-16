@@ -12,6 +12,7 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import DashboardContractAlert from "@/components/contract/DashboardContractAlert";
 import MenteePrereqGate from "@/components/deposit/MenteePrereqGate";
 import MentorTour from "@/components/dashboards/MentorTour";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import MentorScreenCoachmarks from "@/components/dashboards/MentorScreenCoachmarks";
 import "./dashboard.css";
 
@@ -572,6 +573,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {gateExempt ? children : <MenteePrereqGate>{children}</MenteePrereqGate>}
       </main>
+
+      {/* Floating "Beri masukan ke SatuTuju" — mentee, every page. */}
+      {user.role === "mentee" && <FeedbackWidget />}
     </div>
   );
 }

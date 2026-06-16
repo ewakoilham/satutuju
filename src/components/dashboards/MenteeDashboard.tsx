@@ -7,7 +7,6 @@ import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing }
 import { CURRICULUM, PHASES } from "@/lib/curriculum";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
-import FeedbackWidget from "@/components/FeedbackWidget";
 import {
   currentWibHour,
   phaseFromHour,
@@ -558,21 +557,6 @@ export default function MenteeDashboard() {
             </div>
           )}
 
-          {/* Tip card */}
-          <div className="tip">
-            <span className="tag">Tip dari {mentorFirst}</span>
-            <h4>Tulis cerita yang jujur, bukan yang kamu kira juri mau dengar.</h4>
-            <p>
-              Esai terkuat biasanya soal momen kecil yang spesifik.{" "}
-              <em>&ldquo;Apa satu pengalaman yang bikin kamu yakin sama jalan ini?&rdquo;</em> Mulai dari situ.
-            </p>
-            <Link href="/dashboard/resources" className="more">
-              Buka materi
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
-            </Link>
-          </div>
-
-          <FeedbackWidget />
         </aside>
       </div>
 
