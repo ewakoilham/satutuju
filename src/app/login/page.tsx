@@ -151,19 +151,13 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-gray-400 mt-6 leading-relaxed">
-            Belum punya akun? Akses hanya lewat undangan.<br />
-            Untuk jadi <span className="font-medium text-gray-500">mentee</span>, daftar dulu lewat{" "}
+            Kamu hanya bisa login kalau sudah terdaftar sebagai{" "}
+            <span className="font-medium text-gray-500">mentor</span> atau{" "}
+            <span className="font-medium text-gray-500">mentee</span> SatuTuju.<br />
+            Belum daftar?{" "}
             <Link href="/signup" className="text-primary font-semibold hover:underline">
-              program mentorship
+              Gabung di sini
             </Link>
-            . Untuk jadi <span className="font-medium text-gray-500">mentor</span>,{" "}
-            <a
-              href="mailto:hello@satutuju.id"
-              className="text-primary font-semibold hover:underline"
-            >
-              hubungi admin Satu Tuju
-            </a>
-            .
           </p>
         </div>
       </div>
