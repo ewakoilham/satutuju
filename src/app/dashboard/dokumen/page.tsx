@@ -85,7 +85,9 @@ const CAT_LABEL: Record<string, string> = {
   cv: "CV / Resume",
   motivation_letter: "Motivation Letter",
   transcript: "Transkrip",
+  ijazah: "Ijazah",
   ielts: "Skor bahasa",
+  passport: "Paspor",
   essay_lpdp: "Esai beasiswa",
   recommendation: "Surat rekomendasi",
   certificate: "Sertifikat",
@@ -153,19 +155,40 @@ const RECAP_FILTERS: { id: string; label: string; match: (r: RecapRow) => boolea
 /**
  * Which document categories a university actually requires at application time
  * (the core submission set) vs. optional supporting material. Drives the
- * "Dokumen wajib untuk daftar kampus" / "Dokumen opsional" split. Anything not
- * in this set (scholarship essays, certificates, planning trackers, prep notes,
- * misc) is treated as optional.
+ * "Dokumen wajib untuk daftar kampus" / "Dokumen opsional" split.
  */
 const REQUIRED_APPLICATION_CATEGORIES = new Set([
   "cv",
   "motivation_letter",
   "transcript",
+  "ijazah",
   "ielts",
+  "passport",
   "recommendation",
 ]);
-function isWajibDoc(category: string): boolean {
-  return REQUIRED_APPLICATION_CATEGORIES.has(category);
+
+/**
+ * Specific working-draft documents that share a "wajib" category but are really
+ * intermediate artifacts, not the final submission file — forced to optional by
+ * exact name (e.g. the Motivation Letter brainstorm/outline vs the final ML).
+ */
+const FORCE_OPTIONAL_NAMES = new Set([
+  "narrative core document",
+  "ml/ps outline",
+]);
+
+function isWajibRow(r: { name: string; category: string }): boolean {
+  if (FORCE_OPTIONAL_NAMES.has(r.name.trim().toLowerCase())) return false;
+  return REQUIRED_APPLICATION_CATEGORIES.has(r.category);
+}
+
+/**
+ * Collapse near-duplicate checklist labels so they render as a single recap row
+ * (e.g. "Transcript" + "Transcript (official)" → one "Transcript" spanning both
+ * sessions). CV draft vs final are intentionally left distinct.
+ */
+function canonicalDocName(item: string): string {
+  return /transcript|transkrip/i.test(item) ? "Transcript" : item;
 }
 
 const PENDING = new Set(["pending", "in_progress", "overdue"]);
@@ -264,7 +287,7 @@ export default function DokumenPage() {
     for (const s of sessions) {
       const list = Array.isArray(s.docChecklist) ? s.docChecklist : [];
       for (const raw of list) {
-        const item = String(raw || "").trim();
+        const item = canonicalDocName(String(raw || "").trim());
         const key = item.toLowerCase();
         if (!key) continue;
         const existing = map.get(key);
@@ -274,6 +297,13 @@ export default function DokumenPage() {
           map.set(key, { name: item, category: docChecklistCategory(item), sessionNums: s.sessionNum != null ? [s.sessionNum] : [] });
         }
       }
+    }
+    // Required application documents not produced inside any curriculum session
+    // (so they never come from the checklist) — surfaced as their own wajib rows
+    // and matched to any upload of that category.
+    for (const inj of [{ name: "Ijazah", category: "ijazah" }, { name: "Passport", category: "passport" }]) {
+      const k = inj.name.toLowerCase();
+      if (!map.has(k)) map.set(k, { name: inj.name, category: inj.category, sessionNums: [] });
     }
     const matchDoc = (name: string, cat: string): DocRow | null => {
       const q = name.toLowerCase();
@@ -351,7 +381,7 @@ export default function DokumenPage() {
   // headers are over ALL rows of that group (not the active status filter), so
   // "X / Y disetujui" stays meaningful while filtering the list below it.
   const sectionStats = (wajib: boolean) => {
-    const all = requiredDocs.filter((r) => isWajibDoc(r.category) === wajib);
+    const all = requiredDocs.filter((r) => isWajibRow(r) === wajib);
     return { total: all.length, approved: all.filter((r) => r.status === "approved").length };
   };
   const DOC_SECTIONS = [
@@ -359,14 +389,14 @@ export default function DokumenPage() {
       id: "wajib",
       title: "Dokumen wajib untuk daftar kampus",
       hint: "Berkas inti yang diminta hampir semua kampus saat kamu mendaftar.",
-      rows: recapShown.filter((r) => isWajibDoc(r.category)),
+      rows: recapShown.filter((r) => isWajibRow(r)),
       ...sectionStats(true),
     },
     {
       id: "opsional",
       title: "Dokumen opsional",
       hint: "Pelengkap & berkas pendukung — unggah kalau relevan dengan tujuanmu.",
-      rows: recapShown.filter((r) => !isWajibDoc(r.category)),
+      rows: recapShown.filter((r) => !isWajibRow(r)),
       ...sectionStats(false),
     },
   ];
