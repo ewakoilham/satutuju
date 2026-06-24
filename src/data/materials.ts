@@ -84,17 +84,17 @@ export const MATERIALS: Material[] = [
   {
     id: "doc-templates",
     title: "Document Templates",
-    label: "Template · segera",
+    label: "Template · 9 berkas",
     description:
-      "CV akademik, motivation letter, application tracker, study plan — siap diunduh dan diedit.",
-    href: null,
+      "Application tracker, deadline calendar, shortlist kampus, dan kerangka esai — siap diunduh dan diedit.",
+    href: "/dashboard/templates",
     icon: "document",
     tone: "tpl",
     phase: "writing",
     type: "template",
     sessionN: 7,
     roles: null,
-    locked: true,
+    locked: false,
   },
   {
     id: "thousand-essays",

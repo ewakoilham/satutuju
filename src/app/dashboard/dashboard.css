@@ -5489,3 +5489,74 @@ html.dark .dashboard-shell .rs-dur-input:disabled {
   .feedback-fab { right: 16px; bottom: 16px; padding: 13px; }
   .feedback-fab span { display: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Document Templates library (/dashboard/templates). Scoped to .tpl-page.
+   Format-tinted tiles mix toward var(--surface) so they invert for dark mode.
+   ════════════════════════════════════════════════════════════════════════ */
+.dashboard-shell .tpl-page { max-width: 1080px; }
+
+/* Explainer */
+.dashboard-shell .tpl-why {
+  display: flex; gap: 16px; align-items: flex-start;
+  background: linear-gradient(180deg, var(--primary-50), var(--surface));
+  border: 1px solid var(--primary-100); border-radius: 20px;
+  padding: 20px 24px; margin: 18px 0 28px;
+}
+.dashboard-shell .tpl-why-ic {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: var(--primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dashboard-shell .tpl-why-txt h4 { font-family: var(--font-poppins); font-weight: 700; font-size: 16px; color: var(--primary-900); margin: 0 0 4px; }
+.dashboard-shell .tpl-why-txt p { margin: 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.55; }
+.dashboard-shell .tpl-steps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.dashboard-shell .tpl-step {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-poppins); font-weight: 600; font-size: 12.5px; color: var(--primary-900);
+}
+.dashboard-shell .tpl-step .n {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-geist-mono); font-size: 10px; font-weight: 600;
+}
+.dashboard-shell .tpl-step-arrow { color: var(--text-muted-2); }
+
+/* Groups */
+.dashboard-shell .tpl-group { margin-bottom: 28px; }
+.dashboard-shell .tpl-group-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.dashboard-shell .tpl-group-head h2 { font-family: var(--font-poppins); font-weight: 700; font-size: 17px; color: var(--primary-900); margin: 0; letter-spacing: -0.01em; }
+.dashboard-shell .tpl-group-blurb { font-size: 12.5px; color: var(--text-muted-2); }
+
+/* Cards */
+.dashboard-shell .tpl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.dashboard-shell .tpl-card {
+  display: flex; gap: 16px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px 20px; transition: border-color .14s, box-shadow .14s;
+}
+.dashboard-shell .tpl-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); }
+.dashboard-shell .tpl-tile {
+  width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dashboard-shell .tpl-tile.fmt-xlsx { background: color-mix(in srgb, var(--success) 15%, var(--surface)); color: var(--text-green, var(--success)); }
+.dashboard-shell .tpl-tile.fmt-docx { background: color-mix(in srgb, var(--primary) 13%, var(--surface)); color: var(--primary); }
+.dashboard-shell .tpl-body { flex: 1; min-width: 0; }
+.dashboard-shell .tpl-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.dashboard-shell .tpl-title { font-family: var(--font-poppins); font-weight: 700; font-size: 15px; color: var(--primary-900); margin: 0; }
+.dashboard-shell .tpl-fmt {
+  font-family: var(--font-geist-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border);
+}
+.dashboard-shell .tpl-fmt.fmt-xlsx { color: var(--text-green, var(--success)); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); }
+.dashboard-shell .tpl-fmt.fmt-docx { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+.dashboard-shell .tpl-meta { font-family: var(--font-geist-mono); font-size: 11px; color: var(--text-muted-2); margin-top: 4px; }
+.dashboard-shell .tpl-desc { font-size: 13px; color: var(--text-muted-3); line-height: 1.5; margin: 9px 0 14px; }
+.dashboard-shell .tpl-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dashboard-shell .tpl-actions .db-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+@media (max-width: 760px) {
+  .dashboard-shell .tpl-grid { grid-template-columns: 1fr; }
+  .dashboard-shell .tpl-why { flex-direction: column; gap: 12px; }
+}
