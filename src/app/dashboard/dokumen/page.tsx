@@ -150,6 +150,24 @@ const RECAP_FILTERS: { id: string; label: string; match: (r: RecapRow) => boolea
   { id: "done", label: "Disetujui", match: (r) => r.status === "approved" },
 ];
 
+/**
+ * Which document categories a university actually requires at application time
+ * (the core submission set) vs. optional supporting material. Drives the
+ * "Dokumen wajib untuk daftar kampus" / "Dokumen opsional" split. Anything not
+ * in this set (scholarship essays, certificates, planning trackers, prep notes,
+ * misc) is treated as optional.
+ */
+const REQUIRED_APPLICATION_CATEGORIES = new Set([
+  "cv",
+  "motivation_letter",
+  "transcript",
+  "ielts",
+  "recommendation",
+]);
+function isWajibDoc(category: string): boolean {
+  return REQUIRED_APPLICATION_CATEGORIES.has(category);
+}
+
 const PENDING = new Set(["pending", "in_progress", "overdue"]);
 
 export default function DokumenPage() {
@@ -171,6 +189,10 @@ export default function DokumenPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+
+  // Inline "Hapus" confirm + in-flight tracking for the recap delete action.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!openDoc) { setComments([]); setDraft(""); return; }
@@ -292,6 +314,21 @@ export default function DokumenPage() {
     }
   }
 
+  // Remove an uploaded document (mentee may delete their own; API also wipes
+  // the storage object). Reloads from source so the recap row reverts to
+  // "Belum diunggah".
+  async function deleteDoc(docId: string) {
+    if (!pairing) return;
+    setDeletingId(docId);
+    try {
+      const res = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
+      if (res.ok) await load(true);
+    } finally {
+      setDeletingId(null);
+      setConfirmDelete(null);
+    }
+  }
+
   if (loading) return <SkeletonDashboard />;
   if (!pairing || !derived) {
     return (
@@ -309,6 +346,30 @@ export default function DokumenPage() {
   const recapShown = requiredDocs.filter(RECAP_FILTERS.find((f) => f.id === filter)!.match);
   const totalRequired = requiredDocs.length;
   const approvedRequired = requiredDocs.filter((r) => r.status === "approved").length;
+
+  // Split the recap into the two requested groups. Counts in the section
+  // headers are over ALL rows of that group (not the active status filter), so
+  // "X / Y disetujui" stays meaningful while filtering the list below it.
+  const sectionStats = (wajib: boolean) => {
+    const all = requiredDocs.filter((r) => isWajibDoc(r.category) === wajib);
+    return { total: all.length, approved: all.filter((r) => r.status === "approved").length };
+  };
+  const DOC_SECTIONS = [
+    {
+      id: "wajib",
+      title: "Dokumen wajib untuk daftar kampus",
+      hint: "Berkas inti yang diminta hampir semua kampus saat kamu mendaftar.",
+      rows: recapShown.filter((r) => isWajibDoc(r.category)),
+      ...sectionStats(true),
+    },
+    {
+      id: "opsional",
+      title: "Dokumen opsional",
+      hint: "Pelengkap & berkas pendukung — unggah kalau relevan dengan tujuanmu.",
+      rows: recapShown.filter((r) => !isWajibDoc(r.category)),
+      ...sectionStats(false),
+    },
+  ];
 
   function badge(doc: DocRow) {
     const s = statusOf(doc.status);
@@ -336,9 +397,22 @@ export default function DokumenPage() {
           </div>
         </div>
         <div className="d-action">
-          {doc ? (
+          {!doc ? (
+            <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
+              {busy ? "Mengunggah…" : "Unggah"}
+            </button>
+          ) : confirmDelete === doc.id ? (
+            <div className="d-confirm">
+              <span className="d-confirm-q">Hapus dokumen ini?</span>
+              <div className="d-action-row">
+                <button type="button" className="db-btn sm d-danger" onClick={() => deleteDoc(doc.id)} disabled={deletingId === doc.id}>
+                  {deletingId === doc.id ? "Menghapus…" : "Ya, hapus"}
+                </button>
+                <button type="button" className="db-btn db-btn-outline sm" onClick={() => setConfirmDelete(null)} disabled={deletingId === doc.id}>Batal</button>
+              </div>
+            </div>
+          ) : (
             <>
-              <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Unduh</a>
               {r.status === "needs_revision" ? (
                 <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
                   {busy ? "Mengunggah…" : "Kirim revisi"}
@@ -346,11 +420,16 @@ export default function DokumenPage() {
               ) : (
                 <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Lihat</button>
               )}
+              <div className="d-action-row">
+                <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Unduh</a>
+                {r.status !== "needs_revision" && (
+                  <button type="button" className="db-btn db-btn-outline sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
+                    {busy ? "…" : "Ganti"}
+                  </button>
+                )}
+                <button type="button" className="db-btn db-btn-outline sm d-danger-ghost" onClick={() => setConfirmDelete(doc.id)}>Hapus</button>
+              </div>
             </>
-          ) : (
-            <button type="button" className="db-btn db-btn-primary sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
-              {busy ? "Mengunggah…" : "Unggah"}
-            </button>
           )}
         </div>
       </div>
@@ -442,20 +521,32 @@ export default function DokumenPage() {
             </div>
           )}
 
-          <div className="section-head" style={{ marginBottom: 12 }}><h2 style={{ fontSize: 17 }}>Dokumen yang diperlukan</h2><span className="meta">{approvedRequired} / {totalRequired} disetujui</span></div>
-          <div className="dok-list">
-            {totalRequired === 0 ? (
+          {totalRequired === 0 ? (
+            <div className="dok-list">
               <div className="dok-doc" style={{ justifyContent: "center", color: "var(--text-muted)", cursor: "default" }}>
                 Belum ada dokumen yang diminta. Daftar muncul begitu rencana sesi kamu difinalisasi.
               </div>
-            ) : recapShown.length === 0 ? (
-              <div className="dok-doc" style={{ justifyContent: "center", color: "var(--text-muted)", cursor: "default" }}>
-                Tidak ada dokumen untuk filter ini.
+            </div>
+          ) : (
+            DOC_SECTIONS.filter((sec) => sec.total > 0).map((sec) => (
+              <div key={sec.id} style={{ marginBottom: 28 }}>
+                <div className="section-head" style={{ marginBottom: 4 }}>
+                  <h2 style={{ fontSize: 17 }}>{sec.title}</h2>
+                  <span className="meta">{sec.approved} / {sec.total} disetujui</span>
+                </div>
+                <p style={{ fontSize: 12.5, color: "var(--text-muted-2)", margin: "0 0 12px" }}>{sec.hint}</p>
+                <div className="dok-list">
+                  {sec.rows.length === 0 ? (
+                    <div className="dok-doc" style={{ justifyContent: "center", color: "var(--text-muted)", cursor: "default" }}>
+                      Tidak ada dokumen untuk filter ini.
+                    </div>
+                  ) : (
+                    sec.rows.map((r) => <RecapCard key={r.name} r={r} />)
+                  )}
+                </div>
               </div>
-            ) : (
-              recapShown.map((r) => <RecapCard key={r.name} r={r} />)
-            )}
-          </div>
+            ))
+          )}
         </div>
 
         {/* Sidebar */}
