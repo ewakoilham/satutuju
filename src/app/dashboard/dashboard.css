@@ -5560,3 +5560,66 @@ html.dark .dashboard-shell .rs-dur-input:disabled {
   .dashboard-shell .tpl-grid { grid-template-columns: 1fr; }
   .dashboard-shell .tpl-why { flex-direction: column; gap: 12px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Direktori Alumni (/dashboard/alumni). Scoped to .alm-page. Dark-mode aware.
+   ════════════════════════════════════════════════════════════════════════ */
+.dashboard-shell .alm-page { max-width: 1080px; }
+
+/* Controls */
+.dashboard-shell .alm-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 18px 0 20px; }
+.dashboard-shell .alm-n { opacity: 0.6; font-family: var(--font-geist-mono); font-size: 11px; margin-left: 2px; }
+.dashboard-shell .alm-search {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 12px; color: var(--text-muted-2); min-width: 240px; flex: 1; max-width: 320px;
+}
+.dashboard-shell .alm-search input { border: none; background: none; outline: none; font-size: 13px; color: var(--foreground); width: 100%; }
+.dashboard-shell .alm-search input::placeholder { color: var(--text-muted-2); }
+
+/* Grid + cards */
+.dashboard-shell .alm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.dashboard-shell .alm-card {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px; transition: border-color .14s, box-shadow .14s, transform .14s;
+}
+.dashboard-shell .alm-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.dashboard-shell .alm-card-top { display: flex; align-items: center; gap: 13px; margin-bottom: 4px; }
+.dashboard-shell .alm-photo {
+  position: relative; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, var(--surface));
+}
+.dashboard-shell .alm-photo.alm-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-family: var(--font-poppins); font-weight: 700;
+}
+.dashboard-shell .alm-id { min-width: 0; }
+.dashboard-shell .alm-name { font-family: var(--font-poppins); font-weight: 700; font-size: 15px; color: var(--primary-900); margin: 0 0 3px; line-height: 1.2; }
+.dashboard-shell .alm-where { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.dashboard-shell .alm-flag { border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08); display: block; }
+.dashboard-shell .alm-dot { color: var(--text-muted-2); }
+.dashboard-shell .alm-uni { font-family: var(--font-poppins); font-weight: 600; font-size: 13.5px; color: var(--primary-900); margin-top: 6px; }
+.dashboard-shell .alm-major { font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
+.dashboard-shell .alm-sch {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+  color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+.dashboard-shell .alm-ach { font-size: 12px; color: var(--text-muted-3); line-height: 1.5; font-style: italic; margin: 10px 0 0; }
+.dashboard-shell .alm-actions { display: flex; gap: 8px; margin-top: 14px; }
+.dashboard-shell .alm-actions .db-btn { display: inline-flex; align-items: center; gap: 6px; }
+.dashboard-shell .alm-empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; border: 1px dashed var(--border); border-radius: 16px; }
+
+/* Profile modal */
+.dashboard-shell .alm-detail-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.dashboard-shell .alm-facts { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
+.dashboard-shell .alm-facts > div { display: grid; grid-template-columns: 92px 1fr; gap: 12px; }
+.dashboard-shell .alm-facts dt { font-family: var(--font-geist-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted-2); padding-top: 2px; }
+.dashboard-shell .alm-facts dd { margin: 0; font-size: 13.5px; color: var(--primary-900); line-height: 1.5; }
+.dashboard-shell .alm-quote { margin: 0 0 16px; padding: 12px 16px; border-left: 3px solid var(--primary-200); background: var(--primary-50); border-radius: 0 10px 10px 0; font-size: 13.5px; font-style: italic; color: var(--text-muted-3); line-height: 1.6; }
+.dashboard-shell .alm-note { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-muted); margin: 0; }
+
+@media (max-width: 920px) { .dashboard-shell .alm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .dashboard-shell .alm-grid { grid-template-columns: 1fr; } .dashboard-shell .alm-search { max-width: none; } }
