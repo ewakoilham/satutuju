@@ -5061,15 +5061,15 @@
 .dashboard-shell .kc-page .ph-closing   { --ph: #2f9e6f; }
 
 /* ── Header ─────────────────────────────────────── */
-.dashboard-shell .kc-page .kc-back {
+.dashboard-shell .kc-back {
   display: inline-flex; align-items: center; gap: 7px;
   font-family: var(--font-poppins); font-size: 11px; font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--text-muted-2); margin-bottom: 16px;
   transition: color .14s, gap .14s;
 }
-.dashboard-shell .kc-page .kc-back:hover { color: var(--primary); gap: 11px; }
-.dashboard-shell .kc-page .kc-back svg { width: 13px; height: 13px; }
+.dashboard-shell .kc-back:hover { color: var(--primary); gap: 11px; }
+.dashboard-shell .kc-back svg { width: 13px; height: 13px; flex-shrink: 0; }
 
 .dashboard-shell .kc-page .kc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
 .dashboard-shell .kc-page .kc-head h1 {

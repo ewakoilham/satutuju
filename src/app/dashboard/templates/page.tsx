@@ -52,7 +52,7 @@ export default function TemplatesPage() {
   return (
     <div className="tpl-page">
       <Link className="kc-back" href="/dashboard/resources">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
         Materi
       </Link>
 
