@@ -32,6 +32,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (!pairing) return NextResponse.json({ error: "No active pairing with this mentor" }, { status: 403 });
 
+  // Booking mentor time requires a VERIFIED deposit. Uploading proof unlocks
+  // the dashboard for preparation, but a session may only be booked once an
+  // admin has verified the transfer — otherwise a fake screenshot buys real
+  // mentor hours (Phase 0 trust hardening).
+  const { data: deposit } = await supabase
+    .from("MenteeDeposit")
+    .select("status")
+    .eq("userId", user.userId)
+    .single();
+  if (deposit?.status !== "VERIFIED") {
+    const msg =
+      deposit?.status === "UPLOADED"
+        ? "Deposit kamu sedang diverifikasi tim SatuTuju. Booking sesi terbuka begitu verifikasi selesai — biasanya kurang dari 1 hari kerja."
+        : "Selesaikan deposit kamu dulu sebelum booking sesi dengan mentor.";
+    return NextResponse.json({ error: msg, code: "DEPOSIT_NOT_VERIFIED" }, { status: 403 });
+  }
+
   // No duplicate pending booking
   const { data: existing } = await supabase
     .from("ScheduleBooking")

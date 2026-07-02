@@ -243,6 +243,29 @@ export async function POST(req: NextRequest) {
       saved = data as DepositRow;
     }
 
+    // Verification now gates session booking, so admins must know the moment
+    // a proof lands — notify all of them (best-effort; never fails the upload).
+    try {
+      const { data: admins } = await supabase.from("User").select("id").eq("role", "admin");
+      if (admins && admins.length > 0) {
+        const reupload = existing?.rejectedAt != null;
+        await supabase.from("Notification").insert(
+          admins.map((a: { id: string }) => ({
+            id: crypto.randomUUID(),
+            userId: a.id,
+            title: reupload ? "Bukti deposit diunggah ulang" : "Bukti deposit baru",
+            message: `${user.name} mengunggah bukti transfer deposit — perlu verifikasi sebelum bisa booking sesi.`,
+            type: "alert",
+            read: false,
+            link: `/dashboard/admin/deposits/${user.userId}`,
+            createdAt: now,
+          })),
+        );
+      }
+    } catch (notifyErr) {
+      console.error("[mentee-deposit] admin notify failed:", notifyErr);
+    }
+
     return NextResponse.json({ deposit: saved });
   } catch (e) {
     console.error("Upload mentee deposit error:", e);
