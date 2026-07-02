@@ -459,10 +459,16 @@ export default function DokumenPage() {
                   {busy ? "Mengunggah…" : "Kirim revisi"}
                 </button>
               ) : (
-                <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Lihat</button>
+                /* "Lihat" opens the FILE itself (user feedback: the notes
+                   modal is not what you expect when you click "view"). */
+                <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Lihat</a>
               )}
               <div className="d-action-row">
-                <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Unduh</a>
+                {r.status === "needs_revision" && (
+                  <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Lihat</a>
+                )}
+                {/* Discussion thread + versions moved behind "Catatan". */}
+                <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Catatan</button>
                 {r.status !== "needs_revision" && (
                   <button type="button" className="db-btn db-btn-outline sm" onClick={() => startUpload(r.name, r.category, r.sessionNums[0] ?? null, key)} disabled={busy}>
                     {busy ? "…" : "Ganti"}
@@ -534,9 +540,17 @@ export default function DokumenPage() {
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-                  <button type="button" className="db-btn db-btn-primary sm" onClick={() => setOpenDoc(d.featured)}>
-                    {d.featured.feedback ? `Lihat catatan ${mentorFirst}` : "Buka dokumen"}
-                  </button>
+                  {d.featured.feedback ? (
+                    /* Notes exist → the modal is the point. */
+                    <button type="button" className="db-btn db-btn-primary sm" onClick={() => setOpenDoc(d.featured)}>
+                      Lihat catatan {mentorFirst}
+                    </button>
+                  ) : (
+                    /* No notes → "buka dokumen" means the file itself. */
+                    <a href={d.featured.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-primary sm">
+                      Buka dokumen
+                    </a>
+                  )}
                   {d.featured.status === "needs_revision" && (
                     <button type="button" className="db-btn db-btn-outline sm" onClick={() => startUpload(d.featured!.name, d.featured!.category, d.featured!.sessionNum ?? null, `doc:${d.featured!.id}`)}>
                       Kirim revisi
