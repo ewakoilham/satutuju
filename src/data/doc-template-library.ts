@@ -26,6 +26,8 @@ export interface TemplateGroup {
   title: string;
   /** One-line framing for the group. */
   blurb: string;
+  /** Visibility — undefined = everyone. */
+  roles?: Array<"mentor" | "admin">;
   items: TemplateItem[];
 }
 
@@ -154,5 +156,89 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = [
     ],
   },
 ];
+
+/** Mentor-only toolkit — the artifacts every "Persiapan mentor" checklist item
+ *  used to tell mentors to invent from scratch. Linked from the Panduan
+ *  Kurikulum via mentor-toolkit.ts. */
+export const MENTOR_TOOLKIT_GROUP: TemplateGroup = {
+  id: "toolkit-mentor",
+  title: "Toolkit mentor",
+  blurb: "Alat kerja per sesi — scorecard, panduan feedback, bank pertanyaan. Khusus mentor.",
+  roles: ["mentor", "admin"],
+  items: [
+    {
+      id: "readiness-scorecard",
+      title: "Readiness scorecard",
+      file: "/templates/mentor/readiness-scorecard.xlsx",
+      format: "xlsx",
+      icon: "chart",
+      description:
+        "Skor kesiapan mentee di 5 kategori (akademik, bahasa, finansial, dokumen, motivasi) — isi bareng mentee untuk memetakan gap.",
+      sessionN: 2,
+    },
+    {
+      id: "storytelling-guide",
+      title: "Storytelling guide",
+      file: "/templates/mentor/storytelling-guide.docx",
+      format: "docx",
+      icon: "chat",
+      description:
+        "Pertanyaan pemandu untuk menggali cerita asli mentee — akar minat, momen pembuktian, sampai kontribusi pulang.",
+      sessionN: 5,
+    },
+    {
+      id: "feedback-framework",
+      title: "Kerangka feedback ML",
+      file: "/templates/mentor/feedback-framework.docx",
+      format: "docx",
+      icon: "clipboard-check",
+      description:
+        "Empat lapis review motivation letter (struktur, bukti, suara, teknis) + tabel prioritas revisi maksimal 3 poin.",
+      sessionN: 6,
+    },
+    {
+      id: "cv-region-guide",
+      title: "Panduan CV per region",
+      file: "/templates/mentor/cv-region-guide.docx",
+      format: "docx",
+      icon: "school",
+      description:
+        "Norma CV per negara tujuan (UK, Eropa, US, AUS, Asia) — panjang, foto, urutan section — plus aturan universal.",
+      sessionN: 7,
+    },
+    {
+      id: "interview-question-bank",
+      title: "Bank pertanyaan wawancara",
+      file: "/templates/mentor/interview-question-bank.docx",
+      format: "docx",
+      icon: "users",
+      description:
+        "20 pertanyaan wawancara dalam 4 kategori + rubrik penilaian 1–4 untuk mock interview yang terukur.",
+      sessionN: 8,
+    },
+    {
+      id: "final-audit-checklist",
+      title: "Final audit checklist",
+      file: "/templates/mentor/final-audit-checklist.xlsx",
+      format: "xlsx",
+      icon: "clipboard-check",
+      description:
+        "Audit dokumen per kampus sebelum submit + cek konsistensi lintas dokumen yang paling sering bikin gagal.",
+      sessionN: 9,
+    },
+    {
+      id: "evaluation-form",
+      title: "Form evaluasi program",
+      file: "/templates/mentor/evaluation-form.docx",
+      format: "docx",
+      icon: "star",
+      description:
+        "Form penutup program — kilas balik tujuan, rating pengalaman, refleksi terbuka, dan rencana pasca-submit.",
+      sessionN: 10,
+    },
+  ],
+};
+
+TEMPLATE_GROUPS.push(MENTOR_TOOLKIT_GROUP);
 
 export const TEMPLATE_COUNT = TEMPLATE_GROUPS.reduce((n, g) => n + g.items.length, 0);

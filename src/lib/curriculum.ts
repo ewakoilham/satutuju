@@ -41,8 +41,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "List dream universities",
     ],
     mentorPrep: [
-      "Prepare intake form",
-      "Prepare mentee profile template",
+      "Review the mentee's profile in the dashboard (filled at onboarding)",
+      "Note their target campus, program, and funding plan",
     ],
     duration: 75,
     docChecklist: ["CV/Resume (draft)", "University wish list"],
@@ -66,8 +66,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Financial information",
     ],
     mentorPrep: [
-      "Prepare readiness scorecard",
-      "Standard document checklist",
+      "Download the readiness scorecard",
+      "Skim the mentee's uploaded documents so far",
     ],
     duration: 75,
     docChecklist: ["Transcript", "Language test score", "Financial overview"],
@@ -90,8 +90,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Confirm budget & financing options",
     ],
     mentorPrep: [
-      "Prepare university database",
-      "Ranking data & requirements per school",
+      "Browse the Kampus database for target universities",
+      "Note admission requirements per shortlist candidate",
     ],
     duration: 90,
     docChecklist: ["University shortlist document"],
@@ -113,8 +113,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Start ML outline draft",
     ],
     mentorPrep: [
-      "Prepare application tracker template",
-      "Example success timelines",
+      "Download the application tracker & deadline calendar templates",
+      "Prepare 1-2 example timelines from past mentees",
     ],
     duration: 75,
     docChecklist: ["Application tracker", "Deadline calendar"],
@@ -138,7 +138,7 @@ export const CURRICULUM: SessionTemplate[] = [
     ],
     mentorPrep: [
       "Read best ML examples",
-      "Prepare storytelling guide questions",
+      "Download the storytelling guide questions",
     ],
     duration: 90,
     docChecklist: ["Narrative core document", "ML/PS outline"],
@@ -161,7 +161,7 @@ export const CURRICULUM: SessionTemplate[] = [
     ],
     mentorPrep: [
       "Read & annotate mentee draft",
-      "Prepare feedback framework",
+      "Download the ML feedback framework",
     ],
     duration: 90,
     docChecklist: ["Motivation Letter v2+", "LPDP Essay draft"],
@@ -184,8 +184,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Collect all supporting documents",
     ],
     mentorPrep: [
-      "Prepare CV templates per region",
-      "Document checklist per university",
+      "Download the CV-by-region guide",
+      "Check the mentee's supporting documents status",
     ],
     duration: 75,
     docChecklist: [
@@ -213,8 +213,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Prepare self-introduction draft",
     ],
     mentorPrep: [
-      "Prepare 20 common interview questions",
-      "Scoring rubric",
+      "Download the interview question bank + scoring rubric",
+      "Set up a realistic mock-interview setting",
     ],
     duration: 90,
     docChecklist: ["Interview prep notes", "Mock interview recording"],
@@ -237,7 +237,7 @@ export const CURRICULUM: SessionTemplate[] = [
       "Self-check everything first",
     ],
     mentorPrep: [
-      "Final review checklist",
+      "Download the final audit checklist",
       "Cross-document consistency check",
     ],
     duration: 90,
@@ -265,8 +265,8 @@ export const CURRICULUM: SessionTemplate[] = [
       "Prepare evaluation questions",
     ],
     mentorPrep: [
-      "Prepare evaluation form",
-      "Post-submission timeline",
+      "Download the evaluation form",
+      "Prepare post-submission timeline talking points",
     ],
     duration: 60,
     docChecklist: ["Submission confirmations", "Post-submission plan"],

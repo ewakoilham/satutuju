@@ -11,7 +11,8 @@
 
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
-import { TEMPLATE_GROUPS, FORMAT_META, TEMPLATE_COUNT, type TemplateItem } from "@/data/doc-template-library";
+import { useUser } from "@/lib/hooks";
+import { TEMPLATE_GROUPS, FORMAT_META, type TemplateItem } from "@/data/doc-template-library";
 
 /** Microsoft Office Online viewer — renders xlsx/docx inline from a public URL.
  *  Needs a publicly reachable file, so preview works on the deployed site (not
@@ -49,6 +50,12 @@ function TemplateCard({ item }: { item: TemplateItem }) {
 }
 
 export default function TemplatesPage() {
+  const { user } = useUser();
+  // Role-gated groups (Toolkit mentor is mentor/admin-only).
+  const groups = TEMPLATE_GROUPS.filter(
+    (g) => !g.roles || (user?.role && g.roles.includes(user.role as "mentor" | "admin")),
+  );
+  const count = groups.reduce((n, g) => n + g.items.length, 0);
   return (
     <div className="tpl-page">
       <Link className="kc-back" href="/dashboard/resources">
@@ -61,7 +68,7 @@ export default function TemplatesPage() {
           <div className="sesi-crumb">Materi · Template</div>
           <h1 className="sesi-title">Document <span className="lede">Templates.</span></h1>
           <p className="sesi-sub">
-            {TEMPLATE_COUNT} template program SatuTuju — tracker, kalender deadline, shortlist kampus, dan kerangka esai. Siap diunduh dan diedit.
+            {count} template program SatuTuju — tracker, kalender deadline, shortlist kampus, dan kerangka esai. Siap diunduh dan diedit.
           </p>
         </div>
       </div>
@@ -87,7 +94,7 @@ export default function TemplatesPage() {
       </div>
 
       {/* Template groups */}
-      {TEMPLATE_GROUPS.map((g) => (
+      {groups.map((g) => (
         <section key={g.id} className="tpl-group">
           <div className="tpl-group-head">
             <h2>{g.title}</h2>
