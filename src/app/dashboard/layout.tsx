@@ -61,6 +61,9 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     // Steps / Email Templates / Auto-Send) lives inside the pipeline
     // pages via <PipelineSubnav />.
     { href: "/dashboard/admin/new-leads", label: "Pipeline", icon: "chart", activePrefix: "/dashboard/admin/new-leads" },
+    // Deposit verification gates mentee session booking — it must be one
+    // click away, not buried as a sub-tab under Kontrak.
+    { href: "/dashboard/admin/deposits", label: "Deposit", icon: "wallet", activePrefix: "/dashboard/admin/deposits" },
     { href: "/dashboard/admin/feedback", label: "Masukan", icon: "chat", activePrefix: "/dashboard/admin/feedback" },
     { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
     { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
