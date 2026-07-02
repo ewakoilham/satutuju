@@ -1,0 +1,55 @@
+# Vercel production-deploy watchdog.
+#
+# The Vercel↔GitHub integration has silently skipped a production build for a
+# merge to main before (PR #68 — main updated, no deployment created, prod
+# quietly served the previous release). This watchdog makes that failure loud:
+# on every push to main it waits for a GitHub Deployment (environment
+# "Production") for THAT commit to appear and reach state "success". If none
+# does within ~12 minutes, the workflow fails — a red X on the commit + the
+# usual GitHub failure notification.
+#
+# Read-only by design: it never re-triggers a deploy (no loops); a human (or
+# Claude) pushes an empty commit to re-fire Vercel when this alarm rings.
+
+name: Deploy watchdog
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  deployments: read
+  contents: read
+
+jobs:
+  verify-production-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for a successful Production deployment of this SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Watching for Production deployment of $SHA…"
+          # 36 polls × 20s = 12 minutes. Vercel builds usually finish in ~2-3.
+          for i in $(seq 1 36); do
+            state=$(gh api "repos/$REPO/deployments?sha=$SHA&environment=Production&per_page=1" \
+              --jq '.[0].statuses_url // empty' 2>/dev/null \
+              | xargs -r -I{} gh api {} --jq '.[0].state // empty' 2>/dev/null)
+            echo "[$i/36] state=${state:-<no deployment yet>}"
+            case "$state" in
+              success)
+                echo "✅ Production deployment succeeded for $SHA."
+                exit 0 ;;
+              failure|error)
+                echo "❌ Production deployment FAILED for $SHA — check Vercel."
+                exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "❌ No successful Production deployment appeared for $SHA within 12 minutes."
+          echo "   Vercel likely missed the webhook (it has happened before)."
+          echo "   Fix: push an empty commit to main to re-trigger, e.g.:"
+          echo "     git commit --allow-empty -m 'chore: re-trigger Vercel production deploy' && git push"
+          exit 1
