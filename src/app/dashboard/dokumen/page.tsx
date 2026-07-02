@@ -204,6 +204,7 @@ export default function DokumenPage() {
   const [filter, setFilter] = useState("all");
   const [openDoc, setOpenDoc] = useState<DocRow | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null); // task id or "doc:<name>"
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingUpload = useRef<{ name: string; category: string; sessionNum: number | null } | null>(null);
 
@@ -329,6 +330,7 @@ export default function DokumenPage() {
     const file = e.target.files?.[0];
     const ctx = pendingUpload.current;
     if (!file || !ctx || !pairing) { setUploadingFor(null); return; }
+    setUploadError(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -336,7 +338,16 @@ export default function DokumenPage() {
       fd.append("category", ctx.category);
       if (ctx.sessionNum != null) fd.append("sessionNum", String(ctx.sessionNum));
       const res = await fetch(`/api/pairings/${pairing.id}/documents`, { method: "POST", body: fd });
-      if (res.ok) await load(true);
+      if (res.ok) {
+        await load(true);
+      } else {
+        // A silent failure here looks like "file-nya nggak muncul" — always
+        // tell the mentee what went wrong (real bug report).
+        const data = await res.json().catch(() => ({}));
+        setUploadError(data.error || "Gagal mengunggah file. Coba lagi ya.");
+      }
+    } catch {
+      setUploadError("Gagal mengunggah — periksa koneksi internetmu, lalu coba lagi.");
     } finally {
       setUploadingFor(null);
       pendingUpload.current = null;
@@ -548,6 +559,17 @@ export default function DokumenPage() {
                 {uploadingFor === d.requests[0].id ? "Mengunggah…" : "Unggah sekarang"}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
               </button>
+            </div>
+          )}
+
+          {/* Upload failure — never fail silently ("file-nya nggak muncul"). */}
+          {uploadError && (
+            <div className="today-warn" style={{ marginBottom: 18 }}>
+              <span className="ic">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01" /><circle cx="12" cy="12" r="10" /></svg>
+              </span>
+              <span><b>Upload gagal.</b> {uploadError}</span>
+              <button type="button" onClick={() => setUploadError(null)} style={{ marginLeft: "auto", background: "transparent", border: 0, cursor: "pointer", color: "inherit", fontWeight: 700 }} aria-label="Tutup">✕</button>
             </div>
           )}
 

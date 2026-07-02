@@ -109,7 +109,10 @@ export async function POST(
 
   if (uploadError) {
     console.error("Upload error:", uploadError);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Gagal menyimpan file. Coba lagi — kalau masih gagal, hubungi tim SatuTuju." },
+      { status: 500 },
+    );
   }
 
   // Get public URL
