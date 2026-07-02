@@ -307,6 +307,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [taskBusy, setTaskBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
   const docFileRef = useRef<HTMLInputElement | null>(null);
   // When set, the next docFileRef upload uses this name/category (mentee's
   // curriculum checklist) instead of the file name + "other".
@@ -705,10 +706,17 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       fd.append("category", ctx?.category || "other");
       fd.append("sessionNum", String(found.session.sessionNum));
       const res = await fetch(`/api/pairings/${found.pairing.id}/documents`, { method: "POST", body: fd });
-      const data = await res.json();
-      if (res.ok && data.document) setAllDocs((prev) => [data.document as DocRow, ...prev]);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.document) {
+        setAllDocs((prev) => [data.document as DocRow, ...prev]);
+        setUploadErr(null);
+      } else {
+        // Silent failure looks like the file vanished — always say why.
+        setUploadErr(data.error || "Gagal mengunggah file. Coba lagi ya.");
+      }
     } catch (err) {
       console.warn("[sesi] doc upload failed", err);
+      setUploadErr("Gagal mengunggah — periksa koneksi internetmu, lalu coba lagi.");
     } finally {
       setUploadBusy(false);
       setUploadingItem(null);
@@ -1008,6 +1016,9 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                   Dokumen <b>template</b> kami sediakan — unduh, isi, lalu unggah balik ke sesi.
                   Dokumen <b>punyamu</b> (CV, ijazah, paspor, dll.) kamu unggah sendiri.
                 </p>
+                {uploadErr && (
+                  <p className="se-list-hint" style={{ color: "var(--text-red)", fontWeight: 600 }}>Upload gagal: {uploadErr}</p>
+                )}
                 <div className="se-list">
                   {checklist.map((item, i) => {
                     const cat = docChecklistCategory(item);
@@ -1364,6 +1375,9 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
         )}
       </div>
       <input ref={docFileRef} type="file" style={{ display: "none" }} onChange={handleDocFile} />
+      {uploadErr && (
+        <div className="muted" style={{ padding: 4, color: "var(--text-red)", fontWeight: 600 }}>Upload gagal: {uploadErr}</div>
+      )}
       {sessionDocs.length === 0 ? (
         <div className="muted" style={{ padding: 4 }}>Tidak ada lampiran di sesi ini.</div>
       ) : (
