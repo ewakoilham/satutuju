@@ -128,17 +128,17 @@ export const MATERIALS: Material[] = [
   {
     id: "alumni-directory",
     title: "Direktori Alumni",
-    label: "Direktori · segera",
+    label: "Direktori · 15 alumni",
     description:
-      "200+ alumni satu tuju yang siap di-reach untuk insight kampus tujuan. Hadir Q3 2026.",
-    href: null,
+      "Alumni SatuTuju yang sudah sampai ke kampus tujuan — filter per negara, lihat cerita mereka, dan minta dikenalkan untuk insight.",
+    href: "/dashboard/alumni",
     icon: "users",
     tone: "muted",
     phase: "planning",
     type: "direktori",
     sessionN: 3,
     roles: null,
-    locked: true,
+    locked: false,
   },
 ];
 
