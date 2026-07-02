@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
+import { sendAdminBookingEmail } from "@/lib/email-templates";
 
 // POST: mentee requests a slot
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -99,6 +100,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     read: false,
     link: "/dashboard/schedule",
     createdAt: now,
+  });
+
+  // Email the admin inbox so bookings have oversight (best-effort — the
+  // helper never throws).
+  const { data: mentorUser } = await supabase
+    .from("User").select("name").eq("id", slot.mentorId).single();
+  await sendAdminBookingEmail({
+    kind: "requested",
+    mentorName: mentorUser?.name ?? "Mentor",
+    menteeName: user.name,
+    date: slot.date,
+    time: reqTimeDisplay,
   });
 
   return NextResponse.json({ booking }, { status: 201 });
@@ -213,6 +226,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .update({ googleCalendarEventId: calResult.eventId, googleMeetLink: calResult.meetLink })
         .eq("id", bookingId);
     }
+
+    // Confirmed sessions go to the admin inbox too (best-effort).
+    await sendAdminBookingEmail({
+      kind: "accepted",
+      mentorName: mentor?.name ?? user.name,
+      menteeName: mentee?.name ?? "Mentee",
+      date: slot.date,
+      time: acceptedTimeDisplay,
+      sessionLabel,
+    });
   } else {
     const wasCancelling = booking.status === "accepted";
 
@@ -258,6 +281,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       read: false,
       link: "/dashboard/schedule",
       createdAt: now,
+    });
+
+    // Rejections/cancellations go to the admin inbox too — a cancelled
+    // confirmed session is exactly the kind of drift admins should see.
+    const { data: menteeUser } = await supabase
+      .from("User").select("name").eq("id", booking.menteeId).single();
+    await sendAdminBookingEmail({
+      kind: wasCancelling ? "cancelled" : "rejected",
+      mentorName: user.name,
+      menteeName: menteeUser?.name ?? "Mentee",
+      date: slot.date,
+      time: cancelledTimeDisplay,
+      reason,
     });
   }
 

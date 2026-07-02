@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, DEPOSIT_PROOF_BUCKET } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { sniffImage } from "@/lib/image-sniff";
+import { sendAdminDepositUploadedEmail } from "@/lib/email-templates";
 import {
   DEPOSIT_AMOUNT_IDR,
   DEPOSIT_BANK,
@@ -244,11 +245,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Verification now gates session booking, so admins must know the moment
-    // a proof lands — notify all of them (best-effort; never fails the upload).
+    // a proof lands — in-app notification to every admin PLUS an email to the
+    // admin inbox (best-effort; never fails the upload).
+    const reupload = existing?.rejectedAt != null;
     try {
       const { data: admins } = await supabase.from("User").select("id").eq("role", "admin");
       if (admins && admins.length > 0) {
-        const reupload = existing?.rejectedAt != null;
         await supabase.from("Notification").insert(
           admins.map((a: { id: string }) => ({
             id: crypto.randomUUID(),
@@ -265,6 +267,12 @@ export async function POST(req: NextRequest) {
     } catch (notifyErr) {
       console.error("[mentee-deposit] admin notify failed:", notifyErr);
     }
+    await sendAdminDepositUploadedEmail({
+      menteeName: user.name,
+      menteeUserId: user.userId,
+      reupload,
+      transferNote,
+    });
 
     return NextResponse.json({ deposit: saved });
   } catch (e) {
