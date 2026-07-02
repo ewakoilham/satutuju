@@ -792,9 +792,35 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   const sessionDeliverables = (Array.isArray(session.deliverables) ? session.deliverables : null) ?? curr?.deliverables ?? [];
   const moodInfo = draft.menteeEnergy != null ? MOODS.find((m) => m.value === draft.menteeEnergy) : null;
 
-  // Action items + attachments scoped to this session.
+  // Action items scoped to this session.
   const sessionTasks = allTasks.filter((t) => t.sessionNum === session.sessionNum);
-  const sessionDocs = allDocs.filter((d) => d.sessionNum === session.sessionNum);
+
+  // Attachments scoped to this session. A doc belongs here when it's tagged
+  // with this sessionNum OR it satisfies one of this session's checklist
+  // items. The tag alone is NOT enough: the mentee's checklist view matches
+  // by category/name (ignoring the tag), so an upload with a missing or
+  // mis-tagged sessionNum would tick ✓ for the mentee while staying
+  // invisible to the mentor here (real bug report — mentee uploaded the
+  // university list for sesi 2, mentor only saw it after a re-upload that
+  // landed with tag 1).
+  const sessionChecklist =
+    (Array.isArray(session.docChecklist) ? session.docChecklist : null) ??
+    curr?.docChecklist ??
+    [];
+  const matchesChecklistItem = (item: string, d: { category: string; name: string }) => {
+    const cat = docChecklistCategory(item);
+    const q = item.toLowerCase();
+    return (
+      (cat !== "other" && d.category === cat) ||
+      d.name.toLowerCase() === q ||
+      d.name.toLowerCase().includes(q)
+    );
+  };
+  const sessionDocs = allDocs.filter(
+    (d) =>
+      d.sessionNum === session.sessionNum ||
+      sessionChecklist.some((item) => matchesChecklistItem(item, d)),
+  );
 
   // ════════════════════════════════════════════════════════════════
   //  MENTEE VIEW — self-contained early return (ported from the mentee
@@ -963,22 +989,14 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {/* Dokumen yang diperlukan — the session's deliverables, with upload.
               Open on every session (no sequential lock). */}
           {(() => {
-            const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
-              ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
-              ?? [];
+            // Same checklist + matcher the mentor's "Lampiran" card uses
+            // (hoisted above the mentee early-return) — both views MUST agree
+            // on what counts as uploaded, or a doc can tick ✓ for the mentee
+            // while staying invisible to the mentor.
+            const checklist = sessionChecklist;
             if (checklist.length === 0) return null;
-            // Match a checklist item to an uploaded doc. Match by category ONLY
-            // when it's specific (not the "other" catch-all, which would let any
-            // misc doc satisfy any generic item), else by name.
-            const docForItem = (item: string) => {
-              const cat = docChecklistCategory(item);
-              const q = item.toLowerCase();
-              return allDocs.find((d) =>
-                (cat !== "other" && d.category === cat) ||
-                d.name.toLowerCase() === q ||
-                d.name.toLowerCase().includes(q)
-              ) || null;
-            };
+            const docForItem = (item: string) =>
+              allDocs.find((d) => matchesChecklistItem(item, d)) || null;
             const doneN = checklist.filter((item) => !!docForItem(item)).length;
             return (
               <section className="se-card">
@@ -1640,10 +1658,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                   and uploads. Download-only for the mentor (no upload); personal
                   docs (CV/ijazah/etc.) are excluded since those come from the mentee. */}
               {(() => {
-                const checklist = (Array.isArray(session.docChecklist) ? session.docChecklist : null)
-                  ?? CURRICULUM.find((c) => c.sessionNum === session.sessionNum)?.docChecklist
-                  ?? [];
-                const templates = checklist
+                const templates = sessionChecklist
                   .map((item) => ({ item, spec: classifyDoc(item) }))
                   .filter((x) => x.spec.kind === "template");
                 if (templates.length === 0) return null;
