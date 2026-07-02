@@ -5560,3 +5560,7 @@ html.dark .dashboard-shell .rs-dur-input:disabled {
   .dashboard-shell .tpl-grid { grid-template-columns: 1fr; }
   .dashboard-shell .tpl-why { flex-direction: column; gap: 12px; }
 }
+
+/* Panduan Kurikulum — mentor-prep toolkit links (files/pages behind items) */
+.dashboard-shell .kc-page .det-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ph) 45%, transparent); text-underline-offset: 3px; transition: color .13s; }
+.dashboard-shell .kc-page .det-link:hover { color: var(--ph); text-decoration-color: var(--ph); }

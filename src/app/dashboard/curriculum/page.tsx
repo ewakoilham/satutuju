@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CURRICULUM, DOCUMENT_CATEGORIES, type SessionTemplate } from "@/lib/curriculum";
+import { mentorPrepLink } from "@/lib/mentor-toolkit";
 
 /* ──────────────────────────────────────────────────────────────────────
    Panduan Kurikulum — the curriculum "journey" reference.
@@ -85,21 +86,37 @@ const TOTAL_DOCS = CURRICULUM.reduce((a, s) => a + s.docChecklist.length, 0);
 
 /* ── Detail section (Hasil / Persiapan mentee / mentor / Dokumen) ─────── */
 function DetailSection({
-  icon, label, items, marker, variant,
+  icon, label, items, marker, variant, linkify,
 }: {
   icon: React.ReactNode;
   label: string;
   items: string[];
   marker: React.ReactNode;
   variant?: "doc";
+  /** Resolve an item to a toolkit link (mentor prep items → file/page). */
+  linkify?: (item: string) => { href: string; download: boolean } | null;
 }) {
   return (
     <div className="det-sec">
       <div className="det-h">{icon} {label}</div>
       <ul className={`det-list${variant === "doc" ? " doc" : ""}`}>
-        {items.map((t, i) => (
-          <li key={i}><span className="mk">{marker}</span>{t}</li>
-        ))}
+        {items.map((t, i) => {
+          const link = linkify?.(t) ?? null;
+          return (
+            <li key={i}>
+              <span className="mk">{marker}</span>
+              {link ? (
+                link.download ? (
+                  <a className="det-link" href={link.href} download>{t}</a>
+                ) : (
+                  <Link className="det-link" href={link.href}>{t}</Link>
+                )
+              ) : (
+                t
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -137,7 +154,7 @@ function SessionRow({
           <div className="det-grid">
             <DetailSection icon={I_HASIL} label="Hasil" items={session.deliverables} marker={M_CHK} />
             <DetailSection icon={I_MENTEE} label="Persiapan mentee" items={session.menteePrep} marker={M_CHEV} />
-            <DetailSection icon={I_MENTOR} label="Persiapan mentor" items={session.mentorPrep} marker={M_CHEV} />
+            <DetailSection icon={I_MENTOR} label="Persiapan mentor" items={session.mentorPrep} marker={M_CHEV} linkify={mentorPrepLink} />
             <DetailSection icon={I_FILE} label="Dokumen dibutuhkan" items={session.docChecklist} marker={I_FILE} variant="doc" />
           </div>
         </div>
