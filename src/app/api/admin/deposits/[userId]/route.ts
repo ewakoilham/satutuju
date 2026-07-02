@@ -64,6 +64,7 @@ async function notifyMentee(
   title: string,
   message: string,
   type: "info" | "alert",
+  link: string = "/dashboard/deposit",
 ) {
   const { error } = await supabase.from("Notification").insert({
     id: crypto.randomUUID(),
@@ -71,7 +72,7 @@ async function notifyMentee(
     title,
     message,
     type,
-    link: "/dashboard/deposit",
+    link,
     read: false,
     createdAt: new Date().toISOString(),
   });
@@ -137,9 +138,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
     await notifyMentee(
       userId,
-      "Deposit terverifikasi",
-      "Bukti transfer deposit Anda telah diverifikasi oleh admin. Terima kasih!",
+      "Deposit terverifikasi — booking sesi terbuka",
+      "Bukti transfer deposit kamu sudah diverifikasi. Kamu sekarang bisa booking sesi dengan mentormu di halaman Jadwal!",
       "info",
+      "/dashboard/schedule",
     );
     return NextResponse.json({ deposit: data });
   }
