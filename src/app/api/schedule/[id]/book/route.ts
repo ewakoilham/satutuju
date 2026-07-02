@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
+import { sendAdminBookingEmail } from "@/lib/email-templates";
 
 // POST: mentee requests a slot
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single();
 
   if (!pairing) return NextResponse.json({ error: "No active pairing with this mentor" }, { status: 403 });
+
+  // Booking mentor time requires a VERIFIED deposit. Uploading proof unlocks
+  // the dashboard for preparation, but a session may only be booked once an
+  // admin has verified the transfer — otherwise a fake screenshot buys real
+  // mentor hours (Phase 0 trust hardening).
+  const { data: deposit } = await supabase
+    .from("MenteeDeposit")
+    .select("status")
+    .eq("userId", user.userId)
+    .single();
+  if (deposit?.status !== "VERIFIED") {
+    const msg =
+      deposit?.status === "UPLOADED"
+        ? "Deposit kamu sedang diverifikasi tim SatuTuju. Booking sesi terbuka begitu verifikasi selesai — biasanya kurang dari 1 hari kerja."
+        : "Selesaikan deposit kamu dulu sebelum booking sesi dengan mentor.";
+    return NextResponse.json({ error: msg, code: "DEPOSIT_NOT_VERIFIED" }, { status: 403 });
+  }
 
   // No duplicate pending booking
   const { data: existing } = await supabase
@@ -82,6 +100,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     read: false,
     link: "/dashboard/schedule",
     createdAt: now,
+  });
+
+  // Email the admin inbox so bookings have oversight (best-effort — the
+  // helper never throws).
+  const { data: mentorUser } = await supabase
+    .from("User").select("name").eq("id", slot.mentorId).single();
+  await sendAdminBookingEmail({
+    kind: "requested",
+    mentorName: mentorUser?.name ?? "Mentor",
+    menteeName: user.name,
+    date: slot.date,
+    time: reqTimeDisplay,
   });
 
   return NextResponse.json({ booking }, { status: 201 });
@@ -196,6 +226,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .update({ googleCalendarEventId: calResult.eventId, googleMeetLink: calResult.meetLink })
         .eq("id", bookingId);
     }
+
+    // Confirmed sessions go to the admin inbox too (best-effort).
+    await sendAdminBookingEmail({
+      kind: "accepted",
+      mentorName: mentor?.name ?? user.name,
+      menteeName: mentee?.name ?? "Mentee",
+      date: slot.date,
+      time: acceptedTimeDisplay,
+      sessionLabel,
+    });
   } else {
     const wasCancelling = booking.status === "accepted";
 
@@ -241,6 +281,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       read: false,
       link: "/dashboard/schedule",
       createdAt: now,
+    });
+
+    // Rejections/cancellations go to the admin inbox too — a cancelled
+    // confirmed session is exactly the kind of drift admins should see.
+    const { data: menteeUser } = await supabase
+      .from("User").select("name").eq("id", booking.menteeId).single();
+    await sendAdminBookingEmail({
+      kind: wasCancelling ? "cancelled" : "rejected",
+      mentorName: user.name,
+      menteeName: menteeUser?.name ?? "Mentee",
+      date: slot.date,
+      time: cancelledTimeDisplay,
+      reason,
     });
   }
 

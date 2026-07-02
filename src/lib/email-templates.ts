@@ -158,3 +158,104 @@ export async function sendSessionPlanFinalizedEmail(opts: {
     }),
   });
 }
+
+/* ── Admin ops alerts ─────────────────────────────────────────────────────
+   Operational events the admin must act on quickly (deposit verification
+   gates booking; bookings need oversight). Sent to the admin inbox —
+   ADMIN_NOTIFY_EMAIL, default admin@satutuju.id. Best-effort: failures are
+   logged and never break the API call that triggered them. */
+
+function adminNotifyAddress(): string {
+  return process.env.ADMIN_NOTIFY_EMAIL || "admin@satutuju.id";
+}
+
+async function sendAdminOps(opts: {
+  subject: string;
+  preheader: string;
+  heading: string;
+  body: string;
+  cta?: { label: string; url: string };
+}): Promise<void> {
+  try {
+    await send({
+      to: adminNotifyAddress(),
+      subject: opts.subject,
+      html: shell({
+        preheader: opts.preheader,
+        heading: opts.heading,
+        body: opts.body,
+        cta: opts.cta,
+      }),
+    });
+  } catch (e) {
+    console.error("[email] admin ops send failed:", e);
+  }
+}
+
+/** Deposit proof uploaded — verification now gates session booking, so the
+ *  admin needs to jump on it. */
+export async function sendAdminDepositUploadedEmail(opts: {
+  menteeName: string;
+  menteeUserId: string;
+  reupload: boolean;
+  transferNote?: string | null;
+}): Promise<void> {
+  await sendAdminOps({
+    subject: `${opts.reupload ? "[Re-upload] " : ""}Bukti deposit: ${opts.menteeName}`,
+    preheader: "Perlu verifikasi — booking sesi mentee terbuka setelah deposit diverifikasi.",
+    heading: opts.reupload ? "Bukti deposit diunggah ulang." : "Bukti deposit baru masuk.",
+    body: `
+      <p><b>${opts.menteeName}</b> baru saja mengunggah bukti transfer deposit.</p>
+      ${opts.transferNote ? `<p>Catatan transfer: <i>${opts.transferNote}</i></p>` : ""}
+      <p>Booking sesi mentee ini terbuka begitu deposit diverifikasi — mohon
+         cek secepatnya supaya mentee tidak menunggu.</p>
+    `,
+    cta: { label: "Verifikasi sekarang", url: `${appUrl()}/dashboard/admin/deposits/${opts.menteeUserId}` },
+  });
+}
+
+/** Booking lifecycle — request / confirmed / rejected / cancelled. */
+export async function sendAdminBookingEmail(opts: {
+  kind: "requested" | "accepted" | "rejected" | "cancelled";
+  mentorName: string;
+  menteeName: string;
+  date: string;
+  time: string;
+  sessionLabel?: string | null;
+  reason?: string | null;
+}): Promise<void> {
+  const KIND: Record<typeof opts.kind, { subject: string; heading: string; line: string }> = {
+    requested: {
+      subject: `Booking baru: ${opts.menteeName} → ${opts.mentorName}`,
+      heading: "Request sesi baru.",
+      line: `<b>${opts.menteeName}</b> mengajukan sesi ke <b>${opts.mentorName}</b> — menunggu konfirmasi mentor.`,
+    },
+    accepted: {
+      subject: `Sesi terkonfirmasi: ${opts.mentorName} × ${opts.menteeName}`,
+      heading: "Sesi terkonfirmasi.",
+      line: `<b>${opts.mentorName}</b> menerima request sesi dari <b>${opts.menteeName}</b>.`,
+    },
+    rejected: {
+      subject: `Request ditolak: ${opts.mentorName} × ${opts.menteeName}`,
+      heading: "Request sesi ditolak.",
+      line: `<b>${opts.mentorName}</b> menolak request sesi dari <b>${opts.menteeName}</b>.`,
+    },
+    cancelled: {
+      subject: `Sesi dibatalkan: ${opts.mentorName} × ${opts.menteeName}`,
+      heading: "Sesi terkonfirmasi dibatalkan.",
+      line: `<b>${opts.mentorName}</b> membatalkan sesi yang sudah terkonfirmasi dengan <b>${opts.menteeName}</b>.`,
+    },
+  };
+  const k = KIND[opts.kind];
+  await sendAdminOps({
+    subject: k.subject,
+    preheader: `${opts.date} · ${opts.time}`,
+    heading: k.heading,
+    body: `
+      <p>${k.line}</p>
+      <p>📅 <b>${opts.date}</b> · ${opts.time}${opts.sessionLabel ? `<br/>📚 ${opts.sessionLabel}` : ""}</p>
+      ${opts.reason ? `<p>Alasan: <i>${opts.reason}</i></p>` : ""}
+    `,
+    cta: { label: "Buka jadwal", url: `${appUrl()}/dashboard/schedule` },
+  });
+}

@@ -6,6 +6,7 @@ import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { invalidate } from "@/lib/swr-lite";
+import { fetchMenteePrereqs } from "@/lib/mentee-prereq-cache";
 import {
   useScheduleReducer,
   useScheduleData,
@@ -150,6 +151,19 @@ export default function SchedulePage() {
   const isMentor = user?.role === "mentor";
   const isMentee = user?.role === "mentee";
   const isAdmin = user?.role === "admin";
+
+  // Booking is server-gated on a VERIFIED deposit; surface that proactively
+  // so mentees aren't surprised by the error in the booking modal. null =
+  // unknown/loading (banner hidden), "NOT_STARTED" = no deposit row yet.
+  const [depositStatus, setDepositStatus] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isMentee) return;
+    let cancelled = false;
+    fetchMenteePrereqs().then((s) => {
+      if (!cancelled) setDepositStatus(s?.deposit?.status ?? "NOT_STARTED");
+    });
+    return () => { cancelled = true; };
+  }, [isMentee]);
 
   // Drag-to-create hook (mentor only)
   const drag = useDragToCreate(user?.role, state.mode, weekSlots, dispatch);
@@ -549,6 +563,22 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* Deposit-verification notice — booking is blocked server-side until
+          the deposit is VERIFIED; tell the mentee up front instead of letting
+          the booking modal error at them. */}
+      {isMentee && depositStatus && depositStatus !== "VERIFIED" && (
+        <div className="today-warn" style={{ marginBottom: 18 }}>
+          <span className="ic">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01" /><circle cx="12" cy="12" r="10" /></svg>
+          </span>
+          {depositStatus === "UPLOADED" ? (
+            <span><b>Deposit kamu sedang diverifikasi.</b> Kamu bisa lihat jadwal mentor, tapi booking sesi terbuka begitu tim SatuTuju selesai verifikasi — biasanya kurang dari 1 hari kerja.</span>
+          ) : (
+            <span><b>Selesaikan deposit dulu untuk booking sesi.</b> Lihat detail dan unggah bukti transfer di halaman <a href="/dashboard/deposit" style={{ textDecoration: "underline", fontWeight: 600 }}>Deposit</a>.</span>
+          )}
+        </div>
+      )}
 
       {/* ── Quick stats ────────────────────────────────────────────── */}
       <div className="quick-stats">

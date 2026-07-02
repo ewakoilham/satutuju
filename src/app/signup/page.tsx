@@ -14,7 +14,12 @@ export default function SignupPage() {
   // provide atmosphere until the photo fades in.
   const [bgIndex, setBgIndex] = useState<number | null>(null);
   useEffect(() => {
-    setBgIndex(Math.floor(Math.random() * BG_PHOTOS.length));
+    // Deferred out of the synchronous effect body (react-hooks lint); still
+    // client-only so the server render stays image-less (hydration-safe).
+    const raf = requestAnimationFrame(() => {
+      setBgIndex(Math.floor(Math.random() * BG_PHOTOS.length));
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
@@ -114,6 +119,22 @@ export default function SignupPage() {
             title="Ready to fulfill your dreams with Satu Tuju?"
             className="w-full"
           />
+
+          {/* Escape hatch: if the embed script is blocked (ad-blocker, strict
+              privacy mode, corporate network) the iframe stays clipped at
+              545px and the submit button can be unreachable. The direct form
+              always works. */}
+          <p className="text-center text-xs text-gray-500 mt-4">
+            Formulir tidak muncul atau terpotong?{" "}
+            <a
+              href="https://tally.so/r/9qO65Q"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-semibold underline hover:text-primary-700"
+            >
+              Buka formulir di tab baru →
+            </a>
+          </p>
         </div>
       </div>
 

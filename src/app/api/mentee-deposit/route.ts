@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, DEPOSIT_PROOF_BUCKET } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { sniffImage } from "@/lib/image-sniff";
+import { sendAdminDepositUploadedEmail } from "@/lib/email-templates";
 import {
   DEPOSIT_AMOUNT_IDR,
   DEPOSIT_BANK,
@@ -242,6 +243,36 @@ export async function POST(req: NextRequest) {
       }
       saved = data as DepositRow;
     }
+
+    // Verification now gates session booking, so admins must know the moment
+    // a proof lands — in-app notification to every admin PLUS an email to the
+    // admin inbox (best-effort; never fails the upload).
+    const reupload = existing?.rejectedAt != null;
+    try {
+      const { data: admins } = await supabase.from("User").select("id").eq("role", "admin");
+      if (admins && admins.length > 0) {
+        await supabase.from("Notification").insert(
+          admins.map((a: { id: string }) => ({
+            id: crypto.randomUUID(),
+            userId: a.id,
+            title: reupload ? "Bukti deposit diunggah ulang" : "Bukti deposit baru",
+            message: `${user.name} mengunggah bukti transfer deposit — perlu verifikasi sebelum bisa booking sesi.`,
+            type: "alert",
+            read: false,
+            link: `/dashboard/admin/deposits/${user.userId}`,
+            createdAt: now,
+          })),
+        );
+      }
+    } catch (notifyErr) {
+      console.error("[mentee-deposit] admin notify failed:", notifyErr);
+    }
+    await sendAdminDepositUploadedEmail({
+      menteeName: user.name,
+      menteeUserId: user.userId,
+      reupload,
+      transferNote,
+    });
 
     return NextResponse.json({ deposit: saved });
   } catch (e) {
