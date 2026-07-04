@@ -12,10 +12,10 @@ export const DEPOSIT_AMOUNT_LABEL = "Rp 1.000.000 (satu juta rupiah)";
 
 /** Rekening resmi SATU TUJU untuk pembayaran deposit (Pasal 9.1 ayat 3). */
 export const DEPOSIT_BANK = {
-  bank: "Bank BCA",
-  accountNumber: "5771 3525 03",
-  accountNumberRaw: "5771352503", // for the clipboard copy button
-  accountHolder: "Muhammad Ilham Razak",
+  bank: "Bank Mandiri",
+  accountNumber: "1030013358821",
+  accountNumberRaw: "1030013358821", // for the clipboard copy button
+  accountHolder: "Satu Tuju Education",
 } as const;
 
 /** Stored on MenteeDeposit.status — no row means NOT_STARTED. */
