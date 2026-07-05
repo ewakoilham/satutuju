@@ -299,6 +299,16 @@ model Session {
   summaryNotes    String? // 24-hour post-session summary
   menteeFeedback  String? // Mentee's impression/comment about the session
 
+  // Phase 20 — Fireflies.ai recap, ingested by the Fireflies webhook after the
+  // Meet is transcribed. Overview / actionItems / transcriptUrl are
+  // mentor+admin-facing; shortSummary is the clean recap shown to the mentee.
+  firefliesTranscriptId  String?
+  firefliesOverview      String?
+  firefliesShortSummary  String?
+  firefliesActionItems   String?
+  firefliesTranscriptUrl String?
+  firefliesRecapAt       DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

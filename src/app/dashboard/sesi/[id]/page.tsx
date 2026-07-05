@@ -65,6 +65,13 @@ interface SessionRow {
   obstacles?: string | null;
   summaryNotes?: string | null;
   menteeFeedback?: string | null;
+  // Phase 20 — Fireflies recap. Overview/actionItems/transcriptUrl are
+  // mentor+admin-only; shortSummary is the clean recap shown to the mentee.
+  firefliesOverview?: string | null;
+  firefliesShortSummary?: string | null;
+  firefliesActionItems?: string | null;
+  firefliesTranscriptUrl?: string | null;
+  firefliesRecapAt?: string | null;
   durationMinutes?: number | null;
   objective?: string | null;        // published from the mentor's session plan
   deliverables?: string[] | null;   // published from the mentor's session plan
@@ -906,6 +913,22 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 </div>
               </section>
 
+              {session.firefliesShortSummary && (
+                <section className="se-card">
+                  <div className="se-card-head">
+                    <h2>Ringkasan otomatis sesi</h2>
+                    <span className="stamp">Fireflies</span>
+                  </div>
+                  <div className="se-card-body">
+                    {session.firefliesShortSummary
+                      .split(/\n{2,}/)
+                      .map((p) => p.trim())
+                      .filter(Boolean)
+                      .map((p, i) => <p key={i}>{p}</p>)}
+                  </div>
+                </section>
+              )}
+
               {myTasks.length > 0 && (
                 <section className="se-card">
                   <div className="se-card-head">
@@ -1413,6 +1436,33 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           {summaryParas.length ? summaryParas.map((p, i) => <p key={i}>{p}</p>) : <p className="muted">Belum ada ringkasan untuk sesi ini.</p>}
         </div>
       </section>
+
+      {(session.firefliesOverview || session.firefliesActionItems || session.firefliesTranscriptUrl) && (
+        <section className="se-card">
+          <div className="se-card-head">
+            <h2>Ringkasan otomatis (Fireflies)</h2>
+            <span className="stamp">{session.firefliesRecapAt ? fmtDayShort(new Date(session.firefliesRecapAt)) : "otomatis"}</span>
+          </div>
+          <div className="se-card-body">
+            {session.firefliesOverview
+              ? session.firefliesOverview.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)
+              : <p className="muted">Ringkasan belum tersedia.</p>}
+            {session.firefliesActionItems && (
+              <>
+                <h3 className="se-rf-label" style={{ marginTop: 12 }}>Action items</h3>
+                <p style={{ whiteSpace: "pre-wrap" }}>{session.firefliesActionItems}</p>
+              </>
+            )}
+            {session.firefliesTranscriptUrl && (
+              <p style={{ marginTop: 12 }}>
+                <a href={session.firefliesTranscriptUrl} target="_blank" rel="noopener noreferrer" className="se-prep-link">
+                  Buka transkrip lengkap di Fireflies →
+                </a>
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {draft.obstacles && (
         <section className="se-card">
