@@ -99,17 +99,17 @@ export const MATERIALS: Material[] = [
   {
     id: "thousand-essays",
     title: "1000 Essays Project",
-    label: "Contoh · segera",
+    label: "Contoh · kurasi",
     description:
-      "Bank essay yang sudah masuk Chevening, LPDP, AAS, Fulbright. Filter per kampus dan jurusan.",
-    href: null,
+      "Kurasi esai & panduan Chevening, LPDP, AAS, Fulbright dari sumber terbuka — panduan resmi + esai yang dipublikasikan awardee. Terus bertambah.",
+    href: "/dashboard/essays",
     icon: "star",
     tone: "ess",
     phase: "writing",
     type: "contoh",
     sessionN: 8,
     roles: null,
-    locked: true,
+    locked: false,
   },
   {
     id: "mentor-circle",
