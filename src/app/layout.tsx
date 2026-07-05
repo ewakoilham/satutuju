@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Poppins, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme";
+import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,8 +32,22 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Satu Tuju",
   title: "Satu Tuju — Mentorship Platform",
   description: "Connecting mentors who have studied abroad with those who dream of doing the same. Your journey, guided by experience.",
+  // PWA: Next auto-links the manifest (app/manifest.ts) + icon/apple-icon.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Satu Tuju",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#3958b3",
 };
 
 /* Inline script that runs before React to prevent dark-mode flash (FOUC) */
@@ -54,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
