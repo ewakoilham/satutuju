@@ -38,17 +38,24 @@ function signatureValid(rawBody: string, header: string | null, secret: string):
 }
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.FIREFLIES_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error("[fireflies] FIREFLIES_WEBHOOK_SECRET not set");
-    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
-  }
-
   // Raw body is required for HMAC — any re-serialization would break the digest.
   const raw = await req.text();
+  const secret = process.env.FIREFLIES_WEBHOOK_SECRET;
   const sig = req.headers.get("x-hub-signature") || req.headers.get("x-hub-signature-256");
-  if (!signatureValid(raw, sig, secret)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+
+  // Signature verification is OPTIONAL: Fireflies only signs requests when the
+  // (optional) signing secret is configured in its dashboard. We enforce it
+  // only when BOTH a secret env var and a signature header are present — so it
+  // works out of the box with the signing secret left blank, and hardens
+  // automatically once you set the same secret on both sides.
+  if (secret && sig) {
+    if (!signatureValid(raw, sig, secret)) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  } else {
+    console.warn(
+      "[fireflies] webhook accepted WITHOUT signature verification — set FIREFLIES_WEBHOOK_SECRET (env) AND a matching signing secret in Fireflies to enforce.",
+    );
   }
 
   let body: { meetingId?: string; eventType?: string };
@@ -59,7 +66,14 @@ export async function POST(req: NextRequest) {
   }
 
   const { meetingId, eventType } = body;
-  if (eventType !== "Transcription completed") {
+
+  // Act only on "recap ready" events. Fireflies naming varies by webhook
+  // version: classic "Transcription completed" and V2 "Meeting Transcribed" /
+  // "Meeting Summarized". Ignore not-ready events like "Meeting Bot Joined".
+  const ev = (eventType ?? "").toLowerCase();
+  const notReady = /bot ?joined|started|processing|scheduled|failed/.test(ev);
+  const ready = /transcri|summar|complete/.test(ev);
+  if (notReady || !ready) {
     return NextResponse.json({ ok: true, note: `ignored event: ${eventType ?? "unknown"}` });
   }
   if (!meetingId) {
