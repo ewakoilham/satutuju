@@ -5626,3 +5626,66 @@ html.dark .dashboard-shell .rs-dur-input:disabled {
 
 @media (max-width: 920px) { .dashboard-shell .alm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .dashboard-shell .alm-grid { grid-template-columns: 1fr; } .dashboard-shell .alm-search { max-width: none; } }
+
+/* ════════════════════════════════════════════════════════════════════════
+   1000 Essays Project (/dashboard/essays). Scoped to .esy-page. Tints are
+   color-mixed toward var(--surface) so dark mode inverts cleanly.
+   ════════════════════════════════════════════════════════════════════════ */
+.dashboard-shell .esy-page { max-width: 1080px; }
+
+.dashboard-shell .esy-controls { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; }
+.dashboard-shell .esy-controls .filter-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dashboard-shell .esy-n { opacity: 0.6; font-family: var(--font-geist-mono); font-size: 11px; margin-left: 2px; }
+.dashboard-shell .esy-search {
+  display: inline-flex; align-items: center; gap: 7px; margin-left: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 7px 12px; color: var(--text-muted-2); min-width: 230px;
+}
+.dashboard-shell .esy-search input { border: none; background: none; outline: none; font-size: 13px; color: var(--foreground); width: 100%; }
+.dashboard-shell .esy-search input::placeholder { color: var(--text-muted-2); }
+
+.dashboard-shell .esy-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.dashboard-shell .esy-card {
+  display: flex; flex-direction: column; gap: 8px; text-decoration: none;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px 20px; transition: border-color .14s, box-shadow .14s, transform .14s;
+}
+.dashboard-shell .esy-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.dashboard-shell .esy-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.dashboard-shell .esy-sch {
+  font-family: var(--font-poppins); font-weight: 700; font-size: 10.5px;
+  padding: 3px 10px; border-radius: 999px; letter-spacing: 0.02em;
+}
+.dashboard-shell .esy-sch.sch-chevening { color: #1d4ed8; background: color-mix(in srgb, #1d4ed8 12%, var(--surface)); }
+.dashboard-shell .esy-sch.sch-lpdp      { color: #b91c1c; background: color-mix(in srgb, #b91c1c 12%, var(--surface)); }
+.dashboard-shell .esy-sch.sch-aas       { color: #b45309; background: color-mix(in srgb, #b45309 12%, var(--surface)); }
+.dashboard-shell .esy-sch.sch-fulbright { color: #0f766e; background: color-mix(in srgb, #0f766e 12%, var(--surface)); }
+.dashboard-shell .esy-sch.sch-umum      { color: var(--text-muted-3); background: var(--surface-elevated); }
+html.dark .dashboard-shell .esy-sch.sch-chevening { color: #93b4f5; }
+html.dark .dashboard-shell .esy-sch.sch-lpdp      { color: #f3a5a5; }
+html.dark .dashboard-shell .esy-sch.sch-aas       { color: #f0c27a; }
+html.dark .dashboard-shell .esy-sch.sch-fulbright { color: #7fd4cb; }
+.dashboard-shell .esy-kind, .dashboard-shell .esy-lang {
+  font-family: var(--font-geist-mono); font-size: 10px; color: var(--text-muted-2);
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border);
+}
+.dashboard-shell .esy-title { font-family: var(--font-poppins); font-weight: 700; font-size: 15px; color: var(--primary-900); margin: 2px 0 0; line-height: 1.35; }
+.dashboard-shell .esy-desc { font-size: 12.5px; color: var(--text-muted-3); line-height: 1.5; margin: 0; flex: 1; }
+.dashboard-shell .esy-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.dashboard-shell .esy-pub { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); }
+.dashboard-shell .esy-pub svg { color: var(--success); }
+.dashboard-shell .esy-open { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-geist-mono); font-size: 11px; color: var(--primary); }
+.dashboard-shell .esy-empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; border: 1px dashed var(--border); border-radius: 16px; }
+
+.dashboard-shell .esy-note {
+  display: flex; gap: 12px; align-items: flex-start; margin-top: 26px;
+  background: linear-gradient(180deg, var(--primary-50), var(--surface));
+  border: 1px solid var(--primary-100); border-radius: 16px; padding: 16px 20px;
+}
+.dashboard-shell .esy-note svg { color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+.dashboard-shell .esy-note p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.55; }
+
+@media (max-width: 760px) {
+  .dashboard-shell .esy-grid { grid-template-columns: 1fr; }
+  .dashboard-shell .esy-search { margin-left: 0; width: 100%; }
+}
