@@ -17,6 +17,7 @@ import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import { useUser } from "@/lib/hooks";
 import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing } from "@/lib/mentee-pairing-cache";
+import { CURRICULUM } from "@/lib/curriculum";
 
 interface DocRow {
   id: string;
@@ -286,7 +287,14 @@ export default function DokumenPage() {
     const sessions = (pairing.sessions || []).filter((s) => s.enabled !== false);
     const map = new Map<string, { name: string; category: string; sessionNums: number[] }>();
     for (const s of sessions) {
-      const list = Array.isArray(s.docChecklist) ? s.docChecklist : [];
+      // Session rows only carry a docChecklist after the mentor finalizes the
+      // rencana sesi — until then (or for customized sessions with none), fall
+      // back to the default curriculum checklist, exactly like the Sesi page.
+      // Without this, an un-finalized pairing showed just Ijazah+Passport
+      // while other mentees saw the full list (real confusion report).
+      const list = Array.isArray(s.docChecklist)
+        ? s.docChecklist
+        : (CURRICULUM.find((c) => c.sessionNum === s.sessionNum)?.docChecklist ?? []);
       for (const raw of list) {
         const item = canonicalDocName(String(raw || "").trim());
         const key = item.toLowerCase();
