@@ -18,11 +18,15 @@ import { GOOGLE_CALENDAR_AUTH_COLUMNS } from "@/lib/db-columns";
  *   4. Match attendee emails to Lead.email → advance stage
  */
 
-/** Full calendar scope — needed because the schedule-booking flow in
- *  /api/schedule/[id]/book creates events with Meet links (read-write).
- *  The leads-tracking sync only reads, but we share one OAuth grant so
- *  both flows use the same refresh token. */
-export const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar openid email";
+/** Shared scopes for the single admin Google grant:
+ *  - calendar (read-write): schedule booking creates events with Meet links;
+ *    the leads-tracking sync reads them.
+ *  - drive.file: the student-documents Drive sync. Deliberately NOT full
+ *    drive — the app can only see/manage folders and files it created itself.
+ *  Adding a scope means the admin must re-authorize once at /api/auth/google
+ *  (prompt=consent always returns a fresh refresh token). */
+export const GOOGLE_CALENDAR_SCOPE =
+  "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file openid email";
 
 /** Construct an OAuth client. Env vars must be set. */
 export function makeOAuthClient(): OAuth2Client {

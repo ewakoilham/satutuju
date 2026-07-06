@@ -405,6 +405,7 @@ export default function PairingDetailPage() {
         <DocumentsTab
           pairingId={pairing.id}
           menteeName={pairing.menteeProfile?.fullLegalName || pairing.mentee.name}
+          isAdmin={user?.role === "admin"}
           isMentor={isMentor}
           onRefresh={fetchPairing}
           onPreview={setPreviewDoc}
@@ -1484,12 +1485,14 @@ function MenteeFeedback({
 function DocumentsTab({
   pairingId,
   menteeName,
+  isAdmin,
   isMentor,
   onRefresh,
   onPreview,
 }: {
   pairingId: string;
   menteeName: string;
+  isAdmin?: boolean;
   isMentor: boolean;
   onRefresh: () => void;
   onPreview: (doc: Doc) => void;
@@ -1511,6 +1514,31 @@ function DocumentsTab({
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
   const [zipping, setZipping] = useState(false);
+  const [driveSyncing, setDriveSyncing] = useState(false);
+  const [driveResult, setDriveResult] = useState<{ ok: boolean; text: string; url?: string } | null>(null);
+
+  /** Push all documents to the SatuTuju Google Drive, folder per student
+   *  (admin archive for master-agency registration). Idempotent server-side. */
+  async function syncToDrive() {
+    if (driveSyncing) return;
+    setDriveSyncing(true);
+    setDriveResult(null);
+    try {
+      const res = await fetch(`/api/pairings/${pairingId}/drive-sync`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const bits = [`${data.uploaded} baru`, `${data.skipped} sudah ada`];
+        if (data.failed?.length) bits.push(`${data.failed.length} gagal`);
+        setDriveResult({ ok: true, text: `Tersync ke folder "${data.folderName}" — ${bits.join(", ")}.`, url: data.folderUrl });
+      } else {
+        setDriveResult({ ok: false, text: data.error || "Gagal sync ke Drive." });
+      }
+    } catch {
+      setDriveResult({ ok: false, text: "Gagal sync — periksa koneksi lalu coba lagi." });
+    } finally {
+      setDriveSyncing(false);
+    }
+  }
 
   /** Download every uploaded document as one ZIP, files named
    *  "{Mentee}/{Doc} - vN.ext" — for the admin workflow of archiving a
@@ -1635,6 +1663,17 @@ function DocumentsTab({
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">All Documents</h3>
         <div className="flex items-center gap-2">
+        {isAdmin && docs.length > 0 && (
+          <button
+            onClick={syncToDrive}
+            disabled={driveSyncing}
+            className="border border-border text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-surface-elevated inline-flex items-center gap-1.5 disabled:opacity-60"
+            title="Kirim semua dokumen ke Google Drive SatuTuju (folder per nama siswa)"
+          >
+            <Icon name="upload" size={16} />
+            {driveSyncing ? "Sync ke Drive…" : "Sync ke Drive"}
+          </button>
+        )}
         {docs.length > 0 && (
           <button
             onClick={downloadAllZip}
@@ -1655,6 +1694,17 @@ function DocumentsTab({
         </button>
         </div>
       </div>
+
+      {driveResult && (
+        <p className={`text-sm ${driveResult.ok ? "text-green-700" : "text-red-600"}`}>
+          {driveResult.text}{" "}
+          {driveResult.url && (
+            <a href={driveResult.url} target="_blank" rel="noopener noreferrer" className="underline font-medium">
+              Buka folder →
+            </a>
+          )}
+        </p>
+      )}
 
       {showUpload && (
         <form
