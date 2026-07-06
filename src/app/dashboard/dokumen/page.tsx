@@ -285,11 +285,10 @@ export default function DokumenPage() {
       .filter((t) => !docs.some((d) => d.category === taskToCategory(t.title)));
     const approved = docs.filter((d) => d.status === "approved").length;
     const needsAction = docs.filter((d) => d.status === "needs_revision").length;
-    const featured =
-      docs.find((d) => d.status === "needs_revision") ||
-      docs.find((d) => d.status === "uploaded") ||
-      docs.find((d) => d.status === "under_review") ||
-      null;
+    // The hero is "your next action". Only a needs_revision doc qualifies —
+    // an already-sent doc has nothing to continue (user feedback: the old
+    // "Lanjutkan dokumen ini" over a Terkirim doc read as meaningless).
+    const featured = docs.find((d) => d.status === "needs_revision") || null;
     const breakdown = (["needs_revision", "uploaded", "under_review", "approved"] as const)
       .map((k) => ({ k, label: statusOf(k).label, sw: statusOf(k).sw, n: docs.filter((d) => d.status === k).length }))
       .filter((b) => b.n > 0);
@@ -410,6 +409,12 @@ export default function DokumenPage() {
   const mentorFirst = firstName(pairing.mentor?.name);
   // Recap-based view: required docs across all sessions, filtered by status.
   const recapShown = requiredDocs.filter(RECAP_FILTERS.find((f) => f.id === filter)!.match);
+  // Hero fallback when nothing needs revision: the next wajib document that
+  // hasn't been uploaded yet (then any missing doc). Null = all caught up.
+  const nextUpload =
+    requiredDocs.find((r) => isWajibRow(r) && r.status === "none") ??
+    requiredDocs.find((r) => r.status === "none") ??
+    null;
   const totalRequired = requiredDocs.length;
   const approvedRequired = requiredDocs.filter((r) => r.status === "approved").length;
 
@@ -536,15 +541,15 @@ export default function DokumenPage() {
             })}
           </div>
 
-          {/* Continue / featured doc */}
-          {d.featured && (
+          {/* Hero = the next action: a doc to revise, else the next upload. */}
+          {d.featured ? (
             <div className="today" style={{ marginBottom: 18 }}>
               <div className="today-blob" />
               <div className="today-content">
                 <div className="today-head">
                   {badge(d.featured)}
                   <span className="eyebrow primary" style={{ display: "inline" }}>
-                    {d.featured.status === "needs_revision" ? "Perlu kamu revisi" : "Lanjutkan dokumen ini"}
+                    Perlu kamu revisi
                   </span>
                 </div>
                 <h3 style={{ fontFamily: "var(--font-poppins)", fontWeight: 700, fontSize: 21, color: "var(--primary-900)", margin: "10px 0 4px", letterSpacing: "-0.01em" }}>
@@ -584,7 +589,33 @@ export default function DokumenPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : nextUpload ? (
+            <div className="today" style={{ marginBottom: 18 }}>
+              <div className="today-blob" />
+              <div className="today-content">
+                <div className="today-head">
+                  <span className="dok-badge draft">● Belum diunggah</span>
+                  <span className="eyebrow primary" style={{ display: "inline" }}>Langkah berikutnya</span>
+                </div>
+                <h3 style={{ fontFamily: "var(--font-poppins)", fontWeight: 700, fontSize: 21, color: "var(--primary-900)", margin: "10px 0 4px", letterSpacing: "-0.01em" }}>
+                  {nextUpload.name}
+                </h3>
+                <p className="who" style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                  {nextUpload.sessionNums.length ? `Sesi ${[...nextUpload.sessionNums].sort((a, b) => a - b).join(", ")}` : "Umum"} · {CAT_LABEL[nextUpload.category] || nextUpload.category}
+                </p>
+                <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="db-btn db-btn-primary sm"
+                    onClick={() => startUpload(nextUpload.name, nextUpload.category, nextUpload.sessionNums[0] ?? null, `req:${nextUpload.name.toLowerCase()}`)}
+                    disabled={uploadingFor === `req:${nextUpload.name.toLowerCase()}`}
+                  >
+                    {uploadingFor === `req:${nextUpload.name.toLowerCase()}` ? "Mengunggah…" : "Unggah sekarang"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Requested nudge (top one) */}
           {d.requests.length > 0 && (
