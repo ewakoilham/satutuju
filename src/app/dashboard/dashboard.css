@@ -5689,3 +5689,6 @@ html.dark .dashboard-shell .esy-sch.sch-fulbright { color: #7fd4cb; }
   .dashboard-shell .esy-grid { grid-template-columns: 1fr; }
   .dashboard-shell .esy-search { margin-left: 0; width: 100%; }
 }
+
+/* Dokumen — in-app file viewer body ("Lihat") */
+.dashboard-shell .dok-viewer { height: 68vh; min-height: 380px; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }

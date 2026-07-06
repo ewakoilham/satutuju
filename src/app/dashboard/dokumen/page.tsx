@@ -135,6 +135,21 @@ function docChecklistCategory(item: string): string {
   return "other";
 }
 
+
+/** Pick how to embed a file in the in-app viewer, from its extension.
+ *  pdf/images/text render natively in an iframe/img; Office files go through
+ *  the Microsoft Office web viewer (same approach as the Templates page —
+ *  needs the public URL, which Supabase documents have). */
+function viewerSrc(doc: DocRow): { kind: "iframe" | "img" | "none"; src: string } {
+  const ext = (doc.fileName || doc.filePath).split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return { kind: "img", src: doc.filePath };
+  if (["pdf", "txt"].includes(ext)) return { kind: "iframe", src: doc.filePath };
+  if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
+    return { kind: "iframe", src: `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(doc.filePath)}` };
+  }
+  return { kind: "none", src: doc.filePath };
+}
+
 // One required-document row in the recap (aggregated across all sessions).
 interface RecapRow {
   name: string;
@@ -204,6 +219,8 @@ export default function DokumenPage() {
   const [loading, setLoading] = useState(cachedPairing === undefined);
   const [filter, setFilter] = useState("all");
   const [openDoc, setOpenDoc] = useState<DocRow | null>(null);
+  // In-app file viewer ("Lihat") — user feedback: don't bounce to a new tab.
+  const [viewDoc, setViewDoc] = useState<DocRow | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null); // task id or "doc:<name>"
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -469,11 +486,11 @@ export default function DokumenPage() {
               ) : (
                 /* "Lihat" opens the FILE itself (user feedback: the notes
                    modal is not what you expect when you click "view"). */
-                <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Lihat</a>
+                <button type="button" className="db-btn db-btn-outline sm" onClick={() => setViewDoc(doc)}>Lihat</button>
               )}
               <div className="d-action-row">
                 {r.status === "needs_revision" && (
-                  <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline sm">Lihat</a>
+                  <button type="button" className="db-btn db-btn-outline sm" onClick={() => setViewDoc(doc)}>Lihat</button>
                 )}
                 {/* Discussion thread + versions moved behind "Catatan". */}
                 <button type="button" className="db-btn db-btn-outline sm" onClick={() => setOpenDoc(doc)}>Catatan</button>
@@ -555,9 +572,9 @@ export default function DokumenPage() {
                     </button>
                   ) : (
                     /* No notes → "buka dokumen" means the file itself. */
-                    <a href={d.featured.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-primary sm">
+                    <button type="button" className="db-btn db-btn-primary sm" onClick={() => setViewDoc(d.featured)}>
                       Buka dokumen
-                    </a>
+                    </button>
                   )}
                   {d.featured.status === "needs_revision" && (
                     <button type="button" className="db-btn db-btn-outline sm" onClick={() => startUpload(d.featured!.name, d.featured!.category, d.featured!.sessionNum ?? null, `doc:${d.featured!.id}`)}>
@@ -770,6 +787,50 @@ export default function DokumenPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* In-app file viewer — "Lihat" stays inside the dashboard. */}
+      <Modal
+        open={!!viewDoc}
+        onClose={() => setViewDoc(null)}
+        title={viewDoc?.name || "Dokumen"}
+        description={viewDoc ? `${CAT_LABEL[viewDoc.category] || viewDoc.category} · v${viewDoc.version}` : ""}
+        size="2xl"
+        actions={
+          viewDoc ? (
+            <>
+              <button type="button" className="db-btn db-btn-outline" onClick={() => { const d = viewDoc; setViewDoc(null); setOpenDoc(d); }}>
+                Catatan
+              </button>
+              <a href={viewDoc.filePath} target="_blank" rel="noopener noreferrer" className="db-btn db-btn-outline">Unduh</a>
+              <button type="button" className="db-btn db-btn-primary" onClick={() => setViewDoc(null)}>Tutup</button>
+            </>
+          ) : null
+        }
+      >
+        {viewDoc && (() => {
+          const v = viewerSrc(viewDoc);
+          if (v.kind === "img") {
+            return (
+              <div className="dok-viewer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={v.src} alt={viewDoc.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", margin: "0 auto" }} />
+              </div>
+            );
+          }
+          if (v.kind === "iframe") {
+            return (
+              <div className="dok-viewer">
+                <iframe src={v.src} title={viewDoc.name} style={{ width: "100%", height: "100%", border: 0 }} />
+              </div>
+            );
+          }
+          return (
+            <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0 }}>
+              Format file ini belum bisa dipreview di dalam aplikasi — pakai tombol <b>Unduh</b> di bawah.
+            </p>
+          );
+        })()}
       </Modal>
     </>
   );
