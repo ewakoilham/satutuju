@@ -49,7 +49,7 @@ export async function getPairingDetail(pairingId: string): Promise<Row | null> {
     supabase.from("Pairing").select("id").eq("menteeId", menteeId).neq("id", pairingId),
     supabase
       .from("MenteeProfile")
-      .select("intendedStudyProgram, preferredDestinations")
+      .select("fullLegalName, intendedStudyProgram, preferredDestinations")
       .eq("userId", menteeId)
       .single(),
   ]);

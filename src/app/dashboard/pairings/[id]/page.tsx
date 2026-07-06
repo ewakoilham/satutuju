@@ -60,6 +60,7 @@ interface Pairing {
   priorityUnis?: string;
   ieltsScore?: string;
   mentor: { id: string; name: string; email: string; avatar?: string | null };
+  menteeProfile?: { fullLegalName?: string | null } | null;
   mentee: { id: string; name: string; email: string; avatar?: string | null };
   sessions: Session[];
   documents: Doc[];
@@ -403,7 +404,7 @@ export default function PairingDetailPage() {
       {tab === "documents" && (
         <DocumentsTab
           pairingId={pairing.id}
-          menteeName={pairing.mentee.name}
+          menteeName={pairing.menteeProfile?.fullLegalName || pairing.mentee.name}
           isMentor={isMentor}
           onRefresh={fetchPairing}
           onPreview={setPreviewDoc}
