@@ -403,6 +403,7 @@ export default function PairingDetailPage() {
       {tab === "documents" && (
         <DocumentsTab
           pairingId={pairing.id}
+          menteeName={pairing.mentee.name}
           isMentor={isMentor}
           onRefresh={fetchPairing}
           onPreview={setPreviewDoc}
@@ -1481,11 +1482,13 @@ function MenteeFeedback({
 
 function DocumentsTab({
   pairingId,
+  menteeName,
   isMentor,
   onRefresh,
   onPreview,
 }: {
   pairingId: string;
+  menteeName: string;
   isMentor: boolean;
   onRefresh: () => void;
   onPreview: (doc: Doc) => void;
@@ -1506,6 +1509,50 @@ function DocumentsTab({
   const [replacingFile, setReplacingFile] = useState<File | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
+  const [zipping, setZipping] = useState(false);
+
+  /** Download every uploaded document as one ZIP, files named
+   *  "{Mentee}/{Doc} - vN.ext" — for the admin workflow of archiving a
+   *  student's berkas into Google Drive. Zipped client-side (jszip, lazy
+   *  import) so files stream straight from the public bucket, no server
+   *  size limits. */
+  async function downloadAllZip() {
+    if (docs.length === 0 || zipping) return;
+    setZipping(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "-").trim();
+      const folder = zip.folder(safe(menteeName))!;
+      const used = new Set<string>();
+      let failed = 0;
+      for (const d of docs) {
+        try {
+          const res = await fetch(d.filePath);
+          if (!res.ok) { failed++; continue; }
+          const blob = await res.blob();
+          const ext = (d.fileName || d.filePath).split(".").pop() || "bin";
+          let name = `${safe(d.name)} - v${d.version}.${ext}`;
+          for (let i = 2; used.has(name); i++) name = `${safe(d.name)} - v${d.version} (${i}).${ext}`;
+          used.add(name);
+          folder.file(name, blob);
+        } catch {
+          failed++;
+        }
+      }
+      if (used.size === 0) { alert("Tidak ada file yang bisa diunduh."); return; }
+      const out = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(out);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safe(menteeName)} - Dokumen SatuTuju.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (failed > 0) alert(`${failed} file gagal diunduh — cek koneksi lalu coba lagi.`);
+    } finally {
+      setZipping(false);
+    }
+  }
 
   const refreshDocs = useCallback(async () => {
     const res = await fetch(`/api/pairings/${pairingId}/documents`);
@@ -1586,6 +1633,18 @@ function DocumentsTab({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">All Documents</h3>
+        <div className="flex items-center gap-2">
+        {docs.length > 0 && (
+          <button
+            onClick={downloadAllZip}
+            disabled={zipping}
+            className="border border-border text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-surface-elevated inline-flex items-center gap-1.5 disabled:opacity-60"
+            title="Unduh semua dokumen sebagai ZIP (folder per nama siswa)"
+          >
+            <Icon name="download" size={16} />
+            {zipping ? "Menyiapkan ZIP…" : `Download semua (${docs.length})`}
+          </button>
+        )}
         <button
           onClick={() => setShowUpload(!showUpload)}
           className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 inline-flex items-center gap-1.5"
@@ -1593,6 +1652,7 @@ function DocumentsTab({
           <Icon name="plus" size={16} />
           Upload Document
         </button>
+        </div>
       </div>
 
       {showUpload && (
