@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser, useNotifications } from "@/lib/hooks";
+import { warmDashboardCaches } from "@/lib/tab-prefetch";
 import { useTheme } from "@/lib/theme";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -136,6 +137,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  // Warm the other tabs' data caches during idle time so tab switches paint
+  // instantly (user report: Beranda/Leads felt slow on every switch).
+  useEffect(() => {
+    warmDashboardCaches(user?.role);
+  }, [user?.role]);
 
 
   // Close dropdowns on outside click

@@ -82,49 +82,45 @@ export async function GET() {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  // Fetch mentee profiles for live program data
+  // Enrichment queries (mentee profiles, mentor WhatsApp, session-plan
+  // status) are independent of each other — run them in PARALLEL. They were
+  // sequential before, making every dashboard tab pay 3 stacked Supabase
+  // round-trips on top of the main query (part of the "slow tabs" report).
   const menteeIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.menteeId as string))];
-  const menteeProfiles: Record<string, { intendedStudyProgram?: string; preferredDestinations?: string; phoneNumber?: string }> = {};
-  if (menteeIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("MenteeProfile")
-      .select("userId, intendedStudyProgram, preferredDestinations, phoneNumber")
-      .in("userId", menteeIds);
-    if (profiles) {
-      for (const mp of profiles) {
-        menteeProfiles[mp.userId] = {
-          intendedStudyProgram: mp.intendedStudyProgram,
-          preferredDestinations: mp.preferredDestinations,
-          phoneNumber: mp.phoneNumber,
-        };
-      }
-    }
-  }
-
-  // Fetch mentor WhatsApp numbers so the mentee can contact them directly.
   const mentorIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.mentorId as string))];
-  const mentorWhatsapp: Record<string, string> = {};
-  if (mentorIds.length > 0) {
-    const { data: mProfiles } = await supabase
-      .from("MentorProfile")
-      .select("userId, phoneNumber")
-      .in("userId", mentorIds);
-    for (const mp of mProfiles || []) {
-      if (mp.phoneNumber) mentorWhatsapp[mp.userId as string] = mp.phoneNumber as string;
-    }
+  const pairingIds = (pairings || []).map((p: Record<string, unknown>) => p.id as string);
+
+  const [profilesRes, mProfilesRes, plansRes] = await Promise.all([
+    menteeIds.length > 0
+      ? supabase
+          .from("MenteeProfile")
+          .select("userId, intendedStudyProgram, preferredDestinations, phoneNumber")
+          .in("userId", menteeIds)
+      : Promise.resolve({ data: null }),
+    mentorIds.length > 0
+      ? supabase.from("MentorProfile").select("userId, phoneNumber").in("userId", mentorIds)
+      : Promise.resolve({ data: null }),
+    pairingIds.length > 0
+      ? supabase.from("SessionPlan").select("pairingId, status").in("pairingId", pairingIds)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const menteeProfiles: Record<string, { intendedStudyProgram?: string; preferredDestinations?: string; phoneNumber?: string }> = {};
+  for (const mp of profilesRes.data || []) {
+    menteeProfiles[mp.userId] = {
+      intendedStudyProgram: mp.intendedStudyProgram,
+      preferredDestinations: mp.preferredDestinations,
+      phoneNumber: mp.phoneNumber,
+    };
   }
 
-  // Per-pairing session-plan status — drives the mentor card state
-  // (propose → menunggu mentee → unlocked) and the mentee's read/accept view.
-  const pairingIds = (pairings || []).map((p: Record<string, unknown>) => p.id as string);
-  const planStatusByPairing: Record<string, string> = {};
-  if (pairingIds.length > 0) {
-    const { data: plans } = await supabase
-      .from("SessionPlan")
-      .select("pairingId, status")
-      .in("pairingId", pairingIds);
-    for (const pl of plans || []) planStatusByPairing[pl.pairingId as string] = pl.status as string;
+  const mentorWhatsapp: Record<string, string> = {};
+  for (const mp of mProfilesRes.data || []) {
+    if (mp.phoneNumber) mentorWhatsapp[mp.userId as string] = mp.phoneNumber as string;
   }
+
+  const planStatusByPairing: Record<string, string> = {};
+  for (const pl of plansRes.data || []) planStatusByPairing[pl.pairingId as string] = pl.status as string;
 
   // Sort sessions by sessionNum and compute _count equivalents
   const result = (pairings || []).map((p: Record<string, unknown>) => {
