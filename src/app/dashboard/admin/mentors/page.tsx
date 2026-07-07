@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@/lib/hooks";
+import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -80,7 +81,7 @@ export default function AdminMentorsPage() {
     const res = await fetch(`/api/mentors/${id}`, { method: "DELETE", credentials: "include" });
     setBusyId(null);
     if (!res.ok) {
-      alert("Failed to delete");
+      toast.error("Gagal menonaktifkan mentor.");
       return;
     }
     setDbMentors((prev) => (prev ?? []).filter((d) => d.id !== id));
@@ -96,7 +97,7 @@ export default function AdminMentorsPage() {
     });
     setBusyId(null);
     if (!res.ok) {
-      alert("Failed to reactivate");
+      toast.error("Gagal mengaktifkan kembali mentor.");
       return;
     }
     const data = (await res.json()) as { mentor: DbMentor };

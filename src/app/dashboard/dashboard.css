@@ -5692,3 +5692,16 @@ html.dark .dashboard-shell .esy-sch.sch-fulbright { color: #7fd4cb; }
 
 /* Dokumen — in-app file viewer body ("Lihat") */
 .dashboard-shell .dok-viewer { height: 68vh; min-height: 380px; background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+/* Toast primitive (src/lib/toast.tsx) — bottom-center stack, dark-mode aware */
+.dashboard-shell .st-toasts { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.dashboard-shell .st-toast {
+  pointer-events: auto; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); color: var(--foreground);
+  font-family: var(--font-poppins); font-size: 13px; font-weight: 600;
+  padding: 11px 18px; border-radius: 12px; box-shadow: var(--shadow-md);
+  max-width: min(92vw, 480px); text-align: left; animation: stToastIn .18s ease;
+}
+.dashboard-shell .st-toast.error { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); color: var(--text-red); }
+.dashboard-shell .st-toast.success { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); color: var(--text-green); }
+@keyframes stToastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
