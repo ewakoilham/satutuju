@@ -908,7 +908,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 </div>
                 <div className="se-card-body">
                   {summaryShown
-                    ? summaryParas.map((p, i) => <p key={i}>{p}</p>)
+                    ? summaryParas.map((p, i) => <p key={i} style={{ whiteSpace: "pre-line" }}>{p}</p>)
                     : <p className="muted">Ringkasan dari {mentorFirst} belum tersedia untuk sesi ini.</p>}
                 </div>
               </section>
@@ -1433,7 +1433,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
           <span className="stamp">Sesi {session.sessionNum} · {session.completedAt ? fmtDayShort(new Date(session.completedAt)) : "selesai"}</span>
         </div>
         <div className="se-card-body">
-          {summaryParas.length ? summaryParas.map((p, i) => <p key={i}>{p}</p>) : <p className="muted">Belum ada ringkasan untuk sesi ini.</p>}
+          {summaryParas.length ? summaryParas.map((p, i) => <p key={i} style={{ whiteSpace: "pre-line" }}>{p}</p>) : <p className="muted">Belum ada ringkasan untuk sesi ini.</p>}
         </div>
       </section>
 
@@ -1515,7 +1515,10 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
         <section className="se-card">
           <div className="se-card-head"><h2>Dari Sesi {prevSession?.sessionNum}</h2><span className="stamp">carry-forward</span></div>
           <div className="se-card-body">
-            <p>{previousNext}</p>
+            {/* pre-line: the mentor formats this with intentional line breaks
+                (numbered lists etc.) — collapsing them into one paragraph made
+                the card unreadable (user report). */}
+            <p style={{ whiteSpace: "pre-line" }}>{previousNext}</p>
             {prevSession && <Link className="se-prep-link" href={`/dashboard/sesi/${prevSession.id}`}>Buka laporan sesi sebelumnya →</Link>}
           </div>
         </section>
@@ -1582,7 +1585,7 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
       <section className="se-card">
         <div className="se-card-head"><h2>Ringkasan sesi</h2><span className="stamp">dari {mentorFirst}</span></div>
         <div className="se-card-body">
-          {summaryParas.length ? summaryParas.map((p, i) => <p key={i}>{p}</p>) : <p className="muted">—</p>}
+          {summaryParas.length ? summaryParas.map((p, i) => <p key={i} style={{ whiteSpace: "pre-line" }}>{p}</p>) : <p className="muted">—</p>}
         </div>
       </section>
       {draft.obstacles && (
