@@ -1735,10 +1735,13 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                     <div className="se-rail-list">
                       {templates.map(({ item, spec }, i) =>
                         spec.templateUrl ? (
-                          <a key={i} href={spec.templateUrl} target="_blank" rel="noopener noreferrer" className="se-rail-row" style={{ textDecoration: "none" }}>
+                          /* `download` (same-origin) saves directly — target="_blank"
+                             opened a ghost tab that closed instantly, which read as
+                             "the row does nothing" (real confusion report). */
+                          <a key={i} href={spec.templateUrl} download className="se-rail-row" style={{ textDecoration: "none" }}>
                             <div className="se-rail-info">
                               <div className="se-rail-title">{item}</div>
-                              <div className="se-rail-meta">Unduh template</div>
+                              <div className="se-rail-meta" style={{ color: "var(--primary)", fontWeight: 600 }}>Unduh template ↓</div>
                             </div>
                           </a>
                         ) : (
