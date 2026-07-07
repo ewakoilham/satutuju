@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/lib/hooks";
+import { toast } from "@/lib/toast";
 import Select from "@/components/ui/Select";
 import { CURRICULUM, DOCUMENT_CATEGORIES } from "@/lib/curriculum";
 import Image from "next/image";
@@ -171,14 +172,14 @@ export default function PairingDetailPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to replace mentor");
+        toast.error(data.error || "Gagal mengganti mentor.");
       } else {
         setShowReplaceMentor(false);
         setNewMentorId("");
         fetchPairing();
       }
     } catch {
-      alert("Network error");
+      toast.error("Jaringan bermasalah — coba lagi.");
     }
     setAdminActionLoading(false);
   }
@@ -190,12 +191,12 @@ export default function PairingDetailPage() {
       const res = await fetch(`/api/pairings/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to cancel pairing");
+        toast.error(data.error || "Gagal membatalkan pairing.");
       } else {
         router.push("/dashboard");
       }
     } catch {
-      alert("Network error");
+      toast.error("Jaringan bermasalah — coba lagi.");
     }
     setAdminActionLoading(false);
     setShowRemoveConfirm(false);
@@ -1569,7 +1570,7 @@ function DocumentsTab({
           failed++;
         }
       }
-      if (used.size === 0) { alert("Tidak ada file yang bisa diunduh."); return; }
+      if (used.size === 0) { toast.error("Tidak ada file yang bisa diunduh."); return; }
       const out = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(out);
       const a = document.createElement("a");
@@ -1577,7 +1578,7 @@ function DocumentsTab({
       a.download = `${safe(menteeName)} - Dokumen SatuTuju.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      if (failed > 0) alert(`${failed} file gagal diunduh — cek koneksi lalu coba lagi.`);
+      if (failed > 0) toast.error(`${failed} file gagal diunduh — cek koneksi lalu coba lagi.`);
     } finally {
       setZipping(false);
     }

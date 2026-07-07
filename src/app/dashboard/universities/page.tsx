@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useUser } from "@/lib/hooks";
+import { toast } from "@/lib/toast";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
 import Modal from "@/components/ui/Modal";
@@ -278,7 +279,9 @@ export default function UniversitiesPage() {
       })
         .then((r) => { if (!r.ok) throw new Error("save failed"); })
         .catch(() => {
-          // Resync UI to server truth so a failed write doesn't leave us ahead.
+          // Resync UI to server truth so a failed write doesn't leave us ahead
+          // — and SAY so, or the mentee thinks the favorite stuck (it didn't).
+          toast.error("Gagal menyimpan shortlist kampus — perubahan terakhir dibatalkan.");
           fetch("/api/shortlist")
             .then((r) => (r.ok ? r.json() : { universities: [] }))
             .then((d) => setShortlist(new Set<string>(d.universities || [])))

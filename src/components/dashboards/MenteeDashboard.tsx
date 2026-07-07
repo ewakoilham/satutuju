@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@/lib/hooks";
+import { toast } from "@/lib/toast";
 import { getCachedMenteePairing, refreshMenteePairing, invalidateMenteePairing } from "@/lib/mentee-pairing-cache";
 import { CURRICULUM, PHASES } from "@/lib/curriculum";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
@@ -141,7 +142,14 @@ export default function MenteeDashboard() {
     // Always revalidate in the background (stale-while-revalidate), even when
     // we rendered from cache — so any staleness self-corrects.
     Promise.all([
-      refreshMenteePairing().then((p) => (p as Pairing) || null).catch(() => null),
+      refreshMenteePairing()
+        .then((p) => (p as Pairing) || null)
+        .catch(() => {
+          // A network failure here used to render the "belum ada pairing"
+          // empty state — misleading. Say what happened instead.
+          toast.error("Gagal memuat data — periksa koneksi, lalu muat ulang halaman.");
+          return null;
+        }),
       fetch("/api/profile")
         .then((r) => r.json())
         .then((d) => d.profile || null)
