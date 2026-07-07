@@ -13,7 +13,7 @@ import {
 /**
  * POST /api/pairings/[id]/drive-sync — admin-only.
  *
- * Pushes every uploaded document of this pairing's mentee into the SatuTuju
+ * Pushes every mentor-APPROVED document of this pairing's mentee into the SatuTuju
  * Google Drive under a folder named after the student's legal name.
  * Idempotent: files that already exist in the folder (same name) are
  * skipped, so re-syncing after new uploads only adds what's new.
@@ -63,13 +63,22 @@ export async function POST(
   const [{ data: mentee }, { data: profile }, { data: documents }] = await Promise.all([
     supabase.from("User").select("name").eq("id", pairing.menteeId).single(),
     supabase.from("MenteeProfile").select("fullLegalName").eq("userId", pairing.menteeId).single(),
-    supabase.from("Document").select("name, fileName, filePath, mimeType, version")
+    supabase.from("Document").select("name, fileName, filePath, mimeType, version, status")
       .eq("pairingId", id).order("createdAt", { ascending: true }),
   ]);
 
-  const docs = documents || [];
-  if (docs.length === 0) {
+  const allDocs = documents || [];
+  // Only mentor-APPROVED documents go to the agency archive — approval is
+  // the quality gate before anything leaves the platform.
+  const docs = allDocs.filter((d) => d.status === "approved");
+  if (allDocs.length === 0) {
     return NextResponse.json({ error: "Belum ada dokumen untuk disync." }, { status: 400 });
+  }
+  if (docs.length === 0) {
+    return NextResponse.json(
+      { error: "Belum ada dokumen yang disetujui mentor. Minta mentor approve dulu (atau approve lewat Review) — hanya dokumen berstatus Disetujui yang disync ke Drive." },
+      { status: 400 },
+    );
   }
   const studentName = sanitize(profile?.fullLegalName || mentee?.name || "Tanpa Nama");
 
