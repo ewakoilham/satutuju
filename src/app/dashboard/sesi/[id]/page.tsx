@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, use, useCallback } from "react";
 import Link from "next/link";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
+import Modal from "@/components/ui/Modal";
 import { cleanUniName } from "@/data/university-enrichment";
 import { CURRICULUM } from "@/lib/curriculum";
 import { classifyDoc } from "@/lib/doc-templates";
@@ -112,8 +113,30 @@ interface DocRow {
   filePath: string;
   fileSize: number;
   category: string;
+  status: string; // "uploaded" | "under_review" | "needs_revision" | "approved"
   uploadedBy?: string | null;
   createdAt?: string | null;
+}
+
+/** Mentor-review status badge per Document.status. */
+const DOC_STATUS_BADGE: Record<string, { cls: string; label: string }> = {
+  uploaded: { cls: "draft", label: "Terkirim" },
+  under_review: { cls: "review", label: "Ditinjau" },
+  needs_revision: { cls: "feedback", label: "Perlu revisi" },
+  approved: { cls: "done", label: "Disetujui" },
+};
+
+/** In-app preview mode for a document file, by extension (same approach as
+ *  the Dokumen page viewer: pdf/text/images render natively, Office via the
+ *  MS web viewer — needs the deployed public URL). */
+function docPreviewSrc(d: { fileName: string; filePath: string }): { kind: "iframe" | "img" | "none"; src: string } {
+  const ext = (d.fileName || d.filePath).split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return { kind: "img", src: d.filePath };
+  if (["pdf", "txt"].includes(ext)) return { kind: "iframe", src: d.filePath };
+  if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
+    return { kind: "iframe", src: `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(d.filePath)}` };
+  }
+  return { kind: "none", src: d.filePath };
 }
 
 type SavingState = "idle" | "saving" | "saved" | "error";
@@ -311,6 +334,33 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
   // Per-session action items (Task) + attachments (Document).
   const [allTasks, setAllTasks] = useState<TaskRow[]>([]);
   const [allDocs, setAllDocs] = useState<DocRow[]>([]);
+
+  // Mentor document review: preview → Setujui / Minta revisi. Approval is
+  // what unlocks the admin Drive sync, so it must be doable right here.
+  const [reviewDoc, setReviewDoc] = useState<DocRow | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [revisiMode, setRevisiMode] = useState(false);
+  const [revisiText, setRevisiText] = useState("");
+
+  async function submitDocReview(status: "approved" | "needs_revision") {
+    if (!reviewDoc || reviewBusy) return;
+    setReviewBusy(true);
+    try {
+      const res = await fetch(`/api/documents/${reviewDoc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, ...(revisiText.trim() ? { feedback: revisiText.trim() } : {}) }),
+      });
+      if (res.ok) {
+        setAllDocs((prev) => prev.map((d) => (d.id === reviewDoc.id ? { ...d, status } : d)));
+        setReviewDoc(null);
+        setRevisiMode(false);
+        setRevisiText("");
+      }
+    } finally {
+      setReviewBusy(false);
+    }
+  }
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [taskBusy, setTaskBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -1766,25 +1816,94 @@ export default function SesiPage({ params }: { params: Promise<{ id: string }> }
                 {allDocs.length === 0 ? (
                   <div style={{ fontSize: 12, color: "var(--text-muted-2)", padding: "4px 2px" }}>Belum ada dokumen.</div>
                 ) : (
-                  allDocs.map((d) => (
-                    <a
-                      key={d.id}
-                      href={d.filePath}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="se-rail-row"
-                      style={{ textDecoration: "none" }}
-                    >
-                      <div className="se-rail-info">
-                        <div className="se-rail-title">{d.name}</div>
-                        <div className="se-rail-meta">
-                          {d.category}{d.sessionNum ? ` · Sesi ${d.sessionNum}` : ""}
+                  allDocs.map((d) => {
+                    const b = DOC_STATUS_BADGE[d.status] ?? DOC_STATUS_BADGE.uploaded;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        className="se-rail-row"
+                        style={{ width: "100%", textAlign: "left", background: "none", border: 0 }}
+                        onClick={() => { setReviewDoc(d); setRevisiMode(false); setRevisiText(""); }}
+                      >
+                        <div className="se-rail-info">
+                          <div className="se-rail-title">{d.name}</div>
+                          <div className="se-rail-meta" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span>{d.category}{d.sessionNum ? ` · Sesi ${d.sessionNum}` : ""}</span>
+                            <span className={`dok-badge ${b.cls}`} style={{ fontSize: 10, padding: "1px 8px" }}>{b.label}</span>
+                          </div>
                         </div>
-                      </div>
-                    </a>
-                  ))
+                      </button>
+                    );
+                  })
                 )}
               </div>
+
+              {/* Mentor review modal: preview + Setujui / Minta revisi. */}
+              <Modal
+                open={!!reviewDoc}
+                onClose={() => { setReviewDoc(null); setRevisiMode(false); setRevisiText(""); }}
+                title={reviewDoc?.name || "Dokumen"}
+                description={reviewDoc ? `${reviewDoc.category}${reviewDoc.sessionNum ? ` · Sesi ${reviewDoc.sessionNum}` : ""}` : ""}
+                size="2xl"
+                actions={
+                  reviewDoc ? (
+                    <>
+                      <a href={reviewDoc.filePath} download className="db-btn db-btn-outline">Unduh</a>
+                      {revisiMode ? (
+                        <>
+                          <button type="button" className="db-btn db-btn-outline" onClick={() => setRevisiMode(false)} disabled={reviewBusy}>Batal</button>
+                          <button type="button" className="db-btn db-btn-primary" onClick={() => submitDocReview("needs_revision")} disabled={reviewBusy || !revisiText.trim()}>
+                            {reviewBusy ? "Mengirim…" : "Kirim permintaan revisi"}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" className="db-btn db-btn-outline" onClick={() => setRevisiMode(true)} disabled={reviewBusy}>Minta revisi</button>
+                          {reviewDoc.status === "approved" ? (
+                            <span className="dok-badge done" style={{ alignSelf: "center" }}>✓ Sudah disetujui</span>
+                          ) : (
+                            <button type="button" className="db-btn db-btn-primary" onClick={() => submitDocReview("approved")} disabled={reviewBusy}>
+                              {reviewBusy ? "Menyimpan…" : "Setujui"}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : null
+                }
+              >
+                {reviewDoc && (() => {
+                  const v = docPreviewSrc(reviewDoc);
+                  return (
+                    <div>
+                      {v.kind === "none" ? (
+                        <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0 }}>
+                          Format ini belum bisa dipreview — pakai tombol <b>Unduh</b> untuk memeriksa isinya.
+                        </p>
+                      ) : (
+                        <div className="dok-viewer" style={{ height: revisiMode ? "42vh" : "60vh" }}>
+                          {v.kind === "img" ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={v.src} alt={reviewDoc.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", margin: "0 auto" }} />
+                          ) : (
+                            <iframe src={v.src} title={reviewDoc.name} style={{ width: "100%", height: "100%", border: 0 }} />
+                          )}
+                        </div>
+                      )}
+                      {revisiMode && (
+                        <textarea
+                          autoFocus
+                          value={revisiText}
+                          onChange={(e) => setRevisiText(e.target.value)}
+                          placeholder="Apa yang perlu diperbaiki mentee? (dikirim sebagai catatan revisi)"
+                          style={{ width: "100%", minHeight: 90, marginTop: 12, padding: "10px 12px", fontSize: 13, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface)", color: "var(--foreground)", resize: "vertical" }}
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
+              </Modal>
 
               <div className="se-rail-head" style={{ marginTop: 20 }}>
                 <h3>Action items</h3>
