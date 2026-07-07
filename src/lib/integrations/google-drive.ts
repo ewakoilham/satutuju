@@ -13,13 +13,13 @@ import { makeOAuthClient } from "./google-calendar";
  * GOOGLE_CALENDAR_SCOPE; the admin must re-authorize at /api/auth/google
  * after that scope was added.
  *
- * Layout:  {root}/                       ← env GOOGLE_DRIVE_FOLDER_ID, or an
- *            SatuTuju - Dokumen Siswa/     auto-created root in My Drive
+ * Layout:  Students Admission/          ← env GOOGLE_DRIVE_FOLDER_ID, or an
+ *            {Tahun intake}/               auto-created root in My Drive
  *              {Nama Legal Siswa}/
  *                {Nama Dokumen} - vN.ext
  */
 
-const ROOT_FOLDER_NAME = "SatuTuju - Dokumen Siswa";
+const ROOT_FOLDER_NAME = "Students Admission";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 export function makeDriveClient(refreshToken: string): drive_v3.Drive {

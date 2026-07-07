@@ -55,7 +55,7 @@ export async function POST(
   // Pairing → student name (legal name preferred) + documents.
   const { data: pairing } = await supabase
     .from("Pairing")
-    .select("id, menteeId")
+    .select("id, menteeId, startDate")
     .eq("id", id)
     .single();
   if (!pairing) return NextResponse.json({ error: "Pairing tidak ditemukan" }, { status: 404 });
@@ -75,8 +75,14 @@ export async function POST(
 
   try {
     const drive = makeDriveClient(auth.refreshToken);
+    // Students Admission / {tahun intake} / {nama siswa}. The year comes from
+    // the pairing start date (stable per student across re-syncs), falling
+    // back to today for pairings without one.
+    const started = pairing.startDate ? new Date(pairing.startDate) : new Date();
+    const year = String(isNaN(started.getTime()) ? new Date().getFullYear() : started.getFullYear());
     const rootId = await ensureRootFolder(drive);
-    const folderId = await ensureFolder(drive, studentName, rootId);
+    const yearId = await ensureFolder(drive, year, rootId);
+    const folderId = await ensureFolder(drive, studentName, yearId);
 
     let uploaded = 0, skipped = 0;
     const failed: string[] = [];
@@ -101,7 +107,7 @@ export async function POST(
       uploaded,
       skipped,
       failed,
-      folderName: studentName,
+      folderName: `${year}/${studentName}`,
       folderUrl: folderWebUrl(folderId),
     });
   } catch (e) {
