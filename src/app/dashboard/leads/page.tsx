@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Icon from "@/components/ui/Icon";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import type { MentorLeadView } from "@/lib/leads/types";
+import { getCached, revalidate } from "@/lib/swr-lite";
 import MentorLeadDetailPanel from "@/components/mentor/MentorLeadDetailPanel";
 import MentorStatTile from "@/components/mentor/MentorStatTile";
 import MentorFilterChip from "@/components/mentor/MentorFilterChip";
@@ -129,7 +130,6 @@ export default function MentorLeadsPage() {
   }, [openLeadId, country, chip, router, searchParams]);
 
   const fetchList = useCallback(async () => {
-    setLoading(true);
     setErr(null);
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
@@ -138,21 +138,27 @@ export default function MentorLeadsPage() {
     else if (chip === "match_country") params.set("match", "country");
     else if (chip === "match_unread") params.set("match", "unread");
     params.set("limit", "200");
-    try {
-      const res = await fetch(`/api/mentor/leads?${params.toString()}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setErr(body.error || `HTTP ${res.status}`);
-        return;
-      }
-      const json = (await res.json()) as ListResponse;
-      setData(json);
+    const url = `/api/mentor/leads?${params.toString()}`;
+
+    // Stale-while-revalidate: paint the cached list instantly (also fed by the
+    // layout's idle prefetch), then refresh in the background. This was the
+    // "Leads tab loads forever" complaint — it refetched from zero every visit.
+    const cached = getCached<ListResponse>(url);
+    if (cached) {
+      setData(cached);
       setHasLoadedOnce(true);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Network error");
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const json = await revalidate<ListResponse>(url);
+      if (json) {
+        setData(json);
+        setHasLoadedOnce(true);
+      } else if (!cached) {
+        setErr("Gagal memuat leads — coba lagi.");
+      }
     } finally {
       setLoading(false);
     }
