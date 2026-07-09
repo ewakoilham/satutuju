@@ -48,28 +48,37 @@ function isLinkActive(item: NavLink, pathname: string): boolean {
 }
 
 const NAV_ITEMS: Record<string, NavItem[]> = {
+  // Admin nav: 5 top-level items grouped by JOB (acquisition / running the
+  // program / admin paperwork / everything else) instead of 9 flat feature
+  // tabs — per Razak's "too many menu tabs" feedback. Deposit sits inside
+  // Administrasi but stays one notification-deep-link away.
   admin: [
-    { href: "/dashboard",              label: "Overview", icon: "chart" },
-    { href: "/dashboard/users",        label: "Users",    icon: "users" },
+    { href: "/dashboard",                 label: "Overview", icon: "chart" },
+    { href: "/dashboard/admin/new-leads", label: "Pipeline", icon: "chart", activePrefix: "/dashboard/admin/new-leads" },
     {
-      label: "Mentor", icon: "user",
+      label: "Mentorship", icon: "users",
       children: [
-        { href: "/dashboard/admin/mentors",   label: "Daftar Mentor", icon: "user"     },
-        { href: "/dashboard/pairings",        label: "Pairings",      icon: "link"     },
-        { href: "/dashboard/admin/contracts", label: "Kontrak",       icon: "document" },
+        { href: "/dashboard/pairings",      label: "Pairings",      icon: "link"  },
+        { href: "/dashboard/admin/mentors", label: "Daftar Mentor", icon: "user"  },
+        { href: "/dashboard/users",         label: "Users",         icon: "users" },
       ],
     },
-    // Pipeline → single tab. Sub-navigation (Tambah Lead / Pipeline
-    // Steps / Email Templates / Auto-Send) lives inside the pipeline
-    // pages via <PipelineSubnav />.
-    { href: "/dashboard/admin/new-leads", label: "Pipeline", icon: "chart", activePrefix: "/dashboard/admin/new-leads" },
-    // Deposit verification gates mentee session booking — it must be one
-    // click away, not buried as a sub-tab under Kontrak.
-    { href: "/dashboard/admin/deposits", label: "Deposit", icon: "wallet", activePrefix: "/dashboard/admin/deposits" },
-    { href: "/dashboard/admin/feedback", label: "Masukan", icon: "chat", activePrefix: "/dashboard/admin/feedback" },
-    { href: "/dashboard/schedule",     label: "Schedule",     icon: "calendar"   },
-    { href: "/dashboard/resources",    label: "Resources",    icon: "book"       },
-    { href: "/dashboard/universities", label: "Universities", icon: "graduation" },
+    {
+      label: "Administrasi", icon: "wallet",
+      children: [
+        { href: "/dashboard/admin/deposits",  label: "Deposit", icon: "wallet"   },
+        { href: "/dashboard/admin/contracts", label: "Kontrak", icon: "document" },
+        { href: "/dashboard/admin/feedback",  label: "Masukan", icon: "chat"     },
+      ],
+    },
+    {
+      label: "Lainnya", icon: "book",
+      children: [
+        { href: "/dashboard/schedule",     label: "Jadwal", icon: "calendar"   },
+        { href: "/dashboard/resources",    label: "Materi", icon: "book"       },
+        { href: "/dashboard/universities", label: "Kampus", icon: "graduation" },
+      ],
+    },
   ],
   mentor: [
     { href: "/dashboard",              label: "Beranda", icon: "chart"    },
@@ -227,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <nav className="hidden sm:flex items-center gap-1">
                 {navItems.map((item) => {
                   if (isGroup(item)) {
-                    const childActive = item.children.some((c) => pathname === c.href);
+                    const childActive = item.children.some((c) => isLinkActive(c, pathname) || pathname.startsWith(c.href + "/"));
                     const open = openGroup === item.label;
                     return (
                       <div
