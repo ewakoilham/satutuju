@@ -8,7 +8,6 @@ import Select from "@/components/ui/Select";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
-import StatCard from "@/components/ui/StatCard";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useTheme } from "@/lib/theme";
 
@@ -273,8 +272,14 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Admin Dashboard</h1>
+          {/* One-line stats replace the old 4-card grid (less is more —
+              "Completed" was permanently 0 and the cards ate half a screen). */}
           <p className="text-text-muted text-sm mt-1">
-            Manage mentors, mentees, and pairings
+            <a href="/dashboard/users?filter=mentor" className="hover:text-primary hover:underline"><b className="text-foreground">{mentors.length}</b> mentor</a>
+            <span className="mx-1.5">·</span>
+            <a href="/dashboard/users?filter=mentee" className="hover:text-primary hover:underline"><b className="text-foreground">{mentees.length}</b> mentee</a>
+            <span className="mx-1.5">·</span>
+            <b className="text-foreground">{pairings.filter((p) => p.status === "active").length}</b> pairing aktif
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -295,57 +300,32 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Mentors"
-          value={mentors.length}
-          icon="users"
-          accent="blue"
-          href="/dashboard/users?filter=mentor"
-        />
-        <StatCard
-          label="Total Mentees"
-          value={mentees.length}
-          icon="graduation"
-          accent="lavender"
-          href="/dashboard/users?filter=mentee"
-        />
-        <StatCard
-          label="Active Pairings"
-          value={pairings.filter((p) => p.status === "active").length}
-          icon="link"
-          accent="green"
-          href="/dashboard/pairings"
-        />
-        <StatCard
-          label="Completed"
-          value={pairings.filter((p) => p.status === "completed").length}
-          icon="check"
-          accent="yellow"
-          href="/dashboard/pairings"
-        />
-      </div>
-
-      {/* Tabs */}
+      {/* One segmented control replaces the old two stacked toggle rows. */}
       <div className="flex flex-wrap gap-1 bg-surface-elevated rounded-xl p-1 w-fit">
         {[
-          { key: "pairings" as AdminTab, label: "Pairings", icon: "link" },
-          { key: "quality" as AdminTab, label: "Quality Control", icon: "star" },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition ${
-              tab === t.key
-                ? "bg-brand-blue-soft text-primary shadow-sm"
-                : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            <Icon name={t.icon} size={16} />
-            {t.label}
-          </button>
-        ))}
+          { key: "active", label: "Active", count: pairings.filter((p) => p.status === "active").length },
+          { key: "archived", label: "Archived", count: pairings.filter((p) => p.status !== "active").length },
+          { key: "quality", label: "Quality Control", count: null },
+        ].map((t) => {
+          const isOn = t.key === "quality" ? tab === "quality" : tab === "pairings" && pairingsTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => {
+                if (t.key === "quality") setTab("quality");
+                else { setTab("pairings"); setPairingsTab(t.key as PairingsTab); }
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition ${
+                isOn ? "bg-brand-blue-soft text-primary shadow-sm" : "text-text-muted hover:text-foreground"
+              }`}
+            >
+              {t.label}
+              {t.count != null && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-surface/60 text-text-muted">{t.count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "quality" && (
@@ -478,30 +458,6 @@ export default function AdminDashboard() {
       )}
 
       {tab === "pairings" && <>
-      {/* Pairings Sub-tabs */}
-      <div className="flex gap-1 bg-surface-elevated rounded-xl p-1 w-fit">
-        {([
-          { key: "active" as PairingsTab, label: "Active" },
-          { key: "archived" as PairingsTab, label: "Archived" },
-        ] as { key: PairingsTab; label: string }[]).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setPairingsTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-              pairingsTab === t.key
-                ? "bg-brand-blue-soft text-primary shadow-sm"
-                : "text-text-muted hover:text-foreground"
-            }`}
-          >
-            {t.label}
-            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-surface/60 text-text-muted">
-              {t.key === "active"
-                ? pairings.filter((p) => p.status === "active").length
-                : pairings.filter((p) => p.status !== "active").length}
-            </span>
-          </button>
-        ))}
-      </div>
 
       {/* Create Pairing Form */}
       {showCreate && pairingsTab === "active" && (
