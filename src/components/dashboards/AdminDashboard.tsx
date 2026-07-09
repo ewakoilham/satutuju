@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getCached, revalidate } from "@/lib/swr-lite";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import Select from "@/components/ui/Select";
@@ -8,7 +9,6 @@ import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import { SkeletonDashboard } from "@/components/ui/Skeleton";
 import StatCard from "@/components/ui/StatCard";
-import ProgressBar from "@/components/ui/ProgressBar";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useTheme } from "@/lib/theme";
 
@@ -24,11 +24,15 @@ interface User {
 interface Pairing {
   id: string;
   status: string;
+  createdAt?: string;
   mentor?: User;
   mentee?: User;
   targetProgram?: string;
-  sessions: Array<{ status: string }>;
+  sessions: Array<{ status: string; sessionNum?: number; topic?: string | null }>;
   _count: { documents: number; tasks: number };
+  docsApproved?: number;
+  docsNeedsRevision?: number;
+  depositStatus?: string | null;
 }
 
 interface MentorFeedbackItem {
@@ -65,12 +69,16 @@ type PairingsTab = "active" | "archived";
 
 export default function AdminDashboard() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [pairings, setPairings] = useState<Pairing[]>([]);
+  const [pairings, setPairings] = useState<Pairing[]>(
+    () => getCached<{ pairings?: Pairing[] }>("/api/pairings")?.pairings || [],
+  );
   const [mentors, setMentors] = useState<User[]>([]);
   const [mentees, setMentees] = useState<User[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [tab, setTab] = useState<AdminTab>("pairings");
   const [pairingsTab, setPairingsTab] = useState<PairingsTab>("active");
+  const [pairingSearch, setPairingSearch] = useState("");
+  const [pairingSort, setPairingSort] = useState<"latest" | "name">("latest");
   const [mentorSummaries, setMentorSummaries] = useState<MentorSummary[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackItem[]>([]);
   const [selectedMentor, setSelectedMentor] = useState<MentorSummary | null>(null);
@@ -78,7 +86,7 @@ export default function AdminDashboard() {
     mentorId: "",
     menteeId: "",
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCached("/api/pairings"));
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
@@ -89,24 +97,24 @@ export default function AdminDashboard() {
   }>({ open: false, title: "", description: "", onConfirm: () => {}, variant: "default" });
 
   const fetchData = useCallback(async () => {
+    // Stale-while-revalidate: paint whatever is cached instantly, then let
+    // the four revalidations replace it. Admin Overview refetched everything
+    // raw on every visit before — part of the "admin is slow" report.
+    type P = { pairings?: Pairing[] };
+    type U = { users?: User[] };
+    type F = { mentorSummaries?: MentorSummary[]; recentFeedback?: FeedbackItem[] };
     try {
-      const [pRes, mentorRes, menteeRes, fbRes] = await Promise.all([
-        fetch("/api/pairings"),
-        fetch("/api/users?role=mentor"),
-        fetch("/api/users?role=mentee"),
-        fetch("/api/admin/feedback"),
-      ]);
       const [pData, mentorData, menteeData, fbData] = await Promise.all([
-        pRes.json(),
-        mentorRes.json(),
-        menteeRes.json(),
-        fbRes.json(),
+        revalidate<P>("/api/pairings"),
+        revalidate<U>("/api/users?role=mentor"),
+        revalidate<U>("/api/users?role=mentee"),
+        revalidate<F>("/api/admin/feedback"),
       ]);
-      setPairings(pData.pairings || []);
-      setMentors(mentorData.users || []);
-      setMentees(menteeData.users || []);
-      setMentorSummaries(fbData.mentorSummaries || []);
-      setRecentFeedback(fbData.recentFeedback || []);
+      setPairings(pData?.pairings || []);
+      setMentors(mentorData?.users || []);
+      setMentees(menteeData?.users || []);
+      setMentorSummaries(fbData?.mentorSummaries || []);
+      setRecentFeedback(fbData?.recentFeedback || []);
     } catch (err) {
       console.error("Failed to fetch admin data:", err);
     }
@@ -114,7 +122,9 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    // rAF defer keeps setState out of the synchronous effect body (lint).
+    const raf = requestAnimationFrame(() => { void fetchData(); });
+    return () => cancelAnimationFrame(raf);
   }, [fetchData]);
 
   const [createError, setCreateError] = useState("");
@@ -247,6 +257,12 @@ export default function AdminDashboard() {
 
   const completedSessions = (p: Pairing) =>
     p.sessions.filter((s) => s.status === "completed").length;
+
+  /** The session the pairing is currently on — first not-completed. */
+  const nextSession = (p: Pairing) => {
+    const sorted = [...p.sessions].sort((a, b) => (a.sessionNum ?? 0) - (b.sessionNum ?? 0));
+    return sorted.find((sx) => sx.status !== "completed") ?? null;
+  };
 
   if (loading) {
     return <SkeletonDashboard />;
@@ -577,15 +593,48 @@ export default function AdminDashboard() {
 
       {/* Pairings Table */}
       {(() => {
-        const visiblePairings = pairings.filter((p) =>
-          pairingsTab === "active" ? p.status === "active" : p.status !== "active"
-        );
+        const q = pairingSearch.trim().toLowerCase();
+        const visiblePairings = pairings
+          .filter((p) =>
+            pairingsTab === "active" ? p.status === "active" : p.status !== "active"
+          )
+          .filter((p) =>
+            !q ||
+            [p.mentee?.name, p.mentor?.name, p.targetProgram]
+              .some((v) => (v || "").toLowerCase().includes(q))
+          )
+          .sort((a, b) =>
+            pairingSort === "name"
+              ? (a.mentee?.name || "").localeCompare(b.mentee?.name || "")
+              : (b.createdAt || "").localeCompare(a.createdAt || "")
+          );
         return (
       <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-3 flex-wrap">
           <h3 className="font-semibold font-[family-name:var(--font-heading)]">
             {pairingsTab === "active" ? "Active Pairings" : "Archived Pairings"}
           </h3>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-surface">
+              <Icon name="search" size={14} className="text-text-muted-2" />
+              <input
+                type="text"
+                value={pairingSearch}
+                onChange={(e) => setPairingSearch(e.target.value)}
+                placeholder="Cari mentee, mentor, program…"
+                className="bg-transparent outline-none text-sm w-52"
+              />
+            </div>
+            <Select
+              value={pairingSort}
+              onChange={(v) => setPairingSort(v as "latest" | "name")}
+              options={[
+                { value: "latest", label: "Terbaru" },
+                { value: "name", label: "Nama A–Z" },
+              ]}
+              className="text-xs"
+            />
+          </div>
         </div>
         {visiblePairings.length === 0 ? (
           <div className="card mx-6 my-8 text-center text-text-muted-2 text-sm">
@@ -599,21 +648,13 @@ export default function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-elevated/50 text-left">
-                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
-                    Mentor
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
-                    Mentee
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
-                    Program
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
-                    Progress
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">
-                    Status
-                  </th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Mentee</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Sesi berikutnya</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Deposit</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Dokumen</th>
+                  {pairingsTab !== "active" && (
+                    <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Status</th>
+                  )}
                   <th className="px-3 sm:px-6 py-3 font-medium text-text-muted">Actions</th>
                 </tr>
               </thead>
@@ -625,69 +666,76 @@ export default function AdminDashboard() {
                     onClick={() => window.location.href = `/dashboard/pairings/${p.id}`}
                   >
                     <td className="px-3 sm:px-6 py-3">
-                      <span className="flex items-center gap-2 flex-wrap">
-                        {p.mentor?.name && <Avatar name={p.mentor.name} size="sm" src={p.mentor.avatar || undefined} />}
-                        <span>{p.mentor?.name}</span>
-                        {(() => {
-                          const mentor = mentors.find((m) => m.id === p.mentor?.id);
-                          if (!mentor) return null;
-                          return mentor.mentorProfileComplete ? (
-                            <span title="Profile complete" className="text-success">
-                              <Icon name="check" size={13} />
-                            </span>
-                          ) : (
-                            <span title="Profile incomplete" className="text-amber-500">
-                              <Icon name="alert" size={13} />
-                            </span>
-                          );
-                        })()}
-                      </span>
-                    </td>
-                    <td className="px-3 sm:px-6 py-3">
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2.5 min-w-0">
                         {p.mentee?.name && <Avatar name={p.mentee.name} size="sm" src={p.mentee.avatar || undefined} />}
-                        {p.mentee?.name}
-                        {p.mentee?.id && (
-                          <a
-                            href={`/dashboard/profile/${p.mentee.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-primary hover:underline font-medium"
-                          >
-                            Profile
-                          </a>
-                        )}
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2">
+                            <span className="font-semibold truncate">{p.mentee?.name}</span>
+                            {p.mentee?.id && (
+                              <a
+                                href={`/dashboard/profile/${p.mentee.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs text-primary hover:underline font-medium flex-shrink-0"
+                              >
+                                Profile
+                              </a>
+                            )}
+                          </span>
+                          <span className="block text-xs text-text-muted truncate">
+                            mentor {p.mentor?.name || "-"}
+                            {mentors.find((m) => m.id === p.mentor?.id)?.mentorProfileComplete === false && (
+                              <span title="Profil mentor belum lengkap" className="text-amber-500 ml-1 align-middle inline-flex"><Icon name="alert" size={11} /></span>
+                            )}
+                            {p.targetProgram ? ` · ${p.targetProgram}` : ""}
+                          </span>
+                        </span>
                       </span>
                     </td>
-                    <td className="px-3 sm:px-6 py-3 text-text-muted">
-                      {p.targetProgram || "-"}
+                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
+                      {(() => {
+                        const done = completedSessions(p);
+                        const next = nextSession(p);
+                        return (
+                          <span className="text-sm">
+                            <span className="font-mono text-xs font-semibold">{done}/10</span>
+                            <span className="text-text-muted"> · {next ? (next.topic || `Sesi ${next.sessionNum}`) : "selesai"}</span>
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 sm:px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        <ProgressBar
-                          value={(completedSessions(p) / 10) * 100}
-                          size="sm"
-                          className="w-20"
-                        />
-                        <span className="text-xs text-text-muted">
-                          {completedSessions(p)}/10
-                        </span>
-                      </div>
+                      {p.depositStatus === "VERIFIED" ? (
+                        <Badge variant="success">Lunas</Badge>
+                      ) : p.depositStatus === "UPLOADED" ? (
+                        <Badge variant="warning">Verifikasi</Badge>
+                      ) : p.depositStatus === "REJECTED" ? (
+                        <Badge variant="danger">Ditolak</Badge>
+                      ) : (
+                        <Badge variant="neutral">Belum</Badge>
+                      )}
                     </td>
                     <td className="px-3 sm:px-6 py-3">
-                      <Badge
-                        variant={
-                          p.status === "active"
-                            ? "success"
-                            : p.status === "completed"
-                            ? "info"
-                            : p.status === "cancelled"
-                            ? "danger"
-                            : "neutral"
-                        }
-                      >
-                        {p.status}
-                      </Badge>
+                      {(p.docsNeedsRevision ?? 0) > 0 ? (
+                        <Badge variant="danger">{p.docsNeedsRevision} revisi</Badge>
+                      ) : (p._count.documents ?? 0) === 0 ? (
+                        <Badge variant="neutral">0 dok</Badge>
+                      ) : (p.docsApproved ?? 0) === p._count.documents ? (
+                        <Badge variant="success">{p.docsApproved}/{p._count.documents} ok</Badge>
+                      ) : (
+                        <Badge variant="neutral">{p.docsApproved ?? 0}/{p._count.documents}</Badge>
+                      )}
                     </td>
+                    {pairingsTab !== "active" && (
+                      <td className="px-3 sm:px-6 py-3">
+                        <Badge
+                          variant={
+                            p.status === "completed" ? "info" : p.status === "cancelled" ? "danger" : "neutral"
+                          }
+                        >
+                          {p.status}
+                        </Badge>
+                      </td>
+                    )}
                     <td className="px-3 sm:px-6 py-3">
                       <div className="flex items-center gap-1 flex-wrap">
                         {/* View icon */}

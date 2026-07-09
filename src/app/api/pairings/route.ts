@@ -66,7 +66,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let query = supabase.from("Pairing").select(
-    "*, mentor:User!mentorId(id, name, email, avatar), mentee:User!menteeId(id, name, email, avatar), sessions:Session(*), documents:Document(id), tasks:Task(id)"
+    "*, mentor:User!mentorId(id, name, email, avatar), mentee:User!menteeId(id, name, email, avatar), sessions:Session(*), documents:Document(id, status), tasks:Task(id)"
   );
 
   if (user.role === "mentor") {
@@ -90,7 +90,7 @@ export async function GET() {
   const mentorIds = [...new Set((pairings || []).map((p: Record<string, unknown>) => p.mentorId as string))];
   const pairingIds = (pairings || []).map((p: Record<string, unknown>) => p.id as string);
 
-  const [profilesRes, mProfilesRes, plansRes] = await Promise.all([
+  const [profilesRes, mProfilesRes, plansRes, depositsRes] = await Promise.all([
     menteeIds.length > 0
       ? supabase
           .from("MenteeProfile")
@@ -102,6 +102,9 @@ export async function GET() {
       : Promise.resolve({ data: null }),
     pairingIds.length > 0
       ? supabase.from("SessionPlan").select("pairingId, status").in("pairingId", pairingIds)
+      : Promise.resolve({ data: null }),
+    menteeIds.length > 0
+      ? supabase.from("MenteeDeposit").select("userId, status").in("userId", menteeIds)
       : Promise.resolve({ data: null }),
   ]);
 
@@ -122,6 +125,9 @@ export async function GET() {
   const planStatusByPairing: Record<string, string> = {};
   for (const pl of plansRes.data || []) planStatusByPairing[pl.pairingId as string] = pl.status as string;
 
+  const depositByMentee: Record<string, string> = {};
+  for (const d of depositsRes.data || []) depositByMentee[d.userId as string] = d.status as string;
+
   // Sort sessions by sessionNum and compute _count equivalents
   const result = (pairings || []).map((p: Record<string, unknown>) => {
     const sessions = Array.isArray(p.sessions)
@@ -130,8 +136,13 @@ export async function GET() {
             (a.sessionNum as number) - (b.sessionNum as number)
         )
       : [];
-    const documentsCount = Array.isArray(p.documents) ? p.documents.length : 0;
+    const docsArr = Array.isArray(p.documents) ? (p.documents as Array<{ status?: string }>) : [];
+    const documentsCount = docsArr.length;
     const tasksCount = Array.isArray(p.tasks) ? p.tasks.length : 0;
+    // At-a-glance chips for the admin table: doc review state + deposit.
+    const docsApproved = docsArr.filter((d) => d.status === "approved").length;
+    const docsNeedsRevision = docsArr.filter((d) => d.status === "needs_revision").length;
+    const depositStatus = depositByMentee[p.menteeId as string] ?? null;
 
     // Remove raw arrays used only for counting, keep mentor/mentee
     const { documents: _docs, tasks: _tasks, ...rest } = p as Record<string, unknown>;
@@ -144,6 +155,9 @@ export async function GET() {
       ...rest,
       sessions,
       _count: { documents: documentsCount, tasks: tasksCount },
+      docsApproved,
+      docsNeedsRevision,
+      depositStatus,
       menteeProfile: menteeProfiles[p.menteeId as string] || null,
       sessionPlanStatus: planStatusByPairing[p.id as string] || null,
     };
