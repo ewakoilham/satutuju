@@ -1515,6 +1515,30 @@ function DocumentsTab({
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Doc | null>(null);
   const [zipping, setZipping] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  /** One-click approve — the full Review form stays for revisions/feedback,
+   *  but approving shouldn't take four clicks (admin request). */
+  async function quickApprove(docId: string) {
+    if (approvingId) return;
+    setApprovingId(docId);
+    try {
+      const res = await fetch(`/api/documents/${docId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (res.ok) {
+        toast.success("Dokumen disetujui.");
+        await refreshDocs();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Gagal menyetujui dokumen.");
+      }
+    } finally {
+      setApprovingId(null);
+    }
+  }
   const [driveSyncing, setDriveSyncing] = useState(false);
   const [driveResult, setDriveResult] = useState<{ ok: boolean; text: string; url?: string } | null>(null);
 
@@ -1843,6 +1867,17 @@ function DocumentsTab({
                     >
                       <Icon name="edit" size={14} />
                       Review
+                    </button>
+                  )}
+                  {isMentor && doc.status !== "approved" && (
+                    <button
+                      onClick={() => quickApprove(doc.id)}
+                      disabled={approvingId === doc.id}
+                      className="text-xs font-semibold text-green-700 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                      title="Setujui dokumen ini (satu klik)"
+                    >
+                      <Icon name="check" size={14} />
+                      {approvingId === doc.id ? "Menyetujui…" : "Setujui"}
                     </button>
                   )}
                   {/* Replace icon */}
