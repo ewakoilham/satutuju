@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncTallySubmissions } from "@/lib/leads/sync-from-tally";
+import { sendAdminNewLeadsEmail } from "@/lib/email-templates";
 
 /**
  * Vercel Cron-triggered Tally sync. Configured in vercel.json.
@@ -29,6 +30,11 @@ export async function GET(req: NextRequest) {
     console.log(
       `[tally-sync] synced ${result.total} total / created ${result.created} / updated ${result.updated} / skipped ${result.skipped} / errors ${result.errors.length}`,
     );
+    // One digest per tick when new leads landed — only from the cron, so the
+    // admin's manual "Sync" button doesn't email them about what's on screen.
+    if (result.created > 0) {
+      await sendAdminNewLeadsEmail({ count: result.created, names: result.createdNames });
+    }
     return NextResponse.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

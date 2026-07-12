@@ -214,6 +214,112 @@ export async function sendAdminDepositUploadedEmail(opts: {
   });
 }
 
+/** Mentor closed out a session ("Setuju & kirim" → completed). */
+export async function sendAdminSessionCompletedEmail(opts: {
+  mentorName: string;
+  menteeName: string;
+  sessionNum: number;
+  topic?: string | null;
+  pairingId: string;
+}): Promise<void> {
+  await sendAdminOps({
+    subject: `Sesi ${opts.sessionNum} selesai: ${opts.mentorName} × ${opts.menteeName}`,
+    preheader: opts.topic || "Ringkasan sesi sudah dikirim ke mentee.",
+    heading: `Sesi ${opts.sessionNum} selesai.`,
+    body: `
+      <p><b>${opts.mentorName}</b> menyelesaikan Sesi ${opts.sessionNum}${opts.topic ? ` (<i>${opts.topic}</i>)` : ""}
+         dengan <b>${opts.menteeName}</b> dan mengirim ringkasannya.</p>
+    `,
+    cta: { label: "Lihat pairing", url: `${appUrl()}/dashboard/pairings/${opts.pairingId}` },
+  });
+}
+
+/** New leads landed from Tally — one digest per sync tick, not per lead. */
+export async function sendAdminNewLeadsEmail(opts: {
+  count: number;
+  names: string[];
+}): Promise<void> {
+  const shown = opts.names.slice(0, 10);
+  const more = opts.count - shown.length;
+  await sendAdminOps({
+    subject: `${opts.count} lead baru masuk`,
+    preheader: shown.join(", "),
+    heading: `${opts.count} lead baru dari form pendaftaran.`,
+    body: `
+      <ul style="margin:0 0 4px;padding-left:18px;">
+        ${shown.map((n) => `<li>${n}</li>`).join("")}
+      </ul>
+      ${more > 0 ? `<p>…dan ${more} lainnya.</p>` : ""}
+    `,
+    cta: { label: "Buka Pipeline", url: `${appUrl()}/dashboard/leads` },
+  });
+}
+
+/** Booking request landed in the mentor's inbox — mentors don't live in the
+ *  dashboard, so the in-app notification alone gets seen too late. */
+export async function sendMentorBookingRequestEmail(opts: {
+  to: string;
+  mentorName: string;
+  menteeName: string;
+  date: string;
+  time: string;
+  note?: string | null;
+}): Promise<void> {
+  try {
+    await send({
+      to: opts.to,
+      subject: `${opts.menteeName} mengajukan sesi — ${opts.date}`,
+      html: shell({
+        preheader: `${opts.date} · ${opts.time} — menunggu konfirmasi kamu.`,
+        heading: "Request sesi baru.",
+        body: `
+          <p>Hai ${opts.mentorName},</p>
+          <p><b>${opts.menteeName}</b> mengajukan sesi mentoring:</p>
+          <p>📅 <b>${opts.date}</b> · ${opts.time}</p>
+          ${opts.note ? `<p>Catatan mentee: <i>${opts.note}</i></p>` : ""}
+          <p>Terima atau tolak lewat halaman jadwal supaya mentee tidak menunggu.</p>
+        `,
+        cta: { label: "Konfirmasi sekarang", url: `${appUrl()}/dashboard/schedule` },
+      }),
+    });
+  } catch (e) {
+    console.error("[email] mentor booking send failed:", e);
+  }
+}
+
+/** H-1 reminder for a confirmed session — sent to mentor and mentee by the
+ *  daily session-reminders cron. */
+export async function sendSessionReminderEmail(opts: {
+  to: string;
+  recipientName: string;
+  counterpartName: string;
+  date: string;
+  time: string;
+  sessionLabel?: string | null;
+  meetLink?: string | null;
+}): Promise<void> {
+  try {
+    await send({
+      to: opts.to,
+      subject: `Besok: sesi mentoring dengan ${opts.counterpartName}`,
+      html: shell({
+        preheader: `${opts.date} · ${opts.time}`,
+        heading: "Sesi kamu besok.",
+        body: `
+          <p>Hai ${opts.recipientName},</p>
+          <p>Pengingat: sesi mentoring kamu dengan <b>${opts.counterpartName}</b> berlangsung besok.</p>
+          <p>📅 <b>${opts.date}</b> · ${opts.time}${opts.sessionLabel ? `<br/>📚 ${opts.sessionLabel}` : ""}</p>
+        `,
+        cta: opts.meetLink
+          ? { label: "Buka Google Meet", url: opts.meetLink }
+          : { label: "Lihat jadwal", url: `${appUrl()}/dashboard/schedule` },
+      }),
+    });
+  } catch (e) {
+    console.error("[email] session reminder send failed:", e);
+  }
+}
+
 /** Booking lifecycle — request / confirmed / rejected / cancelled. */
 export async function sendAdminBookingEmail(opts: {
   kind: "requested" | "accepted" | "rejected" | "cancelled";

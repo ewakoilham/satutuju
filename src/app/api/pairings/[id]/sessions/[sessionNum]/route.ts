@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
+import { sendAdminSessionCompletedEmail } from "@/lib/email-templates";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -84,6 +85,22 @@ export async function PATCH(
   if (updateError) {
     console.error("Session update error:", updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
+  // Session just transitioned to completed → tell the admin inbox so
+  // progress is visible without opening the dashboard (best-effort).
+  if (body.status === "completed" && session.status !== "completed") {
+    const [{ data: mentorU }, { data: menteeU }] = await Promise.all([
+      supabase.from("User").select("name").eq("id", pairing.mentorId).single(),
+      supabase.from("User").select("name").eq("id", pairing.menteeId).single(),
+    ]);
+    await sendAdminSessionCompletedEmail({
+      mentorName: mentorU?.name ?? "Mentor",
+      menteeName: menteeU?.name ?? "Mentee",
+      sessionNum: parseInt(sessionNum),
+      topic: session.topic,
+      pairingId: id,
+    });
   }
 
   // Notify mentor when mentee submits feedback or rating
