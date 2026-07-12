@@ -34,6 +34,8 @@ export interface SyncResult {
   updated: number;
   skipped: number;
   errors: string[];
+  /** Names of newly created leads — lets the cron send one digest email. */
+  createdNames: string[];
 }
 
 function normalizeFunding(raw: string | null): string {
@@ -98,7 +100,7 @@ async function ingestSubmission(
   sub: EnrichedSubmission,
   existingLeadId: string | null,
 ): Promise<
-  | { action: "created"; leadId: string }
+  | { action: "created"; leadId: string; leadName: string }
   | { action: "updated"; leadId: string }
   | { action: "skipped"; reason: string }
   | { action: "error"; error: string }
@@ -183,7 +185,7 @@ async function ingestSubmission(
     console.error(`[tally-sync] classified-trigger failed for ${id}:`, e);
   });
 
-  return { action: "created", leadId: id };
+  return { action: "created", leadId: id, leadName: fields.name };
 }
 
 /**
@@ -205,7 +207,7 @@ export async function syncTallySubmissions(
   opts: { incremental?: boolean } = {},
 ): Promise<SyncResult> {
   const incremental = opts.incremental ?? false;
-  const result: SyncResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
+  const result: SyncResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [], createdNames: [] };
 
   const limit = 50;
   const MAX_PAGES = 50;
@@ -255,7 +257,7 @@ export async function syncTallySubmissions(
       try {
         const r = await ingestSubmission(sub, existingLeadId);
         switch (r.action) {
-          case "created": result.created++; break;
+          case "created": result.created++; result.createdNames.push(r.leadName); break;
           case "updated": result.updated++; break;
           case "skipped": result.skipped++; break;
           case "error":   result.errors.push(`${sub.id}: ${r.error}`); break;

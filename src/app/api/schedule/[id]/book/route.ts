@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { createCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
-import { sendAdminBookingEmail } from "@/lib/email-templates";
+import { sendAdminBookingEmail, sendMentorBookingRequestEmail } from "@/lib/email-templates";
 
 // POST: mentee requests a slot
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -102,10 +102,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     createdAt: now,
   });
 
-  // Email the admin inbox so bookings have oversight (best-effort — the
-  // helper never throws).
+  // Email the admin inbox so bookings have oversight, and the mentor so the
+  // request doesn't sit unseen until their next dashboard visit (both
+  // best-effort — the helpers never throw).
   const { data: mentorUser } = await supabase
-    .from("User").select("name").eq("id", slot.mentorId).single();
+    .from("User").select("name, email").eq("id", slot.mentorId).single();
   await sendAdminBookingEmail({
     kind: "requested",
     mentorName: mentorUser?.name ?? "Mentor",
@@ -113,6 +114,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     date: slot.date,
     time: reqTimeDisplay,
   });
+  if (mentorUser?.email) {
+    await sendMentorBookingRequestEmail({
+      to: mentorUser.email,
+      mentorName: mentorUser.name ?? "Mentor",
+      menteeName: user.name,
+      date: slot.date,
+      time: reqTimeDisplay,
+      note: message || null,
+    });
+  }
 
   return NextResponse.json({ booking }, { status: 201 });
 }
