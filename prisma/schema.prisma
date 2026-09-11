@@ -640,6 +640,24 @@ model Lead {
   // a fresh duplicate. Admin/mentor list + stats queries exclude rows
   // where this is set; direct-by-id access is unaffected.
   duplicateOfLeadId      String?
+  // Additional Tally profile fields — the intake form grew these after
+  // the original sync mapping was written (graduation status, undergrad
+  // campus, work background, LinkedIn/CV, study-plan type, the
+  // free-text research/field-of-study essay — the closest thing to a
+  // "jurusan" field — extra notes, referral, consent). All nullable;
+  // backfilled by a full Tally re-sync.
+  statusLulus             String?
+  kampusStudiS1           String?
+  bidangPekerjaan         String?
+  lamaPengalamanKerja     String?
+  linkedinOrCvLink        String?
+  cvUploadUrl             String?
+  cvUploadFileName        String?
+  masterStudyPlan         String?
+  studyPlanEssay          String?
+  additionalNotes         String?
+  referralCode            String?
+  consentGiven            Boolean?
   // Bookkeeping
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt

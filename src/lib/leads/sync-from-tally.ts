@@ -63,13 +63,70 @@ interface ParsedFields {
   university: string | null;
   country: string | null;
   fundingRaw: string | null;
+  // Phase — additional profile fields the Tally form grew over time
+  // (not present when this file's original field mapping was written).
+  statusLulus: string | null;
+  kampusStudiS1: string | null;
+  bidangPekerjaan: string | null;
+  lamaPengalamanKerja: string | null;
+  linkedinOrCvLink: string | null;
+  cvUploadUrl: string | null;
+  cvUploadFileName: string | null;
+  masterStudyPlan: string | null;
+  studyPlanEssay: string | null;
+  additionalNotes: string | null;
+  referralCode: string | null;
+  consentGiven: boolean | null;
 }
 
+/** Titles this form is known to use for OTHER fields, checked so the
+ *  first-name positional fallback below can't accidentally grab one of
+ *  them instead of the actual name field. */
+const KNOWN_NON_NAME_TITLES = [
+  "last name", "nama belakang", "email", "whatsapp", "country", "negara",
+  "target university", "target kampus", "status lulus", "kampus studi",
+  "bidang pekerjaan", "pengalaman kerja", "linkedin", "referral",
+];
+
 function parseSubmission(sub: EnrichedSubmission): ParsedFields {
-  const firstName = pickField(sub, ["first name", "nama depan"]);
   const lastName = pickField(sub, ["last name", "nama belakang"]);
+
+  // First name: alias match first. Tally form owners rename questions
+  // freely — this one drifted from "First Name" to "Please enter your
+  // information below" without any code change, silently dropping the
+  // first name off ~140 leads. Title strings will keep drifting, so
+  // fall back to POSITION: the first INPUT_TEXT question in the form
+  // that isn't one of the other fields we already recognize by title.
+  // Position in the form is far more stable than a label the operator
+  // can rename in Tally's UI at any time.
+  let firstName = pickField(sub, ["first name", "nama depan"]);
+  if (!firstName) {
+    const candidate = sub.ordered.find((o) => {
+      if (o.type !== "INPUT_TEXT" || !o.value) return false;
+      const title = (o.title ?? "").toLowerCase();
+      return !KNOWN_NON_NAME_TITLES.some((known) => title.includes(known));
+    });
+    firstName = candidate?.value ?? null;
+  }
   // Concatenate name; if only one present, use that.
   const name = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+
+  // Master study plan / funding are MULTIPLE_CHOICE blocks; Tally
+  // sometimes ships them without a stable title, so fall back to
+  // "first/second multi-choice answer in the submission" when the title
+  // lookup misses. Collected in form order so the fallback is stable.
+  const multipleChoiceValues = sub.ordered
+    .filter((o) => o.type === "MULTIPLE_CHOICE" && o.value)
+    .map((o) => o.value as string);
+
+  const fileEntry = sub.ordered.find((o) => o.type === "FILE_UPLOAD");
+  const fileAnswer = Array.isArray(fileEntry?.rawAnswer) ? fileEntry!.rawAnswer[0] : null;
+  const cvFile =
+    fileAnswer && typeof fileAnswer === "object" && "url" in fileAnswer
+      ? (fileAnswer as { url: string; name: string })
+      : null;
+
+  const consentRaw = pickField(sub, ["bersedia", "consent", "setuju"]);
 
   return {
     name,
@@ -78,16 +135,39 @@ function parseSubmission(sub: EnrichedSubmission): ParsedFields {
       "whatsapp number", "whatsapp", "phone", "no whatsapp",
       "nomor whatsapp", "no hp", "phone number",
     ]),
+    // Phase 12/13 fix: "kampus" alone used to be in this list. The form
+    // later grew a "Kampus Studi S1" question (undergrad campus — NOT
+    // the target), and since that title also contains "kampus", the
+    // substring matcher was silently returning the applicant's OLD
+    // campus as their TARGET whenever the real target field was left
+    // blank (it's optional). Dropped the bare "kampus" alias; "target
+    // kampus" stays since it can't collide with "Kampus Studi S1".
     university: pickField(sub, [
-      "university", "target university", "kampus", "target kampus",
-      "campus", "universitas",
+      "university", "target university", "target kampus", "campus", "universitas",
     ]),
     country: pickField(sub, ["country", "negara", "target country"]),
-    // Funding question is a MULTIPLE_CHOICE block without a stable title;
-    // fall back to "first multi-choice answer in the submission".
     fundingRaw:
       pickField(sub, ["funding", "funding plan", "rencana pendanaan", "rencana pembiayaan", "pembiayaan", "scholarship"])
-      ?? pickFieldByType(sub, "MULTIPLE_CHOICE"),
+      ?? multipleChoiceValues[0]
+      ?? null,
+    statusLulus: pickField(sub, ["status lulus"]),
+    kampusStudiS1: pickField(sub, ["kampus studi s1", "kampus studi"]),
+    bidangPekerjaan: pickField(sub, ["bidang pekerjaan"]),
+    lamaPengalamanKerja: pickField(sub, ["lama pengalaman kerja", "pengalaman kerja"]),
+    linkedinOrCvLink: pickField(sub, ["linkedin"]),
+    cvUploadUrl: cvFile?.url ?? null,
+    cvUploadFileName: cvFile?.name ?? null,
+    masterStudyPlan: pickField(sub, ["master study plan", "rencana studi master"]) ?? multipleChoiceValues[1] ?? null,
+    // The essay is a question with no title at all ("null") — grab the
+    // first untitled TEXTAREA. The (separately titled) "Tell us what we
+    // need to know from you" field is captured as additionalNotes below.
+    studyPlanEssay: (() => {
+      const entry = sub.ordered.find((o) => o.type === "TEXTAREA" && !o.title && o.value);
+      return entry?.value ?? null;
+    })(),
+    additionalNotes: pickField(sub, ["tell us what we need to know"]),
+    referralCode: pickField(sub, ["referral"]),
+    consentGiven: consentRaw ? /ya|yes|bersedia|setuju/i.test(consentRaw) : null,
   };
 }
 
@@ -125,6 +205,10 @@ async function ingestSubmission(
   const fundingPlan = normalizeFunding(fields.fundingRaw);
   const tallySubmissionId = sub.id;
 
+  // NOTE: deliberately does NOT include `stage` — that's pipeline
+  // progress an admin/mentor owns, set once at insert below and never
+  // touched by a re-sync (a re-sync must never silently move someone's
+  // lead backward/forward in the pipeline).
   const baseFields = {
     name: fields.name,
     email: fields.email,
@@ -139,6 +223,18 @@ async function ingestSubmission(
     isCampusPartner: classification.isCampusPartner,
     hasCountryMentor: classification.hasCountryMentor,
     partnerProgramScope: classification.partnerProgramScope,
+    statusLulus: fields.statusLulus,
+    kampusStudiS1: fields.kampusStudiS1,
+    bidangPekerjaan: fields.bidangPekerjaan,
+    lamaPengalamanKerja: fields.lamaPengalamanKerja,
+    linkedinOrCvLink: fields.linkedinOrCvLink,
+    cvUploadUrl: fields.cvUploadUrl,
+    cvUploadFileName: fields.cvUploadFileName,
+    masterStudyPlan: fields.masterStudyPlan,
+    studyPlanEssay: fields.studyPlanEssay,
+    additionalNotes: fields.additionalNotes,
+    referralCode: fields.referralCode,
+    consentGiven: fields.consentGiven,
     updatedAt: now,
   };
 

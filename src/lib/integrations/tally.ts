@@ -36,10 +36,23 @@ export interface TallyQuestion {
   title: string | null;  // may be empty/null for some block types
 }
 
-/** A single answer inside a submission. */
+/** One uploaded file, as Tally returns it for a FILE_UPLOAD answer. */
+export interface TallyFileAnswer {
+  id: string;
+  name: string;
+  url: string;
+  mimeType?: string;
+  size?: number;
+}
+
+/** A single answer inside a submission. FILE_UPLOAD answers are an
+ *  array of TallyFileAnswer objects, not strings — answerToString()
+ *  below only produces a sensible string for the string/string[] cases;
+ *  callers that need the file itself should read `rawAnswer` off
+ *  EnrichedSubmission.ordered instead. */
 export interface TallyResponse {
   questionId: string;
-  answer: string | string[] | number | boolean | null;
+  answer: string | string[] | number | boolean | TallyFileAnswer[] | null;
 }
 
 /** A single submission row. */
@@ -79,6 +92,24 @@ export interface EnrichedSubmission {
    *  (e.g. MULTIPLE_CHOICE blocks without an explicit prompt). Returns
    *  the FIRST answer of that type. */
   byType: Record<string, string>;
+  /** Every question in the form's own declared order, each paired with
+   *  its answer (null if unanswered). Titles drift — the form owner
+   *  renames a question in Tally and every `pickField` alias silently
+   *  stops matching (this bit us for "First Name", which became
+   *  "Please enter your information below" without anyone touching this
+   *  code). Position in the form is far more stable than a title string,
+   *  so this lets callers fall back to "the Nth question of type X"
+   *  when an alias lookup comes up empty. */
+  ordered: Array<{
+    id: string;
+    type: string;
+    title: string | null;
+    value: string | null;
+    /** Unstringified answer — needed for FILE_UPLOAD, whose answer is an
+     *  array of {id, name, url, ...} objects that answerToString()
+     *  can't represent sensibly as a single string. */
+    rawAnswer: TallyResponse["answer"];
+  }>;
   /** Full raw responses for debugging / unexpected layouts. */
   raw: TallySubmission;
 }
@@ -125,12 +156,19 @@ export async function listSubmissions(opts: {
   };
 }
 
-/** Convert an answer (string | string[] | null) to a single human string. */
+/** Convert an answer to a single human string. Returns null (rather than
+ *  "[object Object]") for FILE_UPLOAD-shaped answers — those carry
+ *  {id, name, url, ...} objects, not strings; read `rawAnswer` off
+ *  EnrichedSubmission.ordered instead when the file itself is needed. */
 function answerToString(answer: TallyResponse["answer"]): string | null {
   if (answer === null || answer === undefined) return null;
   if (Array.isArray(answer)) {
     const joined = answer
-      .map((x) => (x === null || x === undefined ? "" : String(x).trim()))
+      .map((x) => {
+        if (x === null || x === undefined) return "";
+        if (typeof x === "object") return ""; // FILE_UPLOAD entries — not stringifiable
+        return String(x).trim();
+      })
       .filter(Boolean)
       .join(" | ");
     return joined || null;
@@ -166,12 +204,26 @@ export function enrichSubmission(
     }
   }
 
+  const responseByQuestionId = new Map<string, TallyResponse>();
+  for (const r of submission.responses ?? []) responseByQuestionId.set(r.questionId, r);
+  const ordered = questions.map((q) => {
+    const answer = responseByQuestionId.get(q.id)?.answer ?? null;
+    return {
+      id: q.id,
+      type: q.type,
+      title: q.title,
+      value: answerToString(answer),
+      rawAnswer: answer,
+    };
+  });
+
   return {
     id: submission.id,
     formId: submission.formId,
     submittedAt: submission.submittedAt || submission.createdAt,
     byTitle,
     byType,
+    ordered,
     raw: submission,
   };
 }

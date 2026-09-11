@@ -30,6 +30,10 @@ export const LEAD_SELECT_COLUMNS =
   // Tally submission of another Lead. See migration
   // add_lead_duplicate_of_lead_id.
   '"duplicateOfLeadId", ' +
+  // Additional Tally profile fields (migration add_lead_tally_profile_fields).
+  '"statusLulus", "kampusStudiS1", "bidangPekerjaan", "lamaPengalamanKerja", ' +
+  '"linkedinOrCvLink", "cvUploadUrl", "cvUploadFileName", "masterStudyPlan", ' +
+  '"studyPlanEssay", "additionalNotes", "referralCode", "consentGiven", ' +
   '"createdAt", "updatedAt"';
 
 export const LEAD_STAGE_HISTORY_COLUMNS =
