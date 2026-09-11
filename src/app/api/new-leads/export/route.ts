@@ -81,6 +81,9 @@ export async function GET(req: NextRequest) {
   if (ids && ids.length > 0) {
     query = query.in("id", ids);
   } else {
+    // Exclude known-duplicate Tally submissions from filtered exports —
+    // an explicit `ids=` export still returns exactly what was asked for.
+    query = query.is("duplicateOfLeadId", null);
     // Mirror the filter contract of /api/new-leads (subset)
     const buckets    = searchParams.getAll("bucket");
     const stages     = searchParams.getAll("stage");

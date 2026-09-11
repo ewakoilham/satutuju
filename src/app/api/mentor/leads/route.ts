@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
     const [totalAllRes, totalTodayRes, matchRes, flaggedRes] = await Promise.all([
       (() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let qb: any = supabase.from("Lead").select("id", { count: "exact", head: true });
+        let qb: any = supabase.from("Lead").select("id", { count: "exact", head: true }).is("duplicateOfLeadId", null);
         if (q) qb = qb.or(`${baseQ("name")},${baseQ("email")},${baseQ("targetCampusAndProgram")}`);
         return qb;
       })(),
@@ -106,6 +106,7 @@ export async function GET(req: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let qb: any = supabase
           .from("Lead").select("id", { count: "exact", head: true })
+          .is("duplicateOfLeadId", null)
           .gte("submittedAt", todayStart);
         if (q) qb = qb.or(`${baseQ("name")},${baseQ("email")},${baseQ("targetCampusAndProgram")}`);
         return qb;
@@ -115,6 +116,7 @@ export async function GET(req: NextRequest) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let qb: any = supabase
             .from("Lead").select("id", { count: "exact", head: true })
+            .is("duplicateOfLeadId", null)
             .eq("parsedCountry", mentorCountry);
           if (q) qb = qb.or(`${baseQ("name")},${baseQ("email")},${baseQ("targetCampusAndProgram")}`);
           return qb;
@@ -180,6 +182,10 @@ export async function GET(req: NextRequest) {
     qb: T,
     withCountry: boolean,
   ): T {
+    // Exclude known-duplicate Tally submissions (see duplicateOfLeadId) —
+    // kept in the DB so re-sync doesn't recreate them, hidden from the
+    // mentor-facing list.
+    qb = qb.is("duplicateOfLeadId", null) as T;
     if (q) {
       qb = qb.or(
         `name.ilike.%${q}%,email.ilike.%${q}%,targetCampusAndProgram.ilike.%${q}%`,
@@ -336,7 +342,8 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let statsQuery: any = supabase
     .from("Lead")
-    .select('id, "parsedCountry", "submittedAt"');
+    .select('id, "parsedCountry", "submittedAt"')
+    .is("duplicateOfLeadId", null);
   if (q) {
     statsQuery = statsQuery.or(
       `name.ilike.%${q}%,email.ilike.%${q}%,targetCampusAndProgram.ilike.%${q}%`,

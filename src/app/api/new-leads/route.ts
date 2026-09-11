@@ -58,7 +58,11 @@ export async function GET(req: NextRequest) {
   // Build the paginated list query.
   let query = supabase
     .from("Lead")
-    .select(LEAD_SELECT_COLUMNS, { count: "exact" });
+    .select(LEAD_SELECT_COLUMNS, { count: "exact" })
+    // Exclude known-duplicate Tally submissions (see duplicateOfLeadId) —
+    // kept in the DB so re-sync doesn't recreate them, but hidden from
+    // the active pipeline view. Fetch by id still works for these rows.
+    .is("duplicateOfLeadId", null);
 
   if (buckets.length > 0) query = query.in("bucket", buckets);
   if (stages.length > 0) query = query.in("stage", stages);
@@ -90,7 +94,7 @@ export async function GET(req: NextRequest) {
 
   // Bucket-count aggregate query — same filters minus range/sort. Cheap:
   // each row is a short string; 200 rows = ~2 KB.
-  let bucketsQuery = supabase.from("Lead").select("bucket");
+  let bucketsQuery = supabase.from("Lead").select("bucket").is("duplicateOfLeadId", null);
   if (buckets.length > 0) bucketsQuery = bucketsQuery.in("bucket", buckets);
   if (stages.length > 0) bucketsQuery = bucketsQuery.in("stage", stages);
   if (countries.length > 0) bucketsQuery = bucketsQuery.in("parsedCountry", countries);

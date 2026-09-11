@@ -26,6 +26,10 @@ export const LEAD_SELECT_COLUMNS =
   // Phase 15 — review-gate fields. All three nullable; missing values
   // mean "not yet reviewed by admin".
   '"classificationReviewedAt", "classificationReviewedBy", "classificationReviewNote", ' +
+  // Non-destructive dedup marker — set when this row is a known-duplicate
+  // Tally submission of another Lead. See migration
+  // add_lead_duplicate_of_lead_id.
+  '"duplicateOfLeadId", ' +
   '"createdAt", "updatedAt"';
 
 export const LEAD_STAGE_HISTORY_COLUMNS =

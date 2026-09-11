@@ -632,6 +632,14 @@ model Lead {
   classificationReviewedAt  DateTime?
   classificationReviewedBy  String?
   classificationReviewNote  String?
+  // Non-destructive dedup marker (added post-launch, once duplicate Tally
+  // submissions from the same person were found in the wild). When set,
+  // this row is a known duplicate of another Lead — kept in place
+  // (never deleted) so a future Tally sync, which keys off
+  // tallySubmissionId, updates this row in place instead of recreating
+  // a fresh duplicate. Admin/mentor list + stats queries exclude rows
+  // where this is set; direct-by-id access is unaffected.
+  duplicateOfLeadId      String?
   // Bookkeeping
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt

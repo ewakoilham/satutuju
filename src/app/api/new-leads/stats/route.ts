@@ -25,7 +25,9 @@ export async function GET(_req: NextRequest) {
   // count(*) queries.
   const { data, error } = await supabase
     .from("Lead")
-    .select("bucket, stage, outreachSentAt, emailOpenedAt, emailClickedAt, callScheduledAt, callCompletedAt, mentorMatchedId, classificationReviewedAt");
+    .select("bucket, stage, outreachSentAt, emailOpenedAt, emailClickedAt, callScheduledAt, callCompletedAt, mentorMatchedId, classificationReviewedAt")
+    // Exclude known-duplicate Tally submissions from the dashboard counts.
+    .is("duplicateOfLeadId", null);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   type LeadStats = {
