@@ -265,11 +265,74 @@ function deriveScope(degreeLevel: string | undefined | null): string | null {
   return trimmed;
 }
 
+/** Trailing paren content that marks a scope restriction rather than an
+ *  institution abbreviation — "(Only PG)", "(UG)", "(Graduate)", etc.
+ *  universities.json already carries this exact information in the
+ *  structured `degreeLevel` column (surfaced via `deriveScope` above),
+ *  so when it's ALSO baked into the name it's pure redundancy that
+ *  breaks matching without adding information. Deliberately narrow:
+ *  a trailing "(ACC)" / "(UTAS)" / "(IIBIT)" style abbreviation — the
+ *  overwhelming majority of trailing-paren rows — must NOT match this,
+ *  since that abbreviation is real, load-bearing identifying text. */
+const SCOPE_PAREN_RE = /\b(only|pg|ug|postgraduate|undergraduate|graduate|foundation)\b/i;
+
+/** Clean a raw universities.json partner name for MATCHING purposes.
+ *  Strips two known scraped-data artifacts that add no information the
+ *  matcher needs but do break substring/token-set matching:
+ *    - a bare trailing "-" left over from spreadsheet export, e.g.
+ *      "University of Amsterdam -"
+ *    - a trailing "(...)" scope annotation (see SCOPE_PAREN_RE), e.g.
+ *      "University of Zurich, Zürich (Only PG)"
+ *  Genuine trailing abbreviations like "(UTAS)" are left untouched.
+ *  Never returns an empty string. */
+function cleanPartnerName(raw: string): string {
+  let name = raw.trim();
+  const parenMatch = name.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+  if (parenMatch && SCOPE_PAREN_RE.test(parenMatch[2])) name = parenMatch[1].trim();
+  name = name.replace(/\s*-+\s*$/, "").trim();
+  return name || raw.trim();
+}
+
 const PARTNER_LOOKUP: Map<string, PartnerEntry> = (() => {
+  // Count how many DIFFERENT rows clean down to the same name, so we
+  // can tell when cleaning would merge two genuinely distinct partner
+  // rows — e.g. "Milwaukee School of Engineering, Milwaukee, Wisconsin"
+  // has a separate "(Only PG)" row and "(Only UG)" row with different
+  // scopes. Silently picking one would be worse than staying unmatched.
+  const cleanedCounts = new Map<string, number>();
+  for (const u of UNIVERSITIES) {
+    const cleaned = cleanPartnerName(u.name);
+    if (cleaned === u.name) continue;
+    const key = partnerKey(cleaned);
+    cleanedCounts.set(key, (cleanedCounts.get(key) ?? 0) + 1);
+  }
+
   const m = new Map<string, PartnerEntry>();
   for (const u of UNIVERSITIES) {
-    const key = partnerKey(u.name);
-    m.set(key, { canonical: u.name, country: u.country, scope: deriveScope(u.degreeLevel) });
+    const cleaned = cleanPartnerName(u.name);
+    const ambiguous = cleaned !== u.name && (cleanedCounts.get(partnerKey(cleaned)) ?? 0) > 1;
+    // Ambiguous rows keep their RAW (scope-suffixed) name as the
+    // canonical — this also feeds PARTNER_NAMES_SORTED below, so the
+    // substring/token-set fallback scan can't silently merge two
+    // different scopes either. A bare-name input for these stays
+    // unmatched, same as before this cleanup existed; an input that
+    // explicitly says "(Only PG)"/"(Only UG)" still matches precisely.
+    const entry: PartnerEntry = {
+      canonical: ambiguous ? u.name : cleaned,
+      country: u.country,
+      scope: deriveScope(u.degreeLevel),
+    };
+    // Exact raw name, unconditionally. Handles CAMPUS_ALIASES
+    // canonicals that already mirror a universities.json row verbatim
+    // (e.g. the Singapore/Twente/Monash/Curtin entries).
+    m.set(partnerKey(u.name), entry);
+    // Cleaned-name alias too, when unambiguous, so a curated alias like
+    // "University of Amsterdam" (no trailing artifact) still finds
+    // this row.
+    if (!ambiguous && cleaned !== u.name) {
+      const cleanedKey = partnerKey(cleaned);
+      if (!m.has(cleanedKey)) m.set(cleanedKey, entry);
+    }
   }
   return m;
 })();
@@ -494,21 +557,23 @@ export function classifyLead(
   // back to a substring + token-set scan over universities.json for
   // partners not yet in CAMPUS_ALIASES.
   //
-  // Phase 14 typo handling: applicants sometimes spell "University" the
-  // Bahasa way ("Universitas of Edinburgh"). When a clearly-foreign
-  // country signal landed (parsedCountry set to something other than
-  // Indonesia), retry campus + partner matching with the typo
-  // normalized. Gated on non-Indonesia so genuine "Universitas
-  // Indonesia" inputs stay domestic (they short-circuit earlier via
-  // isDomesticIndonesia anyway, but the guard is belt-and-suspenders).
-  const hasUniversitasTypo =
+  // Phase 14 typo handling: applicants sometimes spell "University" in
+  // their own language — Bahasa "Universitas of Edinburgh", Dutch
+  // "Universiteit van Amsterdam", etc. (see UNIVERSITY_WORD_VARIANTS).
+  // When a clearly-foreign country signal landed (parsedCountry set to
+  // something other than Indonesia), retry campus + partner matching
+  // with the word normalized to English. Gated on non-Indonesia so
+  // genuine "Universitas Indonesia" inputs stay domestic (they
+  // short-circuit earlier via isDomesticIndonesia anyway, but the guard
+  // is belt-and-suspenders).
+  const hasForeignUniversityWord =
     parsedCountry !== null &&
     parsedCountry !== "Indonesia" &&
-    /\buniversitas\b/.test(normInput);
-  const matchInput = hasUniversitasTypo
-    ? normInput.replace(/\buniversitas\b/g, "university")
+    new RegExp(`\\b(${UNIVERSITY_WORD_VARIANTS.join("|")})\\b`, "i").test(normInput);
+  const matchInput = hasForeignUniversityWord
+    ? normalizeUniversityWord(normInput)
     : normInput;
-  if (!parsedCampus && hasUniversitasTypo) {
+  if (!parsedCampus && hasForeignUniversityWord) {
     const retry = matchCampus(matchInput);
     if (retry) parsedCampus = retry.canonical;
   }
@@ -603,6 +668,32 @@ function normalize(s: string): string {
 function wb(p: string): string {
   const stripped = p.replace(/^\\b/, "").replace(/\\b$/, "");
   return `\\b${stripped}\\b`;
+}
+
+/** Non-English spellings of "university" that applicants commonly use
+ *  instead of the English form — Indonesian, Dutch, French, Italian,
+ *  German, Spanish, Portuguese. `normalize()` has already stripped
+ *  diacritics by the time these are tested, so "université" arrives as
+ *  "universite", "università" as "universita", "universität" as
+ *  "universitat", etc. Normalizing these to "university" lets the
+ *  English-only CAMPUS_ALIASES / universities.json partner names still
+ *  match instead of silently missing a real partner (e.g. "Universiteit
+ *  van Amsterdam" → University of Amsterdam). */
+const UNIVERSITY_WORD_VARIANTS = [
+  "universitas",   // Indonesian
+  "universiteit",  // Dutch
+  "universite",    // French (université)
+  "universita",    // Italian (università)
+  "universitat",   // German (universität) / Catalan
+  "universidad",   // Spanish
+  "universidade",  // Portuguese
+];
+
+function normalizeUniversityWord(input: string): string {
+  return input.replace(
+    new RegExp(`\\b(${UNIVERSITY_WORD_VARIANTS.join("|")})\\b`, "gi"),
+    "university",
+  );
 }
 
 function matchCountry(normInput: string): string | null {
